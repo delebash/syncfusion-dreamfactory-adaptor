@@ -1,0 +1,4355 @@
+/*!
+*  filename: ej.fileexplorer.js
+*  version : 14.2.0.26
+*  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
+*  Use of this code is subject to the terms of our license.
+*  A copy of the current license can be obtained at any time by e-mailing
+*  licensing@syncfusion.com. Any infringement will be prosecuted under
+*  applicable laws. 
+*/
+(function (fn) {
+    typeof define === 'function' && define.amd ? define(["jquery-easing","jsrender","./../common/ej.core","./../common/ej.data","./../common/ej.draggable","./../common/ej.scroller","./ej.button","./ej.treeview","./ej.uploadbox","./ej.waitingpopup","./ej.dialog","./ej.splitter","./ej.toolbar","./ej.menu","./ej.splitbutton","./ej.grid"], fn) : fn();
+})
+(function () {
+	
+/**
+* @fileOverview Plugin to style the Html div elements
+* @copyright Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
+*  Use of this code is subject to the terms of our license.
+*  A copy of the current license can be obtained at any time by e-mailing
+*  licensing@syncfusion.com. Any infringement will be prosecuted under
+*  applicable laws. 
+* @version 12.1 
+* @author <a href="mailto:licensing@syncfusion.com">Syncfusion Inc</a>
+*/
+(function ($, ej, undefined) {
+
+    ej.widget("ejFileExplorer", "ej.FileExplorer", {
+
+        element: null,
+
+        model: null,
+        validTags: ["div"],
+        _addToPersist: ["layout", "selectedFolder", "selectedItems", "height", "width"],
+        _rootCSS: "e-fileexplorer",
+
+        defaults: {
+
+            fileTypes: "*.*",
+
+            filterSettings: {
+
+                caseSensitiveSearch: false,
+
+                filterType: "contains"
+            },
+
+            showToolbar: true,
+
+            showCheckbox: true,
+
+            showNavigationPane: true,
+
+            showContextMenu: true,
+
+            showFooter: true,
+
+            layout: "grid",
+
+            locale: "en-US",
+
+            selectedFolder: "",
+
+            selectedItems: "",
+
+            gridSettings: {
+                allowSorting: true,
+                columns: [
+                    { field: "name", headerText: "Name", width: "30%" },
+                    { field: "dateModified", headerText: "Date Modified", width: "30%" },
+                    { field: "type", headerText: "Type", width: "15%" },
+                    { field: "size", headerText: "Size", width: "12%", textAlign: "right", headerTextAlign: "left" }]
+            },
+
+            tools: {
+                creation: ["NewFolder"],
+                navigation: ["Back", "Forward", "Upward"],
+                addressBar: ["Addressbar"],
+                editing: ["Refresh", "Upload", "Delete", "Rename", "Download"],
+                copyPaste: ["Cut", "Copy", "Paste"],
+                getProperties: ["Details"],
+                searchBar: ["Searchbar"],
+                layout: ["Layout"]
+            },
+
+            toolsList: ["layout", "creation", "navigation", "addressBar", "editing", "copyPaste", "getProperties", "searchBar"],
+
+            path: "",
+
+            height: "400px",
+
+            width: "850px",
+
+            minWidth: "400px",
+
+            maxWidth: null,
+
+            minHeight: "250px",
+
+            maxHeight: null,
+
+            isResponsive: false,
+
+            uploadSettings: {
+
+                allowMultipleFile: true,
+
+                maxFileSize: 31457280,
+
+                autoUpload: false
+
+            },
+
+            enableResize: false,
+
+            cssClass: "",
+
+            enableRTL: false,
+
+            showThumbnail: true,
+
+            showRoundedCorner: false,
+
+            ajaxAction: "",
+
+            ajaxDataType: "json",
+
+            ajaxSettings: {
+                read: {},
+                createFolder: {},
+                remove: {},
+                rename: {},
+                paste: {},
+                getDetails: {},
+                download: {},
+                upload: {},
+                getImage: {},
+                search:{}
+            },
+
+            allowMultiSelection: true,
+
+            layoutChange: null,
+
+            select: null,
+
+            createFolder: null,
+
+            remove: null,
+
+            cut: null,
+
+            copy: null,
+
+            paste: null,
+
+            open: null,
+
+            beforeOpen: null,
+
+            beforeUpload: null,
+
+            beforeDownload: null,
+
+            beforeAjaxRequest: null,
+
+            resizeStart: null,
+
+            resize: null,
+
+            resizeStop: null,
+
+            templateRefresh: null,
+
+            create: null,
+
+            destroy: null
+
+        },
+        dataTypes: {
+            filterSettings: "data",
+            showToolbar: "boolean",
+            showNavigationPane: "boolean",
+            showContextMenu: "boolean",
+            allowDragAndDrop: "boolean",
+            showRoundedCorner: "boolean",
+            showFooter: "boolean",
+            layout: "enum",
+            gridSettings: "data",
+            tools: {
+                creation: "array",
+                navigation: "array",
+                addressBar: "array",
+                editing: "array",
+                layout: "array",
+                copyPaste: "array",
+                getProperties: "array",
+                searchBar: "array"
+            },
+            toolsList: "array",
+            uploadSettings: "data",
+            ajaxSettings: "data",
+        },
+        _setModel: function (options) {
+            for (var prop in options) {
+                switch (prop) {
+                    case "showToolbar":
+                        options[prop] ? ej.isNullOrUndefined(this._toolBarItems) ? this._updateToolbar() : this._toolBarItems.show() : this._toolBarItems.hide();
+                        this.adjustSize();
+                        break;
+                    case "showNavigationPane":
+                    case "showTreeview":
+                        var changeDirection = this.model.enableRTL;
+                        changeDirection && this._enableRTL(false);
+                        this.model.showNavigationPane = this.model.showTreeview = options[prop];
+                        this._showHideSplitBar(false);
+                        this._renderSplitIcon();
+                        changeDirection && this._enableRTL(true);
+                        break;
+                    case "showContextMenu":
+                        this._showHideContextMenu();
+                        break;
+                    case "height":
+                        this.element.css("height", this._getProperValue(this.model.height));
+                        this.adjustSize();
+                        break;
+                    case "width":
+                        this.element.css("width", this._getProperValue(this.model.width));
+                        this.adjustSize();
+                        break;
+                    case "layout":
+                        this._switchLayoutView(true);
+                        break;
+                    case "allowDragAndDrop":
+                        this.model.allowDragAndDrop = options[prop];
+                        this._draggableOption(options[prop] ? "_on" : "_off");
+                        break;
+                    case "showThumbnail":
+                        this.model.showThumbnail = options[prop];
+                        this._switchLayoutView();
+                        break;
+                    case "path":
+                        options[prop] ? this._setPath(options[prop]) : this._getPath();
+                        break;
+                    case "enableRTL": this._enableRTL(options[prop]); break;
+                    case "showFooter":
+                        if (options[prop]) {
+                            if (this._statusbar.hasClass("e-statusbar")) {
+                                var setHeight = this._splittag.find(".e-cont2").outerHeight() - this._statusbar.outerHeight();
+                                this._tileView.height(setHeight);
+                                this._gridtag.height(setHeight);
+                                this._statusbar.show();
+                            }
+                            else {
+                                this._createStatusBar();
+                                this._updateData();
+                                if (this.model.enableResize)
+                                    this._resizeFileExplorer();
+                                this._on($('#' + this._ExplorerId + '_switchGridView'), "click", this._switchView);
+                                this._on($('#' + this._ExplorerId + '_swithListView'), "click", this._switchView);
+                            }
+                            var height = this._splittag.height() - this._gridtag.find(".e-gridheader").outerHeight();
+                            this._tileContent.parent(".e-tile-wrapper").ejScroller({ height: this._splittag.outerHeight() - this._statusbar.outerHeight(), scrollerSize: this._scrollerSize });
+                        } else {
+                            this._tileView.height("auto");
+                            this._gridtag.height("auto");
+                            this._statusbar.hide();
+                            var height = this._splittag.height() - this._gridtag.find(".e-gridheader").outerHeight();
+                            this._tileContent.parent(".e-tile-wrapper").ejScroller({ height: this._splittag.outerHeight(), scrollerSize: this._scrollerSize });
+                        }
+                        break;
+                    case "gridSettings":
+                        var gridSettings = JSON.parse(JSON.stringify(options[prop]));
+                        if (gridSettings.columns) {
+                            gridSettings.columns.unshift({ field: "cssClass", headerText: "", cssClass: "e-grid-image", width: 22, template: "<script type='text/x-jsrender'><span class='e-fe-icon {{:cssClass}}' unselectable='on'></span></script>", textAlign: ej.TextAlign.Center, allowResizing: false });
+                            if (this.model.showCheckbox)
+                                gridSettings.columns.unshift({ field: "", headerText: "check", cssClass: "e-col-check", width: 18, template: "<script type='text/x-jsrender'><input type='checkbox' class='e-grid-row-checkbox'/></script>", textAlign: ej.TextAlign.Center, headerTextAlign: ej.TextAlign.Center, allowResizing: false, allowSorting: false });
+                        }
+                        this._gridObj && this._gridtag.ejGrid(gridSettings);
+                        break;
+                    case "locale":                        
+                        this.model.locale = options[prop];                        
+                        this._destroy();
+                        this._init();
+                        break;
+                    case "cssClass": this._changeSkin(options[prop]); break;
+                    case "fileTypes":
+                        var proxy = this;
+                        $.each(proxy._fileExplorer, function (itemPath, value) {
+                            proxy._fileExplorer[itemPath] = "";
+                        });
+                        this._removeOldSelectionDetails();
+                        this._refreshItems(this._selectedNode, this._currentPath);
+                        this._uploadtag.ejUploadbox("option", { extensionsAllow: this.model.fileTypes == "*.*" ? "" : this.model.fileTypes.replace(/\*/g, "") });
+                        break;
+                    case "selectedFolder":
+                        this._selectedFolder(this.model.selectedFolder);
+                        break;
+                    case "selectedItems":
+                        this._selectedItems = options[prop];
+                        this._setSelectedItems(options[prop]);
+                        break;
+                    case "allowMultiSelection":
+                        !options[prop] && this._setSelectedItems([]);
+                        this._gridtag.find(".e-gridheader").length && this._gridtag.ejGrid("option", { selectionType: (options[prop] ? "multiple" : "single") });
+                        break;
+                    case "isResponsive": {
+                        this.model.isResponsive = options[prop];
+                        if (this._toolBarObj) {
+                            this._toolBarObj.option("isResponsive", this.model.isResponsive);
+                            this.model.showToolbar ? this._toolBarItems.show() : this._toolBarItems.hide();
+                            this.adjustSize();
+                        }
+                        this._wireResizing();
+                        break;
+                    }
+                    case "tools":
+                    case "toolsList":
+                        if (prop == "tools")
+                            $.extend(this.model.tools, options[prop]);
+                        else
+                            this.model.toolsList = options[prop];
+                        if (this._toolBarObj) {
+                            this._toolBarObj.destroy();
+                            this.element.find("#" + this._ExplorerId + "_toolbar").remove();
+                            this._updateToolbar();
+                            this.model.showToolbar ? this._toolBarItems.show() : this._toolBarItems.hide();
+                            this.adjustSize();
+                        }
+                        break;
+                    case "enableResize":
+                        if (!options[prop])
+                            this._resizeItem && this._resizeItem.remove();
+                        else if (options[prop] && this.model.showFooter) {
+                            this._resizeItem = ej.buildTag("div.e-icon e-fe-resize e-resize-handle");
+                            this._resizeItem.insertBefore(this.element.find(".e-switchView"));
+                            this._resizeFileExplorer();
+                        }
+                        break;
+                    case "minHeight":
+                        this.element.css("min-height", this._getProperValue(this.model.minHeight));
+                        this._refreshResizeHandler();
+                        break;
+                    case "maxHeight":
+                        this.element.css("max-height", this._getProperValue(this.model.maxHeight));
+                        this._refreshResizeHandler();
+                        break;
+                    case "minWidth":
+                        this.element.css("min-width", this._getProperValue(this.model.minWidth));
+                        this._refreshResizeHandler();
+                        break;
+                    case "maxWidth":
+                        this.element.css("max-width", this._getProperValue(this.model.maxWidth));
+                        this._refreshResizeHandler();
+                        break;
+                    case "showCheckbox":
+                        this._changeCheckState = this.model.showCheckbox;
+                        this.model.layout == "grid" ? this._renderGridView(this._fileExplorer[this._originalPath]) : this._renderTileView(this._fileExplorer[this._originalPath]);
+                        this._setSelectedItems(this.model.selectedItems);
+                        break;
+                    case "showRoundedCorner":
+                        this._roundedCorner(options[prop]);
+                        break;
+                }
+            }
+        },
+
+        _init: function () {
+            this.model.allowDragAndDrop = false;
+            this._cloneElement = this.element.clone();
+            (!ej.isNullOrUndefined(this.model.uploadBoxSettings)) && (this.model.uploadSettings = this.model.uploadBoxSettings);
+            (!ej.isNullOrUndefined(this.model.showTreeview)) && (this.model.showNavigationPane = this.model.showTreeview);
+            (!ej.isNullOrUndefined(this.model.move)) && (this.model.cut = this.model.move);
+            this._initialize();
+            this._render();            
+            this._changeLayoutActive(this.model.layout);
+        },
+        _postInit: function () {
+            this._enablePostInit = false;
+            this._enableRTL(this.model.enableRTL);
+            this._wireEvents();
+            this._wireResizing();
+            this._setMinMaxSizeInInteger();
+            if (this.model.enableResize && this.model.showFooter)
+                this._resizeFileExplorer();
+        },
+
+        _initialize: function () {
+            this._ExplorerId = this.element[0].id;
+            this._fileExplorer = {};
+            this._feParent = {};
+            this._updateImages = {};
+            this._selectedStates = [];
+            this._updateOnNodeSelection = false;
+            this._isClicked = true;
+            this._toolBarObj = null;
+            this._tileView = null;
+            this._tileScroll = null;
+            this._originalPath = null;            
+            this._initPath = "";
+            this._initUpdate = false;
+            this._scrollerSize = 8;
+            this._editingToolsState = true;
+            this._renderMultiTouchDialog();
+            this._ensureResolution();
+            this._isDevice = this._checkDevice();
+            this.element.css({ "height": this._getProperValue(this.model.height), "width": this._getProperValue(this.model.width), "min-width": this._getProperValue(this.model.minWidth), "max-width": this._getProperValue(this.model.maxWidth), "min-height": this._getProperValue(this.model.minHeight), "max-height": this._getProperValue(this.model.maxHeight) });
+            this._customCssClass = this.model.cssClass;
+            this.element.addClass(this.model.cssClass);            
+            this._isTreeNode = false;
+            this._selectedItems = [];
+            this._selectedTileItems = [];
+            this._downloadDialog = null;
+            this._newFolderDialog = null;
+            this._renameDialog = null;
+            this._openDialog = null;
+            this._detailsDialog = null;
+            this._alertDialog = null;
+            this._enablePostInit = true;
+            this._initialTime = new Date().getTime();
+            this._currentPath = this.model.path.replace(/\\/g, "/");
+            this._rootPath = this._currentPath = this._currentPath.endsWith("/") ? this._currentPath : this._currentPath + "/";
+            this._gridObj = null;
+            this._setUploadLocalization();
+            this._restrictedToolbarOptions = [];
+            this._restrictedMenuOption = [];
+            this._contextMenu = {
+                // navbarfolder menu
+                navbar: ["NewFolder", "Upload", "|", "Delete", "Rename", "|", "Cut", "Copy", "Paste", "|", "Getinfo"],
+                // current directory menu
+                cwd: ["Refresh", "Paste", "|", "NewFolder", "Upload", "|", "Getinfo"],
+                // current directory file menu
+                files: ["Open", "Download", "|", "Upload", "|", "Delete", "Rename", "|", "Cut", "Copy", "Paste", "|", "OpenFolderLocation", "Getinfo"]
+            };
+            this._changeCheckState = this.model.showCheckbox;
+            this._perRow = 1;
+            this._suggestionItems = [];
+            this._highlightedNodes = "";
+        },
+
+        _renderMultiTouchDialog: function () {
+            this._customPop = ej.buildTag("div.e-fe-popup", "", { display: "none" });
+            var $content = ej.buildTag("div.e-content"), $downTail = ej.buildTag("div.e-downtail e-tail");
+            if (this.model.allowMultiSelection) {
+                var $selElement = ej.buildTag("span.e-rowselect e-icon");
+                $content.append($selElement);
+            }
+            this._customPop.append($content);
+            this._customPop.append($downTail);
+            this.element.append(this._customPop);
+            this._on(this._customPop, "mousedown", this._popupClick);
+        },
+
+        _popupClick: function() {
+            var $selElement = this._customPop.find(".e-rowselect");
+            if ($selElement.hasClass("e-spanclicked")) {
+                this._hidePopup();
+            }
+            else {
+                $selElement.addClass("e-spanclicked");
+            }
+        },
+
+        _hidePopup: function () {
+            if (this._customPop != null && this._customPop.is(":visible")) {
+                this._customPop.find(".e-rowselect").removeClass("e-spanclicked");
+                this._customPop.hide();
+            }
+        },
+
+        _ensureResolution: function() {
+            this._isMobileOrTab = $(window).width() <= 750 ? true : false;
+            if (this._isMobileOrTab) {
+                this.element.addClass("e-fe-mobile");
+                this._toolBarObj && this._toolBarObj._liTemplte.css("max-width", this.element.width());
+            }
+            else {
+                this.element.removeClass("e-fe-mobile");
+                if (this._splitObj && this.model.showNavigationPane && this._splitObj.element.find(".e-cont1").hasClass("collapsed")) {
+                    this._splitObj.expand(0);
+                }
+            }
+            this._toolBarObj && this._toolBarObj.option("cssClass", this.model.cssClass + " e-fe-toolbar " + (this._isMobileOrTab ? "e-fe-mobile" : ""));
+        },
+
+        _showHideNavigation: function (event) {
+            if ($(event.currentTarget).find('.e-icon').hasClass("e-arrow-sans-right")) {
+                this._splitObj.expand(0);
+            }
+            else {
+                this._splitObj.collapse(0);
+            }
+        },
+
+        _renderSplitIcon: function () {
+            if (!this.model.showNavigationPane) return;
+            this._splitIcon = ej.buildTag('div.e-fe-split-icon');
+            this._splitIcon.append("<span class='e-icon e-arrow-sans-left'></span>");
+            this._splitObj.element.find(".e-splitbar").append(this._splitIcon);
+            this._on(this._splitIcon, "touchend click", this._showHideNavigation);
+            if (this._isMobileOrTab && this._splitObj && this.model.showNavigationPane) {
+                this._splitObj.collapse(0);
+            }
+        },
+
+        _checkDevice: function () {
+            return (ej.isDevice() && ej.isTouchDevice());
+        },
+
+        _initContextMenuOptions: function (menu) {
+            var menuOptions = [];
+            var parameter = { "class": "e-fe-separator" };
+            for (var i = 0; i < this._contextMenu[menu].length; i++) {
+                if (this._contextMenu[menu][i] != "|")                    
+                {
+                    this["_menu" + this._contextMenu[menu][i]] = this._getLocalizedLabels("ContextMenu" + this._contextMenu[menu][i]);
+                    menuOptions.push({ text: this["_menu" + this._contextMenu[menu][i]], sprite: "e-fileexplorer-toolbar-icon " + this._contextMenu[menu][i], htmlAttr: (this._contextMenu[menu][i + 1] == "|" ? parameter : "") });
+                }                
+           }
+           return menuOptions;  
+        },
+        _render: function () {
+            var selectedTreeFolder = this.model.selectedFolder;
+            var selectedNodes = this.model.selectedItems;
+            this.element.addClass('e-widget e-box').attr({ role: "fileexplorer", tabindex: 0 });
+            this.model.showToolbar && this._renderToolBar();
+            this._createSplitPane();
+            this._read();
+            if (selectedTreeFolder && this._currentPath != selectedTreeFolder)
+                this._selectedFolder(selectedTreeFolder);
+            if (selectedNodes.length) {
+                this._isClicked = false;
+                this._setSelectedItems(selectedNodes);
+                this._isClicked = true;
+            }
+            this._roundedCorner(this.model.showRoundedCorner);
+        },
+        _read: function () {
+            var proxy = this;
+            var _ajaxOptions = {
+                data: { ActionType: "Read", Path: this._currentPath, ExtensionsAllow: this.model.fileTypes, SelectedItems: this._getSelectedItemDetails(this._getFolderPath(), this._selectedContent) },
+                url: this.model.ajaxAction,
+                type: "POST",
+                async: false,
+                success: function (result) {
+                    if (result === undefined || result === null) return;
+                    if (result.hasOwnProperty("d"))
+                        result = result.d;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    proxy._feParent[proxy._currentPath] = result.cwd;
+                    proxy._readSuccess(result.files);
+                    proxy._enablePostInit && proxy._postInit();
+                },
+                successAfter: this.model.ajaxSettings.read.success
+            };
+            this.model.ajaxSettings.read.success = undefined;
+            $.extend(true, _ajaxOptions, this.model.ajaxSettings.read);
+            this._sendAjaxRequest(_ajaxOptions);
+        },
+
+        _sendAjaxRequest: function (ajaxOptions, hideWaitingState) {
+            if (!ajaxOptions.dataType && this.model.ajaxDataType)
+                ajaxOptions.dataType = this.model.ajaxDataType;
+            if (this.model.ajaxAction == "" || this._currentPath == "")
+                return;
+            if (ajaxOptions.data.ActionType != "Read")
+                this._selectedItemDetails = ajaxOptions.data.SelectedItems;
+            var defaultData = { Name: "", ActionType: "", Path: "", ExtensionsAllow: "", LocationFrom: "", LocationTo: "", Action: "", NewName: "", Names:[], CaseSensitive: false, SearchString: "", FileUpload: null, CommonFiles: null };
+            if (!hideWaitingState) {
+                this._waitingPopup.show();
+            }
+            $.extend(true, defaultData, ajaxOptions.data);
+            var args = { data: defaultData };
+            var proxy = this;
+            if (this._trigger("beforeAjaxRequest", args))
+                return;
+            $.ajax({
+                data: ((ajaxOptions.dataType && ajaxOptions.dataType.toLowerCase() == "jsonp") ? { json: JSON.stringify(args.data) } : JSON.stringify(args.data)),
+                url: ajaxOptions.url,
+                type: ajaxOptions.type,
+                async: ajaxOptions.async,
+                success: function(args) {
+                    ajaxOptions.success.call(this, args);
+                    if(typeof ajaxOptions.successAfter == "function")
+                        ajaxOptions.successAfter.apply(this, arguments);
+                },
+                contentType: (ajaxOptions.contentType ? ajaxOptions.contentType : "application/json"),
+                dataType: ajaxOptions.dataType,
+                jsonpCallback: ajaxOptions.jsonpCallback ? ajaxOptions.jsonpCallback : ((ajaxOptions.dataType && ajaxOptions.dataType.toLowerCase() == "jsonp") ? "MyCallbackFunction" : ""),
+                error: ajaxOptions.error ? ajaxOptions.error : function (xhr, textStatus, errorThrown) {
+                    var text = xhr.responseJSON ? xhr.responseJSON.ExceptionType + ", " + xhr.responseJSON.ExceptionMessage : xhr.statusText;
+                    proxy._alertDialog = proxy._createDialog(ej.buildTag('div.e-fe-dialog-label', text), { width: 400, height: "auto", title: proxy._getLocalizedLabels("Error") });
+                    proxy._alertDialogObj = proxy._alertDialog.data("ejDialog");
+                },
+                beforeSend: ajaxOptions.beforeSend,
+                complete: function () {
+                    proxy._waitingPopup.hide();
+                    ajaxOptions.complete;
+                }
+            });
+
+        },
+
+        _onBeforeOpen: function () {
+            var fileUrl, selectedNodes = [], args;
+            fileUrl = this._nodeType == "File" ? this._currentPath.replace("~", "..") + this._selectedFile : this._currentPath;
+            if (this._selectedFile)
+                selectedNodes = this._getSelectedItemDetails(this._currentPath, this._selectedFile);
+            else if (this._selectedContent)
+                selectedNodes = this._getSelectedItemDetails(this._getFolderPath(), this._selectedContent);
+            args = { path: fileUrl, itemType: this._nodeType, selectedItems: selectedNodes };
+            return this._trigger("beforeOpen", args);
+        },
+
+        _readSuccess: function (result) {
+            if (result === undefined || result === null) return;
+            this._update = false;
+            for (var i = 0; i < result.length; i++) {
+                result[i].sizeInByte = result[i].size;
+                result[i].size = result[i].isFile ? this._bytesToSize(result[i].size) : "";
+                result[i].cssClass = this._getCssClass(result[i]);
+            }
+            this._fileExplorer[this._currentPath] = result;
+            this._itemStatus && this._itemStatus.html(result.length + " " + (result.length == 1 ? this._getLocalizedLabels("Item") : this._getLocalizedLabels("Items")));
+            if (!this._treetag.hasClass("e-treeview")) {
+                this._renderTreeView(result);
+                this._updateOnNodeSelection = true;
+            }
+            this.model.layout == "grid" ? this._renderGridView(result) : this._renderTileView(result);
+            this._usePreviousValues();
+        },
+        _getCssClass: function (list) {
+            var extension = list.name.substr(list.name.lastIndexOf('.') + 1).toLowerCase();
+            if (list.isFile) {
+                if ((/\.(bmp|dib|jpg|jpeg|jpe|jfif|gif|tif|tiff|png|ico)$/i).test(list.name))
+                    return 'e-fe-images';
+                else if ((/\.(mp3|wav|aac|ogg|wma|aif|fla|m4a)$/i).test(list.name))
+                    return 'e-fe-audio';
+                else if ((/\.(webm|mkv|flv|vob|ogv|ogg|avi|wmv|mp4|3gp)$/i).test(list.name))
+                    return 'e-fe-video';
+                else if (!(/\.(css|exe|html|js|msi|pdf|pptx|ppt|rar|zip|txt|docx|doc|xlsx|xls|xml|rtf|php)$/i).test(list.name))
+                    return 'e-fe-unknown e-fe-' + extension;
+                else
+                    return 'e-fe-' + extension;
+            }
+            else
+                return (list.permission && !list.permission.Read) ? 'e-fe-folder e-fe-lock' : 'e-fe-folder';
+        },
+        _bytesToSize: function (bytes) {
+            var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes == 0) return '0 Byte';
+            var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            var value = (bytes / Math.pow(1024, i));
+            return value.toFixed(2) + ' ' + sizes[i];
+        },
+
+        _setPath: function (path) {
+            this.model.path = path;
+            this._treetag.remove();
+            this._treetag = ej.buildTag('div#' + this._ExplorerId + '_treeView');
+            this._splittag.find(".e-cont1 > .e-tree-wrapper").append(this._treetag);
+            this._fileExplorer = this._updateImages= {};             
+            this._selectedStates = [];
+            this._selectedItems = [];
+            this._selectedTileItems = [];
+            this._initUpdate = false;
+            this._initPath = "";
+            this._currentPath = this.model.path.replace(/\\/g, "/");
+            this._originalPath = this._rootPath = this._currentPath = this._currentPath.endsWith("/") ? this._currentPath : this._currentPath + "/";
+            this._read();            
+        },
+
+        _getPath: function () {
+            return this.model.path;
+        },
+        _changeSkin: function (value) {
+            this.element.removeClass(this._customCssClass).addClass(value);
+            this._customCssClass = value;
+            this._waitingPopup.option("cssClass", value);
+            this._subControlsSetModel("cssClass", value);
+        },
+        _draggableOption: function (action) {
+            this._treeDragEvents(action);
+            this._tileDragEvents(action);
+            this._gridDragEvents(action);
+            if (action=="_off") this._previousPath = null;
+            this._statusbar && this[action](this._statusbar, "dragover", this._preventDropOption);
+            this._toolBarItems && this[action](this._toolBarItems, "dragover", this._preventDropOption);
+        },
+        _swapWith : function(from, to) {
+            from = $(from); to = $(to);
+            var tmp = $('<span>').hide();
+            from.before(tmp);
+            to.before(from);
+            tmp.replaceWith(to);
+        },
+        _enableRTL: function (value) {
+		    var element1 = this._splittag.find(".e-cont1");
+            var element2 = this._splittag.find(".e-cont2");            
+            this.model.enableRTL = value;
+            if (value) {
+			    element1.index() < element2.index() && this._swapWith(element1, element2);
+                var gridColumnSettings = this.model.gridSettings.columns;
+			    if (!this._oldFormat)
+                    this._oldFormat = JSON.parse(JSON.stringify(gridColumnSettings));
+                for (var i = 0; i < gridColumnSettings.length; i++) {
+                    gridColumnSettings[i].textAlign = gridColumnSettings[i].headerTextAlign = "right";
+                }
+                this._gridObj && this._gridObj.columns(gridColumnSettings);                                   
+                this.element.addClass("e-rtl");
+                this.element.find(".e-scroller").addClass("e-rtl");
+            }
+            else {
+                element1.index() > element2.index() && this._swapWith(element2, element1);                                
+                if (this._gridObj && this._oldFormat) {
+                    for (var i = 0; i < this._oldFormat.length; i++) {
+                        if (!this._oldFormat[i].textAlign)
+                            this._oldFormat[i].textAlign = "left";
+                        if (!this._oldFormat[i].headerTextAlign)
+                            this._oldFormat[i].headerTextAlign = "left";
+                    }
+                    this._gridObj.columns(this._oldFormat);
+                }
+                if (this._oldFormat) {
+                    this.model.gridSettings.columns = JSON.parse(JSON.stringify(this._oldFormat));
+                    this._oldFormat = null;
+                }
+                this.element.removeClass("e-rtl");
+                this.element.find(".e-scroller").removeClass("e-rtl");
+                (this._gridtag) && this._gridtag.removeClass('e-rtl');
+            }
+            this._splitterCorrection();
+            this._subControlsSetModel("enableRTL", value);
+        },
+        _roundedCorner: function (value) {
+            var operation = value ? "addClass" : "removeClass";
+            this.element[operation]('e-corner-all');
+            this._treeContextMenutag && this._treeContextMenutag[operation]("e-corner");
+            this._tileContextMenutag && this._tileContextMenutag[operation]("e-corner");
+            this._subControlsSetModel("showRoundedCorner", value);
+        },
+        _destroy: function () {
+            this._toolBarObj && this._toolBarObj.destroy();
+            this._treeContextMenutag && this._treeContextMenutag.parent().remove();
+            this._tileContextMenutag && this._tileContextMenutag.parent().remove();
+            if (this._newFolderDialogObj && this._newFolderDialogObj.isOpen()) this._removeDialog(this._newFolderDialogObj);
+            if (this._renameDialogObj && this._renameDialogObj.isOpen()) this._removeDialog(this._renameDialogObj);
+            if (this._openDialogObj && this._openDialogObj.isOpen()) this._removeDialog(this._openDialogObj);
+            if (this._detailsDialogObj && this._detailsDialogObj.isOpen()) this._removeDialog(this._detailsDialogObj);
+            if (this._alertDialogObj && this._alertDialogObj.isOpen()) this._removeDialog(this._alertDialogObj);
+            if (this._alertWindowObj && this._alertWindowObj.isOpen()) this._removeDialog(this._alertWindowObj);
+            this._waitingPopup && this._waitingPopup.destroy();
+            this._gridObj && this._gridObj.element.ejWaitingPopup("destroy");
+            this._unwireEvents();
+            this.element.html("")
+            
+            $(this._cloneElement).attr("style") ? this.element.attr("style", $(this._cloneElement).attr("style")) : this.element.removeAttr("style");
+            this.element.removeClass('e-widget e-box');      
+            this.element.removeAttr('role');
+        },
+        _createFolder: function (_name) {
+            var proxy = this;
+            var _ajaxOptions = {
+                data: { ActionType: "CreateFolder", Name: _name, Path: this._originalPath, SelectedItems: this._getSelectedItemDetails(this._getFolderPath(this._originalPath), this._treeObj.getText(this._selectedNode)) },
+                url: this.model.ajaxAction,
+                type: "POST",
+                success: function (result) {
+                    if (result === undefined || result === null) return;
+                    if (result.hasOwnProperty("d"))
+                        result = result.d;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    var selectedNode = proxy._selectedNode;
+                    var nodeObj = [{ id: result.files[0].name, name: result.files[0].name, spriteCssClass: (result.files[0].permission && !result.files[0].permission.Read) ? "e-fe-icon e-fe-folder e-fe-lock" : "e-fe-icon e-fe-folder", hasChild: false }];
+                    if (!proxy._treetag.ejTreeView("isExpanded", selectedNode))
+                        selectedNode.find(".e-icon").click();
+                    proxy._nodeExpanded = true;
+                    proxy._treeObj.addNode(nodeObj, selectedNode);
+                    proxy._nodeExpanded = false;
+                    proxy._update = true;
+                    proxy._treeObj.selectNode(selectedNode);
+                    proxy._refreshTreeScroller();
+                    proxy._treetag.find("li").removeAttr("tabindex");
+                    var args = { data: result, selectedItems: proxy._selectedItemDetails };
+                    proxy._trigger("createFolder", args);
+                    proxy._setSelectedItems([result.files[0].name]);
+                },
+                successAfter: this.model.ajaxSettings.createFolder.success
+            };
+            this.model.ajaxSettings.createFolder.success = undefined;
+            $.extend(true, _ajaxOptions, this.model.ajaxSettings.createFolder);
+            this._sendAjaxRequest(_ajaxOptions);
+        },
+        _cut_copy: function () {
+            if (this._sourcePath == this._currentPath && this._option == "move") {
+                this.element.find(".e-blur").removeClass("e-blur");
+                this._setSelectedItems(this._fileName);
+                return;
+            }
+            var data = this._fileExplorer[this._currentPath], _selectedFiles = (typeof this._copiedNodes == "string") ? [this._copiedNodes] : this._copiedNodes;
+            this._pastedFiles = _selectedFiles.slice();
+            for (var i = 0; i < _selectedFiles.length; i++) {
+                if (!this._isNameExist(this._suggestionItems.length ? this._suggestionItems : this._fileExplorer[this._sourcePath], _selectedFiles[i]))
+                    return;
+            }
+            if (ej.isNullOrUndefined(data)) {
+                this._getFileDetails(this._currentPath);
+                data = this._fileExplorer[this._currentPath];
+            }
+            this._existingItems = [];
+            if (this._sourcePath != this._currentPath && data.length) {
+                this._getDuplicateItems(this._sourcePath, this._currentPath, (typeof this._fileName == "string" ? [this._fileName] : this._fileName));
+                if (this._existingItems.length) {
+                    this._createReplaceConformationDiaolg("_pasteOperation", "ReplaceAlert");
+                }
+                else
+                    this._pasteOperation();
+            }
+            else {
+                for (var i = 0; i < _selectedFiles.length; i++) {
+                    this._pastedFiles[i] = this._getDuplicateName(this._fileExplorer[this._currentPath], _selectedFiles[i]);
+                }
+                this._pasteOperation();
+            }
+
+        },
+        _createReplaceConformationDiaolg: function (executableFunction, alert) {
+            var proxy = this;
+            var i = 0;
+            var viewerData = String.format(this._getLocalizedLabels(alert), this._existingItems[i].Path);
+            var dialogContent = ej.buildTag('div.e-get-name');
+            var labeltag = ej.buildTag('div.e-fe-dialog-label', viewerData);
+            var divtag = ej.buildTag('div.e-fe-dialog-btn e-replace');
+            var yesButton = ej.buildTag('button.e-fe-btn-yes ', this._getLocalizedLabels("YesButton"));
+            var yesToAllButton = ej.buildTag('button.e-fe-btn-yes e-all ', this._getLocalizedLabels("YesToAllButton"));
+            var noButton = ej.buildTag('button.e-fe-btn-no ', this._getLocalizedLabels("NoButton"));
+            var noToAllButton = ej.buildTag('button.e-fe-btn-no e-all ', this._getLocalizedLabels("NoToAllButton"));
+            yesButton.ejButton({
+                type: "button",
+                click: function () {
+                    if ((/\.(gif|jpg|jpeg|tiff|png|bmp)$/i).test(proxy._existingItems[i].Name))
+                        proxy._updateImages[proxy._existingItems[i].Path] = new Date().getTime();
+                    proxy._existingItems[i].IsReplace = true;
+                    i++;
+                    if (i < proxy._existingItems.length)
+                        proxy._alertDialog.find(".e-fe-dialog-label").text(String.format(proxy._getLocalizedLabels(alert), proxy._existingItems[i].Path));
+                    else
+                        proxy._destroyReplaceConformationDiaolg(executableFunction);
+                }
+            });
+            noButton.ejButton({
+                type: "button",
+                click: function () {
+                    proxy._existingItems[i].IsReplace = false;
+                    i++;
+                    if (i < proxy._existingItems.length)
+                        proxy._alertDialog.find(".e-fe-dialog-label").text(String.format(proxy._getLocalizedLabels(alert), proxy._existingItems[i].Path));
+                    else
+                        proxy._destroyReplaceConformationDiaolg(executableFunction);
+                }
+            });
+            yesToAllButton.ejButton({
+                type: "button",
+                click: function () {
+                    for (var j = i; j < proxy._existingItems.length; j++) {
+                        if ((/\.(gif|jpg|jpeg|tiff|png|bmp)$/i).test(proxy._existingItems[j].Name))
+                            proxy._updateImages[proxy._existingItems[j].Path] = new Date().getTime();
+                        proxy._existingItems[j].IsReplace = true;
+                    }
+                    proxy._destroyReplaceConformationDiaolg(executableFunction);
+                }
+            });
+            noToAllButton.ejButton({
+                type: "button",
+                click: function () {
+                    for (var j = i; j < proxy._existingItems.length; j++) {
+                        proxy._existingItems[j].IsReplace = false;
+                    }
+                    proxy._destroyReplaceConformationDiaolg(executableFunction);
+                }
+            });
+            divtag.append(yesButton, yesToAllButton, noButton, noToAllButton);
+            $(dialogContent).append(labeltag, divtag);
+            var open = function () {
+                yesButton.focus();
+            };
+            this._alertDialog = this._createDialog(dialogContent, { width: 500, height: "auto", title: this._getLocalizedLabels("Error"), open: open });
+            this._alertDialogObj = this._alertDialog.data("ejDialog");
+        },
+        _destroyReplaceConformationDiaolg: function (executableFunction) {
+            this._removeDialog(this._alertDialogObj);
+            this[executableFunction]();
+        },
+        _pasteOperation: function () {
+            this._removeBlurEffect();
+            var proxy = this;
+            var itemIndex = -1;
+            if (typeof this._fileName == "string")
+                this._fileName = [this._fileName];
+            for (var i = 0; i < this._fileName.length; i++) {
+                var tempPath = this._sourcePath + this._fileName[i];
+                if (this._currentPath.indexOf(tempPath) >= 0 ) {
+                    itemIndex = i;
+                    break;
+                }
+            }
+            if (itemIndex != -1) {
+                var viewerData = this._getLocalizedLabels("CancelPasteAction");
+                var dialogContent = ej.buildTag('div');
+                var labeltag = ej.buildTag('div.e-fe-dialog-label', viewerData);
+                var divtag = ej.buildTag('div.e-fe-dialog-centerbtn');
+                var cancelButton = ej.buildTag('button.e-fe-btn-cancel ', this._getLocalizedLabels("CancelButton"));
+                cancelButton.ejButton({
+                    type: "button",
+                    click: function () {
+                        proxy._removeDialog(proxy._alertDialogObj);
+                    }
+                });
+                var skipButton = ej.buildTag('button.e-fe-btn-skip ', this._getLocalizedLabels("SkipButton"));
+                skipButton.ejButton({
+                    type: "button",
+                    click: function () {
+                        proxy._fileName.splice(itemIndex, 1);
+                        proxy._removeDialog(proxy._alertDialogObj);
+                        proxy._performPasteOperation();
+                    }
+                });
+                divtag.append(skipButton, cancelButton);
+                $(dialogContent).append(labeltag, divtag);
+                var open = function () {
+                    cancelButton.focus();
+                };
+                this._alertDialog = this._createDialog(dialogContent, { width: 400, height: "auto", title: this._getLocalizedLabels("Error"), open: open });
+                this._alertDialogObj = this._alertDialog.data("ejDialog");
+            }
+            else
+                this._performPasteOperation();
+        },
+        _performPasteOperation: function () {
+            var proxy = this;
+            var nodes = this._currentPath.split('/')
+            var _ajaxOptions = {
+                data: { ActionType: "Paste", LocationFrom: this._sourcePath, LocationTo: this._currentPath, Names: (typeof this._fileName == "string") ? [this._fileName] : this._fileName, Action: this._option, CommonFiles: this._existingItems, SelectedItems: this._getSelectedItemDetails(this._sourcePath, this._fileName), TargetFolder: this._getSelectedItemDetails(this._getFolderPath(), nodes[nodes.length - 2]) },
+                url: this.model.ajaxAction,
+                type: "POST",
+                success: function (result) {
+                    if (result.hasOwnProperty("d"))
+                        result = result.d;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    if (typeof proxy._fileName == "string")
+                        proxy._fileName = [proxy._fileName];
+                    for (var i = 0; i < proxy._pastedFiles.length; i++) {
+                        if ((/\.(bmp|dib|jpg|jpeg|jpe|jfif|gif|tif|tiff|png|ico)$/i).test(proxy._pastedFiles[i]))
+                            proxy._updateImages[proxy._currentPath + proxy._pastedFiles[i]] = new Date().getTime();
+                    }
+                    proxy._existingItems && proxy._existingItems.filter(function (item) {
+                        if (item.IsReplace == false)
+                        {
+                            var index = $.inArray(item.Name, proxy._pastedFiles);
+                            if (index > -1)
+                                proxy._pastedFiles.splice(index, 1);
+                        }
+                    })
+                    proxy._existingItems = [];
+                    var oldPath = proxy._originalPath;
+                    var oldNode = proxy._selectedNode;
+                    if (proxy._option == "move") {
+                        for (var i = 0; i < proxy._fileName.length; i++) {
+                            proxy._modifySelectedStates(proxy._sourcePath + proxy._fileName[i], "");
+                        }
+                        if (proxy._fileName.length == 1)
+                            proxy._sourceType == "Directory" && proxy._treeObj.removeNode(proxy._refreshNode);
+                        else {
+                            nodes = proxy._refreshNode.siblings();
+                            proxy._sourceType == "Directory" && proxy._treeObj.removeNode(proxy._refreshNode);
+                            for (var i = 0; i < proxy._fileName.length; i++) {
+                                for (var j = 0; j < nodes.length; j++) {
+                                    if (proxy._fileName[i] == $(nodes[j]).text())
+                                        proxy._treeObj.removeNode(nodes[j]);
+                                }
+                            }
+                        }
+                        proxy._fileExplorer[proxy._sourcePath] = "";
+                    }
+                    $.each(proxy._fileExplorer, function (path, value) {
+                        //display the key and value pair
+                        if (path.startsWith(oldPath))
+                            proxy._fileExplorer[path] = "";
+                    });
+                    proxy._currentPath = proxy._originalPath;
+                    proxy._highlightedNodes = proxy._pastedFiles;
+                    proxy._refreshItems(oldNode, oldPath);
+                    var folderPath = proxy._getFolderPath();
+                    if (proxy._option == "move") {
+                        proxy._fileName = "";
+                        proxy._option = null;
+                        proxy._toolBarItems && proxy._toolBarItems.ejToolbar("disableItemByID", proxy._ExplorerId + "Paste");
+                        if (proxy.model.showContextMenu) {
+                            proxy._viewMenuObj.disableItem(proxy._menuPaste);
+                            proxy._treeMenuObj.disableItem(proxy._menuPaste);
+                        }
+                        }
+                        var args = { name: proxy._fileName, targetPath: proxy.model.path, selectedItems: proxy._selectedItemDetails, targetFolder: proxy._getSelectedItemDetails(folderPath, proxy._selectedContent) };
+                        proxy._trigger("paste", args);
+                    },
+                    successAfter: this.model.ajaxSettings.paste.success
+                };
+                this.model.ajaxSettings.paste.success = undefined;
+                $.extend(true, _ajaxOptions, this.model.ajaxSettings.paste);
+                this._sendAjaxRequest(_ajaxOptions);
+        },
+        _deletion: function (names, path) {
+            var proxy = this;
+            var selectedNode = this._treeObj.getSelectedNode();
+            if (!this._treeObj.isExpanded(selectedNode))
+                selectedNode.find(".e-icon").click();
+            var _ajaxOptions = {
+                data: { ActionType: "Remove", Names: (typeof names=="string")? [names]: names , Path: path, SelectedItems: this._getSelectedItemDetails(path, names) },
+                traditional: true,
+                url: this.model.ajaxAction,
+                type: "POST",
+                success: function (result) {
+                    if (result.hasOwnProperty("d"))
+                        result = result.d;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    proxy._selectedItemsTag && proxy._selectedItemsTag.html("");
+                    proxy._fileExplorer[proxy._ajax_folderPath] = "";
+                    $.each(proxy._fileExplorer, function (path, value) {
+                        //display the key and value pair
+                        if (path.startsWith(proxy._ajax_folderPath))
+                            proxy._fileExplorer[path] = "";
+                    });
+                    for (var i = 0; i < _ajaxOptions.data.SelectedItems.length; i++) {
+                        _ajaxOptions.data.SelectedItems[i].isFile == false && proxy._modifySelectedStates(path + _ajaxOptions.data.SelectedItems[i].name, "");
+                    }                    
+                    proxy._currentPath = proxy._ajax_folderPath;
+                    var node = (proxy._selectedContent == proxy._selectedTreeText) ? proxy._parentNode : proxy._selectedNode;
+                    proxy._refreshItems(node, proxy._ajax_folderPath);
+                    if (proxy._treeObj.getSelectedNode().length == 0)
+                        proxy._treeObj.selectNode(proxy._parentNode);
+                    else {
+                        if (proxy.model.layout == "tile")
+                            proxy._tileViewWrapper.click();
+                        else if (proxy.model.layout == "grid")
+                            proxy._gridtag.find(".e-gridcontent").click();
+                    }
+                    var args = { data: result, path: proxy._ajax_folderPath, name: names, selectedItems: proxy._selectedItemDetails };
+                    proxy._trigger("remove", args);
+                },
+                successAfter: this.model.ajaxSettings.remove.success
+            };
+            this.model.ajaxSettings.remove.success = undefined;
+            $.extend(true, _ajaxOptions, this.model.ajaxSettings.remove);
+            this._sendAjaxRequest(_ajaxOptions);
+        },
+        _rename: function () {
+            var proxy = this;
+            var _ajaxOptions = {
+                data: { ActionType: "Rename", Path: proxy._currentPath, Name: proxy._selectedContent, NewName: proxy._ajax_person, CommonFiles: proxy._existingItems, SelectedItems: this._getSelectedItemDetails(proxy._currentPath, this._selectedContent) },
+                url: this.model.ajaxAction,
+                type: "POST",
+                success: function (result) {
+                    if (result.hasOwnProperty("d"))
+                        result = result.d;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    proxy._existingItems = [];
+                    proxy._fileExplorer[proxy._currentPath] = "";
+                    proxy._nodeType != "File" && proxy._modifySelectedStates(proxy._currentPath + proxy._selectedContent, proxy._currentPath + proxy._ajax_person);
+                    if (proxy._splittag.find(".e-cont2 .e-active").length <= 0) {
+                        $.each(proxy._fileExplorer, function (itemPath, value) {
+                            if (itemPath.startsWith(proxy._currentPath + proxy._selectedContent + "/"))
+                                proxy._fileExplorer[itemPath] = "";
+                        });
+                        proxy._selectedNode.find("> div > .e-text")[0].lastChild.nodeValue = proxy._selectedContent = proxy._ajax_person;
+                        proxy._originalPath = proxy._currentPath += proxy._ajax_person + "/";
+                        proxy._updateAddressBar();
+                    }
+                    else {
+                        if (proxy.model.selectedItems.length > 0) {
+                            proxy.model.selectedItems[proxy.model.selectedItems.length - 1] = proxy._getOriginalName(proxy._ajax_person);
+                            proxy._selectedItems[0] = proxy._ajax_person;
+                            proxy._highlightedNodes = proxy.model.selectedItems;
+                            proxy._refreshItems(proxy._selectedNode, proxy._currentPath);
+                        }
+                        else
+                            proxy._refreshItems(proxy._parentNode, proxy._currentPath);
+                        if (proxy._treeObj.getSelectedNode().length == 0) {
+                            $(proxy._parentNode).find('li a').each(function () {
+                                if ($(this).text() == proxy._ajax_person) {
+                                    proxy._treeObj.selectNode($(this).closest('li.e-item'));
+                                    return false;
+                                }
+                            });
+                        }
+                    }
+                },
+                successAfter: this.model.ajaxSettings.rename.success
+            };
+            this.model.ajaxSettings.rename.success = undefined;
+            $.extend(true, _ajaxOptions, this.model.ajaxSettings.rename);
+            this._sendAjaxRequest(_ajaxOptions);
+        },
+        _downloadFile: function () {
+            var selectedItems = this._getSelectedItemDetails(this._currentPath, this._selectedItems);
+            var dataObj = {
+                Path: this._currentPath,
+                ActionType: "Download",
+                SelectedItems: JSON.stringify(selectedItems),
+                Names: this._selectedItems
+            };            
+            var url = this.model.ajaxAction + "?" + ($.param(dataObj, true));            
+            if (this.model.ajaxSettings.download.url) {
+                if (this.model.ajaxSettings.download.url.indexOf("{") >= 0)
+                    url = String.format(this.model.ajaxSettings.download.url, "?" + ($.param(dataObj, true)));
+                else
+                    url = this.model.ajaxSettings.download.url;
+            }
+            var args = { path: this._currentPath, files: this._selectedItems, selectedItems: selectedItems };
+            if (this._trigger("beforeDownload", args))
+                return false;
+            window.location = url;
+        },
+        _removeBlurEffect: function () {
+            if (this._currntNode) {
+                this._currntNode.hasClass("e-active") && this._currntNode.removeClass("e-blur");
+                this._currntNode.find(".e-active").length && this._currntNode.find(".e-active").removeClass("e-blur");
+            }
+        },
+        _renderTreeView: function (result) {
+            var rootDIRID = 1, _hasChild = result.length > 0 ? true : false;
+            this._collapse = false;
+            var proxy = this;
+            var nodes = this._currentPath.split("/");
+            for (var i = 0; i < nodes.length - 2; i++) {
+                this._initPath += nodes[i] + "/";
+            }
+            var startNode = nodes[nodes.length - 2];
+            this._localData = [{ id: rootDIRID, name: startNode, spriteCssClass: this._hasReadPermission(this._currentPath) ? "e-fe-icon e-fe-folder" : "e-fe-icon e-fe-folder e-fe-lock", hasChild: _hasChild }];
+            this._treetag._collapse = false;
+            this._treetag.ejTreeView(
+               {
+                   loadOnDemand: true,
+                   cssClass: proxy.model.cssClass,
+                   enableRTL: proxy.model.enableRTL,
+                   fields: { dataSource: proxy._localData, id: "id", parentId: "pid", text: "name", hasChild: "hasChild", spriteCssClass: "spriteCssClass" },
+                   nodeCollapse: function (e) { proxy._refreshTreeScroller(e); },
+                   nodeExpand: function (e) { proxy._refreshTreeScroller(e); },
+                   nodeClick: function (e) { proxy._treenodeClicked(e); },
+                   beforeExpand: function (e) { proxy._treeNodeBeforeExpand(e); },
+                   nodeSelect: function (e) { proxy._updateTreePath(e); },
+                   beforeCollapse: function (e) { proxy._onBeforeCollapse(e); },
+                   beforeDelete: function (e) { proxy._treeBeforeDelete(e); },
+               }
+           );
+            this._treeObj = this._treetag.data("ejTreeView");
+            this._treeViewEvents("_off");
+            this._treeViewEvents("_on");
+            this._treetag.ejTreeView("selectNode", $(this._treetag).find("li")[0]);
+            this._treeScroll = this._treetag.parent(".e-tree-wrapper").ejScroller({ height: this._splittag.height(), width: this._splittag.find(".e-cont1").width(), buttonSize: 0, scrollerSize: this._scrollerSize }).data("ejScroller");
+            this._addChild(result);
+        },
+        _treeViewEvents: function (action) {
+            this[action](this._treetag, "focus", this._focusTreeView);
+            this[action](this._treetag, "blur", this._blurTreeView);
+            this.model.allowDragAndDrop && this._treeDragEvents(action);
+        },
+        _treeDragEvents: function (action) {
+            var treeWraper = this._treetag.parent(".e-tree-wrapper");
+            if (treeWraper) {
+                this[action](treeWraper, "dragover", this._onDragOverHandler);
+                this[action](treeWraper, "drop", this._onDropHandler);
+                this[action](treeWraper, "dragleave", this._onDragLeave);
+            }
+        },
+        _focusTreeView: function (e) {
+            if (!this._treetag.hasClass("e-focus")) {
+                this._treetag.addClass("e-focus");
+                this._itemList = [];
+                this._on(this._treetag, "keydown", this._OnKeyUp);
+                this._hidePopup();
+            }
+        },
+        _blurTreeView: function (e) {
+            this._treetag.removeClass("e-focus");
+            this._off(this._treetag, "keydown", this._OnKeyUp);
+        },
+        _treeBeforeDelete: function (args) {
+            if (ej.isNullOrUndefined(args.event)) return;
+            var code = this._getKeyCode(args.event);
+            if (code == 46) // Prevent the treeview Delete action
+                args.cancel = true;
+        },
+        _treeNodeBeforeExpand: function (args) {
+            if (!this._nodeExpanded) {
+                var path = this._updatePath(args.currentElement, args.value);
+                !this._fileExplorer[path] && this._getFileDetails(path, args.currentElement);
+                if (!this._treetag.ejTreeView("hasChildNode", args.currentElement)) {
+                    this._fileExplorer[path] && this._addChild(this._fileExplorer[path], args.currentElement);
+                }
+            }
+        },
+        _treenodeClicked: function (args) {
+            if ($(args.currentElement).hasClass("e-text") && args.currentElement != this._selectedNode.find('> div > .e-text')[0]) {
+                this._selectedContent = args.currentElement.text;
+                this._selectedNode = $(args.currentElement).closest('li.e-item');
+                var node = $(this._selectedNode.parents('li.e-item')[0]);
+                this._parentNode = node.length != 0 ? node : this._selectedNode;
+                this._nodeType = "Directory";
+                this._isTreeNode = true;
+            }
+        },
+        _showHideContextMenu: function () {
+            if (this.model.showContextMenu) {
+                var events = { beforeOpen: "", click: "" }, menuOptions, menuDetails = { id: "", targetId: "" };                
+                menuOptions = this._initContextMenuOptions("navbar");
+                menuDetails.id = this._ExplorerId + "_treeView";
+                menuDetails.targetId = "#" + this._ExplorerId + "_treeView";
+                events.beforeOpen = $.proxy(this._beforeOpenContextMenu, this);
+                events.close = $.proxy(this._onHideContextMenu, this);
+                events.click = $.proxy(this._contextMenuClick, this);
+                this._treeContextMenutag = this._createContextMenuTag(menuOptions, menuDetails, events);
+                this._treeMenuObj = this._treeContextMenutag.ejMenu('instance');
+
+                this._cwdMenuOptions = this._initContextMenuOptions("cwd");
+                menuDetails.id = this._ExplorerId + "_tileView";
+                menuDetails.targetId = ".e-tile-wrapper,#" + this._ExplorerId + "_grid";
+                events.beforeOpen = $.proxy(this._beforeOpenTileContextMenu, this);
+                events.click = $.proxy(this._fileContextMenuClick, this);
+                this._tileContextMenutag = this._createContextMenuTag(this._cwdMenuOptions, menuDetails, events);
+                this._viewMenuObj = this._tileContextMenutag.ejMenu('instance');
+                if (ej.isNullOrUndefined(this._fileName) || this._fileName == "") {
+                    this._treeMenuObj.disableItem(this._menuPaste);                    
+                }
+                this._fileMenuOptions = this._initContextMenuOptions("files");                
+            }
+            else {
+                if (this._treeContextMenutag && this._tileContextMenutag) {
+                    this._treeMenuObj.destroy();
+                    this._viewMenuObj.destroy();
+                    $("#" + this._ExplorerId + "_treeViewContextMenu").remove();
+                    $("#" + this._ExplorerId + "_tileViewContextMenu").remove();
+                    this._viewMenuObj= this._treeMenuObj = null;                     
+                }
+            }
+        },
+        enableMenuItem: function (operation) {            
+            operation = this._findCommand(operation, this._contextMenu);
+            for(var i=0; i < this._restrictedMenuOption.length; i++){
+                if (this._restrictedMenuOption[i] == operation) {
+                    this._restrictedMenuOption.splice(i, 1);
+                    break;
+                }                    
+            }                        
+            this._treeMenuObj && this._treeMenuObj.enableItem(operation);
+            this._viewMenuObj && this._viewMenuObj.enableItem(operation);
+        },
+        disableMenuItem: function (operation) {
+            operation = this._findCommand(operation, this._contextMenu);
+            this._restrictedMenuOption.push(operation);
+            this._treeMenuObj && this._treeMenuObj.disableItem(operation);
+            this._viewMenuObj && this._viewMenuObj.disableItem(operation);
+        },
+        _renderGridView: function (result) {
+            var columnSettings = JSON.parse(JSON.stringify(this.model.gridSettings.columns));
+            var sortSettings = null;
+            for (var i = 0; i < columnSettings.length; i++) {
+                if (!columnSettings[i]["template"]) {
+                    columnSettings[i]["template"] = "<script type='text/x-jsrender'><span title= '{{:" + columnSettings[i]["field"] + "}}'>{{:" + columnSettings[i]["field"] + "}}</span></script>";
+                }
+            }
+            if (this._suggestionItems.length)
+                columnSettings.push({ field: "filterPath", headerText: "Folder", width: "20%" });
+            columnSettings.unshift({ field: "cssClass", headerText: "", cssClass: "e-grid-image", width: 22, template: "<script type='text/x-jsrender'><span class='e-fe-icon {{:cssClass}}' unselectable='on'></span></script>", textAlign: ej.TextAlign.Center, allowResizing: false });
+            if (this.model.showCheckbox)
+                columnSettings.unshift({ field: "", headerText: "check", cssClass: "e-col-check", width: 18, template: "<script type='text/x-jsrender'><input type='checkbox' class='e-grid-row-checkbox'/></script>", textAlign: ej.TextAlign.Center, headerTextAlign: ej.TextAlign.Center, allowResizing: false, allowSorting: false });
+            var proxy = this;
+            var lastcolumn = columnSettings[columnSettings.length - 1];
+            if (lastcolumn) {
+                if (lastcolumn["customAttributes"]) {
+                    if (lastcolumn["customAttributes"]["class"]) {
+                        if (lastcolumn["customAttributes"]["class"].search("e-rowcell e-last-rowcell") == -1)
+                            lastcolumn["customAttributes"]["class"] = lastcolumn["customAttributes"]["class"] + " e-rowcell e-last-rowcell";
+                    }
+                    else
+                        lastcolumn["customAttributes"]["class"] = " e-rowcell e-last-rowcell";
+                }
+                else {
+                    lastcolumn["customAttributes"] = { 'class': "e-rowcell e-last-rowcell" };
+                }
+            }
+            if (this._gridObj) {
+                if (columnSettings.length != this._gridObj.model.columns.length) {
+                    this._gridObj.model.columns = columnSettings;
+                    this._gridObj.columns(this._gridObj.model.columns);
+                }
+                sortSettings = JSON.parse(JSON.stringify(this._gridObj.model.sortSettings));
+                this._gridObj.option('dataSource', result);
+                this._gridObj.option('enableRTL', this.model.enableRTL);
+                this._gridObj.option('sortSettings', sortSettings);
+            } else {
+                this._gridtag.ejGrid({
+                       cssClass: proxy.model.cssClass,
+                       enableRTL: proxy.model.enableRTL,
+                       dataSource: result,
+                       selectionType: ((proxy.model.allowMultiSelection || proxy.model.showCheckbox) ? "multiple" : "single"),
+                       allowSorting: proxy.model.gridSettings.allowSorting,
+                       columns: columnSettings,
+                       isResponsive: true,
+                       scrollSettings: { width: 186, height: 200, buttonSize: 0, scrollerSize: proxy._scrollerSize},
+                       allowScrolling: true,
+                       enableResponsiveRow: false,
+                       rowSelected: function (e) { proxy._updatePathFromGrid(e); },
+                       recordDoubleClick: function (e) { proxy._openAction(e); },
+                       templateRefresh: function (args) { proxy._templateRefresh(args); },
+                       create: (this.model.showCheckbox ? function (e) { proxy._gridCheckboxState(e); } : null),
+                       actionComplete: function (e) { proxy._gridActionComplete(e); },
+                  }
+               );
+            }
+            if (result.length && result[0].filterPath) {
+                this._setFilteredContent();
+            }   
+            this._gridObj = this._gridtag.ejGrid("instance");
+            if (this._gridObj.model.dataSource.length == 0 && (this._searchbar && $.trim(this._searchbar.val()))) this._gridObj.getContentTable().find(".emptyrecord").html(this._getLocalizedLabels("EmptyResult")).addClass("e-fe-center");
+            else if(this._gridObj.model.dataSource.length == 0) this._gridObj.getContentTable().find(".emptyrecord").html(this._getLocalizedLabels("EmptyFolder")).addClass("e-fe-center");
+            this.gridItems = this._gridObj.getRows();
+            this._reSizeHandler();
+            this._gridtag.attr("tabindex", -1);
+            this._gridViewEvents("_off");
+            this._gridViewEvents("_on");
+        },
+        _setFilteredContent: function(){
+            var rows = this._gridtag.find(".e-gridcontent tr");
+            for (var i = 0; i < rows.length; i++) {
+                var node = $(rows[i]).find("td:last");
+                $(rows[i]).attr("data-parent-path", node.text());
+                node.attr("title", node.text());
+                node.text("/" + node.text().replace(this._rootPath, ""));
+            }
+        },
+        _templateRefresh: function (args) {
+            this._trigger("templateRefresh", args);
+        },
+        _gridActionComplete: function (args) {
+            if (args.requestType == "sorting") {
+                this._removeOldSelectionDetails();
+                this._suggestionItems.length && this._setFilteredContent();
+            }                
+            this.model.showCheckbox && this._gridCheckboxState(args);
+        },
+
+        _gridCheckboxState: function (args) {
+            var proxy = this;
+            this._gridtag.find(".e-headercelldiv:first").html(" <input type='checkbox' id='headchk' />").addClass("e-col-check");
+            this._headCheckObj = this._gridtag.find("#headchk").ejCheckBox({showRoundedCorner: proxy.model.showRoundedCorner, change: function (e) { proxy._headCheckChange(e); } }).data("ejCheckBox");
+            this._gridtag.find(".e-grid-row-checkbox").ejCheckBox({ showRoundedCorner: proxy.model.showRoundedCorner });
+            this._gridtag.find(".e-chkbox-wrap").removeAttr("tabindex");
+        },
+        _checkChange: function (target) {
+            if (!target.isInteraction && target.isInteraction != undefined) return;
+            var rows = this._gridtag.find(".e-grid-row-checkbox");
+            var checkedElements = this._gridtag.find(" .e-gridcontent .e-checkbox:checked");
+            var rowCheck = [];
+            for (var i = 0 ; i < checkedElements.length; i++) {
+                rowCheck.push($(checkedElements[i]).closest("tr").index());
+            }
+            if (target && !target.type) {
+                var index = $.inArray(target.index(), rowCheck);
+                target.find(".e-chk-act").length == 1 ? rowCheck.splice(index, 1) : rowCheck.push(target.index());
+            }
+            this._changeCheckState = false;
+            this._gridObj.clearSelection();
+            if (rowCheck.length == rows.length)//check if all checkboxes in the current page are checked
+                this._gridtag.find("#headchk").ejCheckBox({ "checked": true });
+            else
+                this._gridtag.find("#headchk").ejCheckBox({ "checked": false });
+            this._isClicked = false;
+            for (i = 0; i < rowCheck.length; i++) {
+                if (true) {
+                    this._gridObj.multiSelectCtrlRequest = true;
+                    this._gridObj.selectRows(rowCheck[i]);// To prevent unselection of other rows when a checkbox is unchecked after selectAll rows
+                }
+            }
+            this._isClicked = true;
+            if (this.model.checked == false) {
+                this._gridtag.find("#headchk").ejCheckBox({ "checked": false });
+            }
+            this._changeCheckState = true;
+        },
+        _recordClick: function () {
+            var rows = this._gridtag.find(".e-grid-row-checkbox");
+            for (var i = 0; i < rows.length; i++) {
+                if ($.inArray(i, this._gridObj.selectedRowsIndexes) < 0) {
+                    $(rows[i]).ejCheckBox({ "checked": false })  //To clear checkbox when we select row by recordclick rather than checkbox
+                    this._gridtag.find("#headchk").ejCheckBox({ "checked": false });
+                }
+                else {
+                    $(rows[i]).ejCheckBox({ "checked": true });
+                    var rowCheck = this._gridtag.find(".e-grid-row-checkbox:checked");
+                    if (rowCheck.length == rows.length)
+                        this._gridtag.find("#headchk").ejCheckBox({ "checked": true });
+                }
+            }
+        },
+        _headCheckChange: function (args) {
+            if (!args.isInteraction) return;
+            var proxy = this;
+            var rows = this._gridtag.find(".e-grid-row-checkbox");
+            rows.ejCheckBox({ "change": function (e) { proxy._checkChange(e); } });
+            if (this._gridtag.find("#headchk").is(':checked')) {
+                rows.ejCheckBox({ "checked": true });
+                this._gridObj.selectRows(0, rows.length);  // To Select all rows in Grid Content
+            }
+            else {
+                rows.ejCheckBox({ "checked": false });
+                this._setSelectedItems([]); // To remove selection for all rows
+            }
+        },
+        _gridViewEvents: function (action) {
+            this[action](this._gridtag.find(".e-gridcontent"), "focusin", this._focusGridView);
+            this[action](this._gridtag.find(".e-gridcontent"), "focusout", this._blurGridView);
+            this.model.allowDragAndDrop && this._gridDragEvents(action);
+        },
+        _gridDragEvents: function (action) {
+            var gridContent = this._gridtag.children(".e-gridcontent")
+            if (gridContent) {
+                this[action](gridContent, "dragover", this._onDragOverHandler);
+                this[action](gridContent, "drop", this._onDropHandler);
+                this[action](gridContent, "dragleave", this._onDragLeave);
+                this[action](this._gridtag.find(".e-gridheader"), "dragover", this._preventDropOption);
+            }
+        },
+        _focusGridView: function (e) {
+            if (!this._gridtag.find(".e-gridcontent").hasClass("e-focus")) {
+                this._gridtag.find(".e-gridcontent").addClass("e-focus");
+                this._itemList = [];
+                this._on(this._gridtag.find(".e-gridcontent"), "keydown", this._OnKeyUp);
+                this._hidePopup();
+            }
+        },
+        _blurGridView: function (e) {
+            this._gridtag.find(".e-gridcontent").removeClass("e-focus");
+            this._off(this._gridtag.find(".e-gridcontent"), "keydown", this._OnKeyUp);
+        },
+        _setThumbImageHeight: function () {
+            var perRow = this._perRow = 1;
+            if (this.items) {
+                for (var i = 0; i < this.items.length - 1; i++) {
+                    if (this.items[i].getBoundingClientRect().top == this.items[i + 1].getBoundingClientRect().top)
+                        perRow++;
+                    else
+                        break;
+                }
+                if (!(perRow == null || perRow < 2)) {
+                    for (var i = 0, j = this.items.length; i < j; i += perRow) {
+                        var maxHeight = 0,
+                        row = this.items.slice(i, i + perRow);
+                        row.each(function () {
+                            var itemHeight = parseInt($(this).find(".e-thumb-image").outerHeight());
+                            if (itemHeight > maxHeight) maxHeight = itemHeight;
+                        });
+                        row.find(".e-thumb-image.e-image").css('height', maxHeight);
+                    }
+                }
+                this._tileScroll && this._tileScroll.refresh();
+            }            
+            this._perRow = perRow;
+        },
+        _renderTileView: function (result) {
+            this._tileView.children() && this._tileView.children().remove() && this._tileView.removeClass("e-tileview");
+            this._tileView.appendTo(this._tileContent);
+            this._tileView.addClass("e-tileview").attr("role", "tileview");
+            if ((this._searchbar && $.trim(this._searchbar.val())) && result.length == 0) this._tileView.html(this._getLocalizedLabels("EmptyResult")).addClass("e-fe-center");
+            else if(result.length == 0) this._tileView.html(this._getLocalizedLabels("EmptyFolder")).addClass("e-fe-center");
+            else this._tileView.html("").removeClass("e-fe-center");
+            var proxy = this;
+            var spantag = null;
+            $.each(result, function (index, value) {
+                if (value.filterPath)
+                    var liTag = $("<li class='e-tilenode' data-parent-path='" + value.filterPath + "'></li>");
+                else
+                    var liTag = $("<li class='e-tilenode'></li>");
+                var imageWrapper = $("<div class='e-align'><div class='e-thumb-image e-image ' unselectable='on'></div></div>");
+                if (value.isFile) {
+                    imageWrapper.appendTo(liTag);
+                    var extension = value.name.substr(value.name.lastIndexOf('.') + 1).toLowerCase();
+                    if ((/\.(bmp|dib|jpg|jpeg|jpe|jfif|gif|tif|tiff|png|ico)$/i).test(value.name)) {
+                        if (proxy.model.showThumbnail) {
+                            var path = value.filterPath ? value.filterPath.replace("~", "..") + value.name : proxy._currentPath.replace("~", "..") + value.name;
+                            var url = proxy._getImage(path, value.name);
+                            spantag = ej.buildTag('img.e-thumbImage', "", "", { src: (url ? url : (path + "?" + (proxy._updateImages[path] ? proxy._updateImages[path] : proxy._initialTime))), "unselectable": "on" });
+                        } else spantag = $("<span class='e-thumbImage e-fe-icon' unselectable='on'></span>").addClass('e-fe-images');
+                    }
+                    else if ((/\.(mp3|wav|aac|ogg|wma|aif|fla|m4a)$/i).test(value.name)) spantag = $("<span class='e-thumbImage e-fe-icon' unselectable='on'></span>").addClass('e-fe-audio');
+                    else if ((/\.(webm|mkv|flv|vob|ogv|ogg|avi|wmv|mp4|3gp)$/i).test(value.name)) spantag = $("<span class='e-thumbImage e-fe-icon' unselectable='on'></span>").addClass('e-fe-video');
+                    else if (!(/\.(css|exe|html|js|msi|pdf|pptx|ppt|rar|zip|txt|docx|doc|xlsx|xls|xml|rtf|php)$/i).test(value.name)) spantag = $("<span class='e-thumbImage e-fe-icon e-fe-unknown' unselectable='on'></span>").addClass('e-fe-' + extension);
+                    else spantag = $("<span class='e-thumbImage e-fe-icon' unselectable='on'></span>").addClass('e-fe-' + extension);
+                }
+                else {
+                    imageWrapper.appendTo(liTag);
+                    spantag = $("<span class='e-thumbImage e-fe-icon e-fe-folder' unselectable='on'></span>");
+                    if (value.permission && !value.permission.Read)
+                        spantag.addClass("e-fe-lock");
+                }
+                spantag.appendTo(imageWrapper.find(".e-thumb-image"));
+                if (proxy.model.showCheckbox)
+                    var checkBox = $("<input type='checkbox' class='e-tile-checkbox' />");
+                var divtag1 = $("<div class='e-name-wrap' unselectable='on' </div>");
+                var divtag = $("<div class='e-name e-name-in-wrap' unselectable='on'></div>");
+                var fname = $("<div class='e-file-name' unselectable='on'><span class='e-file-info' title= '" + value.name + "'>" + value.name + "</span></div>");
+                fname.appendTo(divtag);
+                if (value.isFile && proxy.model.layout == "tile") {
+                    var fntype = $("<div class='e-file-type' unselectable='on'><span class='e-file-info'>" + value.type + "</span></div>");
+                    fntype.appendTo(divtag);
+                    var fnsize = $("<div class='e-file-size' unselectable='on'><span class='e-file-info'>" + value.size + "</span></div>");
+                    fnsize.appendTo(divtag);
+                }
+                divtag.appendTo(divtag1);
+                liTag.attr({
+                    "aria-selected": false,
+                    "title": (value.isFile) ? value.dateModified + " (" + value.size + ")" : value.dateModified,
+                    "role": "tileitem"
+                });
+                proxy.model.showCheckbox && checkBox.prependTo(liTag);
+                divtag1.appendTo(liTag);
+                liTag.appendTo(proxy._tileView);
+                proxy.model.showCheckbox && proxy._tileView.find(".e-tile-checkbox").ejCheckBox({ size: "mini", showRoundedCorner : proxy.model.showRoundedCorner });
+                proxy._tileView.find(".e-chkbox-wrap").removeAttr("tabindex");
+            });
+            this._activeItem = 0;
+            this.items = this._tileView.find("li.e-tilenode");
+            this._tileViewEvents("_off");
+            this._tileViewEvents("_on");
+            this._tileContent.addClass("e-content");
+            var _tileHeight = this.model.showFooter ? this._splittag.outerHeight() - this._statusbar.outerHeight() : this._splittag.outerHeight();
+            var _tileWidth = this._splittag.find(".e-cont2").width();
+            if (ej.isNullOrUndefined(this._tileScroll))
+                this._tileScroll = this._tileContent.parent(".e-tile-wrapper").ejScroller({ height: _tileHeight, width: _tileWidth, buttonSize: 0, scrollerSize: this._scrollerSize }).data("ejScroller");
+            else {
+                this._tileScroll.option({ "height": _tileHeight, "width": _tileWidth });
+                this._tileScroll && this._tileScroll.refresh();
+            }
+            if (!proxy._tileView.find(".e-image > img").length)
+                proxy._setThumbImageHeight();
+            else {
+                var images = proxy._tileView.find(".e-image > img");
+                var increament = 0;
+                for (var i = 0; i < images.length; i++) {
+                    var img = new Image();
+                    img.onload = img.onabort = img.onerror = function () {
+                        ++increament == images.length && proxy._setThumbImageHeight();
+                    };
+                    img.src = $(images[i]).attr('src');
+                }
+            }
+        },
+        _getImage: function (path, name) {
+            if (this._currentPath.indexOf(":") == 1 || this.model.ajaxSettings.getImage.url) {
+                var selectedItems = this._getSelectedItemDetails(this._currentPath, name);
+                var url = this.model.ajaxAction + "?Path=" + path + "&ActionType=GetImage&SelectedItems=" + JSON.stringify(selectedItems);
+                if (this.model.ajaxSettings.getImage.url) {
+                    if (this.model.ajaxSettings.getImage.url.indexOf("{") >= 0)
+                        url = String.format(this.model.ajaxSettings.getImage.url, "?Path=" + path + "&SelectedItems=" + JSON.stringify(selectedItems));
+                    else
+                        url = this.model.ajaxSettings.getImage.url;
+                }
+            }
+            return url ? url : "";
+        },
+        _gridtagClick: function (event) {
+            event.stopPropagation();
+            if ($(event.target).hasClass("e-gridcontent") || $(event.target).hasClass("e-content") || $(event.target).hasClass("e-table")) {
+                this._addFocus(this._gridtag.find(".e-gridcontent"));
+                if (this.model.showCheckbox) {
+                    this._gridtag.find(".e-grid-row-checkbox").ejCheckBox({ "checked": false });
+                    this._gridtag.find("#headchk").ejCheckBox({ "checked": false });
+                }
+                this._gridObj.clearSelection();
+                this._updateCurrentPathPermission();
+            }
+        },
+
+        _updateGridSelection: function (args) {
+            if (args.events && !args.events.ctrlKey && $(args.target)[0] != null) {
+                this._gridObj.selectRows($(args.target).closest('td').parent().index(), null, $(args.target).closest('td'));
+            }
+        },
+
+        _updateTileSelection: function (args) {
+            if (args.events && !args.events.ctrlKey && $(args.target)[0] != null) {
+                $(args.target).click();
+            }
+        },
+
+        _tileViewEvents: function (action) {
+            this[action](this.items, "mousedown", this._preventDefaultSelection);
+            this[action](this.items, (this._isDevice && $.isFunction($.fn.tap)) ? "tap" : "click", this._upDatePathFromTileView);
+            this[action](this.items, (this._isDevice && $.isFunction($.fn.tap)) ? "doubletap" : "dblclick", this._openAction);
+            this[action](this.items, "mouseenter", this._onItemHover);
+            this[action](this.items, "mouseleave", this._onItemLeave);
+            this[action](this._tileViewWrapper, "focusin", this._focusTileView);
+            this[action](this._tileViewWrapper, "focusout", this._blurTileView);
+            this.model.allowDragAndDrop && this._tileDragEvents(action);
+        },
+        _tileDragEvents: function (action) {
+            if (this._tileViewWrapper) {
+                this[action](this._tileViewWrapper, "dragover", this._onDragOverHandler);
+                this[action](this._tileViewWrapper, "drop", this._onDropHandler);
+                this[action](this._tileViewWrapper, "dragleave", this._onDragLeave);
+            }
+        },
+        _preventDefaultSelection: function(event){
+            event.shiftKey && event.preventDefault();
+        },
+        _tileViewWrapperClick: function (event) {
+            if ($(event.target).hasClass("e-tile-wrapper") || $(event.target).hasClass("e-tile-content") || $(event.target).hasClass("e-tileview")) {
+                this._lastItemIndex = this._lastItemIndex ? this._lastItemIndex : (this._itemList ? this._itemList.filter(".e-active").index(): -1);
+                this._addFocus(this._tileViewWrapper);
+                if (this.items.hasClass("e-active"))
+                    this.items.removeClass("e-active").attr("aria-selected", false);
+                this._updateCurrentPathPermission();
+                this.model.showCheckbox && this._clearTileCheckBoxSelection();
+                this._hidePopup();
+            }
+        },
+        _onItemHover: function (e) {
+            var currentItem = e.currentTarget, targetItem = e.target;
+            if (!$(currentItem).hasClass("e-disable")) {
+                this.items.removeClass("e-hover");
+                $(currentItem).addClass("e-hover");
+            }
+        },
+        _onItemLeave: function (e) {
+            var currentItem = e.currentTarget, targetItem = e.target;
+            if (!$(currentItem).hasClass("e-disable")) {
+                $(currentItem).removeClass("e-hover");
+            }
+        },
+        _focusTileView: function (e) {
+            if (!this._tileViewWrapper.hasClass("e-focus")) {
+                this._tileViewWrapper.addClass("e-focus");
+                this._itemList = this.items;
+                this._on(this._tileViewWrapper, "keydown", this._OnKeyUp);
+                this._on(this._tileViewWrapper, "keydown", this._OnKeyDown);
+            }
+        },
+        _blurTileView: function (e) {
+            this._tileViewWrapper.removeClass("e-focus");
+            this._off(this._tileViewWrapper, "keydown", this._OnKeyUp);
+            this._off(this._tileViewWrapper, "keydown", this._OnKeyDown);
+        },
+        _OnKeyDown: function (e) {
+            var itemsLength = this._itemList.length - 1, activeItem;
+            this._activeItem = this._lastItemIndex ? this._lastItemIndex : (this._itemList ? this._itemList.filter(".e-active").index() : -1);
+            var code = this._getKeyCode(e);
+            switch (code) {
+                case 38:
+                    e.preventDefault();
+                    if ($(e.target).hasClass("e-statusbar")) {
+                        this._focusLayout(this.model.layout);
+                        return;
+                    }
+                    if (this._activeItem < this._perRow-1)
+                        return;
+                    this._activeItem -= this._perRow;
+                    this._beforeListHover(e);
+                    break;
+                case 37:
+                    e.preventDefault();
+                    if (this._activeItem == 0)
+                        return;
+                    if ((this._activeItem < 0) || (this._activeItem == null) || (this._activeItem > itemsLength))
+                        this._activeItem = 0;
+                    else if (this._activeItem == 0)
+                        this._activeItem = itemsLength;
+                    else
+                        this._activeItem -= 1;
+                    this._beforeListHover(e);
+                    break;
+                case 40:
+                    e.preventDefault();
+                    if (this._activeItem + this._perRow >= this._itemList.length)
+                        return;
+                    this._activeItem += this._perRow;
+                    this._beforeListHover(e);
+                    break;
+                case 39:
+                    e.preventDefault();
+                    if (this._activeItem == itemsLength)
+                        return;                    
+                    if ((this._activeItem > itemsLength) || (this._activeItem == null) || (this._activeItem < 0))
+                        this._activeItem = itemsLength;
+                    else if (this._activeItem == itemsLength)
+                        this._activeItem = 0;
+                    else
+                        this._activeItem += 1;
+                    this._beforeListHover(e);
+                    break;
+                case 33:
+                case 36:
+                    e.preventDefault();
+                    this._activeItem = 0;
+                    this._beforeListHover(e);
+                    break;
+                case 34:
+                case 35:
+                    e.preventDefault();
+                    this._activeItem = itemsLength;
+                    this._beforeListHover(e);
+                    break;
+            }
+            this._lastItemIndex= e.shiftKey ? this._activeItem : null;
+        },
+        _OnKeyUp: function (e) {
+            var activeItem;
+            var code = this._getKeyCode(e);
+            switch (code) {
+                case 13:
+                    e.preventDefault();
+                    if (e.altKey) {
+                        this._lastFocusedElement = e.currentTarget;
+                        this._getDetails();
+                    }
+                    else {
+                        e.preventDefault();
+                        this._lastFocusedElement = e.currentTarget;
+                        if (!$(e.currentTarget).hasClass("e-treeview")) {
+                            var isPresent = false;
+                            if ($(e.currentTarget).hasClass("e-tile-wrapper"))
+                                isPresent = this.items.hasClass("e-active");
+                            else if ($(e.currentTarget).hasClass("e-gridcontent"))
+                                isPresent = $(this.gridItems).find("td").hasClass("e-active");
+                            if (isPresent && this._selectedContent)
+                                this._openAction();
+                        }
+                    }
+                    break;
+                case 86:
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        if (!ej.isNullOrUndefined(this._option) && this._selectedContent) {
+                            if (this._currentPath != this._originalPath) {
+                                this._currentPath = this._originalPath;
+                            }
+                            this._lastFocusedElement = e.currentTarget;
+                            this._cut_copy();
+                        }
+                    }
+                    break;
+                case 46:
+                case 67:
+                case 68:
+                case 88:
+                case 113:
+                    e.preventDefault();
+                    this._lastFocusedElement = e.currentTarget;
+                    var isPresent = false;
+                    if ($(e.currentTarget).hasClass("e-treeview")) {
+                        if (this._rootPath != this._currentPath)
+                            isPresent = (this._treetag.find(".e-active").length > 0) ? true : false;
+                    }
+                    else {
+                        if ($(e.currentTarget).hasClass("e-tile-wrapper"))
+                            isPresent = this.items.hasClass("e-active");
+                        else if ($(e.currentTarget).hasClass("e-gridcontent"))
+                            isPresent = $(this.gridItems).find("td").hasClass("e-active");
+                    }
+                    if (isPresent && this._selectedContent && this._toRead) {
+                        if (code == 67 && this._toCopy) {
+                            if (e.ctrlKey)
+                                this._copyMoveNode("copy");
+                        }
+                        if (this._toEdit) {
+                            switch (code) {
+                                case 46:
+                                    this._deleteFolder();
+                                    break;
+                                case 68:
+                                    if (e.ctrlKey)
+                                        this._deleteFolder();
+                                    break;
+                                case 88:
+                                    if (e.ctrlKey)
+                                        this._copyMoveNode("move");
+                                    break;
+                                case 113:
+                                    this._renameFolder();
+                                    break;
+                            }
+                        }
+                    }
+                    break;
+                case 93:
+                case 121:
+                    if ((e.shiftKey || code == 93) && this.model.showContextMenu) {
+                        e.preventDefault();
+                        this._lastFocusedElement = e.currentTarget;
+                        var pos = null, _target, _element;
+                        if ($(e.currentTarget).hasClass("e-treeview")) {
+                            _element = this._treeObj.getSelectedNode().find(".e-active");
+                            pos = this._getMenuPosition(_element);
+                            this._treeMenuObj.show(pos.left, pos.top, _element, e, true);
+                        }
+                        else {
+                            if ($(e.currentTarget).hasClass("e-tile-wrapper")) {
+                                for (var i = 0; i < this.items.length; i++) {
+                                    _element = $(this.items[i]);
+                                    if (_element.text() == this._selectedContent) {
+                                        pos = this._getMenuPosition(_element);
+                                        _target = _element;
+                                        break;
+                                    }
+                                }
+                            } else if ($(e.currentTarget).hasClass("e-gridcontent")) {
+                                for (var i = 0; i < this.gridItems.length; i++) {
+                                    _element = $(this.gridItems[i]).find("td:first");
+                                    if (_element.text() == this._selectedContent) {
+                                        pos = this._getMenuPosition(_element);
+                                        _target = _element;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (pos == null) {
+                                pos = $(e.currentTarget).offset();
+                                _target = $(e.currentTarget);
+                            }
+                            this._viewMenuObj.show(pos.left, pos.top, _target, e, true);
+                        }
+                    }
+                    break;
+            }
+        },
+        _getMenuPosition: function (element) {
+            var height = element.outerHeight() / 2;
+            var width = element.outerWidth() / 2;
+            var pos = element.offset();
+            pos = { top: pos.top + height, left: pos.left + width };
+            return pos;
+        },
+
+        _beforeListHover: function (args) {
+            var activeItem = this._getActiveItem();
+            if (!activeItem.hasClass("e-disable")) {
+                if ($(args.target).hasClass("e-statusbar")) {
+                    this.model.layout = activeItem.hasClass("e-switchGridView") ? ej.FileExplorer.layoutType.Grid : ej.FileExplorer.layoutType.LargeIcons;
+                    this._switchLayoutView(this.model.layout);
+                    this._addFocus(this._statusbar);
+                }
+                else {
+                    var e = { keyCode: 91, shiftKey: args.shiftKey, innerEvent: true, currentTarget: activeItem[0], target: activeItem[0] };
+                    this._upDatePathFromTileView(e);
+                }
+            }
+        },
+        _getActiveItem: function () {
+            return $($(this._itemList)[this._activeItem]);
+        },
+        _getURL: function () {
+            var url = this.model.ajaxAction + "?Path=" + this._currentPath + "&ActionType=Upload" + (this._selectedContent ? "&SelectedItems=" + JSON.stringify(this._getSelectedItemDetails(this._getFolderPath(), [this._selectedContent])) : "");
+            if (this.model.ajaxSettings.upload.url) {
+                if (this.model.ajaxSettings.upload.url.indexOf("{") >= 0)
+                    url = String.format(this.model.ajaxSettings.upload.url, "?Path=" + this._currentPath + (this._selectedContent ? "&SelectedItems=" + JSON.stringify(this._getSelectedItemDetails(this._getFolderPath(), [this._selectedContent])) : ""));
+                else
+                    url = this.model.ajaxSettings.upload.url;
+            }
+            return url;
+        },
+
+        _renderUploadBox: function () {
+            var proxy = this;
+            var url = this._getURL();
+            this._uploadtag.ejUploadbox({
+                cssClass: this.model.cssClass,
+                enableRTL: this.model.enableRTL,
+                height: "0px",
+                width: "0px",
+                uploadName: "FileUpload",
+                /* For Automatic Upload */
+                autoUpload: this.model.uploadSettings.autoUpload,
+                showFileDetails: !this.model.uploadSettings.autoUpload,
+
+                dialogText: { title: proxy._getLocalizedLabels("Upload") },
+                dialogAction: { modal: true, content: proxy.element },
+                showRoundedCorner: false,
+                extensionsAllow: this.model.fileTypes == "*.*" ? "" : this.model.fileTypes.replace(/\*/g, ""),
+                multipleFilesSelection: this.model.uploadSettings.allowMultipleFile,
+                fileSize: this.model.uploadSettings.maxFileSize,
+                buttonText: { browse: "Upload file" },
+                saveUrl: url,
+                removeUrl: this.model.ajaxAction + "?Path=" + this._currentPath + "&ActionType=Remove",
+                locale: ej.Uploadbox.Locale[this.model.locale] ? this.model.locale : "en-US",
+                complete: function (e) { proxy._uploadSuccess(e); },
+                remove: function (e) { proxy._uploadSuccess(e); },
+                fileSelect: function (e) {
+                    !proxy._fileExplorer[proxy._currentPath] && proxy._getFileDetails(proxy._currentPath);
+                    var targetFiles = proxy._fileExplorer[proxy._currentPath];
+                    proxy._existingItems = [];
+                    var files = proxy._files = e.files;
+                    for (var j = 0; j < files.length; j++) {
+                        for (var i = 0; i < targetFiles.length; i++) {
+                            if (files[j].name == targetFiles[i].name) {
+                                proxy._existingItems.push({ Name: files[j].name, Path: proxy._currentPath + files[j].name, IsReplace: true });
+                                break;
+                            }
+                        }
+                    }
+                    if (proxy._existingItems.length) {
+                        proxy._createReplaceConformationDiaolg("_customUpload", "ReplaceAlert");
+                        e.cancel = true;
+                    }
+
+                },
+                error: function (e) {
+                    if (!proxy._alertDialog || !proxy._alertDialog.is(":visible")) {
+                        proxy._alertDialog = proxy._createDialog(ej.buildTag('div.e-fe-dialog-label', (e.error ? e.error : e.responseText)), { width: 400, height: "auto", title: proxy._getLocalizedLabels("Error") });
+                        proxy._alertDialogObj = proxy._alertDialog.data("ejDialog");
+                    }
+                },
+                begin: function (e) {
+                    var nodes = proxy._currentPath.split('/');
+                    var args = { path: proxy._currentPath, selectedItems: proxy._getSelectedItemDetails(proxy._getFolderPath(), nodes[nodes.length - 2]) };
+                    if (proxy._trigger("beforeUpload", args))
+                        e.cancel = true;
+                    proxy._uploadtag.ejUploadbox({ saveUrl: proxy._getURL() });
+                },
+                cancel: function (e) { proxy._usePreviousValues(); }
+            });
+        },
+        _usePreviousValues: function(){
+            if (this._previousPath) {
+                this._currentPath = this._previousPath;
+                this._selectedContent = this._previousSelectedContent;
+                this._previousPath = null;
+            }
+        },
+        _isResrictedUpload: function (element, text, hoverPath) {
+            var path = null;
+            if(element.find(".e-fe-lock").length){
+                path = hoverPath ? hoverPath : this._getFolderPath(this._updatePath(element, text));
+                if (this._fileExplorer[path] && this._fileExplorer[path].length) {
+                    for (var i = 0; i < this._fileExplorer[path].length; i++) {
+                        if (this._fileExplorer[path][i].name == text && this._fileExplorer[path][i].permission)
+                            return !this._fileExplorer[path][i].permission.Upload;
+                    }
+                }
+                return false;
+            }
+            return false;
+        },
+        _onDragOverHandler: function (args) {
+            var highlightedElement = "";
+            var hoverPath = "";
+            var element = $(args.target);
+            var hoverElementName = element.hasClass("e-js") || element.hasClass("e-tileview") ? "" : element.text();
+            args.originalEvent.dataTransfer.dropEffect = "copy";
+            args.stopPropagation();
+            args.preventDefault();
+            if (!element.hasClass("e-file-droppable")) {
+                highlightedElement = this._splittag.find(".e-file-droppable");
+                highlightedElement && highlightedElement.removeClass("e-file-droppable");                
+                if ($(args.currentTarget).hasClass("e-tree-wrapper")) {
+                    if (!ej.isNullOrUndefined(element) && element.is('A')) {
+                        this._droppableElement = element;
+                        this._droppableElement.length && this._droppableElement.addClass("e-file-droppable");
+                        var nodeItem = element.closest("li.e-item");
+                        if (nodeItem.find(".e-icon").length && !this._treeObj.isExpanded(nodeItem)) {
+                            this._expandTimer = window.setTimeout(function () {
+                                nodeItem.find(".e-icon").click();
+                            }, 800);
+                        }
+                    }
+                    else {
+                        args.originalEvent.dataTransfer.dropEffect = "none";
+                    }
+                }
+                else {
+                    if (this.model.layout == "grid") {
+                        this._droppableElement = element.closest("tr", "table.e-table");
+                        if (this._droppableElement.length) {
+                            this._droppableElementData = this._gridObj.model.currentViewData[this._gridObj.getIndexByRow(this._droppableElement)];
+                            if (this._droppableElementData.isFile) {
+                                this._gridtag.find(".e-gridcontent").addClass("e-file-droppable");
+                                this._droppableElement = null;
+                            }
+                        }
+                        else
+                            this._gridtag.find(".e-gridcontent").addClass("e-file-droppable");
+                    }
+                    else {
+                        this._droppableElement = element.closest("li", ".e-tileview").has(".e-fe-folder");
+                        !this._droppableElement.length && this._tileViewWrapper.addClass("e-file-droppable");
+                    }
+                    this._droppableElement && this._droppableElement.length && this._droppableElement.addClass("e-file-droppable");
+                    hoverPath = this._originalPath;
+                    if (this._droppableElement && this._droppableElement.length)
+                        hoverElementName = (this.model.layout == "grid" ? this._droppableElementData.name : this._droppableElement.find(".e-file-name").text());
+                }
+            }
+            if (this._droppableElement && this._droppableElement.length && this._isResrictedUpload(this._droppableElement, hoverElementName, hoverPath)) {
+                args.originalEvent.dataTransfer.dropEffect = "none";
+            }
+            var args = { target: (this._droppableElement && this._droppableElement.length ? this._droppableElement : element), targetElementName: hoverElementName };
+            this._trigger("fileDrag", args);
+        },
+        _onDropHandler: function (args) {
+            args.stopPropagation();
+            args.preventDefault();
+            if (this._expandTimer != null) {
+                window.clearTimeout(this._expandTimer);
+                this._expandTimer = null;
+            }
+            this.element.find(".e-file-droppable").removeClass("e-file-droppable");
+            var uploadObj = this._uploadtag.ejUploadbox("instance");
+            if (this._droppableElement && this._droppableElement.length) {
+                this._previousPath = this._currentPath;
+                this._previousSelectedContent = this._selectedContent;
+                if ($(args.currentTarget).hasClass("e-tree-wrapper")) {
+                    this._selectedContent = args.target.text;
+                    this._currentPath = this._updatePath($(args.target), this._selectedContent);
+                }
+                else {
+                    this._selectedContent = this.model.layout == "grid" ? this._droppableElementData.name : $(args.target).closest("li", "e-tileview").find(".e-file-name").text();
+                    this._currentPath = this._originalPath + this._selectedContent + "/";
+                }
+            }
+            else {
+                if (this._droppableElement && !this._droppableElement.length) {
+                    if (this._isResrictedUpload(this._selectedNode, this._selectedTreeText, this._getFolderPath(this._originalPath))) {
+                        args.originalEvent.dataTransfer.dropEffect = "none";
+                        return null;
+                    }
+                }
+                this._currentPath = this._originalPath;
+                this._selectedContent = this._selectedTreeText;
+            }
+            var eventArgs = { fileInfo: args.originalEvent.dataTransfer.files, target: this._droppableElement && this._droppableElement.length ? this._droppableElement : $(args.currentTarget), targetPath: this._currentPath, targetFolder: this._selectedContent };
+            this._trigger("fileDropped", eventArgs);
+            uploadObj._onDropHandler(args);
+        },
+        _onDragLeave: function (args) {
+            if (this._expandTimer!= null) {
+                window.clearTimeout(this._expandTimer);
+                this._expandTimer = null;
+            }
+            if (this._gridtag.find(".e-gridcontent").hasClass("e-file-droppable")||$(args.target).hasClass("e-tile-wrapper") || $(args.target).hasClass("e-gridcontent") || !(args.target.closest(".e-fileexplorer .e-tile-wrapper") || args.target.closest(".e-fileexplorer .e-gridcontent")))
+                this.model.layout == "grid" ? this._gridtag.find(".e-gridcontent").removeClass("e-file-droppable") : this._tileViewWrapper.removeClass("e-file-droppable");
+        },
+        _customUpload: function () {
+            for (var i = 0; i < this._existingItems.length; i++) {
+                if (!this._existingItems[i].IsReplace) {
+                    for (var k = 0; k < this._files.length; k++) {
+                        if (this._files[k].name == this._existingItems[i].Name) {
+                            this._files.splice(k, 1);
+                            break;
+                        }
+                    }
+                }
+            }
+            this._uploadtag.ejUploadbox({ pushFile: this._files });
+        },
+        _uploadSuccess: function (args) {
+            var oldPath = this._currentPath;
+            var uploadedItems = [];
+            for (var i = 0; i < args.success; i++) {
+                uploadedItems.push(args.success[i].name);
+            }
+            this.element.find(".e-dialog.e-js .e-action-perform").remove();
+            this._fileExplorer[this._currentPath] = "";
+            this._treeObj.selectNode(this._selectedNode);
+            (oldPath == this._currentPath) && this._setSelectedItems(uploadedItems);
+        },
+        _createAddressBar: function () {
+            this._addresstag = ej.buildTag('input.e-addressBar e-tool-input', "", {}, { id: this._ExplorerId + '_addressbar', type: "text" });
+            this._addresstag.appendTo(this._toolBarItems.find("#" + this._ExplorerId + "Addressbar").html(""));
+            var spanTag = $("<span class='e-fe-icon e-fe-folder'></span>");
+            spanTag.insertBefore(this._addresstag);
+            ej.browserInfo().name == "msie" && ej.ieClearRemover(this._addresstag[0]);
+            this._addressBarEvents("_on");
+        },
+        _addressBarEvents: function (action) {
+            this[action]($('#' + this._ExplorerId + '_addressbar'), "focus", this._inputFocusin);
+            this[action]($('#' + this._ExplorerId + '_addressbar'), "keydown", this._searchPath);
+            this[action]($('#' + this._ExplorerId + '_addressbar'), "blur", this._addressbarFocusout);
+        },
+        _inputFocusin: function (e) {
+            $(e.target).select();
+        },
+        _updateAddressBar: function () {
+            if (this._addresstag) {
+                var temp = this._currentPath;
+                this._addresstag.val(temp.replace(this._initPath, ""));
+            }
+        },
+        _onEpand: function (args) {
+            if (this._splitObj.element.find(".e-cont1").hasClass("collapsed")) {
+                if (this._splitIcon && this._splitIcon.find('.e-icon').hasClass("e-arrow-sans-left"))
+                    this._splitIcon.find('.e-icon').addClass('e-arrow-sans-right').removeClass("e-arrow-sans-left");
+            }
+            else {
+                if (this._splitIcon && this._splitIcon.find('.e-icon').hasClass("e-arrow-sans-right"))
+                    this._splitIcon.find('.e-icon').addClass('e-arrow-sans-left').removeClass("e-arrow-sans-right");
+            }
+            this._reSizeHandler(args);
+        },
+        _createSplitPane: function () {
+            var proxy = this;
+            var pane1 = ej.buildTag('div');
+            var pane2 = ej.buildTag('div');
+            this._splittag = ej.buildTag('div#' + this._ExplorerId + '_splitter');
+            pane1.addClass('e-cont1');
+            pane2.addClass('e-cont2');
+            this._splittag.append(pane1, pane2);
+            this.element.append(this._splittag);
+            this._splitObj = this._splittag.ejSplitter({
+                enableAutoResize: true,
+                animationSpeed: 50,
+                width: "100%",
+                cssClass: this.model.cssClass,
+                enableRTL: this.model.enableRTL,
+                height: Math.ceil(this.element.height() - (this._toolBarItems ? this._toolBarItems.outerHeight() : 0)),
+                properties: [{ paneSize: this._isMobileOrTab ? "150px" : "25%" }, {}],
+                expandCollapse: function (e) { proxy._onEpand(e); },
+                resize: function (e) { proxy._reSizeHandler(e); }
+            }).data('ejSplitter');
+            this._splitObj._bar = 0;
+            this._splitObj.refresh();
+            this._renderSplitIcon();
+            var treeWrapper = ej.buildTag('div.e-tree-wrapper');
+            pane1.append(treeWrapper);
+            this._treetag = ej.buildTag('div#' + this._ExplorerId + '_treeView');
+            treeWrapper.append(this._treetag);
+            this._gridtag = ej.buildTag('div#' + this._ExplorerId + '_grid');
+            pane2.append(this._gridtag);
+            this._tileViewWrapper = ej.buildTag('div.e-tile-wrapper', "", "", { tabindex: 0 });
+            if (this.model.layout == "tile")
+                this._tileViewWrapper.addClass("e-tileInfo-view");
+            pane2.append(this._tileViewWrapper);
+            this._tileViewWrapper.append("<div class='e-tile-content' > </div>");
+            this._tileContent = this._tileViewWrapper.find(".e-tile-content");
+            this._tileView = ej.buildTag('ul#' + this._ExplorerId + '_tileView');
+            this._tileContent.append(this._tileView);
+
+            this._statusbar = ej.buildTag('div', "", "", { tabindex: 0 });
+            this._statusbar.insertAfter(this._tileView);
+            pane2.append(this._statusbar);
+            this.model.showFooter && this._createStatusBar();
+            this._waitingPopup = this._splittag.find(".e-cont2").ejWaitingPopup({ showOnInit: false, cssClass: this.model.cssClass }).data("ejWaitingPopup");
+            this._showHideSplitBar(false);
+            this._showHideContextMenu();
+            if (this.model.layout == "grid") {
+                this._tileContent.parent().hide();
+            }
+            else {
+                this._gridtag.hide();
+            }
+            this._createUploadBox();
+
+        },
+        _selectedFolder: function (targetNavigationPath) {
+            var navigationPath = targetNavigationPath.replace(this._initPath, "");
+            var selectedNode = this._treeObj.getSelectedNode();          
+            var folders = navigationPath.split("/");
+            navigationPath && this._treeObj.selectNode(this._treeObj.element.find("li:first"));
+            for (var j = 0; j < folders.length; j++) {
+                if (folders[j] != "") {
+                    selectedNode = this._treeObj.getSelectedNode();
+                    if (!this._treeObj.isExpanded(selectedNode))
+                        selectedNode.find(".e-icon").click();
+                    var childItems = selectedNode.find('ul:first>li').find('div:first .e-text');
+                    for (var i = 0; i < childItems.length; i++) {
+                        if (childItems[i].text == folders[j]) {
+                            this._treeObj.selectNode(childItems[i].parentNode.parentNode);
+                        }
+                    }
+                }
+            }
+        },
+        _setSelectedItems: function (selectedItems) {
+            var realName;
+            if (this._suggestionItems.length) {
+                realName = selectedItems;
+                selectedItems = this._selectedItems;
+            }
+            if (typeof selectedItems == "string")
+                selectedItems = [selectedItems];
+            this._removeOldSelectionDetails();
+            if (this.model.layout == "grid") {
+                this._gridObj.clearSelection();
+                var _ctrlKey = this._gridObj.multiSelectCtrlRequest;
+                this._gridObj.multiSelectCtrlRequest = true;
+                var nodes = this._gridtag.find(".e-gridcontent tr");
+                for (var j = 0; j < selectedItems.length; j++) {
+                    var nodes = $("#" + this._ExplorerId + " .e-gridcontent td:contains(" + (realName ? realName[j] : selectedItems[j]) + ")");
+                    for (var i = 0; i < nodes.length; i++) {
+                        if (this._suggestionItems.length ? this._originalPath + selectedItems[j] == $(nodes[i]).closest("tr").attr("data-parent-path") + $(nodes[i]).text()  : selectedItems[j] == $(nodes[i]).text()) {
+                            this._gridObj.selectRows($(nodes[i]).closest("tr").index());
+                            break;
+                        }
+                    }
+                }
+                this._recordClick();
+                this._gridObj.multiSelectCtrlRequest = _ctrlKey;
+            }
+            else {
+                this.items.removeClass("e-active").attr("aria-selected", false);
+                var nodes = this._tileView.find(".e-tilenode");
+                for (var j = 0; j < selectedItems.length; j++) {
+                    for (var i = 0; i < nodes.length; i++) {
+                        var name = this.model.layout == "tile" ? $(nodes[i]).find(".e-file-name").text() : $(nodes[i]).text();
+                        if (this._suggestionItems.length ? this._originalPath + selectedItems[j] == $(nodes[i]).attr("data-parent-path") + name : selectedItems[j] == name) {
+                            var e = { keyCode: 91, ctrlKey: true, currentTarget: nodes[i], target: nodes[i] };
+                            this._upDatePathFromTileView(e);
+                            break;
+                        }
+                    }
+                }
+            }
+        },
+        _refreshTreeScroller: function (args) {
+            if (this.model.enableRTL) {
+                this._treeScroll.model.scrollLeft = 0;
+            }
+            this._treeScroll && this._treeScroll.refresh();
+        },
+        _createStatusBar: function () {
+            this._statusbar.addClass("e-statusbar");
+            this._itemStatus = ej.buildTag('div.e-itemStaus');
+            this._selectedItemsTag = ej.buildTag('div.e-itemStaus e-selected-items');
+            this._switchBtn = ej.buildTag('div.e-switchView');
+            this._statusbar.append(this._switchBtn, this._itemStatus, this._selectedItemsTag);
+            if (this.model.enableResize) {
+                this._resizeItem = ej.buildTag("div.e-icon e-fe-resize e-resize-handle");
+                this._resizeItem.insertBefore(this._switchBtn);
+            }
+            var setHeight = this._splittag.find(".e-cont2").outerHeight() - this._statusbar.outerHeight();
+            this._gridtag.height(setHeight);
+            var button = ej.buildTag('button.e-switchGridView#' + this._ExplorerId + '_switchGridView', "", {}, { title: this._getLocalizedLabels("Grid"), tabindex: 0 });
+            this._switchBtn.append(button);
+            button.ejButton({ type: "button", size: "normal", contentType: "imageonly", prefixIcon: "e-fe-grid" });
+            button = ej.buildTag('button.e-swithListView#' + this._ExplorerId + '_swithListView', "", {}, { title: this._getLocalizedLabels("LargeIcons"), tabindex: 0 });
+            this._switchBtn.append(button);
+            button.ejButton({ type: "button", size: "normal", contentType: "imageonly", prefixIcon: "e-fe-largeicons" });
+            this.model.layout == "grid" && this._statusbar.find(".e-switchGridView").addClass("e-active");
+            this.model.layout == "largeicons" && this._statusbar.find(".e-swithListView").addClass("e-active");
+            this._statusBarEvents("_off");
+            this._statusBarEvents("_on");
+        },
+        _statusBarEvents: function (action) {
+            this[action](this._statusbar, "focus", this._focusStatusBar);
+            this[action](this._statusbar, "blur", this._blurStatusBar);
+            this.model.allowDragAndDrop && this[action](this._statusbar, "dragover", this._preventDropOption);
+        },
+        _focusStatusBar: function (e) {
+            if (!this._statusbar.hasClass("e-focus")) {
+                this._statusbar.addClass("e-focus");
+                this._itemList = this._switchBtn.find("button");
+                this._on(this._statusbar, "keydown", this._OnKeyDown);
+                this._hidePopup();
+            }
+        },
+        _blurStatusBar: function (e) {
+            this._statusbar.removeClass("e-focus");
+            this._off(this._statusbar, "keydown", this._OnKeyDown);
+        },
+        _refreshResizeHandler: function () {
+            this._setMinMaxSizeInInteger();
+            this.adjustSize();
+            if (this.model.showFooter && this.model.enableResize)
+                this._resizeFileExplorer();
+        },
+        _refreshResizeEventHandler: function (event) {
+            var reElement = $(event.element).parents("div.e-fileexplorer");
+            this.model.height = $(reElement).outerHeight();
+            this.model.width = $(reElement).outerWidth();
+            this.element.css({ "height": this.model.height, "width": this.model.width });
+            this.adjustSize();
+        },
+        _convertPercentageToPixel: function (parent, child) {
+            return Math.round((child * parent) / 100);
+        },
+        _getProperValue: function (value) {
+            if (value == null) return null;
+            else return !isNaN(value) ? value : value;
+        },
+        _setMinMaxSizeInInteger: function () {
+            var parentObj;
+            this._minWidth = parseInt(this.model.minWidth);
+            this._minHeight = parseInt(this.model.minHeight);
+            this._maxWidth = parseInt(this.model.maxWidth);
+            this._maxHeight = parseInt(this.model.maxHeight);
+            parentObj = this.element.parent()[0].nodeName == "BODY" ? $(window) : $(this.element.parent()[0]);
+            if (isNaN(this.model.minWidth) && (this.model.minWidth.indexOf("%") > 0))
+                this._minWidth = this._convertPercentageToPixel(parentObj.outerWidth(), this._minWidth);
+            if (isNaN(this.model.minHeight) && (this.model.minHeight.indexOf("%") > 0))
+                this._minHeight = this._convertPercentageToPixel(parentObj.outerHeight(), this._minHeight);
+            if (isNaN(this.model.maxWidth) && (this.model.maxWidth.indexOf("%") > 0))
+                this._maxWidth = this._convertPercentageToPixel(parentObj.innerWidth(), this._maxWidth);
+            if (isNaN(this.model.maxHeight) && (this.model.maxHeight.indexOf("%") > 0))
+                this._maxHeight = this._convertPercentageToPixel(parentObj.innerHeight(), this._maxHeight);
+        },
+        _resizeFileExplorer: function () {
+            var proxy = this;
+            this.element.find("div.e-fe-resize").ejResizable(
+                {
+                    minHeight: proxy._minHeight,
+                    minWidth: proxy._minWidth,
+                    maxHeight: proxy._maxHeight,
+                    maxWidth: proxy._maxWidth,
+                    resizeStart: function (event) {
+                        proxy._trigger("resizeStart", { event: event });
+                    },
+                    resize: function (event) {
+                        proxy._refreshResizeEventHandler(event);
+                        proxy._trigger("resize", { event: event });                       
+                    },
+                    resizeStop: function (event) {
+                        proxy._refreshResizeEventHandler(event);
+                        proxy._trigger("resizeStop", { event: event });
+                    },
+                    helper: function (event) {
+                        return $(proxy.element);
+                    }
+                });
+        },
+        _showHideSplitBar: function (option) {
+            this._splittag.show();
+            if (this._splitObj.model.properties[1].paneSize == 0) {
+                this.element.find(".e-splitbar").show();
+                this._splitObj.expand(1);
+                if (!this._gridtag.hasClass("e-grid") && option) {
+                    this._updateData();
+                }
+            }
+            else if (this._splitObj.model.properties[0].paneSize == 0) {
+                this.element.find(".e-splitbar").show();
+                this._splitObj.expand(0);
+                this._treetag.parent(".e-tree-wrapper").css("display", "block");
+            }
+            if (!this.model.showNavigationPane) {
+                this._splitObj.collapse(0);
+                this.element.find(".e-splitbar").hide();
+                if (!this._gridtag.hasClass("e-grid") && option) {
+                    this._updateData();
+                }
+                this._treetag.parent(".e-tree-wrapper").css("display", "none");
+            }
+        },
+        _updateTreePath: function (args) {
+            this._suggestionItems = [];
+            this._toDownload = false; this._toUpload = this._toEdit = this._toEditContents = this._toRead = this._toCopy = true;
+            this._removeBlurEffect();
+            this._searchbar && this._searchbar.val("");
+            this._selectedTreeText = this._selectedContent = args.value;
+            this._selectedNode = args.currentElement;
+            var node = $(this._selectedNode.parents('li.e-item')[0]);
+            this._parentNode = node.length != 0 ? node : this._selectedNode;
+            this._nodeType = "Directory";
+            if (this._initUpdate) {
+                this._currentPath = this._updatePath(args.currentElement, args.value);
+            } else
+                this._initUpdate = true;            
+            this._updateOnNodeSelection && this._updateData();
+            this._originalPath = this._currentPath;
+            if (!this._isStateNavigation) {
+                if (!ej.isNullOrUndefined(this._currentState)) {
+                    for (var i = this._selectedStates.length - 1; i > this._currentState; i--)
+                        this._selectedStates.pop();
+                    this._toolBarItems && this._disableToolbarItem("Forward");
+                }
+                if (this._selectedStates[this._selectedStates.length - 1] != this._originalPath) {
+                    this._currentState = this._selectedStates.length;
+                    this._selectedStates.push(this._originalPath);
+                    this._selectedStates.length == 2 && this._toolBarItems && this._enableToolbarItem("Back");
+                }
+            }
+            this._updateAccessRules(this._originalPath);
+            this._updateToolbarItems();
+            this._updateNewFolderTool(this._toRead && this._toEditContents);
+            if (!node.length) {
+                this._disableEditingTools();
+                this._toolBarItems && this._disableToolbarItem("Copy");
+            }
+            this.model.selectedFolder = this._currentPath;
+            this._updateAddressBar();
+            this._currntNode = this._selectedNode.find("> div > .e-text");
+            this.model.selectedItems = [];
+            this._filteredItemsName = [];
+            this._selectedItems = [];
+            this._selectedTileItems = [];
+            var parentPath = this._getFolderPath();
+            var args = { name: [args.value], path: parentPath, nodeType: this._nodeType, selectedItems: this._getSelectedItemDetails(parentPath, this._selectedContent) };
+            this._trigger("select", args);
+        },
+        _modifySelectedStates: function (startsWith, replace) {
+            var proxy = this;            
+            $.each(proxy._selectedStates, function (index, path) {
+                if (path && path.startsWith(startsWith))
+                    proxy._selectedStates[index]= (replace ? proxy._selectedStates[index].replace(startsWith, replace): replace);                                                            
+            });            
+        },
+        _onBeforeCollapse: function (args) {           
+           this._collapse = true;
+        },
+        _updatePath: function (node, val) {
+            var parentPath = "";
+            var unnecesaryULtags = 1;
+            for (var i = 0; i < node.parents("ul").length - unnecesaryULtags; i++) {
+                if ($(node.parents("ul")[i]).siblings("div").find("a").text())
+                    parentPath = $(node.parents("ul")[i]).siblings("div").find("a").text() + "/" + parentPath;
+            }
+            return this._initPath + parentPath + val + "/";
+        },
+        _updatePathFromGrid: function (args) {
+            if (!(this._searchbar && $.trim(this._searchbar.val())))
+                this._suggestionItems = [];
+            if (this.model.showCheckbox && this._changeCheckState) {
+                $(args.target).closest(".e-chkbox-wrap").length && this._checkChange(args.row);
+                if((args.target && !args.target.hasClass("e-chk-image")) || ej.isNullOrUndefined(args.target))
+                    this._recordClick();
+            }
+            var proxy = this, target = $(args.target);
+            this._addFocus(this._gridtag.find(".e-gridcontent"));
+            var isFolder, _isUpdate = true;
+            this._toDownload = this._toUpload = this._toEdit = this._toEditContents = this._toRead = this._toCopy = true;
+            this._isTreeNode = false;
+            var _childItems;
+            this._selectedItems = [];
+            var sizeInByte = 0;
+            var selectedRecords = this._gridtag.ejGrid("getSelectedRecords");
+            var index = $.inArray(undefined, selectedRecords);
+            if (index > -1)
+                selectedRecords.splice(index, 1);
+            for (var record = 0; record < selectedRecords.length; record++) {
+                if (this._suggestionItems && this._suggestionItems.length) {
+                    name = selectedRecords[record].filterPath.replace(this._originalPath, "") + selectedRecords[record].name;
+                    this._selectedItems.push(name);
+                }
+                else
+                    this._selectedItems.push(selectedRecords[record].name);
+                sizeInByte += selectedRecords[record].sizeInByte;
+                if (!selectedRecords[record].isFile) {
+                    _isUpdate = false;
+                    this._toDownload = false;
+                }
+                this._updateAccessValue(selectedRecords[record]);
+            }
+            if (this._currentPath != this._originalPath) {
+                this._currentPath = this._originalPath;
+            }
+            $.each((proxy._suggestionItems.length > 0 ? proxy._suggestionItems : proxy._fileExplorer[proxy._originalPath]), function (index, value) {
+                if (value.name == args.data.name && !value.isFile)
+                    isFolder = true;
+            });
+            if (isFolder) {
+                this._nodeType = "Directory";
+                if (target.hasClass('e-active'))
+                    this._updateNode(args.data.name);
+            }
+            else {
+                this._nodeType = "File";
+            }
+            this._currntNode = target[0] != null && target.parent("tr");
+            this._selectedContent = this._selectedItems[this._selectedItems.length - 1];
+            if (!target.hasClass('e-active') && selectedRecords.length > 0) {
+                this._selectedContent = this._selectedItems[this._selectedItems.length - 1];
+                this._nodeType = selectedRecords[selectedRecords.length - 1].isFile ? "File" : "Directory";
+                if (this._nodeType == "Directory")
+                    this._updateNode(this._selectedContent);
+            }
+            this._selectedItemsTag && this._selectedItemsTag.html((this._selectedItems.length > 0 ? (this._selectedItems.length + " " + (this._selectedItems.length > 1 ? this._getLocalizedLabels("Items") : this._getLocalizedLabels("Item")) + " " + this._getLocalizedLabels("Selected")) : "") + (sizeInByte ? (_isUpdate ? "  " + this._bytesToSize(sizeInByte) : "") : ""));
+            this._setFilteredItemsName();
+            this.model.selectedItems = this._filteredItemsName;
+            var args = { name: this._selectedItems, path: this.model.selectedFolder, nodeType: this._nodeType, selectedItems: this._getSelectedItemDetails(this.model.selectedFolder, this._filteredItemsName) };
+            this._urlTag && this._urlTag.find("input").val(args.path);
+            this._nameTag && this._nameTag.find("input").val(args.name);
+            this._updateSelectionDetails();
+            if (this._isClicked)
+                this._trigger("select", args);
+        },
+        _enableEditingTools: function () {
+            if (!this._editingToolsState && this._toolBarItems) {
+                var items = ["Rename", "Delete", "Cut"];
+                for (var i = 0; i < items.length; i++) {
+                    this._enableToolbarItem(items[i]);
+                }
+                this._editingToolsState = true;
+            }
+        },
+        _enableToolbarItem: function (suffixID) {
+            if (this._restrictedToolbarOptions.indexOf(suffixID) < 0)
+            {
+                var id = this._ExplorerId + suffixID.replace(/ /g, '');
+                if (this._toolBarObj && this._toolBarObj.itemsContainer.find("li#" + id).hasClass("e-disable"))
+                    this._toolBarObj.enableItemByID(id);
+            }            
+        },
+        _disableToolbarItem: function (suffixID) {
+            var id = this._ExplorerId + suffixID.replace(/ /g, '');
+            if (this._toolBarObj && !this._toolBarObj.itemsContainer.find("li#" + id).hasClass("e-disable"))
+                this._toolBarObj.disableItemByID(id);
+        },
+
+        _disableEditingTools: function () {
+            if (this._toolBarItems) {
+                var items = ["Rename", "Delete", "Cut"];
+                for (var i = 0; i < items.length; i++) {
+                    this._disableToolbarItem(items[i]);
+                }
+                this._editingToolsState = false;
+            }
+        },
+        _clearTileCheckBoxSelection: function () {
+            if (this.model.showCheckbox) {
+                this._tileView.find(".e-tile-checkbox ").ejCheckBox({ "checked": false });
+            }
+        },
+        _upDatePathFromTileView: function (event) {
+            var $target = $(event.target);
+            if (event["pointerType"] == "touch" && this._customPop != null && this.model.allowMultiSelection) {
+                if (!this._customPop.is(":visible"))
+                    this._customPop.show();
+                if (this._customPop.is(":visible") && !this._customPop.find(".e-rowselect").hasClass("e-spanclicked")) {
+                    var offset = $target.offset();
+                    this._customPop.offset({ left: offset.left - 40, top: offset.top - 40 });
+                }
+                else
+                    event.ctrlKey = true;
+            }
+            else
+                this._hidePopup();
+            if (!(this._searchbar && $.trim(this._searchbar.val())))
+                this._suggestionItems = [];
+            if (!event.innerEvent)
+                this._lastItemIndex = $(event.currentTarget).index();
+            this._addFocus(this._tileViewWrapper);
+            this._isTreeNode = false;
+            var proxy = this;
+            var checkboxObj;
+            if(this.model.showCheckbox){
+                checkboxObj = $(event.target).closest(".e-tilenode").find(".e-tile-checkbox").data("ejCheckBox");
+                if ($(event.target).hasClass("e-chk-image"))
+                    event.ctrlKey = this.model.showCheckbox;
+            }
+            if (!event.shiftKey) {
+                if (!event.ctrlKey || !this.model.allowMultiSelection) {
+                    this._sizeInByte = 0;
+                    this._selectedItems = [];
+                    this._selectedTileItems = [];
+                    $(event.currentTarget).siblings().removeClass("e-active").attr("aria-selected", false);
+                    $(event.currentTarget).removeClass("e-active").attr("aria-selected", false);
+                    this._clearTileCheckBoxSelection();
+                }
+                if ($(event.currentTarget).hasClass("e-active")) {
+                    $(event.currentTarget).removeClass("e-active").attr("aria-selected", false);
+                    checkboxObj && checkboxObj.option("checked", false);
+                }
+                else {
+                    $(event.currentTarget).addClass("e-active").attr("aria-selected", true);
+                    checkboxObj && checkboxObj.option("checked", true);
+                }
+                var nodeType = "File", _childItems, _isUpdate = true;
+                this._toDownload = this._toUpload = this._toEdit = this._toEditContents = this._toRead = this._toCopy = true;
+                var name = $(event.currentTarget).find(".e-file-name").text();
+                if (this._currentPath != this._originalPath) {
+                    this._currentPath = this._originalPath;
+                }
+                var items = this._suggestionItems.length ? this._suggestionItems : this._fileExplorer[this._originalPath];
+                if (items) {
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].name == name) {
+                            if ($(event.currentTarget).hasClass("e-active")) {
+                                this._sizeInByte += items[i].sizeInByte;
+                                this._selectedTileItems.push(items[i]);
+                            } else if (event.ctrlKey) {
+                                this._sizeInByte -= items[i].sizeInByte;
+                                var index = $.inArray(items[i], this._selectedTileItems);
+                                if (index > -1)
+                                    this._selectedTileItems.splice(index, 1);
+                            }
+                            break;
+                        }
+                    }
+                }
+                $.each(this._selectedTileItems, function (index, value) {
+                    if (!value.isFile) {
+                        proxy._update = false;
+                        _isUpdate = false;
+                        proxy._toDownload = false;
+                    }
+                    proxy._updateAccessValue(value);
+                });
+                if ($(event.currentTarget).find(".e-fe-folder").length) {
+                    nodeType = "Directory";
+                    if ($(event.currentTarget).hasClass("e-active"))
+                        this._updateNode(name);
+                }
+                this._currntNode = $(event.currentTarget);
+                if (this._currntNode.attr("data-parent-path")) {                    
+                    name = this._currntNode.attr("data-parent-path").replace(this._originalPath, "") + name;
+                }                
+                this._selectedContent = name;
+                if ($(event.currentTarget).hasClass("e-active"))
+                    this._selectedItems.push(this._selectedContent);
+                else {
+                    var index = $.inArray(this._selectedContent, this._selectedItems);
+                    if (index > -1)
+                        this._selectedItems.splice(index, 1);
+                    if (this._selectedTileItems.length > 0) {
+                        this._selectedContent = this._selectedItems[this._selectedItems.length - 1];
+                        nodeType = this._selectedTileItems[this._selectedTileItems.length - 1].type;
+                        if (nodeType == "Directory")
+                            this._updateNode(this._selectedContent);
+                    }
+                }                
+                if ((!this._startNode) || this._selectItems.length == 0 || this._selectItems.length == this._selectedItems.length) {
+                    if (!this._selectItems || this._selectItems.length <= 0)
+                        this._startNode = null;
+                    this._selectedItemsTag && this._selectedItemsTag.html((this._selectedItems.length > 0 ? (this._selectedItems.length + " " + (this._selectedItems.length > 1 ? this._getLocalizedLabels("Items") : this._getLocalizedLabels("Item")) + " " + this._getLocalizedLabels("Selected")) : "") + (this._sizeInByte ? (_isUpdate ? "  " + this._bytesToSize(this._sizeInByte) : "") : ""));
+                    this._nodeType = nodeType;
+                    this._setFilteredItemsName();
+                    this.model.selectedItems = this._filteredItemsName;
+                    var args = { name: this._selectedItems, path: this.model.selectedFolder, nodeType: this._nodeType, selectedItems: this._getSelectedItemDetails(this.model.selectedFolder, this._filteredItemsName) };
+                    this._urlTag && this._urlTag.find("input").val(args.url);
+                    this._nameTag && this._nameTag.find("input").val(args.name);
+                    this._updateSelectionDetails();
+                    if (this._isClicked)                        
+                        this._trigger("select", args);
+                    this._selectItems = [];
+                }                
+            } else {
+                this._selectItems = [];
+                if (!this._startNode)
+                    this._startNode = this._currntNode;
+                var startIndex = $(event.currentTarget).index();
+                var endIndex = this._startNode.index();
+                if (startIndex > endIndex) {
+                    var temp = startIndex;
+                    startIndex = endIndex;
+                    endIndex = temp;
+                }
+                var items = this._tileContent.find(".e-tilenode");
+                items.removeClass("e-active").attr("aria-selected", false);
+                for (var i = startIndex ; i <= endIndex; i++) {
+                    this._selectItems.push($(items.get(i)).find(".e-file-name").text());
+                }
+                this._setSelectedItems(this._selectItems);
+            }
+        },
+        _setFilteredItemsName: function () {
+            this._filteredItemsName = [];
+            for (var i = 0; i < this._selectedItems.length; i++) {
+                var names = this._selectedItems[i].split('/');
+                this._filteredItemsName.push(names[names.length - 1] ? names[names.length - 1] : names[names.length - 2]);
+            }
+        },
+        _getOriginalName: function(path){
+            var names = path.split('/');
+             return (names[names.length - 1] ? names[names.length - 1] : names[names.length - 2]);
+        },
+        _updateNode: function (name) {
+            this._currentPath += name + "/";
+        },
+        _getFileURL: function () {
+            if (this._nodeType == "File") {
+                if ((/\.(gif|jpg|jpeg|tiff|png|bmp)$/i).test(this._selectedContent)) {
+                    this._widthTag && this._widthTag.show().removeClass("e-hide");
+                    this._heightTag && this._heightTag.show().removeClass("e-hide");
+                } else {
+                    this._widthTag && this._widthTag.hide().addClass("e-hide");
+                    this._heightTag && this._heightTag.hide().addClass("e-hide");
+                }
+                return (this._currentPath.replace("~", "..") + this._selectedContent);
+            }
+            else
+                return "";
+        },
+        _updateData: function () {
+            var details = this._fileExplorer[this._currentPath];
+            this._selectedItemsTag && this._selectedItemsTag.html("");
+            if (details && !this._update) {
+                this._itemStatus && this._itemStatus.html(details.length + " " + (details.length == 1 ? this._getLocalizedLabels("Item") : this._getLocalizedLabels("Items")));
+                this.model.layout == "grid" ? this._renderGridView(details) : this._renderTileView(details);
+            }
+            else {
+                this._read();
+            }
+        },
+
+        _addChild: function (result, targetNode) {
+            var directories = [];
+            if (result) {
+                for (var i = 0; i < result.length; i++) {
+                    if (!result[i].isFile) {
+                        result[i].id = result[i].name;
+                        result[i].spriteCssClass = (result[i].permission && !result[i].permission.Read) ? "e-fe-icon e-fe-folder e-fe-lock" : "e-fe-icon e-fe-folder";
+                        directories.push(result[i]);
+                    }
+                }
+            }
+            this._nodeExpanded = true;
+            var selectedNode = targetNode ? $(targetNode).closest('li.e-item') : this._treeObj.getSelectedNode();
+            directories.length && this._treeObj.addNode(directories, selectedNode);
+            var ele = selectedNode.find(".e-load");
+            ele && ((ele.hasClass('e-plus') || ele.hasClass('e-minus')) ? ele.removeClass('e-load') : ele.removeClass('e-icon e-load'));
+            this._nodeExpanded = false;
+            this._treetag.find("li").removeAttr("tabindex");
+        },
+
+        _createContextMenuTag: function (menuOptions, menuDetails, events) {
+            var contextMenu = $("body").find('#' + menuDetails.id + 'ContextMenu');
+            var ContextMenutag = contextMenu.length ? contextMenu : ej.buildTag('ul.fe-context-menu #' + menuDetails.id + 'ContextMenu');
+            ContextMenutag.ejMenu({
+                menuType: ej.MenuType.ContextMenu,
+                enableSeparator: true,
+                enableRTL: this.model.enableRTL,
+                cssClass: this.model.cssClass,
+                contextMenuTarget: menuDetails.targetId,
+                beforeOpen: events.beforeOpen,
+                close: events.close,
+                click: events.click,
+                fields: { dataSource: menuOptions, id: "text", text: "text", htmlAttribute: "htmlAttr", spriteCssClass: "sprite" },
+            });
+            ContextMenutag.hide();
+            return ContextMenutag;
+        },
+
+        _beforeOpenContextMenu: function (args) {
+            if (!$(args.target).hasClass("e-text"))
+                args.cancel = true;
+            else {
+                this._menuNode = $(args.target).closest('li.e-item');
+                (this._treeObj) && this._treeObj.element.find('.e-node-focus').removeClass('e-node-focus');
+                this._menuNode.find('> div > .e-text:first').addClass('e-node-focus');
+                (this._toRead && this._toEdit) ? this._enableEditingMenus() : this._disableEditingMenus();
+                (this._toRead && this._toCopy) ? (this._restrictedMenuOption.indexOf(this._menuCopy) < 0 && this._treeMenuObj.enableItem(this._menuCopy)) : this._treeMenuObj.disableItem(this._menuCopy);
+                this._toRead ? (this._restrictedMenuOption.indexOf(this._menuOpen) < 0 && this._treeMenuObj.enableItem(this._menuOpen)) : this._treeMenuObj.disableItem(this._menuOpen);
+                (this._toRead && this._toEditContents) ? (this._restrictedMenuOption.indexOf(this._menuNewFolder) < 0 && this._treeMenuObj.enableItem(this._menuNewFolder)) : this._treeMenuObj.disableItem(this._menuNewFolder);
+                (this._toRead && this._toUpload) ? (this._restrictedMenuOption.indexOf(this._menuUpload) < 0 && this._treeMenuObj.enableItem(this._menuUpload)) : this._treeMenuObj.disableItem(this._menuUpload);
+                if ($(args.target).parents("li.e-item:first").attr("id") == 1) {
+                    this._disableEditingMenus();
+                }
+            }
+        },
+
+        _beforeOpenTileContextMenu: function (args) {
+            if ($(args.target).closest('th.e-headercell').hasClass('e-col-check'))
+                this._headCheckObj.wrapper.click();
+            if ($(args.target).hasClass("e-scrollbar") || $(args.target).parents().hasClass("e-scrollbar") || $(args.target).closest('th.e-headercell').hasClass('e-col-check')) {
+                args.cancel = true;
+                return;
+            }
+            if (!$(args.target).hasClass('e-rowcell') && !$(args.target).closest('td.e-rowcell').hasClass('e-col-check') && $(args.target).closest('td.e-rowcell').length > 0 && !$(args.target).closest('td.e-rowcell').hasClass('e-active') && args.events && (args.events.button == 2 || args.events.which == 3))
+                this._updateGridSelection(args);
+            else if (($(args.target).hasClass("e-file-info") || $(args.target).hasClass("e-thumb-image") || $(args.target).closest(".e-thumb-image").length > 0) && $(args.target).closest('.e-chkbox-wrap').length == 0 && !$(args.target).closest(".e-tilenode").hasClass("e-active"))
+                this._updateTileSelection(args);
+            if ($(args.target).is(".e-tilenode.e-active") || $(args.target).closest(".e-tilenode").hasClass("e-active") || $(args.target).closest('td.e-rowcell').is(".e-active") || ((args.events.ctrlKey || args.events.shiftKey || $(args.target).closest('td.e-rowcell').hasClass('e-col-check') || $(args.target).closest('.e-chkbox-wrap').length > 0) && ($(this.items).hasClass('e-active') || $(this.gridItems).find('td').hasClass('e-active')))) {
+                JSON.stringify(this._viewMenuObj.model.fields.dataSource) == JSON.stringify(this._cwdMenuOptions) && this._viewMenuObj.option("fields", { dataSource: this._fileMenuOptions, id: "text", text: "text", htmlAttribute: "htmlAttr", spriteCssClass: "sprite" });
+            }
+            else {
+                JSON.stringify(this._viewMenuObj.model.fields.dataSource) == JSON.stringify(this._fileMenuOptions) && this._viewMenuObj.option("fields", { dataSource: this._cwdMenuOptions, id: "text", text: "text", htmlAttribute: "htmlAttr", spriteCssClass: "sprite" });
+                if ($(args.events.currentTarget).hasClass("e-grid") && ($(args.target).hasClass("e-gridcontent") || $(args.target).hasClass("e-content") || $(args.target).hasClass("e-table") || !$(args.target).is(".e-rowcell.e-active"))) {
+                    this._gridObj.clearSelection();
+                    if (this.model.showCheckbox) {
+                        this._gridtag.find(".e-grid-row-checkbox").ejCheckBox({ "checked": false });
+                        this._gridtag.find("#headchk").ejCheckBox({ "checked": false });
+                    }
+                }
+                if ($(args.events.currentTarget).hasClass("e-tile-wrapper") && ($(args.target).hasClass("e-tile-wrapper") || $(args.target).hasClass("e-tile-content") || $(args.target).hasClass("e-tileview") || !($(args.target).is(".e-tilenode.e-active") || $(args.target).parent(".e-tilenode").hasClass("e-active")))) {
+                    this.model.showCheckbox && this._clearTileCheckBoxSelection();
+                    if (this.items.hasClass("e-active"))
+                        this.items.removeClass("e-active").attr("aria-selected", false);
+                }
+                this._updateCurrentPathPermission();
+            }
+            for (var i = 0; i < this._restrictedMenuOption.length; i++) {
+                this._viewMenuObj && this._viewMenuObj.disableItem(this._restrictedMenuOption[i]);
+            }
+            if (!this._toRead || (!(/\.(bmp|dib|jpg|jpeg|jpe|jfif|gif|tif|tiff|png|ico)$/i).test(this.model.selectedItems) && this._nodeType == "File"))
+                this._viewMenuObj && this._viewMenuObj.disableItem("Open");            
+            else
+                this._viewMenuObj && this._viewMenuObj.enableItem("Open");
+            if (!this._option || !this._toRead)
+                this._viewMenuObj.disableItem(this._menuPaste);
+            this._isupdate ? (this._restrictedMenuOption.indexOf(this._menuDownload) < 0 && this._viewMenuObj.enableItem(this._menuDownload)) : this._viewMenuObj.disableItem(this._menuDownload);
+            (this._searchbar && $.trim(this._searchbar.val())) ? this._viewMenuObj.enableItem(this._menuOpenFolderLocation) : this._viewMenuObj.disableItem(this._menuOpenFolderLocation);
+            (this._toRead && this._toDownload) ? (this._restrictedMenuOption.indexOf(this._menuDownload) < 0 && this._viewMenuObj.enableItem(this._menuDownload)) : this._viewMenuObj.disableItem(this._menuDownload);
+            (this._toRead && this._toUpload) ? (this._restrictedMenuOption.indexOf(this._menuUpload) < 0 && this._viewMenuObj.enableItem(this._menuUpload)) : this._viewMenuObj.disableItem(this._menuUpload);
+            (this._toRead && this._toEdit) ? this._enableEditingMenus() : this._disableEditingMenus();
+            (this._toRead && this._toCopy) ? (this._restrictedMenuOption.indexOf(this._menuCopy) < 0 && this._viewMenuObj.enableItem(this._menuCopy)) : this._viewMenuObj.disableItem(this._menuCopy);
+            this._hasEditContentsPermission(this._originalPath) ? (this._restrictedMenuOption.indexOf(this._menuNewFolder) < 0 && this._viewMenuObj.enableItem(this._menuNewFolder)) : this._viewMenuObj.disableItem(this._menuNewFolder);
+        },
+        _removeOldSelectionDetails: function () {
+            if (this._currentPath != this._originalPath) {
+                this._currentPath = this._originalPath;
+            }
+            this._sizeInByte = 0;
+            this._selectedItems = [];
+            this._selectedTileItems = [];
+            this.model.selectedItems = [];
+            this._selectedContent = this._selectedTreeText;
+            this._nodeType = "Directory";
+            this._selectedItemsTag && this._selectedItemsTag.html("");
+            this._toolBarItems && this._disableToolbarItem("Download");            
+            this._viewMenuObj && this._viewMenuObj.disableItem(this._menuDownload);
+            this._disableEditingTools();
+        },
+        _contextMenuClick: function (args) {
+            this._treeObj.selectNode(this._menuNode);
+            this._fileContextMenuClick(args);
+        },
+        _fileContextMenuClick: function (args) {
+            if (this.model.ajaxAction == "" || this._currentPath == "")
+                return;
+            switch (args.text) {
+                case this._menuOpen:
+                    this._openAction();
+                    break;
+                case this._menuNewFolder:
+                    this._createNewFolder();
+                    break;
+                case this._menuDelete:
+                    this._deleteFolder();
+                    break;
+                case this._menuRefresh:
+                    this.refresh();
+                    break;
+                case this._menuRename:
+                    this._renameFolder();
+                    break;
+                case this._menuUpload:
+                    this.element.find(".e-uploadinput").click();
+                    break;
+                case this._menuDownload:
+                    this._downloadFile();
+                    break;
+                case this._menuCut:
+                    this._copyMoveNode("move");
+                    break;
+                case this._menuCopy:
+                    this._copyMoveNode("copy");
+                    break;
+                case this._menuPaste:
+                    this._cut_copy();
+                    break;
+                case this._menuGetinfo:
+                    this._getDetails();
+                    break;
+                case this._menuOpenFolderLocation:
+                    this._setFilteredItemsName();
+                    var selectedItems = this.model.selectedItems;
+                    this._selectedFolder(this._originalPath + this._selectedContent.replace(this._filteredItemsName, ""));
+                    this._setSelectedItems(selectedItems);
+                    break;
+            }
+        },
+
+
+        _createNewFolder: function () {
+            var proxy = this;
+            var name = "";
+            var viewerData = this._getLocalizedLabels("NewFolderAlert");
+            var dialogContent = ej.buildTag('div.e-get-name');
+            var labeltag = ej.buildTag('div.e-fe-dialog-label', viewerData);
+            var inputtag = ej.buildTag('input.e-fe-dialog-text e-ejinputtext', "", "", { type: "text" });
+            var errDiv= ej.buildTag('div.e-fe-dialog-label e-error-msg');
+            inputtag.val("New folder");
+            var divtag = ej.buildTag('div.e-fe-dialog-btn');
+            var okButton = ej.buildTag('button.e-fe-btn-ok ', this._getLocalizedLabels("OkButton"));
+            var cancelButton = ej.buildTag('button.e-fe-btn-cancel ', this._getLocalizedLabels("CancelButton"));
+            okButton.ejButton({
+                type: "button",
+                click: function () {
+                    proxy._removeDialog(proxy._newFolderDialogObj);
+                    name = inputtag.val();
+                    if (!$.trim(name)) {
+                        name = "New folder";
+                    }
+                    !proxy._fileExplorer[proxy._currentPath] && proxy._getFileDetails(proxy._currentPath);
+                    var data = proxy._fileExplorer[proxy._currentPath];
+                    if (!data.length)
+                        name && proxy._createFolder(name);
+                    else {
+                        for (var i = 0; i < data.length; i++) {
+                            if (!data[i].isFile && data[i].name == name) {
+                                var dialogContent = ej.buildTag('div.e-get-name');
+                                var labeltag = ej.buildTag('div.e-fe-dialog-label', String.format(proxy._getLocalizedLabels("ErrorOnFolderCreation"), name));
+                                var divtag = ej.buildTag('div.e-fe-dialog-btn');
+                                var okButton = ej.buildTag('button.e-fe-btn-ok ', proxy._getLocalizedLabels("YesButton"));
+                                var cancelButton = ej.buildTag('button.e-fe-btn-cancel ', proxy._getLocalizedLabels("NoButton"));
+                                okButton.ejButton({
+                                    type: "button",
+                                    click: function () {
+                                        proxy._removeDialog(proxy._alertDialogObj);
+                                    }
+                                });
+                                cancelButton.ejButton({
+                                    type: "button",
+                                    click: function () {
+                                        proxy._removeDialog(proxy._alertDialogObj);
+                                        proxy._createFolder(proxy._getDuplicateName(data, "New folder"));
+                                    }
+                                });
+                                divtag.append(okButton, cancelButton);
+                                $(dialogContent).append(labeltag, divtag);
+                                var open = function () {
+                                    okButton.focus();
+                                };
+                                proxy._alertDialog = proxy._createDialog(dialogContent, { width: 400, height: "auto", title: proxy._getLocalizedLabels("Error"), open: open });
+                                proxy._alertDialogObj = proxy._alertDialog.data("ejDialog");
+                                break;
+                            }
+                            else if (i == data.length - 1) {
+                                name && proxy._createFolder(name);
+                            }
+                        }
+                    }
+                }
+            });
+            cancelButton.ejButton({
+                type: "button",
+                click: function () {
+                    proxy._removeDialog(proxy._newFolderDialogObj);
+                }
+            });
+            divtag.append(okButton, cancelButton);
+            $(dialogContent).append(labeltag, inputtag, errDiv, divtag);
+            this._newFolderDialog = this._createDialog(dialogContent, { width: 350, height: "auto", open: function (e) { proxy._openInputDialog(inputtag, okButton, errDiv, this); }, title: this._getLocalizedLabels("NewFolder") });
+            this._newFolderDialogObj = this._newFolderDialog.data("ejDialog");
+        },
+        _openInputDialog: function (inputtag, okButton, errDiv, obj) {
+            var proxy = this;
+            inputtag.focus();
+            !this._isDevice && inputtag.select();
+            if (this._isMobileOrTab || this._isDevice) obj.option("position", { Y: "20%" });
+            inputtag.keyup(function (e) {
+                var code = proxy._getKeyCode(e);
+                if (code == 13)
+                    okButton.click();
+            });
+            inputtag.keypress(function (e) {
+                var code = proxy._getKeyCode(e);
+                if (/[/\\|*?"<>:]/.test(String.fromCharCode(code))) {
+                    errDiv.html(proxy._getLocalizedLabels("InvalidFileName"));
+                    return false;
+                }
+                return true;
+            });
+            inputtag.keydown(function (e) {
+                errDiv.html("");
+            });
+        },
+
+        _deleteFolder: function () {
+            this._alertWindow = ej.buildTag("div#" + "e-fe_deleteAlert");
+            var viewerData;
+            if (this._selectedItems.length > 1)
+                viewerData = String.format(this._getLocalizedLabels("DeleteMultipleFolder"), this._selectedItems.length);
+            else
+                viewerData = this._getLocalizedLabels("DeleteFolder") + this._selectedContent + "?";
+            var labeltag = ej.buildTag('div.e-fe-dialog-label', viewerData);
+            var divTag = ej.buildTag('div.e-fe-dialog-btn');
+            var okButton = ej.buildTag('button.e-fe-btn-ok', this._getLocalizedLabels("OkButton"));
+            var cancelButton = ej.buildTag('button.e-fe-btn-cancel', this._getLocalizedLabels("CancelButton"));
+            divTag.append(okButton, cancelButton);
+            this._alertWindow.append(labeltag, divTag);
+            proxy = this;
+            okButton.ejButton({
+                type: "button",
+                click: function () {
+                    proxy._removeDialog(proxy._alertWindowObj);
+                    proxy._ajax_folderPath = proxy._nodeType == "Directory" ? proxy._getFolderPath() : proxy._currentPath;
+                    proxy._deletion(proxy._selectedItems.length > 1 ? proxy._selectedItems : proxy._selectedContent, proxy._ajax_folderPath);
+                    proxy._disableEditingTools();
+                }
+            });
+            cancelButton.ejButton({
+                type: "button",
+                click: function () {
+                    proxy._removeDialog(proxy._alertWindowObj);
+                }
+            });
+            var open = function () {
+                okButton.focus();
+            };
+            this._alertWindow = this._createDialog(this._alertWindow, { width: 350, height: "auto", title: this._getLocalizedLabels("Delete"), open: open });
+            this._alertWindowObj = this._alertWindow.data("ejDialog");
+        },
+        _getFileDetails: function (path, updateTreeNode, updateLayoutContent) {
+            var proxy = this;
+            var _ajaxOptions = {
+                data: { ActionType: "Read", Path: path, ExtensionsAllow: this.model.fileTypes, SelectedItems: this._getSelectedItemDetails(this._getFolderPath(path), (updateTreeNode ? updateTreeNode.text() : (this.model.selectedItems.length ? this.model.selectedItems : this._selectedContent))) },
+                url: this.model.ajaxAction,
+                type: "POST",
+                async: false,
+                success: function (result) {
+                    result = (result.hasOwnProperty("d")) ? result.d : result;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    for (var i = 0; i < result.files.length; i++) {
+                        result.files[i].sizeInByte = result.files[i].size;
+                        result.files[i].size = result.files[i].size ? proxy._bytesToSize(result.files[i].size) : "";
+                        result.files[i].cssClass = proxy._getCssClass(result.files[i]);
+                    }
+                    proxy._feParent[path] = result.cwd;
+                    proxy._fileExplorer[path] = result.files;
+                    updateTreeNode && proxy._addChild(proxy._fileExplorer[path], $(updateTreeNode));
+                    if (updateLayoutContent) {
+                        (proxy.model.layout == "grid" ? proxy._renderGridView(result.files) : proxy._renderTileView(result.files));
+                        proxy._updateItemStatus(result.files);
+                    }                    
+                    if (proxy._highlightedNodes && (!proxy._suggestionItems.length)) {
+                        proxy._setSelectedItems(proxy._highlightedNodes);                        
+                        proxy._highlightedNodes = "";
+                    }
+                    proxy._searchbar && $.trim(proxy._searchbar.val()) && proxy._searchFiles(proxy._originalPath);
+                },
+                successAfter: this.model.ajaxSettings.read.success
+            };
+            this.model.ajaxSettings.read.success = undefined;
+            $.extend(true, _ajaxOptions, this.model.ajaxSettings.read);
+            this._sendAjaxRequest(_ajaxOptions);
+        },
+        _searchFiles: function (path) {
+            var proxy = this;
+            var _ajaxOptions = {
+                data: { ActionType: "Search", SearchString: this._queryString, Path: path, CaseSensitive: this.model.filterSettings.caseSensitiveSearch, ExtensionsAllow: this.model.fileTypes, SelectedItems: this._getSelectedItemDetails(this._getFolderPath(path), (this.model.selectedItems.length ? this.model.selectedItems : this._selectedContent)) },
+                url: this.model.ajaxAction,
+                type: "POST",
+                async: false,
+                success: function (result) {
+                    result = (result.hasOwnProperty("d")) ? result.d : result;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    for (var i = 0; i < result.files.length; i++) {
+                        result.files[i].sizeInByte = result.files[i].size;
+                        result.files[i].size = result.files[i].size ? proxy._bytesToSize(result.files[i].size) : "";
+                        result.files[i].cssClass = proxy._getCssClass(result.files[i]);                        
+                        result.files[i].filterPath = proxy._originalPath + result.files[i].filterPath.replace(/\\/g, "/");                        
+                    }
+                    proxy._suggestionItems = result.files;                                                                                   
+                    proxy.model.layout == "grid" ? proxy._renderGridView(result.files) : proxy._renderTileView(result.files);
+                    proxy._updateItemStatus(result.files);                                       
+                    proxy._setSelectedItems(proxy._highlightedNodes);
+                    proxy._highlightedNodes = "";                                        
+                },
+                successAfter: this.model.ajaxSettings.search.success
+            };
+            this.model.ajaxSettings.search.success = undefined;
+            $.extend(true, _ajaxOptions, this.model.ajaxSettings.search);
+            this._sendAjaxRequest(_ajaxOptions);
+        },
+        _getDuplicateName: function (fileDetails, name) {
+            var directoryCount = 0;
+            var initialName = name;
+            while (this._isNameExist(fileDetails, name)) {
+                directoryCount++;
+                name = initialName.split(".")[0] + (directoryCount > 0 ? "(" + directoryCount + ")" : "") + (name.split(".")[1] ? "." + name.split(".")[1] : "");
+            }
+            return name;
+        },
+        _isNameExist: function (fileDetails, name) {
+            for (var i = 0; i < fileDetails.length; i++) {
+                if (name == fileDetails[i].name)
+                    return true;
+            }
+            return false;
+        },
+
+        _renameFolder: function () {
+            var proxy = this;
+            var viewerData = this._getLocalizedLabels("RenameAlert");
+            var dialogContent = ej.buildTag('div.e-rename');
+            var labeltag = ej.buildTag('div.e-fe-dialog-label', viewerData);
+            var elements = this._selectedContent.split(".")[0].split('/');
+            elements.indexOf("") != -1 && elements.splice(elements.indexOf(""), 1);
+            var inputtag = ej.buildTag('input.e-fe-dialog-text e-ejinputtext', "", "", { type: "text", value: elements[elements.length-1] });
+            var errDiv = ej.buildTag('div.e-fe-dialog-label e-error-msg');
+            var divtag = ej.buildTag('div.e-fe-dialog-btn');
+            var okButton = ej.buildTag('button.e-fe-btn-ok', this._getLocalizedLabels("OkButton"));
+            var cancelButton = ej.buildTag('button.e-fe-btn-cancel', this._getLocalizedLabels("CancelButton"));
+            okButton.ejButton({
+                type: "button",
+                click: function () {
+                    var person = inputtag.val(), _oldName = elements[elements.length - 1];
+                    proxy._removeDialog(proxy._renameDialogObj);
+                    if ($.trim(person) && person != _oldName) {
+                        proxy._currentPath = proxy._nodeType == "Directory" ? proxy._getFolderPath() : proxy._currentPath;
+                        !proxy._fileExplorer[proxy._currentPath] && proxy._getFileDetails(proxy._currentPath);
+                        var data = proxy._fileExplorer[proxy._currentPath];
+                        proxy._ajax_person = proxy._selectedContent.replace(_oldName, person);
+                        if (proxy._nodeType == "File" && (/\.(bmp|dib|jpg|jpeg|jpe|jfif|gif|tif|tiff|png|ico)$/i).test(proxy._ajax_person))
+                            proxy._updateImages[proxy._currentPath + proxy._ajax_person] = new Date().getTime();
+                        for (var i = 0; i < data.length; i++) {
+                            if (data[i].name == person) {
+                                if (proxy._nodeType == "File") {
+                                    person = proxy._getDuplicateName(proxy._fileExplorer[proxy._currentPath], person);
+                                    proxy._ajax_person = proxy._selectedContent.replace(_oldName, person);
+                                }
+                                var dialogContent = ej.buildTag('div.e-get-name');
+                                var labeltag = ej.buildTag('div.e-fe-dialog-label', String.format(proxy._getLocalizedLabels(proxy._nodeType == "File" ? "DuplicateFileCreation" : "ErrorOnFolderCreation"), person));
+                                var divtag = ej.buildTag('div.e-fe-dialog-btn');
+                                var okButton = ej.buildTag('button.e-fe-btn-ok ', proxy._getLocalizedLabels("OkButton"));
+                                var cancelButton = ej.buildTag('button.e-fe-btn-cancel ', proxy._getLocalizedLabels("CancelButton"));
+                                okButton.ejButton({
+                                    type: "button",
+                                    click: function () {
+                                        proxy._removeDialog(proxy._alertDialogObj);
+                                        if (proxy._nodeType == "File")
+                                            proxy._rename();
+                                        else {
+                                            proxy._existingItems = [];
+                                            proxy._getDuplicateItems(proxy._currentPath + proxy._selectedContent + "/", proxy._currentPath + person + "/", true);
+                                            if (proxy._existingItems.length) {
+                                                proxy._createReplaceConformationDiaolg("_rename", "DuplicateAlert");
+                                            }
+                                            else
+                                                proxy._rename();
+                                        }
+                                    }
+                                });
+                                cancelButton.ejButton({
+                                    type: "button",
+                                    click: function () {
+                                        proxy._removeDialog(proxy._alertDialogObj);
+                                    }
+                                });
+                                divtag.append(okButton, cancelButton);
+                                $(dialogContent).append(labeltag, divtag);
+                                var open = function () {
+                                    okButton.focus();
+                                };
+                                proxy._alertDialog = proxy._createDialog(dialogContent, { width: 400, height: "auto", title: proxy._getLocalizedLabels("Error"), open: open });
+                                proxy._alertDialogObj = proxy._alertDialog.data("ejDialog");
+                                break;
+                            }
+                            else if (i == data.length - 1) {
+                                proxy._rename();
+                            }
+                        }
+                    }
+                }
+            });
+            cancelButton.ejButton({
+                type: "button",
+                click: function () {
+                    proxy._removeDialog(proxy._renameDialogObj);
+                }
+            });
+
+            divtag.append(okButton, cancelButton);
+            $(dialogContent).append(labeltag, inputtag, errDiv, divtag);
+            this._renameDialog = this._createDialog(dialogContent, { width: 350, height: "auto", open: function (e) { proxy._openInputDialog(inputtag, okButton, errDiv, this); }, title: this._getLocalizedLabels("Rename") });
+            this._renameDialogObj = this._renameDialog.data("ejDialog");
+        },
+
+        _isSelectedFile: function (files, name) {
+            for (var i = 0; i < files.length; i++) {
+                if (name == files[i])
+                    return true;
+            }
+            return false;
+        },
+        _refreshItems: function (node, path) {
+            node = $(node);
+            !this._treeObj.isExpanded(node) && this._treeObj.hasChildNode(node) && this._treeObj.expandNode(node);
+            this._fileExplorer[path] = "";
+            var proxy = this;
+            $.each(proxy._fileExplorer, function (itemPath, value) {
+                //display the key and value pair
+                if (itemPath.startsWith(path))
+                    proxy._fileExplorer[itemPath] = "";
+            });
+            var childNodes = node.find('ul:first > li');
+            for (var i = 0; i < childNodes.length; i++) {
+                node.find(childNodes[i]).length && this._treeObj.removeNode($(childNodes[i]));
+            }
+            var processNode = node.find(".e-process");
+            processNode.length && processNode.removeClass("e-process");
+            this._getFileDetails(path, node.find('> div > .e-text'), true);
+        },
+        _getDuplicateItems: function (source, target, files) {
+            !this._fileExplorer[target] && this._getFileDetails(target);
+            var targetFiles = this._fileExplorer[target];
+            !this._fileExplorer[source] && this._getFileDetails(source);
+            var sourceFiles = this._fileExplorer[source];
+            for (var s = 0; s < sourceFiles.length; s++) {
+                for (var t = 0; t < targetFiles.length; t++) {
+                    if (sourceFiles[s].name == targetFiles[t].name) {
+                        if (files == true || this._isSelectedFile(files, targetFiles[t].name)) {
+                            this._existingItems[this._existingItems.length] = { Name: targetFiles[t].name, Path: target + targetFiles[t].name + (!targetFiles[t].isFile ? "/" : ""), IsReplace: true };
+                            if (!targetFiles[t].isFile)
+                                this._getDuplicateItems(source + sourceFiles[s].name + "/", target + targetFiles[t].name + "/", true);
+                        }
+                    }
+                }
+            }
+        },
+        _backward: function () {
+            if (this._currentState > 0) {
+                //minimum number of states to show forward icon
+                var minState = 2;
+                var update = true;
+                var disableBackwardPosition = 0;
+                this._isStateNavigation = true;
+                var oldIndex = this._currentState;
+                --this._currentState;
+                while (this._selectedStates[this._currentState] == "" || this._selectedStates[this._currentState] == this._selectedStates[oldIndex]) {
+                    if (this._currentState)
+                        --this._currentState;
+                    else
+                        update = false;                        
+                }
+                update && this._selectedFolder(this._selectedStates[this._currentState]);
+                this._isStateNavigation = false;                
+                (this._currentState == disableBackwardPosition || this._selectedStates.length - minState == this._currentState) && this._toolBarItems && this._enableToolbarItem("Forward");
+                this._currentState == disableBackwardPosition && this._toolBarItems && this._disableToolbarItem("Back");
+            }
+        },
+        _forward: function () {
+            if (this._currentState + 1 < this._selectedStates.length) {
+                //used to get index from array length
+                var update = true;
+                var reduceIndex = 1;
+                var disableState = 0;
+                var enableState = 1;
+                this._isStateNavigation = true;
+                var oldIndex = this._currentState;
+                ++this._currentState;
+                while (this._selectedStates[this._currentState] == "" || this._selectedStates[this._currentState] == this._selectedStates[oldIndex]) {
+                    if (this._currentState < this._selectedStates.length - 1)
+                        ++this._currentState;
+                    else
+                        update = false;                        
+                }
+                update && this._selectedFolder(this._selectedStates[this._currentState]);
+                this._isStateNavigation = false;
+                this._selectedStates.length - reduceIndex == this._currentState && this._toolBarItems && this._disableToolbarItem("Forward");
+                this._currentState == 0 && this._toolBarItems && this._disableToolbarItem("Back");
+                this._currentState == 1 && this._toolBarItems && this._enableToolbarItem("Back");
+            }
+        },
+        _copyMoveNode: function (action) {
+            if (action == "move") {
+                this.element.find(".e-blur").removeClass("e-blur");
+                var activeElement = this.element.find(".e-splitter .e-active");
+                activeElement.length && activeElement.length == 1 ? activeElement.addClass("e-blur") : this.element.find(".e-cont2 .e-active").addClass("e-blur");
+            }
+            this._copiedNodes = this._filteredItemsName;
+            this._option = action;
+            this._sourcePath = this._nodeType == "Directory" ? this._getFolderPath() : this._currentPath;
+            this._sourceType = this._nodeType;
+            this._fileName = this._selectedItems.length > 1 ? this._selectedItems : this._selectedContent;
+            this._refreshNode = this._originalPath != this._currentPath ? this._findMatchingElement(this._selectedNode.find("ul:first"), this._selectedContent) : this._selectedNode;
+            this._toolBarItems && this._enableToolbarItem("Paste");
+            if (this.model.showContextMenu) {
+                this._restrictedMenuOption.indexOf(this._menuPaste) < 0 && this._viewMenuObj.enableItem(this._menuPaste);
+                this._restrictedMenuOption.indexOf(this._menuPaste) < 0 && this._treeMenuObj.enableItem(this._menuPaste);
+            }
+            var args = { name: this._fileName, sourcePath: this._sourcePath, selectedItems: this._getSelectedItemDetails(this._sourcePath, this._fileName) };
+            if (action == "move")
+                this._trigger("cut", args);
+            else
+                this._trigger("copy", args);
+        },
+        _openAction: function () {
+            if (!this._toRead) return;
+            var proxy = this;
+            var selectedNodes;
+            if (this._nodeType == "File")
+                this._selectedFile = this._selectedContent;
+            if (this._onBeforeOpen()) return;
+            if (this._nodeType == "Directory") {
+                if (this._suggestionItems.length) {                    
+                    this._selectedFolder(this._originalPath + this._selectedContent);                    
+                }
+                else {
+                    var selectedNode = this._treeObj.getSelectedNode(), _selectedContent = this._selectedContent;
+                    if (!this._treeObj.isExpanded(selectedNode))
+                        selectedNode.find(".e-icon").click();
+                    var _childItems = selectedNode.find('ul:first>li').find('div:first .e-text');
+                    if (!this._treeObj.hasChildNode(selectedNode)) {
+                        var path = (this._isTreeNode == true ? this._currentPath : this._currentPath.replace(this._selectedContent + "/", ""));
+                        this._isTreeNode = false;
+                        this._addChild(this._fileExplorer[path]);
+                    }
+                    for (var i = 0; i < _childItems.length; i++) {
+                        if ($(_childItems[i]).text() == _selectedContent) {
+                            this._treeObj.selectNode(_childItems[i].parentNode.parentNode);
+                            break;
+                        }
+                    }
+                    selectedNodes = this._getSelectedItemDetails(this._getFolderPath(), _selectedContent);
+                    this._selectedItems = [];
+                    this._selectedTileItems = [];
+                }                
+            }
+            else if (this._nodeType == "File") {
+                if ((/\.(bmp|dib|jpg|jpeg|jpe|jfif|gif|tif|tiff|png|ico)$/i).test(this._selectedFile)) {
+                    proxy._openDialog = ej.buildTag('div.e-imageViewer', "", "", { id: proxy._ExplorerId + '_basicDialog', title: proxy._selectedFile });
+                    var path = proxy._currentPath.replace("~", "..") + this._selectedFile;
+                    var url = this._getImage(path, this._selectedFile);
+                    var imagetag = ej.buildTag('img', "", "", { src: (url ? url : path) });
+                    $(proxy._openDialog).append(imagetag);
+                    $(proxy.element).append(proxy._openDialog);
+                    proxy._openDialog.ejDialog({
+                        width: 450,
+                        height: 350,
+                        minHeight: 200,
+                        minWidth: 300,
+                        maxWidth: "100%",
+                        target: proxy.element,
+                        closeIconTooltip: proxy._getLocalizedLabels("DialogCloseToolTip"),
+                        enableRTL: proxy.model.enableRTL,
+                        showRoundedCorner: proxy.model.showRoundedCorner,
+                        cssClass: proxy.model.cssClass,
+                        close: function (e) { proxy._onDialogClose(e); }
+                    }).parents(".e-dialog-wrap").addClass("e-imageViewer-wrap");
+                    proxy._openDialog.css("height", "90%");
+                    proxy._openDialogObj = proxy._openDialog.data("ejDialog");
+                }
+                selectedNodes = proxy._getSelectedItemDetails(proxy._currentPath, proxy._selectedContent);
+            }
+            var fileUrl;
+            fileUrl = this._nodeType == "File" ? path : this._currentPath;
+            var args = { path: fileUrl, itemType: this._nodeType, selectedItems: selectedNodes };
+            this._trigger("open", args);
+        },
+        _getSelectedItemDetails: function (path, names) {
+            if (typeof names == "string")
+                names = [names];
+            var itemDetails = [];
+            var data = this._suggestionItems && this._suggestionItems.length ? this._suggestionItems : this._fileExplorer[path];
+            if (data) {
+                for (var j = 0; j < names.length; j++) {
+                    for (var i = 0; i < data.length; i++) {                        
+                        if (data[i].name == this._getOriginalName(names[j]))
+                            itemDetails.push(data[i]);
+                    }
+                }
+            }
+            return itemDetails;
+        },
+        _getDetails: function () {
+            var _path = this._nodeType == "Directory" ? this._getFolderPath() : this._currentPath;
+            var proxy = this;
+            var names = (typeof this._selectedContent == "string") ? [this._selectedContent] : this._selectedContent;
+            if (names[0].endsWith('/'))
+                names[0] = names[0].substring(0, names[0].length - 1);
+            var _ajaxOptions = {
+
+                data: { ActionType: "GetDetails", Path: _path, Names: names, SelectedItems: this._getSelectedItemDetails(_path, (this.model.selectedItems.length ? this.model.selectedItems : this._selectedContent)) },
+                url: this.model.ajaxAction,
+                type: "POST",
+                async: false,
+                success: function (result) {
+                    if (result.hasOwnProperty("d"))
+                        result = result.d;
+                    if (!ej.isNullOrUndefined(result.error)) {
+                        proxy._showErrorDialog(result.error);
+                        return;
+                    }
+                    var dialogContent = ej.buildTag('div.e-fe-table');
+                    var tabletag = ej.buildTag('table'), trtag, tdtag1, tdtag2, wrapDiv, inputtag, kbsize, tdata;
+                    $.each(result.details[0], function (name, value) {
+                        trtag = ej.buildTag('tr');
+                        tdtag1 = ej.buildTag('td', ej.isNullOrUndefined(proxy._getLocalizedLabels(name)) ? name : proxy._getLocalizedLabels(name));
+                        tdtag2 = ej.buildTag('td');
+                        if (name == "Name" || name == "Location") {
+                            wrapDiv = ej.buildTag('div');
+                            inputtag = ej.buildTag('input.e-readonly', "", "", { style: "border:none;", type: 'text', value: value, title: value, readonly: true });
+                            inputtag.focus(function () {
+                                $(this).blur();
+                            });
+                            wrapDiv.append(inputtag);
+                        } else if (name == "Size") {
+                            kbsize = proxy._bytesToSize(value);
+                            wrapDiv = ej.buildTag('span', kbsize + " (" + value + " Bytes)");
+                        } else if (name == "Permission") {
+                            wrapDiv = (value != undefined) ? ej.buildTag('span', proxy._objToString(value), "", { style: "word-break: break-word;" }) : null;
+                        } else {
+                            wrapDiv = ej.buildTag('span', value);
+                        }
+                        if (wrapDiv != undefined) {
+                            (name == "Permission") && $(tabletag).find("tr:last").addClass('e-border');
+                            tdtag2.append(wrapDiv);
+                            $(tabletag).append(trtag);
+                            $(trtag).append(tdtag1, tdtag2);
+                            (name == "Name" || name == "Size") && trtag.addClass('e-border');
+                        }
+                    });
+                    $(dialogContent).append(tabletag);
+                    proxy._detailsDialog = proxy._createDialog(dialogContent, { width: 500, height: "auto", title: proxy._getLocalizedLabels("Details") });
+                    proxy._detailsDialogObj = proxy._detailsDialog.data("ejDialog");
+                    proxy._detailsDialogObj.focus();
+                },
+                successAfter: this.model.ajaxSettings.getDetails.success
+            };
+            this.model.ajaxSettings.getDetails.success = undefined;
+            $.extend(true, _ajaxOptions, this.model.ajaxSettings.getDetails);
+            this._sendAjaxRequest(_ajaxOptions, true);
+        },
+        _objToString: function (obj) {
+            var str = '';
+            for (var prop in obj) {
+                if (obj.hasOwnProperty(prop)) {
+                    str += prop + ': ' + obj[prop] + ', ';
+                }
+            }
+            return str;
+        },
+        _uploadFile: function () {
+            proxy = this.element.find(".e-uploadbox");
+            proxy = proxy.ejUploadbox("instance");
+        },
+
+        _getFolderPath: function (path) {
+            var str_array = path? path.split('/'):this._currentPath.split('/');            
+            var editedPath = "";
+            for (var i = 0; i < str_array.length - 2; i++) {
+                editedPath += str_array[i] + "/";
+            }
+            return editedPath;
+        },
+        _renderToolBar: function () {
+            this._crateToolbarTemplate();
+            this._initToolbarItems();
+            var model = {};
+            model.click = $.proxy(this._toolBarClick, this);
+            model.cssClass = this.model.cssClass;
+            model.enableRTL = this.model.enableRTL;
+            model.enableSeparator = true;
+            model.isResponsive = this.model.isResponsive;
+            model.height = model.isResponsive ? "" : "auto";
+            model.cssClass = this.model.cssClass + " e-fe-toolbar " + (this._isMobileOrTab ? "e-fe-mobile" : "");
+            model.enableRTL = this.model.enableRTL;
+            this._toolBarItems.ejToolbar(model);
+            this._toolBarObj = this._toolBarItems.ejToolbar("instance");
+            if (this._isMobileOrTab) this._toolBarObj._liTemplte.css("max-width", this.element.width());
+            this._disableToolbarItem("Paste");
+            this._disableToolbarItem("Download");
+            this._disableToolbarItem("Back");
+            this._disableToolbarItem("Forward");
+            this._disableEditingTools();
+        },
+        _initToolbarItems: function () {
+            this._toolBarItems.find("#" + this._ExplorerId + "Addressbar").length > 0 && this._createAddressBar();
+            this._toolBarItems.find("#" + this._ExplorerId + "Searchbar").length > 0 && this._searchDetails();
+            this._toolBarItems.find("#" + this._ExplorerId + "Layout").length > 0 && this._renderLayoutDrpdwn();
+        },
+        _renderLayoutDrpdwn: function () {
+            this._showLayoutDDL = ej.buildTag("button#" + this._ExplorerId + "_layout", "", "", { title: this._getLocalizedLabels("Layout"), "data-role": "none","type":"button" });
+            var ultag = $("<ul id="+this._ExplorerId+"_splitMenu class='e-fe-split-context'>");
+            this._layoutList = ["Tile","Grid","LargeIcons"];
+            for (i = 0; i < this._layoutList.length; i++) {
+                ultag.append($("<li><a class=' e-arrow-space'><span class='e-icon e-fe-activeicon'></span>" + this._getLocalizedLabels(this._layoutList[i]) + "</a></li>"));
+            }
+            ultag.appendTo(this._toolBarItems.find("#" + this._ExplorerId + "Layout").html(""));
+          
+            var model = {};
+            var proxy = this;
+            model.height = "24px",
+            model.enableRTL = this.model.enableRTL;
+            model.showRoundedCorner = this.model.showRoundedCorner;
+            model.targetID = this._ExplorerId+"_splitMenu";
+            model.contentType = "imageonly";
+            model.buttonMode = "dropdown";
+            model.itemSelected = function (args) {
+                switch (args.text) {
+                    case proxy._getLocalizedLabels("LargeIcons"):
+                        proxy.model.layout = "largeicons";
+                        break;
+                    case proxy._getLocalizedLabels("Tile"):
+                        proxy.model.layout = "tile";
+                        break;
+                    case proxy._getLocalizedLabels("Grid"):
+                    default:
+                        proxy.model.layout = "grid";
+                        break;
+                }
+                proxy._switchLayoutView();
+            }
+            model.prefixIcon = 'e-fe-' + this.model.layout;
+            this._showLayoutDDL.appendTo(this._toolBarItems.find("#" + this._ExplorerId + "Layout"));
+            this._showLayoutDDL.ejSplitButton(model);
+            this._splitButtonObj = this._showLayoutDDL.data("ejSplitButton");
+        },
+        _changeLayoutActive: function (layout) {
+            this._splitButtonObj && this._splitButtonObj.option('prefixIcon', 'e-fe-' + layout);
+            if (this._toolBarItems && this._toolBarItems.find("#" + this._ExplorerId + "Layout").length > 0) {
+                $($("#" + this._ExplorerId + "_splitMenu").find("li span").removeClass('e-fe-activeicon'));
+                switch (layout) {
+                    case ej.FileExplorer.layoutType.LargeIcons:
+                        $($("#" + this._ExplorerId + "_splitMenu").find("li")[2]).find("span").addClass('e-fe-activeicon'); break;
+                    case ej.FileExplorer.layoutType.Tile:
+                        $($("#" + this._ExplorerId + "_splitMenu").find("li")[0]).find("span").addClass('e-fe-activeicon'); break;
+                    case ej.FileExplorer.layoutType.Grid:
+                    default:
+                        $($("#" + this._ExplorerId + "_splitMenu").find("li")[1]).find("span").addClass('e-fe-activeicon'); break;
+                }
+            }
+        },
+        _createUploadBox: function () {
+            this._uploadtag = ej.buildTag('div#' + this._ExplorerId + 'FileUpload', "", { padding: "0px", height: "0px", width: "0px" });
+            this.element.prepend(this._uploadtag);
+            this._renderUploadBox();
+            this._uploadtag.find(".e-inputbtn").hide();
+            this._uploadtag.find(".e-uploadinput").attr("tabindex", -1);
+        },
+        _searchDetails: function () {
+            this._isWatermark = 'placeholder' in document.createElement('input');
+            var waterMark = this._getLocalizedLabels("Search");
+            this._searchbar = ej.buildTag('input.e-searchBar e-tool-input', "", {}, { id: this._ExplorerId + '_searchbar', type: "text", placeholder: waterMark });
+            this._searchbar.appendTo(this._toolBarItems.find("#" + this._ExplorerId + "Searchbar").html(""));
+            ej.browserInfo().name == "msie" && ej.ieClearRemover(this._searchbar[0]);
+            if (!this._isWatermark)
+                this._hiddenSpan = ej.buildTag("span.e-input e-placeholder ", waterMark, {display: "block"}).insertAfter(this._searchbar);
+            this._on($('#' + this._ExplorerId + '_searchbar'), "focus", this._inputFocusin);
+            this._on($('#' + this._ExplorerId + '_searchbar'), "keyup", this._onSearchKeyup);
+        },
+        _setUploadLocalization: function () {
+            $.each(ej.FileExplorer.Locale, function (locale, value) {
+                if (value.UploadSettings) {
+                    ej.Uploadbox.Locale[locale] = value.UploadSettings;
+                }                
+            });            
+        },
+        _getLocalizedLabels: function (property) {
+            return ej.FileExplorer.Locale[this.model.locale][property] === undefined ? (ej.FileExplorer.Locale["en-US"][property] ? ej.FileExplorer.Locale["en-US"][property] : property) : ej.FileExplorer.Locale[this.model.locale][property];
+        },
+        _crateToolbarTemplate: function () {
+            this._toolBarItems = ej.buildTag("div#" + this._ExplorerId + "_toolbar").prependTo(this.element);
+            for (var item = 0; item < this.model.toolsList.length; item++) {
+                items = this.model.toolsList[item];
+                if (!ej.isNullOrUndefined(this.model.tools[items])) {
+                    if (items == "customTool")
+                        !ej.isNullOrUndefined(this.model.tools[items]) && this._customTools(this.model.tools[items]);
+                    else
+                        this.model.tools[items].length > 0 && this._createToolsItems(this.model.tools[items], items);
+                }
+            }
+        },
+
+        _createToolsItems: function (items, itemName) {
+            var ulTag = ej.buildTag("ul#" + (this._ExplorerId + itemName)), liTag;
+            ulTag.addClass("e-ul-" + itemName);
+            for (var i = 0; i < items.length; i++) {
+                liTag = $("<li id='" + (this._ExplorerId + items[i].replace(/ /g, '')) + "' class='e-feItem-" + items[i] + "' title='" + this._getLocalizedLabels(items[i].replace(/ /g, '')) + "' ><div class='e-fileexplorer-toolbar-icon " + items[i] + "'></div></li>");
+                liTag.appendTo(ulTag);
+            }
+            ulTag.appendTo(this._toolBarItems);
+        },
+        _customTools: function (toolbarItems) {
+            for (var item = 0; item < toolbarItems.length; item++) {
+                var ulTag = ej.buildTag("ul"), liTag;
+                liTag = $("<li id='" + (this._ExplorerId + toolbarItems[item].name.replace(/ /g, '')) + "' title='" + toolbarItems[item].tooltip + "' ><div class='" + (ej.isNullOrUndefined(toolbarItems[item].css) ? "" : toolbarItems[item].css) + "'></div></li>");
+                var fn = toolbarItems[item].action;
+                if (typeof fn === "string") {
+                    fn = ej.util.getObject(fn, window);
+                }
+                !ej.isNullOrUndefined(toolbarItems[item].action) && this._on(liTag, "click", fn);
+                $(toolbarItems[item].template).appendTo(liTag.find("div"));
+                liTag.appendTo(ulTag);
+                ulTag.appendTo(this._toolBarItems);
+            }
+        },
+        _toolBarClick: function (args) {
+            this._hidePopup();
+            var proxy = this;
+            if ((args.event.which && (args.event.which == 3 || args.event.which == 2)) || (args.event.button && args.event.button == 2))
+                return false;
+            if (this.model.ajaxAction == "" || this._currentPath == "")
+                return;
+            this._lastFocusedElement = $(args.currentTarget);
+            var currrentElement = $(args.currentTarget);
+            var selected = currrentElement.attr("id");
+            switch (selected) {
+                case this._ExplorerId + "Addressbar":
+                case this._ExplorerId + "Searchbar":
+                    if (this._searchbar && !this._isWatermark) {
+                        this._searchbar.blur(function () {
+                            !proxy._searchbar.val() && proxy._hiddenSpan.css("display", "block");
+                        });
+                        this._hiddenSpan.css("display", "none");
+                    }
+                    if (args.event.type == "keyup")
+                        currrentElement.find("input").focus();
+                    break;
+                case this._ExplorerId + "Download":
+                    this._downloadFile();
+                    break;
+                case this._ExplorerId + "Upward":
+                    this._upward();
+                    break;
+                case this._ExplorerId + "NewFolder":
+                    this._createNewFolder();
+                    break;
+                case this._ExplorerId + "Delete":
+                    this._deleteFolder();
+                    break;
+                case this._ExplorerId + "Rename":
+                    this._renameFolder();
+                    break;
+                case this._ExplorerId + "Refresh":
+                    this._currentPath = this._originalPath;
+                    this._highlightedNodes = this.model.selectedItems;
+                    this._refreshItems(this._treeObj.getSelectedNode(), this._originalPath);
+                    break;
+                case this._ExplorerId + "Back":
+                    this._backward();
+                    break;
+                case this._ExplorerId + "Forward":
+                    this._forward();
+                    break;
+                case this._ExplorerId + "Cut":
+                    this._copyMoveNode("move");
+                    break;
+                case this._ExplorerId + "Copy":
+                    this._copyMoveNode("copy");
+                    break;
+                case this._ExplorerId + "Paste":
+                    this._currentPath = this._originalPath;
+                    this._cut_copy();
+                    break;
+                case this._ExplorerId + "Open":
+                    this._openAction();
+                    break;
+                case this._ExplorerId + "Details":
+                    this._getDetails();
+                    break;
+                case this._ExplorerId + "Upload":
+                    this.element.find(".e-uploadinput").click();
+                    break;
+            }
+        },
+        _upward: function () {            
+            this._treeObj && this._treeObj.selectNode(this._treeObj.getSelectedNode().parent().closest('li.e-item'));            
+        },
+        _getFilteredList: function (list) {
+            var w_char;
+            var searchItems = [];
+            this._suggestionItems = [];                       
+            if ($.trim(this._queryString)) {
+                switch (this.model.filterSettings.filterType) {
+                    case ej.FileExplorer.filterType.StartsWith:
+                        this._queryString = this._queryString + "*";
+                        break;
+                    case ej.FileExplorer.filterType.EndsWith:
+                        this._queryString = "*" + this._queryString;
+                        break;
+                    case ej.FileExplorer.filterType.Contains:
+                        this._queryString =  "*" + this._queryString + "*";
+                        break;
+                }
+                this._searchFiles(this._originalPath);
+            }                
+            else {
+                this._suggestionItems = [];                
+                this.model.layout == "grid" ? this._renderGridView(this._fileExplorer[this._originalPath]) : this._renderTileView(this._fileExplorer[this._originalPath]);
+                this._updateItemStatus(this._fileExplorer[this._originalPath]);
+            }            
+        },
+        
+        _updateItemStatus: function (items) {
+            if (items) {
+                this._itemStatus && this._itemStatus.html(items.length + " " + (items.length == 1 ? this._getLocalizedLabels("Item") : this._getLocalizedLabels("Items")));
+            }            
+        },
+        _onSearchKeyup: function (event) {
+            var proxy = this;
+            var event = event;
+            clearTimeout(this._searchTimer);
+            this._searchTimer = setTimeout(function () {
+                proxy._validateKeyCode(event);
+            }, 300);
+        },
+        _validateKeyCode: function (event) {
+            switch (event.which) {
+                case 38:
+                case 40:
+                case 37:
+                case 39:
+                case 20:
+                case 16:
+                case 17:
+                case 18:
+                case 35:
+                case 36:
+                case 144: break;
+                case 27:
+                    this._searchbar && this._searchbar.val("");
+                    this._queryString = "";
+                    var address = this._addresstag.val();
+                    this._removeOldSelectionDetails();
+                    this._currentPath = this._currentPath.split(address)[0] + address;
+                    this._getFilteredList(this._fileExplorer[this._currentPath]);
+                    this.model.layout == 'grid' ? this._addFocus(this._gridtag.find(".e-gridcontent")) : this._addFocus(this._tileViewWrapper);
+                    break;
+                case 9:
+                case 46:
+                case 8:
+                case 13:
+                default:
+                    this._queryString = event.currentTarget.value;
+                    var address = this._addresstag.val();
+                    this._removeOldSelectionDetails();
+                    this._currentPath = this._currentPath.split(address)[0] + address;
+                    this._getFilteredList(this._fileExplorer[this._currentPath]);
+                    break;
+            }
+        },
+        _onDialogClose: function (args) {
+            $("body").find("#" + this._ExplorerId + "_basicDialog_wrapper").remove();
+            this._lastFocusedElement && this._lastFocusedElement.focus();
+        },
+        _switchView: function (event) {
+            var changed = false;
+            if (event.currentTarget.getAttribute("id") == this._ExplorerId + '_swithListView') {
+                if (this.model.layout != ej.FileExplorer.layoutType.LargeIcons) {
+                    this.model.layout = ej.FileExplorer.layoutType.LargeIcons;
+                    changed = true;
+                }
+            } else {
+                if (this.model.layout != ej.FileExplorer.layoutType.Grid) {
+                    this.model.layout = ej.FileExplorer.layoutType.Grid;
+                    changed = true;
+                }
+            }
+            if (changed) {
+                this._switchLayoutView();
+                this._addFocus(this._statusbar);
+            }
+        },
+        _switchLayoutView: function (isCode) {
+            var changed = false;
+            var items = (this._searchbar && this._searchbar.val() != "") ? (this._suggestionItems.length >= 0 ? this._suggestionItems : this._fileExplorer[this._originalPath]) : this._fileExplorer[this._originalPath];
+            this._currentPath = this._originalPath;
+            switch (this.model.layout) {
+                case ej.FileExplorer.layoutType.LargeIcons:
+                case ej.FileExplorer.layoutType.Tile:
+                    this._gridtag.hide();
+                    this._tileContent.parent().show();
+                    this._tileViewWrapper.removeClass("e-tileInfo-view");
+                    if (this._statusbar) {
+                        this._statusbar.find(".e-swithListView").removeClass("e-active");
+                        this._statusbar.find(".e-switchGridView").removeClass("e-active");
+                    }
+                    if (this.model.layout == ej.FileExplorer.layoutType.LargeIcons)
+                        this._statusbar && this._statusbar.find(".e-swithListView").addClass("e-active");
+                    else {
+                        this._tileViewWrapper.addClass("e-tileInfo-view");
+                        this.items = this._tileView.find("li.e-tilenode");
+                        this._setThumbImageHeight();
+                    }                        
+                    this._renderTileView(items);
+                    changed = true;
+                    break;
+                case ej.FileExplorer.layoutType.Grid:
+                default:
+                    this._tileView && this._tileContent.parent().hide();
+                    this._gridtag.show();
+                    this._renderGridView(items);
+                    if (this._statusbar) {
+                        this._statusbar.find(".e-swithListView").removeClass("e-active");
+                        this._statusbar.find(".e-switchGridView").addClass("e-active");
+                    }
+                    changed = true;
+                    break;
+            }
+            this._changeLayoutActive(this.model.layout);
+            if (changed) {
+                this._updateItemStatus(items);
+                this._setSelectedItems(this.model.selectedItems);
+                var args = { layoutType: this.model.layout, isInteraction: !isCode };
+                this._trigger("layoutChange", args);
+            }
+        },
+        _wireEvents: function () {
+            this._on($('#' + this._ExplorerId + '_newFolder'), "click", this._createNewFolder);
+            this._on($('#' + this._ExplorerId + '_switchGridView'), "click", this._switchView);
+            this._on($('#' + this._ExplorerId + '_swithListView'), "click", this._switchView);
+            this._on(this.element, "keydown", this._keyDownOnInput);
+            this._on(this._gridtag, "click", this._gridtagClick);
+            this._on(this._tileViewWrapper, "click", this._tileViewWrapperClick);
+            this.model.allowDragAndDrop && this._toolBarItems && this._on(this._toolBarItems, "dragover", this._preventDropOption);
+        },
+        _preventDropOption: function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.originalEvent.dataTransfer.dropEffect = "none";
+        },
+        _onHideContextMenu: function() {
+            (this._treeObj) && this._treeObj.element.find('.e-node-focus').removeClass('e-node-focus');
+        },
+
+        _adjustSize: function(args){
+            this._isWindowResized = args ? true : false;
+            this.adjustSize();
+        },
+        _closeDialog: function (event) {
+            this._unwireDialogEvent(event);
+            $(event.target).closest("div.e-dialog").find(".e-dialog").ejDialog("close");
+        },
+
+        _searchPath: function (event) {
+            var code = this._getKeyCode(event);
+            switch (code) {
+                case 13:
+                    this._searchbar && this._searchbar.val("");
+                    var text = this._addresstag.val(), Items = text.split("/"), element = this._treetag;
+                    for (var i = 0; i < Items.length; i++) {
+                        if (Items[i]) {
+                            element = this._findMatchingElement($(element).children("ul"), Items[i]);
+                            if(element.length)
+                                this._treetag.ejTreeView("selectNode", element) 
+                            else {
+                                this._setSelectedItems([Items[i]]);
+                                if (this.model.selectedItems.length) {
+                                    this._openAction();
+                                }
+                                else {
+                                    this._alertDialog = this._createDialog(ej.buildTag('div.e-fe-dialog-label', String.format(this._getLocalizedLabels("ErrorPath"), text)), { width: 400, height: "auto", title: this._getLocalizedLabels("Error") });
+                                    this._alertDialogObj = this._alertDialog.data("ejDialog");
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case 27:
+                    event.preventDefault();
+                    this._updateAddressBar();
+                    this._toolBarItems.focus();
+                    break;
+            }
+        },
+
+        _addressbarFocusout: function (event) {
+            this._updateAddressBar();
+        },
+
+        _createDialog: function (contentTag, model) {
+            var proxy = this;
+            var dialog = ej.buildTag('div#' + this._ExplorerId + '_basicDialog.e-fe-dialog');
+            $(contentTag).css("overflow", "hidden");
+            $(dialog).append(contentTag);
+            dialog.ejDialog({
+                title: (model.title) ? model.title : "",
+                width: model.width,
+                maxWidth: "100%",
+                target: proxy.element,
+                closeIconTooltip: proxy._getLocalizedLabels("DialogCloseToolTip"),
+                height: model.height,
+                enableModal: true,
+                showHeader: true,
+                enableResize: false,
+                enableAnimation: false,
+                allowKeyboardNavigation: false,
+                enableRTL: proxy.model.enableRTL,
+                showRoundedCorner: proxy.model.showRoundedCorner,
+                cssClass: this.model.cssClass + " e-fe-dialog",
+                open: model.open,
+                close: function (e) {  proxy._onDialogClose(e); }
+            });
+            return dialog;
+        },
+        _showErrorDialog: function (error) {
+            this._alertDialog = this._createDialog(ej.buildTag('div.e-fe-dialog-label', error), { width: 400, height: "auto", title: this._getLocalizedLabels("Error") });
+            this._alertDialogObj = this._alertDialog.data("ejDialog");
+        },
+        _findMatchingElement: function (element, text) {
+            return $(element).children("li").filter(function (index) {
+                if ($(this).find(".e-text:first").text() == text)
+                    return $(this)
+            });
+        },
+        _getKeyCode: function (e) {
+            var code;
+            if (e.keyCode) code = e.keyCode; // ie and mozilla/gecko
+            else if (e.which) code = e.which; // ns4 and opera
+            else code = e.charCode;
+            return code
+        },
+
+
+        _keyDownOnInput: function (e) {
+            if ($(e.target).hasClass("e-tool-input"))
+                return;
+            var code = this._getKeyCode(e);
+            switch (code) {
+                case 49: // Ctrl + Shift + 1 for toolbar focus
+                    if (e.shiftKey && e.ctrlKey && this.model.showToolbar) {
+                        e.preventDefault();
+                        this._addFocus(this._toolBarItems);
+                    }
+                    break;
+                case 50: // Ctrl + Shift + 2 for treeview focus
+                    if (e.shiftKey && e.ctrlKey && this.model.showNavigationPane) {
+                        e.preventDefault();
+                        this._addFocus(this._treetag);
+                    }
+                    break;
+                case 51: // Ctrl + Shift + 3 for splitter focus
+                    if (e.shiftKey && e.ctrlKey) {
+                        e.preventDefault();
+                        this._addFocus($(this._splittag.find(".e-splitbar")[0]));
+                    }
+                    break;
+                case 52: // Ctrl + Shift + 4 for gridview focus
+                    if (e.shiftKey && e.ctrlKey) {
+                        e.preventDefault();
+                        this._changeLayout(ej.FileExplorer.layoutType.Grid);
+                    }
+                    break;
+                case 53: // Ctrl + Shift + 5 for tileview focus
+                    if (e.shiftKey && e.ctrlKey) {
+                        e.preventDefault();
+                        this._changeLayout(ej.FileExplorer.layoutType.Tile);
+                    }
+                    break;
+                case 54: // Ctrl + Shift + 6 for largeicons view
+                    if (e.shiftKey && e.ctrlKey) {
+                        e.preventDefault();
+                        this._changeLayout(ej.FileExplorer.layoutType.LargeIcons);
+                    }
+                    break;
+                case 55: // Ctrl + Shift + 7 for Statusbar focus
+                    if (e.shiftKey && e.ctrlKey && this.model.showFooter) {
+                        e.preventDefault();
+                        this._addFocus(this._statusbar);
+                    }
+                    break;
+                case 65: // Ctrl + A for select all file
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        var _items;
+                        if (this.model.layout == "grid") {
+                            _items = this.gridItems;
+                            this._gridObj.clearSelection();
+                            this._removeOldSelectionDetails();
+                            this._addFocus(this._gridtag.find(".e-gridcontent"));
+                            this._gridObj.selectRows(0, _items.length - 1, $(_items[_items.length - 1]).find("td:first"));
+                        } else {
+                            _items = this.items;
+                            if (this.items.hasClass("e-active"))
+                                this.items.removeClass("e-active").attr("aria-selected", false);
+                            this._removeOldSelectionDetails();
+                            this._addFocus(this._tileViewWrapper);
+                            for (var i = 0; i < _items.length; i++) {
+                                var e = { keyCode: 91, ctrlKey: true, currentTarget: _items[i], target: _items[i] };
+                                this._upDatePathFromTileView(e);
+                            }
+                        }
+                    }
+                    break;
+                case 78: // Alt + N for Create newfolder
+                    if (e.altKey && this._hasEditContentsPermission(this._originalPath)) {
+                        e.preventDefault();
+                        this._createNewFolder();
+                    }
+                    break;
+                case 85: // Ctrl + U for upload
+                    if (e.ctrlKey && this._toUpload) {
+                        e.preventDefault();
+                        this.element.find(".e-uploadinput").click();
+                    }
+                    break;
+                case 116: // F5 for refresh
+                    e.preventDefault();
+                    this._currentPath = this._originalPath;
+                    this._highlightedNodes = this.model.selectedItems;
+                    this._refreshItems(this._treeObj.getSelectedNode(), this._originalPath);
+                    break;
+            }
+        },
+        _changeLayout: function (layout) {
+            if (this.model.layout != layout) {
+                this.model.layout = layout;
+                this._removeFocus();
+                this._switchLayoutView(layout);
+            }
+            this._focusLayout(layout);
+        },
+        _focusLayout: function (layout) {
+            switch (layout) {
+                case ej.FileExplorer.layoutType.Grid:
+                    this._addFocus(this._gridtag.find(".e-gridcontent"));
+                    break;
+                case ej.FileExplorer.layoutType.Tile:
+                case ej.FileExplorer.layoutType.LargeIcons:
+                default:
+                    this._addFocus(this._tileViewWrapper);
+                    break;
+            }
+        },
+        _getFocusedElement: function () {
+            var focusedElement = this.element.find(".e-focus");
+            return focusedElement = focusedElement ? focusedElement : $(':focus');
+        },
+
+        _addFocus: function (target) {
+            if (!target.hasClass("e-focus")) {
+                this._removeFocus();
+                target.focus();
+            }
+        },
+        _removeFocus: function () {
+            var target = this._getFocusedElement();
+            if (target.length > 0) {
+                target.blur();
+            }
+        },
+
+        _subControlsSetModel: function (prop, value) {
+            var propObj = {};
+            propObj[prop] = value;
+            this._treeObj && this._treeObj.option(prop, value);
+            if (this._downloadDialogObj && this._downloadDialogObj.isOpen()) this._downloadDialogObj.option(prop, value);
+            if (this._newFolderDialogObj && this._newFolderDialogObj.isOpen()) this._newFolderDialogObj.option(prop, value);
+            if (this._renameDialogObj && this._renameDialogObj.isOpen()) this._renameDialogObj.option(prop, value);
+            if (this._openDialogObj && this._openDialogObj.isOpen()) this._openDialogObj.option(prop, value);
+            if (this._detailsDialogObj && this._detailsDialogObj.isOpen()) this._detailsDialogObj.option(prop, value);
+            if (this._alertDialogObj && this._alertDialogObj.isOpen()) this._alertDialogObj.option(prop, value);
+            if (this._alertWindowObj && this._alertWindowObj.isOpen()) this._alertWindowObj.option(prop, value);
+            this._treeContextMenutag && this._treeMenuObj.option(prop, value);
+            this._tileContextMenutag && this._viewMenuObj.option(prop, value);
+            this._toolBarObj && this._toolBarObj.option(prop, value);
+            this._uploadtag && this._uploadtag.data("ejUploadbox").option(prop, value);
+            this._splitObj && this._splitObj.option(prop, value);
+            this._splitButtonObj && this._splitButtonObj.option(prop, value);
+            this._statusbar.find("button").length && this._statusbar.find("button").ejButton(propObj);
+            this._headCheckObj && this._headCheckObj.option(prop, value);
+            this._tileView.find(".e-tile-checkbox").length && this._tileView.find(".e-tile-checkbox").ejCheckBox(propObj);
+            this._gridtag.find(".e-grid-row-checkbox").length && this._gridtag.find(".e-grid-row-checkbox").ejCheckBox(propObj);
+        },
+        _removeDialog: function (obj) {
+            obj.close();
+            var isOverLay = obj._overLay;
+            isOverLay && isOverLay.remove();
+            obj._ejDialog.remove();
+        },
+        _reSizeHandler: function (args) {
+            this._splitterCorrection();
+            if (this.model.ajaxAction == "" || this._currentPath == "")
+                return;
+            if (this.model.layout == "grid") {
+                var height = this._splittag.outerHeight() - this._gridtag.find(".e-gridheader").outerHeight();
+                this._gridObj && this._gridObj.option("scrollSettings", { height: this.model.showFooter ? height - this._statusbar.outerHeight() : height, width: this._splittag.find(".e-cont2").width() });
+            }
+            else {
+                this._tileScroll && this._tileScroll.option("width", this._splittag.find(".e-cont2").width());
+                this._setThumbImageHeight();
+            }
+            this._treeScroll && this._treeScroll.option("width", this._splittag.find(".e-cont1").width());
+            this._waitingPopup && this._waitingPopup.refresh();
+        },
+        _splitterCorrection: function () {
+            var left = this._splittag.find(this.model.enableRTL ? ".e-cont2" : ".e-cont1").width() - 1;           
+            this._splittag.find(".e-split-divider").css("left", left).css("z-index", 1);
+        },
+        _findCommand: function(command, obj) {
+            $.each(obj, function(key, val) {
+                for(var j = 0, leng = val.length; j < leng; j++) {
+                    if(val[j].toLowerCase() == command.toLowerCase()) {
+                        command = val[j];
+                        return false;
+                    }
+                }
+            });
+            return command;
+        },
+        _getElement: function (node) {
+            typeof node == "string" && (node = this._findCommand(node, this.model.tools));
+            (typeof node != "object") && (node = (typeof node == "string") ? (this._toolBarObj.itemsContainer.find("li#" + node).length > 0 ? this._toolBarObj.itemsContainer.find("li#" + node) : this._toolBarObj.itemsContainer.find("li#" + this._ExplorerId + node.replace(/ /g, ''))) : this._toolBarObj.itemsContainer.find('li').eq(node));
+            node = $(node);
+            return $(node[0]);
+        },
+        _updateToolbar: function () {
+            this._renderToolBar();
+            this._selectedStates.length >= 2 && this._enableToolbarItem("Back");
+            this._updateAddressBar();
+            if (this._selectedItems.length > 0) {
+                if (this._toRead) {
+                    this._toDownload && this._enableToolbarItem("Download");
+                    this._enableEditingTools();
+                    this._toCopy && this._enableToolbarItem("Copy");
+                }
+            }
+            if (!ej.isNullOrUndefined(this._fileName) && this._fileName != "")
+                this._toRead && this._enableToolbarItem("Paste");
+        },
+        _enableEditingMenus: function () {
+            var items = [this._menuRename, this._menuDelete, this._menuCut];
+            for (var i = 0; i < items.length; i++) {
+                if (this._restrictedMenuOption.indexOf(items[i]) < 0) {
+                    this._viewMenuObj && this._viewMenuObj.enableItem(items[i]);
+                    this._treeMenuObj && this._treeMenuObj.enableItem(items[i]);
+                }
+            }
+        },
+        _disableEditingMenus: function () {
+            var items = [this._menuRename, this._menuDelete, this._menuCut];
+            for (var i = 0; i < items.length; i++) {
+                this._viewMenuObj && this._viewMenuObj.disableItem(items[i]);
+                this._treeMenuObj && this._treeMenuObj.disableItem(items[i]);
+            }
+        },
+        _updateSelectionDetails: function () {
+            if (this._selectedItems.length == 0)
+                this._removeOldSelectionDetails();
+            else {
+                this._updateToolbarItems();
+                this._updateNewFolderTool(this._hasEditContentsPermission(this._originalPath));
+            }
+        },
+        _updatePasteTool: function () {
+            this._toolBarItems && ((this._option && this._toRead) ? this._enableToolbarItem("Paste") : this._disableToolbarItem("Paste"));
+        },
+        _updateAccessRules: function (path) {
+            var _value = this._feParent[path];
+            this._updateAccessValue(_value);
+        },
+        _updateAccessValue: function (_value) {
+            if (!ej.isNullOrUndefined(_value) && !ej.isNullOrUndefined(_value.permission)) {
+                if (!_value.permission.Copy) this._toCopy = false;
+                if (!_value.permission.Download) this._toDownload = false;
+                if (!_value.permission.Edit) this._toEdit = false;
+                if (!_value.permission.EditContents) this._toEditContents = false;
+                if (!_value.permission.Read) this._toRead = false;
+                if (!_value.permission.Upload) this._toUpload = false;
+            }
+        },
+        _updateToolbarItems: function () {
+            if (this._toolBarItems) {
+                (this._toRead && this._toDownload) ? this._enableToolbarItem("Download") : this._disableToolbarItem("Download");
+                (this._toRead && this._toUpload) ? this._enableToolbarItem("Upload") : this._disableToolbarItem("Upload");
+                (this._toRead && this._toEdit) ? this._enableEditingTools() : this._disableEditingTools();
+                (this._toRead && this._toCopy) ? this._enableToolbarItem("Copy") : this._disableToolbarItem("Copy");
+                this._updatePasteTool();
+            }
+        },
+        _getFilePermission: function (path) {
+            return this._feParent[path] ? this._feParent[path].permission : null;
+        },
+        _updateCurrentPathPermission: function () {
+            this._removeOldSelectionDetails();
+            this._toDownload = false; this._toUpload = this._toEdit = this._toEditContents = this._toRead = this._toCopy = true;
+            this._updateAccessRules(this._originalPath);
+            this._toolBarItems && (this._toUpload ? this._enableToolbarItem("Upload") : this._disableToolbarItem("Upload"));
+            this._updateNewFolderTool(this._hasEditContentsPermission(this._originalPath));
+            (this._toRead && this._toCopy) ? this._enableToolbarItem("Copy") : this._disableToolbarItem("Copy");
+            this._updatePasteTool();
+        },
+        _updateNewFolderTool: function (value) {
+            this._toolBarItems && (value ? this._enableToolbarItem("NewFolder") : this._disableToolbarItem("NewFolder"));
+        },
+        _hasEditContentsPermission: function (path) {
+            var permission = this._getFilePermission(path);
+            return permission ? ((permission.Read && permission.EditContents) ? true : false) : true;
+        },
+        _hasReadPermission: function (path) {
+            var permission = this._getFilePermission(path);
+            return (permission && !permission.Read) ? false : true;
+        },
+        _unwireEvents: function () {
+            this._off($('#' + this._ExplorerId + '_newFolder'), "click", this._createNewFolder);
+            this._off($('#' + this._ExplorerId + '_switchGridView'), "click", this._switchView);
+            this._off($('#' + this._ExplorerId + '_swithListView'), "click", this._switchView);
+            this._addressBarEvents("_off");
+            this._off($('#' + this._ExplorerId + '_searchbar'), "focus", this._inputFocusin);
+            this._off($('#' + this._ExplorerId + '_searchbar'), "keyup", this._onSearchKeyup);
+            this._off(this.element, "keydown", this._keyDownOnInput);
+            this._off(this._gridtag, "click");
+            this._off(this._tileViewWrapper, "click");
+            this.model.isResponsive && $(window).unbind('resize', $.proxy(this._adjustSize, this));
+            this._toolBarItems && this._off(this._toolBarItems, "dragover", this._preventDropOption);
+        },
+
+        _wireResizing: function () {
+            this.model.isResponsive ? $(window).bind('resize', $.proxy(this._adjustSize, this)) : $(window).unbind('resize', $.proxy(this._adjustSize, this));
+        },
+        adjustSize: function () {
+            this._ensureResolution();
+            (!this._isWindowResized) && this.model.showToolbar && this.model.isResponsive && this._toolBarObj._reSizeHandler();
+            this._isWindowResized = false;
+            this._splittag.css('height', (this.element.height() - ((this.model.showToolbar && this._toolBarItems) ? this._toolBarItems.outerHeight() : 0)));
+            var layoutHeight = this._splittag.outerHeight() - (this.model.showFooter ? this._statusbar.outerHeight() : 0);
+            this._tileContent && this._tileContent.parent(".e-tile-wrapper").height(layoutHeight);
+            this._tileScroll && this._tileScroll.option("height", layoutHeight);
+            this._gridtag && this._gridtag.height(layoutHeight);
+            this._splitObj && this._splitObj._windowResized();
+            this._treeScroll && this._treeScroll.option("height", this._splittag.height());
+            this._reSizeHandler();
+        },
+        refresh: function () {
+            this._refreshItems(this._selectedNode, this._currentPath);
+        },
+        enableToolbarItem: function (liElement) {
+            this._removeResrictedToolItem(liElement);
+            liElement = this._getElement(liElement);
+            (liElement[0] != null && this._toolBarObj) && this._toolBarObj.enableItem(liElement);
+        },
+        disableToolbarItem: function (liElement) {
+            liElement = this._getElement(liElement);
+            if(liElement[0] != null && this._toolBarObj) {
+                var operation = liElement.attr("id").replace(this._ExplorerId, "");
+                this._restrictedToolbarOptions.push(operation);
+                this._toolBarObj.disableItem(liElement);
+            }
+        },
+        removeToolbarItem: function (liElement) {
+            this._removeResrictedToolItem(liElement);
+            liElement = this._getElement(liElement);
+            (liElement[0] != null && this._toolBarObj) && this._toolBarObj.removeItem(liElement);
+        },
+        _removeResrictedToolItem: function (item) {
+            var operation = typeof item == "string" ? item : item.attr("id").replace(this._ExplorerId, "");
+            for (var i = 0; i < this._restrictedToolbarOptions.length; i++) {
+                if (this._restrictedToolbarOptions[i] == operation) {
+                    this._restrictedToolbarOptions.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    });
+    ej.FileExplorer.Locale = {};
+
+    ej.FileExplorer.Locale["en-US"] = {
+        EmptyFolder: "This folder is empty",
+        EmptyResult:"No items match your search",
+        Back: "Backward",
+        Forward: "Forward",
+        Upward:"Upward",
+        Refresh: "Refresh",
+        Addressbar: "Address bar",
+        Upload: "Upload",
+        Rename: "Rename",
+        Delete: "Delete",
+        Download: "Download",
+        Error: "Error",
+        Cut: "Cut",
+        Copy: "Copy",
+        Paste: "Paste",
+        Details: "Details",
+        Searchbar: "Search bar",
+        Open: "Open",
+        Search: "Search",
+        NewFolder: "New folder",
+        Size: "Size",
+        RenameAlert: "Please enter new name",
+        NewFolderAlert: "Please enter new folder name",        
+        ContextMenuOpen: "Open",
+        ContextMenuNewFolder: "New folder",
+        ContextMenuDelete: "Delete",
+        ContextMenuRename: "Rename",
+        ContextMenuUpload: "Upload",
+        ContextMenuDownload: "Download",
+        ContextMenuCut: "Cut",
+        ContextMenuCopy: "Copy",
+        ContextMenuPaste: "Paste",
+        ContextMenuGetinfo: "Get info",
+        ContextMenuRefresh: "Refresh",
+        ContextMenuOpenFolderLocation: "Open folder location",
+        Item: "item",
+        Items: "items",
+        Selected: "selected",
+        ErrorOnFolderCreation: "This destination already contains a folder named '{0}'. Do you want to merge this folder content with already existing folder '{0}'?",
+        InvalidFileName: "A file name can't contain any of the following characters: \\/:*?\"<>|",
+        GeneralError: "Please see browser console window for more information",
+        ErrorPath: "FileExplorer can't find '{0}'. Check the spelling and try again.",
+        ReplaceAlert: "File named '{0}' already exists. Replace old file with new one?",
+        DuplicateAlert: "There is already a file with the same name '{0}'. Do you want to create file with duplicate name",
+        DuplicateFileCreation: "There is already a file with the same name in this location. Do you want to rename '{0}' to '{1}'?",
+        DeleteFolder: " Are you sure you want to delete ",
+        DeleteMultipleFolder: "Are you sure you want to delete these {0} items?",
+        CancelPasteAction: "The destination folder is a subfolder of source folder.",
+        OkButton: "OK",
+        CancelButton: "Cancel",
+        YesToAllButton: "Yes to all",
+        NoToAllButton: "No to all",
+        YesButton: "Yes",
+        NoButton: "No",
+        SkipButton:"Skip",
+        Grid: "Grid view",
+        Tile: "Tile view",
+        LargeIcons: "Large icons",
+        Name: "Name",
+        Location: "Location",
+        Type: "Item type",
+        Layout:"Layout",
+        Created: "Created",
+        Accessed: "Accessed",
+        Modified: "Modified",
+        Permission: "Permission",
+        DialogCloseToolTip: "Close",
+        UploadSettings: {
+            buttonText: {
+                upload: "Upload",
+                browse: "Browse",
+                cancel: "Cancel",
+                close: "Close"
+            },
+            dialogText: {
+                title: "Upload Box",
+                name: "Name",
+                size: "Size",
+                status: "Status"
+            },
+            dropAreaText: "Drop files or click to upload",
+            filedetail: "The selected file size is too large. Please select a file within the valid size.",
+            denyError: "Files with #Extension extensions are not allowed.",
+            allowError: "Only files with #Extension extensions are allowed.",
+            cancelToolTip: "Cancel",
+            removeToolTip: "Remove",
+            retryToolTip: "Retry",
+            completedToolTip: "Completed",
+            failedToolTip: "Failed",
+            closeToolTip: "Close"
+        }
+    };
+
+
+    ej.FileExplorer.filterType = {
+        /**  Supports to search text with startswith  */
+        StartsWith: "startswith",
+        /**  Supports to search text with contains */
+        Contains: "contains",
+        /**  Supports to search text with endswith */
+        EndsWith: "endswith"        
+    };
+    ej.FileExplorer.layoutType = {
+        Tile: "tile",
+        Grid: "grid",
+        LargeIcons: "largeicons"
+    };
+})(jQuery, Syncfusion);
+;
+
+});

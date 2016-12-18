@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Syncfusion Query Example</title>
+    <link rel="stylesheet"
+          href="../../node_modules/syncfusion-javascript/Content/ej/web/default-theme/ej.widgets.all.min.css">
+
+    <script src="../../node_modules/jquery/dist/jquery.js"></script>
+    <script src="../../node_modules/jsrender/jsrender.js"></script>
+    <script src="../../node_modules/syncfusion-javascript/Scripts/ej/web/ej.web.all.min.js"></script>
+
+    <script src="queryLogin.js"></script>
+    <script src="queryDataManager.js"></script>
+    <script src="../../syncfusionDreamFactoryAdapter.js"></script>
+
+</head>
+<body>
+<div class="datatable">
+    <table id="table1" class="table table-striped table-bordered" style="width:700px">
+        <thead>
+        <tr>
+            <th>Last Name</th>
+            <th>First Name</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+<script type="text/javascript">
+  login();
+</script>
+<script id="tableTemplate" type="text/x-jsrender">
+      <tr>
+ <tr>
+             <td>{{:last_name}}</td>
+                <td>{{:first_name}}</td>
+      </tr>
+
+      </tr>
+
+
+
+</script>
+</body>
+</html>
