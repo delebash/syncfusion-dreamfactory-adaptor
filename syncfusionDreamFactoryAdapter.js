@@ -1,4 +1,4 @@
-var syncfusiondmSymbols = {}
+var syncfusiondmSymbols = {};
 syncfusiondmSymbols.operatorSymbols = {
   "=": "equal",
   "is not null": "notnull",

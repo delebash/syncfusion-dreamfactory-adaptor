@@ -4,13 +4,16 @@ A custom Syncfusion data adapter for use with [Dreamfactory](https://www.dreamfa
 
 **This is an initial commit use at your own risk**.
 
+To use:
+clone project and run `npm install`
+
 # Examples: #
 
 Ajax -- Just a quick tester without a data adapter to verify you can connect to dreamfactory and retrieve data
 
-Grid -- Uses the data-adapter to load a grid, sorting and filtering are working
+Grid -- Uses the data-adapter to load a syncfusion grid. Sorting, Filtering, and Paging are working
 
-Query -- Uses the data-adapter and a custom defined query
+Query -- Uses the data-adapter combined with a syncfusion query
 
 For these examples to work you need to change to your values
 

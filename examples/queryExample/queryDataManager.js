@@ -7,8 +7,9 @@ function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
   });
   var query = ej.Query()
     .from(serviceObject)
-  //  .select("last_name", "first_name")
-  //  .where("last_name", "=", "Yang");
+    .select("last_name", "first_name")
+    //.where("last_name","=","Bedecs")
+    .sortBy("last_name","DESC")
   //.where("last_name", "notin" , "Huang,Yang");
   //.where("last_name", "in" , "Yuan,Huang");
   // .where("last_name", "startswith", "Y");
