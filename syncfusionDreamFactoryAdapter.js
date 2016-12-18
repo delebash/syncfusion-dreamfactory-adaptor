@@ -1,5 +1,5 @@
-var syncdm = {}
-syncdm.operatorSymbols = {
+var syncfusiondmSymbols = {}
+syncfusiondmSymbols.operatorSymbols = {
   "=": "equal",
   "is not null": "notnull",
   "is null": "isnull",
@@ -27,7 +27,7 @@ ej.data.fnOperators.in = function (actual, expected, ignoreCase) {
   return actual > expected;
 };
 
-$.extend(ej.data.operatorSymbols, syncdm.operatorSymbols);
+$.extend(ej.data.operatorSymbols, syncfusiondmSymbols.operatorSymbols);
 
 var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
   options: {
