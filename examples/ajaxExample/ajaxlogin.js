@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------
 //  DreamFactory 2.0 instance specific constants
 //--------------------------------------------------------------------------
-var INSTANCE_URL = 'https://api.ageektech.com';
+var INSTANCE_URL = 'https://api.test.com';
 var APP_API_KEY = 'key';
 
 var api = "/api/v2/",
