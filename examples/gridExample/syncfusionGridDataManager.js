@@ -1,7 +1,7 @@
 function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
-  var token = getToken('token');
-  url += serviceObject
-  var dataManager = ej.DataManager({
+  let token = getToken('token');
+  url += serviceObject;
+  let dataManager = ej.DataManager({
     url: url,
     adaptor: new syncfusionDreamFactoryAdapter(),
     headers: [{"X-DreamFactory-API-Key": APP_API_KEY, "X-DreamFactory-Session-Token": token}]
