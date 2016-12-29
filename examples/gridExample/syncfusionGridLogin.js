@@ -11,7 +11,7 @@ var api = "/api/v2/",
   overrideMethod = '?method=GET',
   url = INSTANCE_URL + api + db + service;
 
-var username = 'support@ageektech.com';
+var username = 'support@test.com';
 var password = 'test12345';
 
 //--------------------------------------------------------------------------
