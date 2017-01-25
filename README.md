@@ -1,4 +1,4 @@
-# Syncfusion-DreamFactory-Adaptor
+#  Syncfusion-DreamFactory-Adaptor
 
 A custom Syncfusion data adapter for use with [Dreamfactory](https://www.dreamfactory.com/)
 
