@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------
 //  DreamFactory 2.0 instance specific constants
 //--------------------------------------------------------------------------
-var INSTANCE_URL = 'https://api.test.com';
-var APP_API_KEY = 'key';
+var INSTANCE_URL = 'https://api.ageektech.com';
+var APP_API_KEY = 'e36139937010dae37c94ffee331f2acae9989a9a04211bc5025f3a1d5d7d2e36';
 
 var api = "/api/v2/",
   db = "northwind/",
@@ -11,7 +11,7 @@ var api = "/api/v2/",
   overrideMethod = '?method=GET',
   url = INSTANCE_URL + api + db + service;
 
-var username = 'support@test.com';
+var username = 'test@ageektech.com';
 var password = 'test12345';
 
 //--------------------------------------------------------------------------
