@@ -66,6 +66,8 @@ INSTANCE_URL, APP_API_KEY, username, password, serviceObject, field names in cod
     "IS NOT IN": " IS NOT IN ",
     "IS IN": " IS IN "
     
+[**Example Application**](https://github.com/delebash/syncfusion-dreamfactory-aurelia-skeleton-cli)
+
 **Note:**  I have not tested aggregates yet.
 
 **TODO:**
