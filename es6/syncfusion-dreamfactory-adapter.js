@@ -129,7 +129,7 @@ export class DreamFactoryAdapter {
                 count = 'include_count=true';
             }
 
-            if (settings.action != "") {
+            if (settings.action) {
                 settings.url = settings.url + table;
             } else {
                 settings.url = settings.url + table + '?method=GET&' + count + '';
