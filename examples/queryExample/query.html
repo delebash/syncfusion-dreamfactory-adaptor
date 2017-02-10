@@ -6,7 +6,14 @@
     <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
     <script src="../../node_modules/jquery/dist/jquery.js"></script>
     <script src="../../node_modules/jsrender/jsrender.js"></script>
-    <script src="../../node_modules/syncfusion-javascript/Scripts/ej/web/ej.web.all.min.js"></script>
+
+    <!--Prod Vendor-->
+    <!--<script src="../../node_modules/syncfusion-javascript/Scripts/ej/web/ej.web.all.min.js"></script>-->
+
+    <!--Debug Vendor-->
+    <script src="../../js/debug/syncfusion/ej.core.js"></script>
+    <script src="../../js/debug/syncfusion/ej.data.js"></script>
+    <!--End Vendor-->
 
     <script src="queryLogin.js"></script>
     <script src="queryDataManager.js"></script>
@@ -30,7 +37,7 @@
 </div>
 
 <script type="text/javascript">
-  login();
+    login();
 </script>
 <script id="tableTemplate" type="text/x-jsrender">
         <tr>
@@ -38,6 +45,7 @@
            <td>{{:last_name}}</td>
            <td>{{:company}}</td>
         </tr>
+
 </script>
 </body>
 </html>
