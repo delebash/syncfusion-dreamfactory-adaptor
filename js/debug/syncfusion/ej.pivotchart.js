@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.pivotchart.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.data","./../common/ej.touch","./../common/ej.draggable","./../common/ej.scroller","./ej.dialog","./ej.waitingpopup","./../datavisualization/ej.chart"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.data","./../common/ej.touch","./../common/ej.draggable","./../common/ej.scroller","./ej.dialog","./ej.waitingpopup","./../datavisualization/ej.chart","./ej.pivot.common"], fn) : fn();
 })
 (function () {
 	
@@ -46,10 +46,12 @@
             serviceMethodSettings: {
                 initialize: "InitializeChart",
                 drillDown: "DrillChart",
-                exportPivotChart: "Export"
+                exportPivotChart: "Export",
+                paging: "paging"
             },
             dataSource: {
                 data: null,
+                isFormattedValues: false,
                 columns: [],
                 cube: "",
                 catalog: "",
@@ -57,14 +59,16 @@
                 values: [],
                 filters: []
             },
-            locale: "en-US",
+            locale: null,
             drillSuccess: null,
             load: null,
             beforeServiceInvoke: null,
             afterServiceInvoke: null,
             renderComplete: null,
             renderFailure: null,
-            renderSuccess: null
+            renderSuccess: null,
+            beforeExport:null,
+            beforePivotEnginePopulate: null
         }),
 
         dataTypes: {
@@ -97,6 +101,14 @@
             this._JSONRecords = $.parseJSON(value);
         },
 
+        getPivotEngine: function () {
+            return this._pivotEngine;
+        },
+
+        setPivotEngine: function (value) {
+            this._pivotEngine = value;
+        },
+
         _init: function () {
             this._initPrivateProperties();
             this._load();
@@ -105,13 +117,12 @@
         _destroy: function () {
             this._pivotEngine = null;
             this.element.empty().removeClass("e-pivotchart" + this.model.cssClass);
-            if (this.ochartWaitingPopup != undefined)
-                this.ochartWaitingPopup._destroy();
+            if (this._waitingPopup != undefined)
+                this._waitingPopup._destroy();
         },
 
         _initPrivateProperties: function () {
             this._id = this.element.attr("id");
-            ochartProxy = this;
             this._olapReport = "";
             this._JSONRecords = null;
             this._currentAction = "initialize";
@@ -129,32 +140,36 @@
             this._pivotEngine = null;
             this._curFocus = null;
             this._selectedSeriesInfo = new Array();
-            ochartWaitingPopup = null;
-            ochartProgressBar = null;
-            oChartTimer = null;
+            this._waitingPopup = null;
         },
 
         _load: function () {
+		    this.model.locale= this.model.locale || "en-US";
             var eventArgs = { action: "initialize", element: this.element, customObject: this.model.customObject };
             this._trigger("load", eventArgs);
             this.element.addClass(this.model.cssClass);
-            if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null) {
-                this.model.customObject = oclientProxy.model.customObject;
-                if ($("#" + oclientProxy._id + "_maxView")[0]) {
-                    $("#" + oclientProxy._id + "_maxView").ejWaitingPopup({ showOnInit: true });
-                }
-                else
-                    oclientWaitingPopup.show();
+
+            if ($(this.element).parents(".e-pivotclient").length > 0) {
+                var pivotClientObj = $(this.element).parents(".e-pivotclient").data("ejPivotClient");
+                if ($("#" + pivotClientObj._id + "_maxView")[0])
+                    $("#" + pivotClientObj._id + "_maxView").ejWaitingPopup({ showOnInit: true });
+                else if (!ej.isNullOrUndefined(this._waitingPopup))
+                    this._waitingPopup.show();
             }
             else {
                 this.element.ejWaitingPopup({ showOnInit: true });
-                ochartWaitingPopup = this.element.data("ejWaitingPopup");
+                this._waitingPopup = this.element.data("ejWaitingPopup");
+                this._waitingPopup.show();
             }
             if (this.model.zooming != "")
                 this._initZooming = true;
             if ((this.model.dataSource.data == null && this.model.url != "") || (this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode)) {
                 this.model.operationalMode = ej.PivotChart.OperationalMode.ServerMode;
-                if (this.model.beforeServiceInvoke != null)
+                if (this.model.url == "") {
+                    this.renderChartFromJSON("");
+                    return;
+                }
+                if (this.model.beforeServiceInvoke != null && this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode)
                     this._trigger("beforeServiceInvoke", { action: this._currentAction, element: this.element, customObject: this.model.customObject });
                 var serializedCustomObject = JSON.stringify(this.model.customObject);
                 if (this.model.customObject != "" && this.model.customObject != null && this.model.customObject != undefined)
@@ -165,14 +180,29 @@
             else {
                 this.model.operationalMode = ej.PivotChart.OperationalMode.ClientMode;
                 this.model.analysisMode = this.model.dataSource.cube != "" ? ej.PivotChart.AnalysisMode.Olap : ej.PivotChart.AnalysisMode.Pivot;
-                if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
-                    var data = ej.PivotAnalysis.pivotEnginePopulate(this.model);
-                    this._pivotEngine = data.pivotEngine;
-                    this._generateData(data.pivotEngine);
-                }
-                else
-                    ej.olap.base.getJSONData({ action: "initialLoad" }, this.model.dataSource, this);
+                this.refreshControl();
             }
+        },
+
+        refreshControl: function () {
+            if (this.model.analysisMode == ej.Pivot.AnalysisMode.Pivot) {
+                var data = ej.PivotAnalysis.pivotEnginePopulate(this.model);
+                this._pivotEngine = data.pivotEngine;
+                if (data.pivotEngine.length > 0) {
+                    if (!ej.isNullOrUndefined(this._labelCurrentTags.expandedMembers)) {
+                        var clonedEngine = this._cloneEngine(this._pivotEngine);
+                        for (var i = 0; i < this._labelCurrentTags.expandedMembers.length; i++)
+                            this._cropData(clonedEngine, this._labelCurrentTags.expandedMembers[i], 0, true);
+                        this._generateData(clonedEngine);
+                    }
+                    else
+                        this._generateData(this._pivotEngine);
+                }
+                else if (!ej.isNullOrUndefined(this._waitingPopup))
+                    this._waitingPopup.hide();
+            }
+            else
+                ej.olap.base.getJSONData({ action: "initialLoad" }, this.model.dataSource, this);
         },
 
         _setFirst: true,
@@ -223,67 +253,65 @@
                 this._curFocus.click();
             }
             if ((e.which === 39 || e.which === 37 || e.which === 38 || e.which === 40) && this.element.find(".e-dialog").length > 0) {
-                    e.preventDefault();
-                    var menu = this.element.find(".e-dialog");
-                    menu.tabindex = -1;
-                    menu.focus();
-                    var focEle = menu.find("li");
-                    var next;
-                    if (e.which === 39 || e.which === 40) {
-                        if (!ej.isNullOrUndefined(this._curFocus)) {
-                            this._curFocus.removeClass("hoverCell");
-                            next = this._curFocus.next();
-                            if (next.length > 0) {
-                                this._curFocus = next;
-                            }
-                            else {
-                                this._curFocus = focEle.eq(0);
-                            }
+                e.preventDefault();
+                var menu = this.element.find(".e-dialog");
+                menu.tabindex = -1;
+                menu.focus();
+                var focEle = menu.find("li");
+                var next;
+                if (e.which === 39 || e.which === 40) {
+                    if (!ej.isNullOrUndefined(this._curFocus)) {
+                        this._curFocus.removeClass("hoverCell");
+                        next = this._curFocus.next();
+                        if (next.length > 0) {
+                            this._curFocus = next;
                         }
                         else {
                             this._curFocus = focEle.eq(0);
                         }
-                        this._curFocus.addClass("hoverCell");
                     }
-                    else if (e.which === 37 || e.which === 38) {
-                        if (!ej.isNullOrUndefined(this._curFocus)) {
-                            this._curFocus.removeClass("hoverCell");
-                            next = this._curFocus.prev();
-                            if (next.length > 0) {
-                                this._curFocus = next;
-                            }
-                            else {
-                                this._curFocus = focEle.last();
-                            }
+                    else {
+                        this._curFocus = focEle.eq(0);
+                    }
+                    this._curFocus.addClass("hoverCell");
+                }
+                else if (e.which === 37 || e.which === 38) {
+                    if (!ej.isNullOrUndefined(this._curFocus)) {
+                        this._curFocus.removeClass("hoverCell");
+                        next = this._curFocus.prev();
+                        if (next.length > 0) {
+                            this._curFocus = next;
                         }
                         else {
                             this._curFocus = focEle.last();
                         }
-                        this._curFocus.addClass("hoverCell");
-                    }               
+                    }
+                    else {
+                        this._curFocus = focEle.last();
+                    }
+                    this._curFocus.addClass("hoverCell");
+                }
             }
         },
 
         _wireEvents: function () {
             this._on($(document), 'keydown', this._keyDownPress);
-            window.clearInterval(oChartTimer);
             this._on(this.element, "click", ".menuList", function (evt) {
-                this._curFocus = null;
-                ochartWaitingPopup = this.element.data("ejWaitingPopup");
-                if (evt.target.innerHTML == ochartProxy._getLocalizedLabels("Exit")) {
-                    this.element.find("#" + ochartProxy._id + "ExpandMenu, .expandMenu, .e-dialog").remove();
+                this._curFocus = null;               
+                if (evt.target.innerHTML == this._getLocalizedLabels("Exit")) {
+                    this.element.find("#" + this._id + "ExpandMenu, .expandMenu, .e-dialog").remove();
                 }
-                else if (evt.target.innerHTML.indexOf(ochartProxy._getLocalizedLabels("Expand")) > -1) {
+                else if (evt.target.innerHTML.indexOf(this._getLocalizedLabels("Expand")) > -1) {
                     this._drillAction = "drilldown";
-                    if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null) {
-                        if ($("#" + oclientProxy._id + "_maxView")[0])
-                            $("#" + oclientProxy._id + "_maxView").ejWaitingPopup({ showOnInit: true });
-                        else
-                            oclientWaitingPopup.show();
+                    if ($(this.element).parents(".e-pivotclient").length > 0) {
+                        var pivotClientObj = $(this.element).parents(".e-pivotclient").data("ejPivotClient");
+                        if ($("#" + pivotClientObj._id + "_maxView")[0])
+                            $("#" + pivotClientObj._id + "_maxView").ejWaitingPopup({ showOnInit: true });
+                        else if (!ej.isNullOrUndefined(this._waitingPopup))
+                            this._waitingPopup.show();
                     }
-                    else {
-                        ochartWaitingPopup.show();
-                    }
+                    else if (!ej.isNullOrUndefined(this._waitingPopup))
+                        this._waitingPopup.show();
                     if (this.model.operationalMode == ej.PivotChart.OperationalMode.ClientMode) {
                         var selectedMember = this.model.enableRTL ? evt.target.innerHTML.split(" - ")[0] : evt.target.innerHTML.split(" - ")[1];
                         if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
@@ -293,12 +321,12 @@
                             for (var i = 0; i < this._labelCurrentTags.expandedMembers.length; i++)
                                 this._cropData(clonedEngine, this._labelCurrentTags.expandedMembers[i], 0, true);
                             this._generateData(clonedEngine);
+                            this._trigger("drillSuccess", { chartObj: this, drillAction: "drilldown", drilledMember: this._labelCurrentTags.expandedMembers.join(">#>"), event: evt });
                         }
                         else {
                             this._labelCurrentTags.collapsedMembers = $.grep(this._labelCurrentTags.collapsedMembers, function (item) { return item != selectedMember; });
                             var memberInfo = $(this.getJSONRecords().seriesTags).filter(function (index, item) { return item.split('::')[2] == selectedMember })[0];
                             var drilledMember = ej.olap._mdxParser._splitCellInfo(memberInfo);
-
                             var tempArray = new Array();
                             for (var i = 0; i < this.model.dataSource.rows.length; i++) {
                                 if (!ej.isNullOrUndefined(this._labelCurrentTags.expandedMembers)) {
@@ -343,22 +371,29 @@
                             this._labelCurrentTags.expandedMembers[dimensionIndex].push(memberInfo);
                             for (var i = dimensionIndex + 1; i < this._labelCurrentTags.expandedMembers.length; i++)
                                 this._labelCurrentTags.expandedMembers[i] = [];
-                            ej.olap._mdxParser.updateDrilledReport({ uniqueName: memberInfo, seriesInfo: this._selectedSeriesInfo, uniqueNameArray: uniqueNameArray }, "rowheader", this);
+                            var currentObj = this.element.parents(".e-pivotclient").length > 0 ? this.element.parents(".e-pivotclient").data("ejPivotClient") : this
+                            ej.olap._mdxParser.updateDrilledReport({ uniqueName: memberInfo, seriesInfo: this._selectedSeriesInfo, uniqueNameArray: uniqueNameArray }, "rowheader", currentObj);
                         }
                     }
                     else {
+                        var serializedCustomObject = JSON.stringify(this.model.customObject);
                         if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
                             var selectedMember = this.model.enableRTL ? evt.target.innerHTML.split(" - ")[0] : evt.target.innerHTML.split(" - ")[1];
+                            this._selectedItem = selectedMember;
                             if (ej.isNullOrUndefined(this._labelCurrentTags.expandedMembers)) this._labelCurrentTags["expandedMembers"] = new Array();
                             this._labelCurrentTags.expandedMembers.push(selectedMember);
-                            this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drilldown", "drilledSeries": JSON.stringify(this._labelCurrentTags.expandedMembers) }), this.renderControlSuccess);
+                            if (this.model.customObject != "" && this.model.customObject != null && this.model.customObject != undefined)
+                                this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drilldown", "drilledSeries": JSON.stringify(this._labelCurrentTags.expandedMembers), "customObject": serializedCustomObject, "currentReport": JSON.parse(this.getOlapReport())["Report"] }), this.renderControlSuccess);
+                            else
+                                this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drilldown", "drilledSeries": JSON.stringify(this._labelCurrentTags.expandedMembers), "currentReport": JSON.parse(this.getOlapReport())["Report"] }), this.renderControlSuccess);
                         }
                         else {
+                            var pivotChartObj = this;
                             if (!this._isDrilled) {
                                 this._isDrilled = true;
                                 jQuery.each(evt.target.parentElement.children, function (index, value) {
                                     if (value.innerHTML == evt.target.innerHTML)
-                                        ochartProxy._dimensionIndex = index;
+                                        pivotChartObj._dimensionIndex = index;
                                 });
                             }
                             var report = this.getOlapReport();
@@ -368,18 +403,17 @@
                             else
                                 this._selectedItem = $.trim(evt.target.innerHTML.replace(this._getLocalizedLabels("Expand") + " - ", ""));
                             jQuery.each(this._labelCurrentTags, function (index, value) {
-                                if (value.name == ochartProxy._selectedItem) {
-                                    ochartProxy._tagCollection = [];
-                                    ochartProxy._tagCollection = ochartProxy._selectedTags.slice();
-                                    ochartProxy._selectedTagInfo = value.tag;
-                                    ochartProxy._selectedMenuItem = value.name;
+                                if (value.name == pivotChartObj._selectedItem) {
+                                    pivotChartObj._tagCollection = [];
+                                    pivotChartObj._tagCollection = pivotChartObj._selectedTags.slice();
+                                    pivotChartObj._selectedTagInfo = value.tag;
+                                    pivotChartObj._selectedMenuItem = value.name;
                                     return false;
                                 }
                             });
                             this._startDrilldown = true;
-                            if (this.model.beforeServiceInvoke != null)
+                            if (this.model.beforeServiceInvoke != null && this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode)
                                 this._trigger("beforeServiceInvoke", { action: this._drillAction, element: this.element, customObject: this.model.customObject });
-                            var serializedCustomObject = JSON.stringify(this.model.customObject);
                             if (this.model.customObject != "" && this.model.customObject != null && this.model.customObject != undefined) {
                                 if (typeof (oclientProxy) != "undefined")
                                     this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drilldown", "drilledSeries": this._selectedTagInfo, "olapReport": report, "clientReports": oclientProxy.reports, "customObject": serializedCustomObject }), this.renderControlSuccess);
@@ -397,15 +431,15 @@
                 }
                 else {
                     this._drillAction = "drillup";
-                    if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null) {
-                        if ($("#" + oclientProxy._id + "_maxView")[0])
-                            $("#" + oclientProxy._id + "_maxView").ejWaitingPopup({ showOnInit: true });
-                        else
-                            oclientWaitingPopup.show();
+                    if ($(this.element).parents(".e-pivotclient").length > 0) {
+                        var pivotClientObj = $(this.element).parents(".e-pivotclient").data("ejPivotClient");
+                        if ($("#" + pivotClientObj._id + "_maxView")[0])
+                            $("#" + pivotClientObj._id + "_maxView").ejWaitingPopup({ showOnInit: true });
+                        else if (!ej.isNullOrUndefined(this._waitingPopup))
+                            this._waitingPopup.show();
                     }
-                    else {
-                        ochartWaitingPopup.show();
-                    }
+                    else
+                        this._waitingPopup.show();
                     if (this.model.operationalMode == ej.PivotChart.OperationalMode.ClientMode) {
                         var selectedMember = this.model.enableRTL ? evt.target.innerHTML.split(" - ")[0] : evt.target.innerHTML.split(" - ")[1];
                         if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
@@ -415,10 +449,19 @@
                                 if (!flag) tempArray.push(member);
                             });
                             this._labelCurrentTags.expandedMembers = tempArray;
+                            var drillInfo = this._labelCurrentTags.expandedMembers.length == 0 ? selectedMember : this._labelCurrentTags.expandedMembers.join(">#>") + ">#>" + selectedMember;
+                            if (this._labelCurrentTags.expandedMembers.length == 0 && $(this.element).parents(".e-pivotclient").length > 0) {
+                                var pivotClientObj = $(this.element).parents(".e-pivotclient").data("ejPivotClient");
+                                if (pivotClientObj._drillParams.length > 0) {
+                                    pivotClientObj._drillParams = $.grep(pivotClientObj._drillParams, function (item) { return item.indexOf(selectedMember) < 0; });
+                                    pivotClientObj._getDrilledMember();
+                                }
+                            }
                             var clonedEngine = this._cloneEngine(this._pivotEngine);
                             for (var i = 0; i < this._labelCurrentTags.expandedMembers.length; i++)
                                 this._cropData(clonedEngine, this._labelCurrentTags.expandedMembers[i], 0, true);
                             this._generateData(clonedEngine);
+                            this._trigger("drillSuccess", { chartObj: this, drillAction: "drillup", drilledMember: drillInfo, event: evt });
                         }
                         else {
                             var memberInfo = null;
@@ -479,10 +522,23 @@
                             }
                             for (var i = dimensionIndex + 1; i < this._labelCurrentTags.expandedMembers.length; i++)
                                 this._labelCurrentTags.expandedMembers[i] = [];
-                            ej.olap._mdxParser.updateDrilledReport({ uniqueName: memberInfo, seriesInfo: this._selectedSeriesInfo, uniqueNameArray: uniqueNameArray, action: "collapse" }, "rowheader", this);
+                            var currentObj = this;
+                            if (this.element.parents(".e-pivotclient").length > 0) {
+                                currentObj = this.element.parents(".e-pivotclient").data("ejPivotClient");
+                                currentObj._drillParams = $.grep(currentObj._drillParams, function (item) { return item != memberInfo; });
+                                var flag = false;
+                                for (var i = 0; i < this._labelCurrentTags.expandedMembers.length; i++) {
+                                    if (this._labelCurrentTags.expandedMembers[i].length > 0) { flag = true; break; }
+                                }
+                                if (currentObj._drillParams.length > 0 && !flag) {
+                                    this._labelCurrentTags.expandedMembers[dimensionIndex].push(currentObj._drillParams[dimensionIndex].split(">#>")[currentObj._drillParams[dimensionIndex].split(">#>").length - 1]);
+                                }
+                            }
+                            ej.olap._mdxParser.updateDrilledReport({ uniqueName: memberInfo, seriesInfo: this._selectedSeriesInfo, uniqueNameArray: uniqueNameArray, action: "collapse" }, "rowheader", currentObj);
                         }
                     }
                     else {
+                        var serializedCustomObject = JSON.stringify(this.model.customObject);
                         if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
                             var selectedMember = this.model.enableRTL ? evt.target.innerHTML.split(" - ")[0] : evt.target.innerHTML.split(" - ")[1];
                             var flag = false, tempArray = new Array();
@@ -490,8 +546,12 @@
                                 if (member == selectedMember) flag = true;
                                 if (!flag) tempArray.push(member);
                             });
+                            this._selectedItem = selectedMember;
                             this._labelCurrentTags.expandedMembers = tempArray;
-                            this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drilldown", "drilledSeries": JSON.stringify(this._labelCurrentTags.expandedMembers) }), this.renderControlSuccess);
+                            if (this.model.customObject != "" && this.model.customObject != null && this.model.customObject != undefined)
+                            this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drilldown", "drilledSeries": JSON.stringify(this._labelCurrentTags.expandedMembers), "customObject": serializedCustomObject, "currentReport": JSON.parse(this.getOlapReport())["Report"]}), this.renderControlSuccess);
+                            else
+                                this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drilldown", "drilledSeries": JSON.stringify(this._labelCurrentTags.expandedMembers), "currentReport": JSON.parse(this.getOlapReport())["Report"] }), this.renderControlSuccess);
                         }
                         else {
                             var report = this.getOlapReport();
@@ -500,22 +560,22 @@
                                 this._selectedItem = $.trim(evt.target.innerHTML.replace(" - " + this._getLocalizedLabels("Collapse"), ""));
                             else
                                 this._selectedItem = $.trim(evt.target.innerHTML.replace(this._getLocalizedLabels("Collapse") + " - ", ""));
-                            ochartProxy._tagCollection = [];
-                            ochartProxy._tagCollection = ochartProxy._selectedTags.slice();
-                            jQuery.each(ochartProxy._tagCollection, function (index, value) {
-                                if (value.name == ochartProxy._selectedItem) {
-                                    ochartProxy._selectedIndex = index;
-                                    ochartProxy._selectedTagInfo = value.tag;
-                                    ochartProxy._tagCollection.splice(index, ochartProxy._tagCollection.length);
+                            this._tagCollection = [];
+                            this._tagCollection = this._selectedTags.slice();
+                            var pivotChartObj = this;
+                            jQuery.each(this._tagCollection, function (index, value) {
+                                if (value.name == pivotChartObj._selectedItem) {
+                                    pivotChartObj._selectedIndex = index;
+                                    pivotChartObj._selectedTagInfo = value.tag;
+                                    pivotChartObj._tagCollection.splice(index, pivotChartObj._tagCollection.length);
                                     return false;
                                 }
                             });
-                            if (ochartProxy._tagCollection.length == 0)
+                            if (this._tagCollection.length == 0)
                                 this._isDrilled = false;
                             this._startDrilldown = true;
-                            if (this.model.beforeServiceInvoke != null)
+                            if (this.model.beforeServiceInvoke != null && this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode)
                                 this._trigger("beforeServiceInvoke", { action: this._drillAction, element: this.element, customObject: this.model.customObject });
-                            var serializedCustomObject = JSON.stringify(this.model.customObject);
                             if (this.model.customObject != "" && this.model.customObject != null && this.model.customObject != undefined) {
                                 if (typeof (oclientProxy) != "undefined")
                                     this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.drillDown, JSON.stringify({ "action": "drillup", "drilledSeries": this._selectedTagInfo, "olapReport": report, "clientReports": reports, "customObject": serializedCustomObject }), this.renderControlSuccess);
@@ -530,17 +590,17 @@
                             }
                         }
                     }
-                }
+                }				
             });
             if (typeof (oclientProxy) == "undefined")
-                $(window).bind('resize', $.proxy(this._reSizeHandler, this));
+                $(window).on('resize', $.proxy(this._reSizeHandler, this));
         },
 
         _unWireEvents: function () {
             this._off($(document), 'keydown', this._keyDownPress);
-            $(document.body).unbind("click");
+            $(document.body).off("click");
             this._off(this.element, "click", ".menuList");
-            $(window).unbind('resize', $.proxy(this._reSizeHandler, this));
+            $(window).off('resize', $.proxy(this._reSizeHandler, this));
         },
 
         generateJSON: function (baseObj, pivotEngine) {
@@ -566,112 +626,130 @@
                 points_Y: [],
                 measureNames: ""
             };
+
             var columnCount = pivotEngine.length;
-            var rowCount = pivotEngine[0].length;
-            var summaryColumns = new Array();
-            var summaryRows = new Array();
+            if (columnCount > 0 && pivotEngine[0].length > 0) {
+                var rowCount = pivotEngine[0].length;
+                var summaryColumns = new Array();
+                var summaryRows = new Array();
 
-            if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot)
-                var rowHeaderWidth = (!ej.isNullOrUndefined(this._labelCurrentTags.expandedMembers)) ? this.model.dataSource.rows.length - this._labelCurrentTags.expandedMembers.length : this.model.dataSource.rows.length;
-            else
-                var rowHeaderWidth = this.model.dataSource.rows.length + (this.model.dataSource.values[0].axis == "rows" ? 1 : 0);
+                if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot)
+                    var rowHeaderWidth = (!ej.isNullOrUndefined(this._labelCurrentTags.expandedMembers)) ? this.model.dataSource.rows.length - this._labelCurrentTags.expandedMembers.length : this.model.dataSource.rows.length;
+                else
+                    var rowHeaderWidth = this.model.dataSource.rows.length + ((this.model.dataSource.values[0].axis == "rows" && this.model.dataSource.values[0].measures.length > 0) ? 1 : 0);
 
-            var columnHeaderHeight = this.model.dataSource.columns.length + ((this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot || this.model.dataSource.values[0].axis == "columns") ? 1 : 0);
+                var columnHeaderHeight = this.model.dataSource.columns.length;
+                if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot)
+                    columnHeaderHeight += this.model.dataSource.values.length > 0 ? 1 : 0;
+                else
+                    columnHeaderHeight += (this.model.dataSource.values[0].axis == "columns" && this.model.dataSource.values[0].measures.length > 0) ? 1 : 0;
 
-            //Getting Series Labels
-            for (var i = rowHeaderWidth; i < columnCount; i++) {
-                var seriesName = "";
-                var isSummary = false;
-                for (var j = 0; j < columnHeaderHeight; j++) {
-                    if (pivotEngine[i][j].CSS.indexOf("summary") >= 0) {
-                        isSummary = true;
-                        summaryColumns.push(i);
-                        break;
-                    }
-                    seriesName += (seriesName == "" ? "" : " - ") + pivotEngine[i][j].Value;
-                }
-                if (!isSummary && seriesName != "") chartData.seriesNames.push(seriesName);
-            }
-
-            //Getting Chart Labels
-            for (var i = columnHeaderHeight; i < rowCount; i++) {
-                if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
-                    if (rowHeaderWidth > 1) {
-                        if (pivotEngine[0][i].CSS == "summary rstot" && pivotEngine[0][i].Value != "Grand Total")
-                            chartData.chartLables.push(pivotEngine[0][i].Value.replace(" Total", ""));
-                    }
-                    else if (pivotEngine[0][i].CSS == "rowheader")
-                        chartData.chartLables.push(pivotEngine[0][i].Value);
-                }
-                else {
-                    if (ej.isNullOrUndefined(this._labelCurrentTags.collapsedMembers)) this._labelCurrentTags["collapsedMembers"] = new Array();
-                    if (rowHeaderWidth > 1) {
-                        var chartLabel = "", isSummary = false, labelTag = "";
-                        for (var j = 0; j < rowHeaderWidth; j++) {
-                            if (pivotEngine[j][i].CSS == "rowheader") {
-                                chartLabel += chartLabel == "" ? pivotEngine[j][i].Value : " ~ " + pivotEngine[j][i].Value;
-                                if (pivotEngine[j][i].Info.indexOf("[Measures]") == -1) labelTag += labelTag == "" ? pivotEngine[j][i].Info : " ~ " + pivotEngine[j][i].Info;
-                                if ($.inArray(pivotEngine[j][i].Value, this._labelCurrentTags.collapsedMembers) < 0 && pivotEngine[j][i].State == 2) this._labelCurrentTags.collapsedMembers.push(pivotEngine[j][i].Value);
-                                if ($.inArray(pivotEngine[j][i].Info, chartData.seriesTags) < 0 && pivotEngine[j][i].Info.indexOf("[Measures]") == -1) chartData.seriesTags.push(pivotEngine[j][i].Info);
-                            }
-                            else {
+                //Getting Series Labels
+                var measure = "";
+                for (var i = rowHeaderWidth; i < columnCount; i++) {
+                    var seriesName = "";
+                    var isSummary = false;
+                    for (var j = 0; j < columnHeaderHeight; j++) {
+                        if (!ej.isNullOrUndefined(pivotEngine[i][j])) {
+                            if (pivotEngine[i][j].CSS.indexOf("summary") >= 0) {
                                 isSummary = true;
-                                summaryRows.push(i);
-                                break
+                                summaryColumns.push(i);
+                                break;
                             }
-                        }
-                        if (!isSummary) {
-                            chartData.chartLables.push(chartLabel);
-                            chartData.labelTags.push(labelTag);
+                            if (pivotEngine[i][j].Info.indexOf(this._getLocalizedLabels("Measure")) >= 0 && measure.indexOf(pivotEngine[i][j].Value) < 0) {
+                                measure += measure == "" ? pivotEngine[i][j].Value : " ~ " + pivotEngine[i][j].Value;
+                            }
+                            seriesName += (seriesName == "" ? "" : (pivotEngine[i][j].Value == "" ? "" : " - ")) + pivotEngine[i][j].Value;
                         }
                     }
-                    else {
-                        if (pivotEngine[0][i].CSS == "rowheader") {
-                            chartData.chartLables.push(pivotEngine[0][i].Value);
-                            chartData.labelTags.push(pivotEngine[0][i].Info);
-                            chartData.seriesTags.push(pivotEngine[0][i].Info);
-                        }
-                        if (pivotEngine[0][i].State == 2) this._labelCurrentTags.collapsedMembers.push(pivotEngine[0][i].Value);
-                    }
+                    if (!isSummary && seriesName != "") chartData.seriesNames.push(seriesName);
                 }
-            }
 
-            //Forming Data Points
-            for (var i = columnHeaderHeight; i < rowCount; i++) {
-                var pointsArray = new Array();
-                if (rowHeaderWidth > 1) {
+                //Getting Chart Labels
+                for (var i = columnHeaderHeight; i < rowCount; i++) {
                     if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
-                        if (pivotEngine[0][i].CSS == "summary rstot" && pivotEngine[0][i].Value != "Grand Total") {
-                            for (var j = rowHeaderWidth; j < columnCount; j++) {
-                                if ($.inArray(j, summaryColumns) < 0)
-                                    pointsArray.push(pivotEngine[j][i].Value);
-                            }
-                            chartData.points_Y.push(pointsArray);
+                        if (rowHeaderWidth > 1) {
+                            if (pivotEngine[0][i].CSS == "summary rstot" && pivotEngine[0][i].Value != "Grand Total")
+                                chartData.chartLables.push(pivotEngine[0][i].Value.replace(" Total", ""));
                         }
+                        else if (pivotEngine[0][i].CSS == "rowheader")
+                            chartData.chartLables.push(pivotEngine[0][i].Value);
                     }
                     else {
-                        if ($.inArray(i, summaryRows) < 0) {
-                            for (var j = rowHeaderWidth; j < columnCount; j++) {
-                                if ($.inArray(j, summaryColumns) < 0)
-                                    pointsArray.push(pivotEngine[j][i].Value == "" ? 0 : ej.parseFloat(pivotEngine[j][i].Value));
+                        if (ej.isNullOrUndefined(this._labelCurrentTags.collapsedMembers)) this._labelCurrentTags["collapsedMembers"] = new Array();
+                        if (rowHeaderWidth > 1) {
+                            var chartLabel = "", isSummary = false, labelTag = "";
+                            for (var j = 0; j < rowHeaderWidth; j++) {
+                                if (pivotEngine[j][i].CSS == "rowheader") {
+                                    chartLabel += chartLabel == "" ? pivotEngine[j][i].Value : " ~ " + pivotEngine[j][i].Value;
+                                    if (pivotEngine[j][i].Info.indexOf("[Measures]") == -1) labelTag += labelTag == "" ? pivotEngine[j][i].Info : " ~ " + pivotEngine[j][i].Info;
+                                    if ($.inArray(pivotEngine[j][i].Value, this._labelCurrentTags.collapsedMembers) < 0 && pivotEngine[j][i].State == 2) this._labelCurrentTags.collapsedMembers.push(pivotEngine[j][i].Value);
+                                    if ($.inArray(pivotEngine[j][i].Info, chartData.seriesTags) < 0 && pivotEngine[j][i].Info.indexOf("[Measures]") == -1) chartData.seriesTags.push(pivotEngine[j][i].Info);
+                                }
+                                else {
+                                    isSummary = true;
+                                    summaryRows.push(i);
+                                    break
+                                }
                             }
-                            chartData.points_Y.push(pointsArray);
+                            if (!isSummary) {
+                                chartData.chartLables.push(chartLabel);
+                                chartData.labelTags.push(labelTag);
+                            }
+                        }
+                        else {
+                            if (pivotEngine[0][i].CSS == "rowheader") {
+                                chartData.chartLables.push(pivotEngine[0][i].Value);
+                                chartData.labelTags.push(pivotEngine[0][i].Info);
+                                chartData.seriesTags.push(pivotEngine[0][i].Info);
+                            }
+                            if (pivotEngine[0][i].State == 2) this._labelCurrentTags.collapsedMembers.push(pivotEngine[0][i].Value);
                         }
                     }
                 }
-                else if (pivotEngine[0][i].CSS == "rowheader") {
-                    for (var j = pivotEngine[0][0].ColSpan; j < columnCount; j++) {
-                        if ($.inArray(j, summaryColumns) < 0)
-                            pointsArray.push(this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap ? (pivotEngine[j][i].Value == "" ? 0 : ej.parseFloat(pivotEngine[j][i].Value)) : pivotEngine[j][i].Value);
+
+                //Forming Data Points
+                for (var i = columnHeaderHeight; i < rowCount; i++) {
+                    var pointsArray = new Array();
+                    if (rowHeaderWidth > 1) {
+                        if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
+                            if (pivotEngine[0][i].CSS == "summary rstot" && pivotEngine[0][i].Value != "Grand Total") {
+                                for (var j = rowHeaderWidth; j < columnCount; j++) {
+                                    if ($.inArray(j, summaryColumns) < 0)
+                                        pointsArray.push(pivotEngine[j][i].Value);
+                                }
+                                chartData.points_Y.push(pointsArray);
+                            }
+                        }
+                        else {
+                            if ($.inArray(i, summaryRows) < 0) {
+                                for (var j = rowHeaderWidth; j < columnCount; j++) {
+                                    if ($.inArray(j, summaryColumns) < 0)
+                                        pointsArray.push(pivotEngine[j][i].Value == "" ? 0 : ej.parseFloat(pivotEngine[j][i].Value, this.locale()));
+                                }
+                                chartData.points_Y.push(pointsArray);
+                            }
+                        }
                     }
-                    chartData.points_Y.push(pointsArray);
+                    else if (pivotEngine[0][i].CSS == "rowheader") {
+                        for (var j = pivotEngine[0][0].ColSpan; j < columnCount; j++) {
+                            if ($.inArray(j, summaryColumns) < 0)
+                                pointsArray.push(this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap ? (pivotEngine[j][i].Value == "" ? 0 : ej.parseFloat(pivotEngine[j][i].Value, this.locale())) : pivotEngine[j][i].Value);
+                        }
+                        chartData.points_Y.push(pointsArray);
+                    }
                 }
             }
 
             //Getting Value Names
-            var measureNames = $(this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap ? this.model.dataSource.values[0].measures : this.model.dataSource.values).map(function (index, item) { return item.fieldName });
-            for (var i = 0; i < measureNames.length; i++)
+            if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap) {
+                chartData.measureNames = measure;
+            }
+            else {
+                var measureNames = $(this.model.dataSource.values).map(function (index, item) { return item.fieldCaption });
+                for (var i = 0; i < measureNames.length; i++)
                 chartData.measureNames += chartData.measureNames == "" ? measureNames[i] : "~" + measureNames[i];
+            }
             this.renderControlSuccess({ JsonRecords: JSON.stringify(chartData), OlapReport: JSON.stringify(this.model.dataSource) });
             chartData = {};
         },
@@ -696,8 +774,31 @@
             if (isRemoved) pivotEngine.splice(drilledDimensionIndex, 1);
         },
 
+        refreshPagedPivotChart: function (axis, pageNo) {
+            if (typeof ochartWaitingPopup != 'undefined' && ochartWaitingPopup != null)
+                ochartWaitingPopup.show();
+            axis = axis.indexOf('categ') != -1 ? "categorical" : "series";
+            var report;
+            try {
+                report = JSON.parse(this.getOlapReport());
+            }
+            catch (err) {
+                report = this.getOlapReport();
+            }
+            this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.paging, JSON.stringify({ "action": "paging", "pagingInfo": axis + ":" + pageNo, "currentReport": report, "customObject": JSON.stringify(this.model.customObject) }), this.renderControlSuccess);
+        },
+        _updatePageSettings: function (msg, oclientProxy) {
+            var pageSettings = $.map(msg, function (obj, index) { if (obj.Key == "PageSettings") return obj; });
+            var headerSettings = $.map(msg, function (obj, index) { if (obj.Key == "HeaderCounts") return obj; });
+            if (pageSettings.length > 0 && oclientProxy._pagerObj != null) {
+                oclientProxy._pagerObj.element.css("opacity", "1");
+                oclientProxy._pagerObj.element.find(".pagerTextBox").removeAttr('disabled');
+                oclientProxy._pagerObj._unwireEvents();
+                oclientProxy._pagerObj._wireEvents();
+                oclientProxy._pagerObj.initPagerProperties(JSON.parse(headerSettings[0].Value), JSON.parse(pageSettings[0].Value));
+            }
+        },
         renderControlSuccess: function (msg) {
-            ochartProxy = this;
             if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null)
                 if ($("#" + oclientProxy._id + "_maxView")[0])
                     $("#" + oclientProxy._id + "_maxView").ejWaitingPopup({ showOnInit: true });
@@ -705,32 +806,44 @@
                     oclientWaitingPopup.show();
             try {
                 if (msg[0] != undefined) {
-                    ochartProxy.setJSONRecords(msg[0].Value); ochartProxy.setOlapReport(msg[1].Value);
-                    if (msg[2].Key == "AnalysisMode" && msg[2].Value == "Olap") ochartProxy.model.analysisMode = ej.PivotChart.AnalysisMode.Olap;
+                    this.setJSONRecords(msg[0].Value); this.setOlapReport(msg[1].Value);
+                    if (!ej.isNullOrUndefined(msg[2]) && msg[2].Key == "AnalysisMode" && msg[2].Value == "Olap") this.model.analysisMode = ej.PivotChart.AnalysisMode.Olap;
                     if (typeof (oclientProxy) != "undefined") {
                         oclientProxy.currentReport = msg[1].Value;
                         if (msg[2] != null && msg[2] != undefined && msg[2].Key == "ClientReports")
                             oclientProxy.reports = msg[2].Value;
+                        this._updatePageSettings(msg, oclientProxy);
                     }
-                    if (msg[2] != null && msg[2] != undefined && !msg[2].Key == "ClientReports")
-                        ochartProxy.model.customObject = msg[2].Value;
+                    if (msg[2] != null && msg[2] != undefined && !msg[2].Key == "ClientReports" && msg[2].Key != "AnalysisMode")
+                        this.model.customObject = msg[2].Value;
+                    if ($(".e-pivotpager")[0] != null && $(".e-pivotpager")[0] != undefined) {
+                        if (this._pagerObj != null && msg[2] != null && msg.d[2] != undefined)
+                            this._pagerObj.initPagerProperties(JSON.parse(msg.d[3].Value), JSON.parse(msg.d[2].Value));
+                    }
                 }
                 else if (msg.d != undefined) {
-                    ochartProxy.setJSONRecords(msg.d[0].Value); ochartProxy.setOlapReport(msg.d[1].Value);
-                    if (msg.d[2].Key == "AnalysisMode" && msg.d[2].Value == "Olap") ochartProxy.model.analysisMode = ej.PivotChart.AnalysisMode.Olap;
+                    this.setJSONRecords(msg.d[0].Value); this.setOlapReport(msg.d[1].Value);
+                    if (msg.d[2].Key == "AnalysisMode" && msg.d[2].Value == "Olap") this.model.analysisMode = ej.PivotChart.AnalysisMode.Olap;
                     if (typeof (oclientProxy) != "undefined") {
                         oclientProxy.currentReport = msg.d[1].Value;
                         if (msg.d[2] != null && msg.d[2] != undefined && msg.d[2].Key == "ClientReports")
                             oclientProxy.reports = msg.d[2].Value;
+                        this._updatePageSettings(msg.d, oclientProxy);
                     }
-                    if (msg.d[2] != null && msg.d[2] != undefined && !(msg.d[2].Key == "ClientReports"))
-                        ochartProxy.model.customObject = msg.d[2].Value;
+                    if (msg.d[2] != null && msg.d[2] != undefined && !(msg.d[2].Key == "ClientReports") && msg.d[2].Key != "AnalysisMode")
+                        this.model.customObject = msg.d[2].Value;
+                    if (this._pagerObj != null && $(".e-pivotpager")[0] != null && $(".e-pivotpager")[0] != undefined) {
+                        if (msg.d[2] != null && msg.d[2] != undefined && msg.d[2].Key == "PageSettings")
+                            this._pagerObj.initPagerProperties(JSON.parse(msg.d[3].Value), JSON.parse(msg.d[2].Value));
+                        if (msg.d[3] != null && msg.d[3] != undefined && msg.d[3].Key == "PageSettings")
+                            this._pagerObj.initPagerProperties(JSON.parse(msg.d[4].Value), JSON.parse(msg.d[3].Value));
+                    }
                 }
                 else {
-                    ochartProxy.setJSONRecords(msg.JsonRecords); ochartProxy.setOlapReport(msg.OlapReport);
-                    if (msg.AnalysisMode == "Olap") ochartProxy.model.analysisMode = ej.PivotChart.AnalysisMode.Olap;
+                    this.setJSONRecords(msg.JsonRecords); this.setOlapReport(msg.OlapReport);
+                    if (msg.AnalysisMode == "Olap") this.model.analysisMode = ej.PivotChart.AnalysisMode.Olap;
                     if (msg.customObject != null && msg.customObject != null)
-                        ochartProxy.model.customObject = msg.customObject;
+                        this.model.customObject = msg.customObject;
                     if (typeof (oclientProxy) != "undefined") {
                         if (typeof (oclientProxy.currentReport) != "undefined")
                             oclientProxy.currentReport = msg.OlapReport;
@@ -738,106 +851,105 @@
                             oclientProxy.reports = msg.reports;
                     }
                 }
-                if (ochartProxy.model.afterServiceInvoke != null) {
+                if (this.model.afterServiceInvoke != null && this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode) {
                     var eventArgs;
-                    if (ochartProxy._drillAction != "")
-                        eventArgs = { action: ochartProxy._drillAction, element: ochartProxy.element, customObject: ochartProxy.model.customObject };
+                    if (this._drillAction != "")
+                        eventArgs = { action: this._drillAction, element: this.element, customObject: this.model.customObject };
                     else
-                        eventArgs = { action: ochartProxy._currentAction, element: ochartProxy.element, customObject: ochartProxy.model.customObject };
-                    ochartProxy._trigger("afterServiceInvoke", eventArgs);
+                        eventArgs = { action: this._currentAction, element: this.element, customObject: this.model.customObject };
+                    this._trigger("afterServiceInvoke", eventArgs);
                 }
-                $("#" + ochartProxy._id + "Container").ejChart('destroy');
-                var htmlTag = ej.buildTag("div#" + ochartProxy._id + "Container", "", { "height": (typeof (oclientProxy) != "undefined") ? oclientProxy._chartHeight : this.element.height(), "width": (typeof (oclientProxy) != "undefined") ? oclientProxy._chartWidth : this.element.width() })[0].outerHTML;
-                ochartProxy.element.html(htmlTag);
-                if (ochartProxy.model.commonSeriesOptions.type == ej.PivotChart.ChartTypes.Funnel || ochartProxy.model.commonSeriesOptions.type == ej.PivotChart.ChartTypes.Pyramid)
-                    ochartProxy.model.legend.toggleSeriesVisibility = false;
+                $("#" + this._id + "Container").ejChart('destroy');
+                var htmlTag = ej.buildTag("div#" + this._id + "Container", "", { "height": (typeof (oclientProxy) != "undefined") ? oclientProxy._chartHeight : this.element.height(), "width": (typeof (oclientProxy) != "undefined") ? (oclientProxy.model.enableSplitter ? oclientProxy.element.find(".controlPanelTD").width() : (oclientProxy._toggleExpand ? (oclientProxy.element.find(".controlPanelTD").width()-15) : oclientProxy._chartWidth)) : this.element.width() })[0].outerHTML;
+                this.element.html(htmlTag);
+                if (this.model.commonSeriesOptions.type == ej.PivotChart.ChartTypes.Funnel || this.model.commonSeriesOptions.type == ej.PivotChart.ChartTypes.Pyramid)
+                    this.model.legend.toggleSeriesVisibility = false;
                 else
-                    ochartProxy.model.legend.toggleSeriesVisibility = true;
-                ochartProxy.renderChartFromJSON(ochartProxy.getJSONRecords());
-                ochartProxy._unWireEvents();
-                ochartProxy._wireEvents();
-                if (ochartProxy._drillAction != "") {
-                    ochartProxy.model.currentReport = ochartProxy.getOlapReport();
-                    ochartProxy._trigger("drillSuccess", ochartProxy.element);
+                    this.model.legend.toggleSeriesVisibility = true;
+                this.renderChartFromJSON(this.getJSONRecords());
+                this._unWireEvents();
+                this._wireEvents();
+                if (this._drillAction != "") {
+                    this.model.currentReport = this.getOlapReport();
                     if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
                         if (this.model.operationalMode == ej.PivotChart.OperationalMode.ClientMode) {
-                            var chartData = ochartProxy.getJSONRecords();
-                            if (ochartProxy.model.dataSource.rows.length - ochartProxy._labelCurrentTags.expandedMembers.length > 1) {
-                                ochartProxy._labelCurrentTags["collapsedMembers"] = new Array();
+                            var chartData = this.getJSONRecords();
+                            if (this.model.dataSource.rows.length - this._labelCurrentTags.expandedMembers.length > 1) {
+                                this._labelCurrentTags["collapsedMembers"] = new Array();
                                 for (var i = 0; i < chartData.chartLables.length; i++)
-                                    ochartProxy._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
+                                    this._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
                             }
                         }
                         else {
-                            var chartData = ochartProxy.getJSONRecords();
-                            var rows = JSON.parse(JSON.parse(ochartProxy.getOlapReport()).rows);
-                            ochartProxy._labelCurrentTags["collapsedMembers"] = new Array();
-                            if (rows.length - ochartProxy._labelCurrentTags.expandedMembers.length > 1) {
+                            var chartData = this.getJSONRecords();
+                            var rows = JSON.parse(JSON.parse(this.getOlapReport()).rows);
+                            this._labelCurrentTags["collapsedMembers"] = new Array();
+                            if (rows.length - this._labelCurrentTags.expandedMembers.length > 1) {
                                 for (var i = 0; i < chartData.chartLables.length; i++)
-                                    ochartProxy._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
+                                    this._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
                             }
                         }
                     }
+                    this._trigger("drillSuccess", this.element);
                 }
                 else {
                     if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Pivot) {
                         if (this.model.operationalMode == ej.PivotChart.OperationalMode.ClientMode) {
-                            var chartData = ochartProxy.getJSONRecords();
-                            ochartProxy._labelCurrentTags = { collapsedMembers: [] };
-                            if (ochartProxy.model.dataSource.rows.length > 1) {
+                            var chartData = this.getJSONRecords();
+                            this._labelCurrentTags = { collapsedMembers: [] };
+                            if (this.model.dataSource.rows.length > 1) {
                                 for (var i = 0; i < chartData.chartLables.length; i++)
-                                    ochartProxy._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
+                                    this._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
                             }
                         }
                         else {
-                            var chartData = ochartProxy.getJSONRecords();
-                            ochartProxy.model.currentReport = JSON.parse(ochartProxy.getOlapReport());
-                            var rows = JSON.parse(ochartProxy.model.currentReport.rows);
-                            ochartProxy._labelCurrentTags = { collapsedMembers: [] };
-                            if (rows.length > 1) {
+                            var chartData = this.getJSONRecords();
+                            this.model.currentReport = JSON.parse(this.getOlapReport());
+                            this._labelCurrentTags = { collapsedMembers: [] };
+                            if ($(this.element).parents(".e-pivotclient").length > 0 ? this.model.currentReport.PivotRows.length > 1 : JSON.parse(this.model.currentReport.rows).length > 1) {
                                 for (var i = 0; i < chartData.chartLables.length; i++) {
-                                    ochartProxy._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
+                                    this._labelCurrentTags["collapsedMembers"].push(chartData.chartLables[i]);
                                 }
                             }
                         }
                     }
                 }
-                if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null) {
+                if (typeof oclientProxy != 'undefined' && oclientProxy._waitingPopup != null) {
                     if ($("#" + oclientProxy._id + "_maxView")[0]) {
                         $("#" + oclientProxy._id + "_maxView").ejWaitingPopup({ showOnInit: false });
-                        oclientWaitingPopup.hide();
+                        oclientProxy._waitingPopup.hide();
                     }
-                    else if (typeof oclientProxy.ogridObj != "undefined") {
-                        if (oclientProxy && (oclientProxy.ogridObj._drillAction && !oclientProxy.ogridObj._startDrilldown) || oclientProxy.ochartObj._drillAction && !oclientProxy.ochartObj._startDrilldown)
-                            oclientWaitingPopup.hide();
-                        else if (oclientProxy && oclientProxy.ogridObj._drillAction == "" && oclientProxy.ochartObj._drillAction == "" && !oclientProxy.ogridObj._startDrilldown && !oclientProxy.ochartObj._startDrilldown && (oclientProxy.ogridObj._JSONRecords != null || oclientProxy.ochartObj._JSONRecords == null))
-                            oclientWaitingPopup.hide();
-                        else if (oclientProxy.ochartObj._startDrilldown && !oclientProxy.ogridObj._startDrilldown && !$("#" + oclientProxy._id + "_maxView")[0])
-                            oclientWaitingPopup.show();
-                        else if (!oclientProxy.ochartObj._startDrilldown && !oclientProxy.ogridObj._startDrilldown && oclientProxy.ochartObj._drillAction == "" && oclientProxy.ogridObj._drillAction == "" && (oclientProxy.ogridObj._JSONRecords != null || oclientProxy.ochartObj._JSONRecords == null))
-                            oclientWaitingPopup.hide();
+                    else if (typeof oclientProxy._pivotGrid != "undefined") {
+                        if (oclientProxy && (oclientProxy._pivotGrid._drillAction && !oclientProxy._pivotGrid._startDrilldown) || oclientProxy._pivotChart._drillAction && !oclientProxy._pivotChart._startDrilldown)
+                            oclientProxy._waitingPopup.hide();
+                        else if (oclientProxy && oclientProxy._pivotGrid._drillAction == "" && oclientProxy._pivotChart._drillAction == "" && !oclientProxy._pivotGrid._startDrilldown && !oclientProxy._pivotChart._startDrilldown && (oclientProxy._pivotGrid._JSONRecords != null || oclientProxy._pivotChart._JSONRecords == null))
+                            oclientProxy._waitingPopup.hide();
+                        else if (oclientProxy._pivotChart._startDrilldown && !oclientProxy._pivotGrid._startDrilldown && !$("#" + oclientProxy._id + "_maxView")[0])
+                            oclientProxy._waitingPopup.show();
+                        else if (!oclientProxy._pivotChart._startDrilldown && !oclientProxy._pivotGrid._startDrilldown && oclientProxy._pivotChart._drillAction == "" && oclientProxy._pivotGrid._drillAction == "" && (oclientProxy._pivotGrid._JSONRecords != null || oclientProxy._pivotChart._JSONRecords == null))
+                            oclientProxy._waitingPopup.hide();
                     }
                     if (oclientProxy.model.displaySettings.mode == "chartonly")
-                        oclientWaitingPopup.hide();
+                        oclientProxy._waitingPopup.hide();
                 }
                 else
-                    ochartWaitingPopup.hide();
+                    this._waitingPopup.hide();
                 if (typeof oclientProxy != 'undefined')
-                    oclientProxy.ochartObj._startDrilldown = false;
+                    oclientProxy._pivotChart._startDrilldown = false;
             }
             catch (err) {
             }
-            var eventArgs = { "action": this._currentAction, "customObject": this.model.customObject, "element": this.element };
-            this._trigger("renderSuccess", eventArgs);
+            //var eventArgs = { "action": this._currentAction, "customObject": this.model.customObject, "element": this.element };
+            this._trigger("renderSuccess", this);
         },
 
         renderChartFromJSON: function (jsonData) {
-            window.clearInterval(oChartTimer);
+            this.setJSONRecords(JSON.stringify(jsonData));
             var chartSeries = new Array();
             if (jsonData == null || jsonData == "") {
                 if (jsonData == "") {
-                    var htmlTag = ej.buildTag("div#" + ochartProxy._id + "Container")[0].outerHTML;
-                    ochartProxy.element.html(htmlTag);
+                    var htmlTag = ej.buildTag("div#" + this._id + "Container")[0].outerHTML;
+                    this.element.html(htmlTag);
                 }
                 chartSeries = [];
             }
@@ -849,6 +961,7 @@
                 var seriesPoints = new Array(); var XValues = jsonData.chartLables; var tempArray = new Array();
                 var YValues = new Array(); var pointsCount = pCnt = 0; var count = 0; var seriesName = new Array(); var points, measureRCnt = 0, chartLabels = [];
                 measureRCnt = jsonData.measureInfo != "" ? parseInt(jsonData.measureInfo) : 0;
+                var pivotChartObj = this;
                 jQuery.each(jsonData.chartLables, function (index, value) {
                     var YPoints = new Array();
                     if (measureRCnt > 1 && jsonData.addInfo.action != "DrillChart" || (measureRCnt > 1 && jsonData.addInfo.levelHash == "1")) {
@@ -856,21 +969,21 @@
                         for (var mCnt = 0; mCnt < measureRCnt; mCnt++) {
                             if (jsonData.points_Y[(lblVal + mCnt)] != undefined && jsonData.chartLables[index] == jsonData.points_Y[(lblVal + mCnt)][0].Item1)
                                 for (var i = 0; i < jsonData.points_Y[index].length; i++) {
-                                    points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[lblVal + mCnt][i].Item2).indexOf(",") > -1 ? ej.globalize.parseFloat(ej.globalize.format((jsonData.points_Y[lblVal + mCnt][i].Item2), "c")) : (jsonData.points_Y[lblVal + mCnt][i].Item2), text: (jsonData.points_Y[lblVal + mCnt][i].Item2) };
+                                    points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[lblVal + mCnt][i].Item2).indexOf(",") > -1 ? ej.globalize.parseFloat(ej.globalize.format((jsonData.points_Y[lblVal + mCnt][i].Item2), "c", pivotChartObj.model.locale), pivotChartObj.model.locale) : (jsonData.points_Y[lblVal + mCnt][i].Item2) == "" ? 0 : ej.globalize.parseFloat((jsonData.points_Y[lblVal + mCnt][i].Item2)), "text": (jsonData.points_Y[lblVal + mCnt][i].Item2) == "" ? 0 : (jsonData.points_Y[lblVal + mCnt][i].Item2) };
                                     YPoints.push(points);
                                 }
                         }
                     }
                     else
                         for (var i = 0; i < jsonData.points_Y[index].length; i++) {
-                            if (ochartProxy.model.analysisMode == ej.PivotChart.AnalysisMode.Olap && ochartProxy.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode) {
-                                if (ochartProxy.seriesType() == "bubble")
-                                    points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[index])[i].Item2, "size": (jsonData.points_Y[index])[i].Item2 };
+                            if (pivotChartObj.model.analysisMode == ej.PivotChart.AnalysisMode.Olap && pivotChartObj.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode) {
+                                if (pivotChartObj.seriesType() == "bubble")
+                                    points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[index])[i].Item2 == "" ? 0 : (jsonData.points_Y[index])[i].Item2, "size": (jsonData.points_Y[index])[i].Item2 == "" ? 0 : (jsonData.points_Y[index])[i].Item2 };
                                 else
-                                    points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[index])[i].Item2.indexOf(",") > -1 ? ej.globalize.parseFloat(ej.globalize.format((jsonData.points_Y[index])[i].Item2, "c")) : (jsonData.points_Y[index])[i].Item2, "text": (jsonData.points_Y[index])[i].Item2 };
+                                    points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[index])[i].Item2.indexOf(",") > -1 ? ej.globalize.parseFloat(ej.globalize.format((jsonData.points_Y[index])[i].Item2, "c", pivotChartObj.model.locale), pivotChartObj.model.locale) : (jsonData.points_Y[index])[i].Item2 == "" ? 0 : ej.globalize.parseFloat((jsonData.points_Y[index])[i].Item2), "text": (jsonData.points_Y[index])[i].Item2 == "" ? 0 : (jsonData.points_Y[index])[i].Item2 };
                             }
                             else {
-                                if (ochartProxy.seriesType() == "bubble")
+                                if (pivotChartObj.seriesType() == "bubble")
                                     points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[index])[i] == "" ? 0 : (jsonData.points_Y[index])[i], "size": (jsonData.points_Y[index])[i] == "" ? 0 : (jsonData.points_Y[index])[i] };
                                 else
                                     points = { "xValues": jsonData.chartLables[index], "yValues": (jsonData.points_Y[index])[i] == "" ? 0 : (jsonData.points_Y[index])[i] };
@@ -907,12 +1020,16 @@
                             chartSeries[pointsCount] = { dataSource: tempArray[index], xName: "xValues", yName: "yValues", size: "size", name: jsonData.seriesNames[pointsCount] };
                             pointsCount++;
                         });
+                        if (this.model.commonSeriesOptions.marker.dataLabel)
+                            this.model.commonSeriesOptions.marker.dataLabel.visible = false;
                     }
                     else {
                         jQuery.each(jsonData.seriesNames, function (index, value) {
                             chartSeries[pointsCount] = { dataSource: tempArray[index], xName: "xValues", yName: "yValues", name: jsonData.seriesNames[pointsCount], marker: { dataLabel: { textMappingName: "text" } } };
                             pointsCount++;
                         });
+                        if (this.model.commonSeriesOptions.marker.dataLabel)
+                            this.model.commonSeriesOptions.marker.dataLabel.visible = false;
                     }
                 }
                 if (jsonData.chartLables.length > 10 && this.model.zooming == "")
@@ -925,10 +1042,14 @@
                         size: { height: 12, width: 12 },
                         visible: true,
                         connectorLine: { height: 30, type: "line" },
+                        dataLabel: { visible: false },
                         border: { width: 3, color: 'white' }
                     };
-                else if ((this.seriesType() == "pie" || this.seriesType() == "doughnut"))
+                else if ((this.seriesType() == "pie" || this.seriesType() == "doughnut")){
                     this.model.commonSeriesOptions.marker.visible = false;
+                    if (this.model.commonSeriesOptions.marker.dataLabel)
+                        this.model.commonSeriesOptions.marker.dataLabel.visible = false;
+                }
                 else if ((this.seriesType() == "pyramid" || this.seriesType() == "funnel")) {
                     this.model.commonSeriesOptions.marker = {
                         dataLabel: {
@@ -936,7 +1057,7 @@
                         }
                     };
                 }
-                else if (jQuery.inArray(this.seriesType(), ["column", "stackingcolumn", "bar", "stackingcolumn"]) > -1 && this.model.commonSeriesOptions.marker) {
+                else if (jQuery.inArray(this.seriesType(), ["column", "stackingcolumn", "bar", "stackingbar"]) > -1 && this.model.commonSeriesOptions.marker) {
                     if (this.model.commonSeriesOptions.marker.dataLabel)
                         this.model.commonSeriesOptions.marker.dataLabel.visible = false;
                     this.model.commonSeriesOptions.marker.visible = false;
@@ -956,12 +1077,13 @@
                     }
                 }
 
-                if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap && this.model.operationalMode == ej.PivotChart.ServerMode) {
-                    this.model.primaryYAxis.labelFormat = (ochartProxy.model.primaryYAxis.labelFormat != null || ochartProxy.model.primaryYAxis.labelFormat != "") && (this.model.primaryYAxis.labelFormat) ? this.model.primaryYAxis.labelFormat : (jsonData.labelFormat.indexOf("#") > -1 && jsonData.measureNames.indexOf("~") < 0) ? "Number" : (jsonData.labelFormat.toLowerCase().indexOf("percent") > -1 && jsonData.measureNames.indexOf("~") < 0) ? "{value}%" : (jsonData.labelFormat.toLowerCase().indexOf("currency") > -1 && jsonData.measureNames.indexOf("~") < 0) ? "Currency" : "";
+                if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap && this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode) {
+                    this.model.primaryYAxis.labelFormat = (this.model.primaryYAxis.labelFormat != null || this.model.primaryYAxis.labelFormat != "") && (this.model.primaryYAxis.labelFormat) ? this.model.primaryYAxis.labelFormat : (jsonData.labelFormat.indexOf("#") > -1 && jsonData.measureNames.indexOf("~") < 0) ? "Number" : (jsonData.labelFormat.toLowerCase().indexOf("percent") > -1 && jsonData.measureNames.indexOf("~") < 0) ? "{value}%" : (jsonData.labelFormat.toLowerCase().indexOf("currency") > -1 && jsonData.measureNames.indexOf("~") < 0) ? "Currency" : "";
                 }
 
-                if (this.model.enable3D != true) {
-                    this.model.zooming.enableScrollbar = true;
+                if (this.model.zooming.enableScrollbar) {
+                    if (ej.isNullOrUndefined(this.model.size.width)) this.model.size.width = "800px";
+                    if (ej.isNullOrUndefined(this.model.size.height)) this.model.size.height = "400px";
                     var chartWidthPixel = this.model.size.width.indexOf("%") > -1 ? (this.element.width() * this.model.size.width.split("%")[0]) / 100 : this.model.size.width.split("px")[0];
                     var chartHeightPixel = this.model.size.height.indexOf("%") > -1 ? (this.element.height() * this.model.size.height.split("%")[0]) / 100 : this.model.size.height.split("px")[0];
                     var pointsPerFrame = (this.seriesType() == "bar" || this.seriesType() == "stackingbar") ? (chartHeightPixel / 100) * 6 : (chartWidthPixel / 100) * 3;
@@ -970,101 +1092,101 @@
                 else
                     this.model.primaryXAxis.zoomFactor = 1;
             }
-            $("#" + ochartProxy._id + "Container").ejChart({
-                border: ochartProxy.model.border,
-                backGroundImageUrl: ochartProxy.model.backGroundImageUrl,
-                palette: ochartProxy.model.palette,
-                chartArea: ochartProxy.model.chartArea,
-                primaryXAxis: ochartProxy.model.primaryXAxis,
-                primaryYAxis: ochartProxy.model.primaryYAxis,
-                secondaryX: ochartProxy.model.secondaryX,
-                secondaryY: ochartProxy.model.secondaryY,
-                striplineDefault: ochartProxy.model.striplineDefault,
+            $("#" + this._id + "Container").ejChart({
+                border: this.model.border,
+                backGroundImageUrl: this.model.backGroundImageUrl,
+                palette: this.model.palette,
+                chartArea: this.model.chartArea,
+                primaryXAxis: this.model.primaryXAxis,
+                primaryYAxis: this.model.primaryYAxis,
+                secondaryX: this.model.secondaryX,
+                secondaryY: this.model.secondaryY,
+                striplineDefault: this.model.striplineDefault,
                 title: {
-                    text: ochartProxy.titleText(),
-                    textAlignment: ochartProxy.model.title.textAlignment,
+                    text: this.titleText(),
+                    textAlignment: this.model.title.textAlignment,
                     font: {
-                        color: ochartProxy.model.title.color,
-                        fontFamily: ochartProxy.model.title.fontFamily,
-                        fontWeight: ochartProxy.model.title.fontWeight,
-                        opacity: ochartProxy.model.title.opacity,
-                        size: ochartProxy.model.title.size,
-                        fontStyle: ochartProxy.model.title.fontStyle
+                        color: this.model.title.color,
+                        fontFamily: this.model.title.fontFamily,
+                        fontWeight: this.model.title.fontWeight,
+                        opacity: this.model.title.opacity,
+                        size: this.model.title.size,
+                        fontStyle: this.model.title.fontStyle
                     }
                 },
-                lineCap: ochartProxy.model.lineCap,
-                lineJoin: ochartProxy.model.lineJoin,
-                legendAlignment: ochartProxy.model.legendAlignment,
-                legendPosition: ochartProxy.model.legendPosition,
-                legend: ochartProxy.model.legend,
-                animation: ochartProxy.model.animation,
-                crosshair: ochartProxy.model.crosshair,
+                lineCap: this.model.lineCap,
+                lineJoin: this.model.lineJoin,
+                legendAlignment: this.model.legendAlignment,
+                legendPosition: this.model.legendPosition,
+                legend: this.model.legend,
+                animation: this.model.animation,
+                crosshair: this.model.crosshair,
                 commonSeriesOptions: {
-                    doughnutCoefficient: ochartProxy.model.commonSeriesOptions.doughnutCoefficient,
-                    explodeOffset: ochartProxy.model.commonSeriesOptions.explodeOffset,
-                    pyramidMode: ochartProxy.model.commonSeriesOptions.pyramidMode,
-                    gapRatio: ochartProxy.model.commonSeriesOptions.gapRatio,
-                    pieCoefficient: ochartProxy.model.commonSeriesOptions.pieCoefficient,
-                    doughnutSize: ochartProxy.model.commonSeriesOptions.doughnutSize,
-                    startAngle: ochartProxy.model.commonSeriesOptions.startAngle,
-                    xAxisName: ochartProxy.model.commonSeriesOptions.xAxisName,
-                    yAxisName: ochartProxy.model.commonSeriesOptions.yAxisName,
-                    explodeAll: ochartProxy.model.commonSeriesOptions.explodeAll,
-                    explodeIndex: ochartProxy.model.commonSeriesOptions.explodeIndex,
-                    tooltipOptions: ochartProxy.model.commonSeriesOptions.tooltipOptions,
-                    marker: ochartProxy.model.commonSeriesOptions.marker || ochartProxy.model.marker,
-                    font: ochartProxy.model.commonSeriesOptions.font,
-                    type: ochartProxy.seriesType(),
-                    enableAnimation: ochartProxy.model.commonSeriesOptions.enableAnimation,
-                    style: ochartProxy.model.commonSeriesOptions.style,
-                    explode: ochartProxy.model.commonSeriesOptions.explode,
-                    labelPosition: ochartProxy.model.commonSeriesOptions.labelPosition,
-                    tooltip: ochartProxy.model.commonSeriesOptions.tooltip,
-                    zOrder: ochartProxy.model.commonSeriesOptions.zOrder,
-                    drawType: ochartProxy.model.commonSeriesOptions.drawType,
-                    isStacking: ochartProxy.model.commonSeriesOptions.isStacking,
-                    enableSmartLabels: ochartProxy.model.commonSeriesOptions.enableSmartLabels
+                    doughnutCoefficient: this.model.commonSeriesOptions.doughnutCoefficient,
+                    explodeOffset: this.model.commonSeriesOptions.explodeOffset,
+                    pyramidMode: this.model.commonSeriesOptions.pyramidMode,
+                    gapRatio: this.model.commonSeriesOptions.gapRatio,
+                    pieCoefficient: this.model.commonSeriesOptions.pieCoefficient,
+                    doughnutSize: this.model.commonSeriesOptions.doughnutSize,
+                    startAngle: this.model.commonSeriesOptions.startAngle,
+                    xAxisName: this.model.commonSeriesOptions.xAxisName,
+                    yAxisName: this.model.commonSeriesOptions.yAxisName,
+                    explodeAll: this.model.commonSeriesOptions.explodeAll,
+                    explodeIndex: this.model.commonSeriesOptions.explodeIndex,
+                    tooltipOptions: this.model.commonSeriesOptions.tooltipOptions,
+                    marker: this.model.commonSeriesOptions.marker || this.model.marker,
+                    font: this.model.commonSeriesOptions.font,
+                    type: this.seriesType(),
+                    enableAnimation: this.model.commonSeriesOptions.enableAnimation,
+                    style: this.model.commonSeriesOptions.style,
+                    explode: this.model.commonSeriesOptions.explode,
+                    labelPosition: this.model.commonSeriesOptions.labelPosition,
+                    tooltip: this.model.commonSeriesOptions.tooltip,
+                    zOrder: this.model.commonSeriesOptions.zOrder,
+                    drawType: this.model.commonSeriesOptions.drawType,
+                    isStacking: this.model.commonSeriesOptions.isStacking,
+                    enableSmartLabels: this.model.commonSeriesOptions.enableSmartLabels
                 },
-                seriesStyle: ochartProxy.model.seriesStyle,
-                pointStyle: ochartProxy.model.pointStyle,
-                textStyle: ochartProxy.model.textStyle,
-                initSeriesRender: ochartProxy.model.initSeriesRender,
-                theme: ochartProxy.model.theme,
-                canResize: ochartProxy.model.isResponsive,
-                rotation: ochartProxy.model.rotation,
-                enable3D: ochartProxy.model.enable3D,
-                zooming: ochartProxy.model.zooming,
-                margin: ochartProxy.model.margin,
-                elementSpacing: ochartProxy.model.elementSpacing,
-                seriesColors: ochartProxy.model.seriesColors,
-                seriesBorderColors: ochartProxy.model.seriesBorderColors,
-                pointColors: ochartProxy.model.pointColors,
-                pointBorderColors: ochartProxy.model.pointBorderColors,
+                seriesStyle: this.model.seriesStyle,
+                pointStyle: this.model.pointStyle,
+                textStyle: this.model.textStyle,
+                initSeriesRender: this.model.initSeriesRender,
+                theme: this.model.theme,
+                canResize: this.model.isResponsive,
+                rotation: this.model.rotation,
+                enable3D: this.model.enable3D,
+                zooming: this.model.zooming,
+                margin: this.model.margin,
+                elementSpacing: this.model.elementSpacing,
+                seriesColors: this.model.seriesColors,
+                seriesBorderColors: this.model.seriesBorderColors,
+                pointColors: this.model.pointColors,
+                pointBorderColors: this.model.pointBorderColors,
                 series: chartSeries,
-                size: ochartProxy.model.size,
-                load: ochartProxy.model.load,
-                axesRangeCalculate: ochartProxy.model.axesRangeCalculate,
-                axesTitleRendering: ochartProxy.model.axesTitleRendering,
-                chartAreaBoundsCalculate: ochartProxy.model.chartAreaBoundsCalculate,
-                legendItemRendering: ochartProxy.model.legendItemRendering,
-                lengendBoundsCalculate: ochartProxy.model.lengendBoundsCalculate,
-                preRender: ochartProxy.model.preRender,
-                seriesRendering: ochartProxy.model.seriesRendering,
-                symbolRendering: ochartProxy.model.symbolRendering,
-                titleRendering: ochartProxy.model.titleRendering,
-                axesLabelsInitialize: ochartProxy.model.axesLabelsInitialize,
-                pointRegionMouseMove: ochartProxy.model.pointRegionMouseMove,
-                legendItemClick: ochartProxy.model.legendItemClick,
-                legendItemMouseMove: ochartProxy.model.legendItemMouseMove,
-                displayTextRendering: ochartProxy.model.displayTextRendering,
-                toolTipInitialize: ochartProxy.model.toolTipInitialize,
-                trackAxisToolTip: ochartProxy.model.trackAxisToolTip,
-                trackToolTip: ochartProxy.model.trackToolTip,
-                animationComplete: ochartProxy.model.animationComplete,
-                destroy: ochartProxy.model.destroy,
-                create: ochartProxy.model.create,
-                axesLabelRendering: ej.proxy(ochartProxy._onLabelRenders, ochartProxy),
-                pointRegionClick: (typeof (oclientProxy) != "undefined" ? (!oclientProxy.model.enableDeferUpdate ? ej.proxy(ochartProxy._onSeriesClick, ochartProxy) : null) : ej.proxy(ochartProxy._onSeriesClick, ochartProxy)),
+                size: this.model.size,
+                load: this.model.load,
+                axesRangeCalculate: this.model.axesRangeCalculate,
+                axesTitleRendering: this.model.axesTitleRendering,
+                chartAreaBoundsCalculate: this.model.chartAreaBoundsCalculate,
+                legendItemRendering: this.model.legendItemRendering,
+                lengendBoundsCalculate: this.model.lengendBoundsCalculate,
+                preRender: this.model.preRender,
+                seriesRendering: this.model.seriesRendering,
+                symbolRendering: this.model.symbolRendering,
+                titleRendering: this.model.titleRendering,
+                axesLabelsInitialize: this.model.axesLabelsInitialize,
+                pointRegionMouseMove: this.model.pointRegionMouseMove,
+                legendItemClick: this.model.legendItemClick,
+                legendItemMouseMove: this.model.legendItemMouseMove,
+                displayTextRendering: this.model.displayTextRendering,
+                toolTipInitialize: this.model.toolTipInitialize,
+                trackAxisToolTip: this.model.trackAxisToolTip,
+                trackToolTip: this.model.trackToolTip,
+                animationComplete: this.model.animationComplete,
+                destroy: this.model.destroy,
+                create: this.model.create,
+                axesLabelRendering: ej.proxy(this._labelRenders, this),
+                pointRegionClick: (typeof (oclientProxy) != "undefined" ? (!oclientProxy.model.enableDeferUpdate ? ej.proxy(this._seriesClick, this) : null) : ej.proxy(this._seriesClick, this)),
             });
             if (this.model.enableRTL && jsonData != null) {
                 var toolTipInfo = ej.buildTag("div#e-toolTip.e-toolTip",
@@ -1080,44 +1202,47 @@
                         "border": "1px solid rgb(0, 0, 0)"
                     }
                  )[0].outerHTML
-                $("#" + ochartProxy._id).append(toolTipInfo);
+                $("#" + this._id).append(toolTipInfo);
             }
-            $("#" + ochartProxy._id + "progressContainer").hide();
+            $("#" + this._id + "progressContainer").hide();
             if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap && this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode) {
                 if (jsonData != null && jsonData != "") {
-                    ochartProxy._labelCurrentTags.splice(0, ochartProxy._labelCurrentTags.length);
+                    this._labelCurrentTags.splice(0, this._labelCurrentTags.length);
+                    var pivotChartObj = this;
                     jQuery.each(jsonData.labelTags, function (index, value) {
                         var currentTag = new Object();
                         var splitData = value.split("::");
                         currentTag = { "name": splitData[2], "state": splitData[splitData.length - 1], "tag": value };
-                        ochartProxy._labelCurrentTags.push(currentTag);
+                        pivotChartObj._labelCurrentTags.push(currentTag);
                     });
-                    jQuery.each(ochartProxy._labelCurrentTags, function (index, value) {
-                        if (value.name == ochartProxy._selectedItem && ochartProxy._drillAction == "drillup") {
-                            ochartProxy._selectedTagInfo = ochartProxy._labelCurrentTags[index].tag;
+                    jQuery.each(this._labelCurrentTags, function (index, value) {
+                        if (value.name == pivotChartObj._selectedItem && pivotChartObj._drillAction == "drillup") {
+                            pivotChartObj._selectedTagInfo = pivotChartObj._labelCurrentTags[index].tag;
                             return false;
                         }
                     });
                 }
             }
-            if (ochartWaitingPopup != null)
-                this.element.ejWaitingPopup({ showOnInit: false });
+            if (this._waitingPopup != null)
+                this._waitingPopup.hide();
+            if (typeof (oclientProxy) != "undefined" && !ej.isNullOrUndefined(oclientProxy) && oclientProxy.model.isResponsive)
+                $("#" + this._id + "Container").width('100%');           
         },
 
-        _onLabelRenders: function (args) {
-            ochartProxy._trigger("axesLabelRendering", args);
-            if ((args.data.axis.orientation.toLowerCase() == "horizontal" && args.data.label.Text != undefined) || ((ochartProxy.seriesType() == "bar" || ochartProxy.seriesType() == "stackingbar") && args.data.axis.orientation.toLowerCase() == "vertical" && args.data.label.Text != undefined)) {
+        _labelRenders: function (args) {
+            this._trigger("axesLabelRendering", args);
+            if ((args.data.axis.orientation.toLowerCase() == "horizontal" && args.data.label.Text != undefined) || ((this.seriesType() == "bar" || this.seriesType() == "stackingbar") && args.data.axis.orientation.toLowerCase() == "vertical" && args.data.label.Text != undefined)) {
                 var splitName = this.model.enableRTL ? args.data.label.Text.toString().split("~~").reverse(): args.data.label.Text.toString().split("~~");
-                if (ochartProxy._tagCollection.length == 0)
+                if (this._tagCollection.length == 0)
                     args.data.label.Text = splitName[splitName.length - 1];
-                else if (ochartProxy._drillAction == "drilldown" && splitName.indexOf(ochartProxy._selectedItem) + 1 < splitName.length)
-                    args.data.label.Text = splitName[splitName.indexOf(ochartProxy._selectedItem) + 1];
-                else if (ochartProxy._drillAction == "drilldown" && splitName.indexOf(ochartProxy._selectedItem) + 1 >= splitName.length)
-                    args.data.label.Text = splitName[splitName.indexOf(ochartProxy._selectedItem)];
+                else if (this._drillAction == "drilldown" && splitName.indexOf(this._selectedItem) + 1 < splitName.length)
+                    args.data.label.Text = splitName[splitName.indexOf(this._selectedItem) + 1];
+                else if (this._drillAction == "drilldown" && splitName.indexOf(this._selectedItem) + 1 >= splitName.length)
+                    args.data.label.Text = splitName[splitName.indexOf(this._selectedItem)];
                 else if (splitName.length == 1)
                     args.data.label.Text = splitName[0];
-                else if (ochartProxy._drillAction == "drillup")
-                    args.data.label.Text = splitName[ochartProxy._selectedIndex];
+                else if (this._drillAction == "drillup")
+                    args.data.label.Text = splitName[this._selectedIndex];
                 else
                     args.data.label.Text = splitName[splitName.length - 1];
             }
@@ -1132,13 +1257,19 @@
             return ej.PivotChart.Locale[this.locale()][property] === undefined ? ej.PivotChart.Locale["en-US"][property] : ej.PivotChart.Locale[this.locale()][property];
         },
 
-        _onSeriesClick: function (sender) {
-            this.element.find("#" + ochartProxy._id + "ExpandMenu, .expandMenu, .e-dialog").remove();
+        _onPreventPanelClose: function (e) {
+            $('body').find("#preventDiv").remove();
+            if ($(".e-pivotgrid").data("ejWaitingPopup") && !(!ej.isNullOrUndefined(e) && ($(e.target).hasClass("pivotTree") || $(e.target).hasClass("pivotTreeContext") || $(e.target).hasClass("pivotTreeContextMenu"))))
+                $(".e-pivotgrid").data("ejWaitingPopup").hide()
+        },
+
+        _seriesClick: function (sender) {
+            this.element.find("#" + this._id + "ExpandMenu, .expandMenu, .e-dialog").remove();
             var selectedLabel, menuList = new Array(), chartOffset = this.element.position(), me = this;
-            ochartProxy = this;
+            var pivotChartObj = this;
             if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap && this.model.operationalMode == ej.PivotChart.OperationalMode.ServerMode) {
                 var tempLabel; var pointIndex;
-                ochartProxy._selectedTags = [];
+                this._selectedTags = [];
                 if (sender.data.region != null && sender.data.region != undefined) {
                     var labels = this.model.enableRTL ? $.map(sender.model.primaryXAxis.labels, function (x) { return x.split("~~").reverse().join("~~"); }) : sender.model.primaryXAxis.labels;
                     selectedLabel = labels[sender.data.region.Region.PointIndex];
@@ -1149,15 +1280,15 @@
                     selectedLabel = labels[sender.data.point.X];
                     pointIndex = sender.data.point.X;
                 }
-                if ($($("#" + ochartProxy._id + "Container_vml_XAxisLabels_0")[0]).children()[pointIndex] != undefined)
-                    tempLabel = $($("#" + ochartProxy._id + "Container_vml_XAxisLabels_0")[0]).children()[pointIndex].innerHTML;
-                else if ($("#" + ochartProxy._id + "Container_svg_XAxisLabels_0").children()[pointIndex])
-                    tempLabel = $("#" + ochartProxy._id + "Container_svg_XAxisLabels_0").children()[pointIndex].textContent;
+                if ($($("#" + this._id + "Container_vml_XAxisLabels_0")[0]).children()[pointIndex] != undefined)
+                    tempLabel = $($("#" + this._id + "Container_vml_XAxisLabels_0")[0]).children()[pointIndex].innerHTML;
+                else if ($("#" + this._id + "Container_svg_XAxisLabels_0").children()[pointIndex])
+                    tempLabel = $("#" + this._id + "Container_svg_XAxisLabels_0").children()[pointIndex].textContent;
                 else if (this.seriesType() == "bar" || this.seriesType() == "stackingbar") {
-                    if ($($("#" + ochartProxy._id + "Container_vml_YAxisLabels_0")[0]).children()[pointIndex] != undefined)
-                        tempLabel = $($("#" + ochartProxy._id + "Container_vml_YAxisLabels_0")[0]).children()[pointIndex].innerHTML;
-                    else if ($("#" + ochartProxy._id + "Container_svg_YAxisLabels_0").children()[pointIndex])
-                        tempLabel = $("#" + ochartProxy._id + "Container_svg_YAxisLabels_0").children()[pointIndex].textContent;
+                    if ($($("#" + this._id + "Container_vml_YAxisLabels_0")[0]).children()[pointIndex] != undefined)
+                        tempLabel = $($("#" + this._id + "Container_vml_YAxisLabels_0")[0]).children()[pointIndex].innerHTML;
+                    else if ($("#" + this._id + "Container_svg_YAxisLabels_0").children()[pointIndex])
+                        tempLabel = $("#" + this._id + "Container_svg_YAxisLabels_0").children()[pointIndex].textContent;
                     else {
                         var temp = sender.model.primaryXAxis.labels[pointIndex].split("~~");
                         tempLabel = temp[temp.length - 1];
@@ -1168,49 +1299,54 @@
                     tempLabel = temp[temp.length - 1];
                 }
                 if (tempLabel) {
-                    $("#" + ochartProxy._id).find("#" + ochartProxy._id + "ExpandMenu, .expandMenu, .e-dialog").remove();
+                    $("#" + this._id).find("#" + this._id + "ExpandMenu, .expandMenu, .e-dialog").remove();
                     var splitLabel = selectedLabel.split("~~");
 
                     jQuery.each(splitLabel, function (index, value) {
-                        jQuery.each(ochartProxy._labelCurrentTags, function (key, val) {
+                        jQuery.each(pivotChartObj._labelCurrentTags, function (key, val) {
                             if ($.trim(value) == val.name) {
-                                ochartProxy._selectedTags.push(val);
+                                pivotChartObj._selectedTags.push(val);
                                 return false;
                             }
                         });
                     });
 
-                    jQuery.each(ochartProxy._selectedTags, function (index, value) {
+                    jQuery.each(this._selectedTags, function (index, value) {
                         if (value.state > 1)
                             if (me.model.enableRTL)
-                                menuList.push($(ej.buildTag("li.menuList", value.name + " - " + (ochartProxy._getLocalizedLabels("Expand")))[0]).attr("role", "presentation")[0].outerHTML);
+                                menuList.push($(ej.buildTag("li.menuList", value.name + " - " + (pivotChartObj._getLocalizedLabels("Expand")))[0]).attr("role", "presentation")[0].outerHTML);
                             else
-                                menuList.push($(ej.buildTag("li.menuList", (ochartProxy._getLocalizedLabels("Expand")) + " - " + value.name)[0]).attr("role", "presentation")[0].outerHTML);
+                                menuList.push($(ej.buildTag("li.menuList", (pivotChartObj._getLocalizedLabels("Expand")) + " - " + value.name)[0]).attr("role", "presentation")[0].outerHTML);
                     });
-                    jQuery.each(ochartProxy._selectedTags, function (index, value) {
+                    jQuery.each(this._selectedTags, function (index, value) {
                         for (var label = 0; label < selectedLabel.split("~~").length - 1; label++) {
                             if ((selectedLabel.split("~~")[label] == value.name) && value.state == 1)
                                 if (me.model.enableRTL)
-                                    menuList.push($(ej.buildTag("li.menuList", value.name + " - " + (ochartProxy._getLocalizedLabels("Collapse")))[0]).attr("role", "presentation")[0].outerHTML);
+                                    menuList.push($(ej.buildTag("li.menuList", value.name + " - " + (pivotChartObj._getLocalizedLabels("Collapse")))[0]).attr("role", "presentation")[0].outerHTML);
                                 else
-                                    menuList.push($(ej.buildTag("li.menuList", (ochartProxy._getLocalizedLabels("Collapse")) + " - " + selectedLabel.split("~~")[label])[0]).attr("role", "presentation")[0].outerHTML);
+                                    menuList.push($(ej.buildTag("li.menuList", (pivotChartObj._getLocalizedLabels("Collapse")) + " - " + selectedLabel.split("~~")[label])[0]).attr("role", "presentation")[0].outerHTML);
                         }
                     });
                 }
             }
             else {
                 selectedLabel = (sender.data.region != null && sender.data.region != undefined) ? sender.model.primaryXAxis.labels[sender.data.region.Region.PointIndex] : sender.data.series.xAxis.labels[sender.data.point.X];
-                if (!ej.isNullOrUndefined(ochartProxy._labelCurrentTags.collapsedMembers)) {
+                if (!ej.isNullOrUndefined(this._labelCurrentTags.collapsedMembers)) {
                     if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap) {
                         var memberNames = selectedLabel.split(" ~ ");
+                        if (this.model.dataSource.values[0].axis == ej.olap.AxisName.Row) {
+                            var measureNames = $.map(this.model.dataSource.values[0].measures, function (item) { return item.fieldName });
+                            if ($.inArray(memberNames[memberNames.length - 1], measureNames) >= 0)
+                                memberNames.splice(memberNames.length - 1, 1);
+                        }
                         this._selectedSeriesInfo = new Array();
                         for (var i = 0; i < memberNames.length; i++) {
-                            this._selectedSeriesInfo.push($(this.getJSONRecords().seriesTags).filter(function (index, item) { return item.split('::')[2] == memberNames[i] })[0]);
-                            if ($.inArray(memberNames[i], ochartProxy._labelCurrentTags.collapsedMembers) >= 0) {
+                            if ($(this.getJSONRecords().seriesTags).filter(function (index, item) { return item.split('::')[2] == memberNames[i] }).length > 0) this._selectedSeriesInfo.push($(this.getJSONRecords().seriesTags).filter(function (index, item) { return item.split('::')[2] == memberNames[i] })[0]);
+                            if ($.inArray(memberNames[i], this._labelCurrentTags.collapsedMembers) >= 0) {
                                 if (me.model.enableRTL)
-                                    menuList.push($(ej.buildTag("li.menuList",  memberNames[i] +" - " +(ochartProxy._getLocalizedLabels("Expand")) )[0]).attr("role", "presentation")[0].outerHTML);
+                                    menuList.push($(ej.buildTag("li.menuList",  memberNames[i] +" - " +(this._getLocalizedLabels("Expand")) )[0]).attr("role", "presentation")[0].outerHTML);
                                 else
-                                    menuList.push($(ej.buildTag("li.menuList", (ochartProxy._getLocalizedLabels("Expand")) + " - " + memberNames[i])[0]).attr("role", "presentation")[0].outerHTML);
+                                    menuList.push($(ej.buildTag("li.menuList", (this._getLocalizedLabels("Expand")) + " - " + memberNames[i])[0]).attr("role", "presentation")[0].outerHTML);
                             }
                         }
                     }
@@ -1226,34 +1362,34 @@
                     if (this.model.analysisMode == ej.PivotChart.AnalysisMode.Olap) {
                         for (var j = 0; j < this._labelCurrentTags.expandedMembers.length; j++) {
                             if (!ej.isNullOrUndefined(this._labelCurrentTags.expandedMembers[j])) {
-                                for (var i = 0; i < ochartProxy._labelCurrentTags.expandedMembers[j].length; i++) {
+                                for (var i = 0; i < this._labelCurrentTags.expandedMembers[j].length; i++) {
                                     if (me.model.enableRTL)
-                                        menuList.push($(ej.buildTag("li.menuList", ochartProxy._labelCurrentTags.expandedMembers[j][i].split('::')[2] + " - " + (ochartProxy._getLocalizedLabels("Collapse")))[0]).attr("role", "presentation")[0].outerHTML);
+                                        menuList.push($(ej.buildTag("li.menuList", this._labelCurrentTags.expandedMembers[j][i].split('::')[2] + " - " + (this._getLocalizedLabels("Collapse")))[0]).attr("role", "presentation")[0].outerHTML);
                                     else
-                                        menuList.push($(ej.buildTag("li.menuList", (ochartProxy._getLocalizedLabels("Collapse")) + " - " + ochartProxy._labelCurrentTags.expandedMembers[j][i].split('::')[2])[0]).attr("role", "presentation")[0].outerHTML);
+                                        menuList.push($(ej.buildTag("li.menuList", (this._getLocalizedLabels("Collapse")) + " - " + this._labelCurrentTags.expandedMembers[j][i].split('::')[2])[0]).attr("role", "presentation")[0].outerHTML);
                                 }
                             }
                         }
                     }
                     else {
-                        for (var i = 0; i < ochartProxy._labelCurrentTags.expandedMembers.length; i++) {
+                        for (var i = 0; i < this._labelCurrentTags.expandedMembers.length; i++) {
                             if (me.model.enableRTL)
-                                menuList.push($(ej.buildTag("li.menuList", ochartProxy._labelCurrentTags.expandedMembers[i] + " - " + (ochartProxy._getLocalizedLabels("Collapse")))[0]).attr("role", "presentation")[0].outerHTML);
+                                menuList.push($(ej.buildTag("li.menuList", this._labelCurrentTags.expandedMembers[i] + " - " + (this._getLocalizedLabels("Collapse")))[0]).attr("role", "presentation")[0].outerHTML);
                             else
-                                menuList.push($(ej.buildTag("li.menuList", (ochartProxy._getLocalizedLabels("Collapse")) + " - " + ochartProxy._labelCurrentTags.expandedMembers[i])[0]).attr("role", "presentation")[0].outerHTML);
+                                menuList.push($(ej.buildTag("li.menuList", (this._getLocalizedLabels("Collapse")) + " - " + this._labelCurrentTags.expandedMembers[i])[0]).attr("role", "presentation")[0].outerHTML);
                         }
                     }
                 }                
             }
             if (menuList.length > 0) {
-                menuList.push($(ej.buildTag("li.menuList", ochartProxy._getLocalizedLabels("Exit"))[0]).attr("role", "presentation")[0].outerHTML);
-                var expandMenu = $(ej.buildTag("div#" + ochartProxy._id + "ExpandMenu.expandMenu", menuList)[0]).attr("role", "presentation")[0].outerHTML;
-                $(expandMenu).ejDialog({ width: "auto", target: "#" + ochartProxy._id, enableResize: false, enableRTL: this.model.enableRTL });
-                $("#" + ochartProxy._id + "ExpandMenu_wrapper").appendTo(this.element).css({ "left": sender.data.location.x + 8 + chartOffset.left, "top": sender.data.location.y + 8 + chartOffset.top, "min-height": navigator.userAgent.toLowerCase().indexOf('webkit') > 0 ? "initial" : "auto" });
-                $("#" + ochartProxy._id + "ExpandMenu").css({ "min-height": navigator.userAgent.toLowerCase().indexOf('webkit') > 0 ? "initial" : "auto" });
+                menuList.push($(ej.buildTag("li.menuList", this._getLocalizedLabels("Exit"))[0]).attr("role", "presentation")[0].outerHTML);
+                var expandMenu = $(ej.buildTag("div#" + this._id + "ExpandMenu.expandMenu", menuList)[0]).attr("role", "presentation")[0].outerHTML;
+                $(expandMenu).ejDialog({ width: "auto", target: "#" + this._id, enableResize: false, enableRTL: this.model.enableRTL });
+                $("#" + this._id + "ExpandMenu_wrapper").appendTo(this.element).css({ "left": sender.data.location.x + 8 + chartOffset.left, "top": sender.data.location.y + 8 + chartOffset.top, "min-height": navigator.userAgent.toLowerCase().indexOf('webkit') > 0 ? "initial" : "auto" });
+                $("#" + this._id + "ExpandMenu").css({ "min-height": navigator.userAgent.toLowerCase().indexOf('webkit') > 0 ? "initial" : "auto" });
             }
             this.element.find(".e-titlebar, .e-header").remove();
-            ochartProxy._trigger("pointRegionClick", sender);
+            this._trigger("pointRegionClick", sender);
         },
 
         exportPivotChart: function (exportOption, fileName, exportFormat) {
@@ -1269,14 +1405,18 @@
             chartObj.model.primaryXAxis.zoomFactor = zoomFactor;
             chartObj.model.enableCanvasRendering = false;
             chartObj.redraw();
-            
-            if (this.model.operationalMode == ej.PivotChart.OperationalMode.ClientMode) {
+            var bgColor = $(this.element).css('background-color') != "" ? $(this.element).css('background-color') : "rgb(255, 255, 255)";
+            var exportSetting = { url: "", fileName: "PivotChart", exportMode: ej.PivotChart.ExportMode.ClientMode, title: "", description: "" };
+            this._trigger("beforeExport", exportSetting);
+            if (exportSetting.exportMode == ej.PivotChart.ExportMode.ClientMode) {
                 var params = {
                     args: JSON.stringify({
-                        fileName: fileName,
+                        fileName: ej.isNullOrUndefined(fileName) ? (ej.isNullOrUndefined(exportSetting.fileName) ? "PivotChart" : exportSetting.fileName) : fileName,
                         chartdata: chartString.split(',')[1],
-                        bgColor: $(this.element).css('background-color'),
-                        exportFormat: exportFormat
+                        bgColor: bgColor,
+                        exportFormat: exportFormat,
+                        title: exportSetting.title,
+                        description: exportSetting.description
                     })
                 };
                 if (ej.raiseWebFormsServerEvents) {
@@ -1295,10 +1435,12 @@
                     args: JSON.stringify({
                         exportOption: exportOption,
                         chartdata: chartString.split(',')[1],
-                        bgColor: $(this.element).css('background-color')
+                        bgColor: bgColor,
+                        title: exportSetting.title,
+                        description: exportSetting.description
                     })
                 };
-                this.doPostBack(this.model.url + "/" + this.model.serviceMethodSettings.exportOlapChart, params);
+                this.doPostBack($.trim(exportSetting.url) != "" ? exportSetting.url : this.model.url + "/" + this.model.serviceMethodSettings.exportPivotChart, params);
             }            
         },
 
@@ -1321,8 +1463,8 @@
                     this._trigger("renderComplete", eventArgs);
                 }, this),
                 error: ej.proxy(function (msg, textStatus, errorThrown) {
-                    if (typeof ochartWaitingPopup != 'undefined' && ochartWaitingPopup != null)
-                        ochartWaitingPopup.hide();
+                    if (typeof this._waitingPopup != 'undefined' && this._waitingPopup != null)
+                        this._waitingPopup.hide();
                     if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null)
                         oclientWaitingPopup.hide();
                     var eventArgs = { "action": this._currentAction, "customObject": this.model.customObject, "element": this.element, "Message": msg };
@@ -1344,8 +1486,8 @@
             for (var item in params)
                 addParam(item, params[item]);
             form.appendTo(document.body).submit().remove();
-        }
-    });
+                    }
+            });
 
     ej.PivotChart.Locale = {};
 
@@ -1360,7 +1502,7 @@
     };
 
     ej.PivotChart.ChartTypes = {
-        Line: 'line', Spline: 'spline', Column: 'column', Area: 'area', SplineArea: 'splinearea', StepLine: 'stepline', StepArea: 'steparea', Pie: 'pie', Bar: 'bar', StackingArea: 'stackingarea', StackingColumn: 'stackingcolumn', StackingBar: 'stackingbar', Pyramid: 'pyramid', Funnel: 'funnel', Doughnut: 'doughnut', Scatter: 'scatter', Bubble: 'bubble'
+        Line: 'line', Spline: 'spline', Column: 'column', Area: 'area', SplineArea: 'splinearea', StepLine: 'stepline', StepArea: 'steparea', Pie: 'pie', Bar: 'bar', StackingArea: 'stackingarea', StackingColumn: 'stackingcolumn', StackingBar: 'stackingbar', Pyramid: 'pyramid', Funnel: 'funnel', Doughnut: 'doughnut', Scatter: 'scatter', Bubble: 'bubble', WaterFall: 'waterfall'
     };
 
     ej.PivotChart.ExportOptions = {
@@ -1407,7 +1549,10 @@
         ClientMode: "clientmode",
         ServerMode: "servermode"
     };
-
+    ej.PivotChart.ExportMode = {
+        ClientMode: "clientmode",
+        ServerMode: "servermode"
+    };
 })(jQuery, Syncfusion);;
 
 });

@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.webform.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -21,6 +21,7 @@
     setViewstate(ej.Dialog, ["enabled", "cssClass", "enableRTL"]);
     setViewstate(ej.DropDownList, ["value", "text", "enabled", "readOnly", "cssClass", "enableRTL", "selectedIndex", "selectedIndices"]);
     setViewstate(ej.FileExplorer, ["allowMultiSelection", "showToolbar", "showCheckbox", "showRoundedCorner", "showTreeview", "showContextMenu", "showFooter", "selectedFolder", "selectedItems", "fileTypes", "locale", "layout", "enableRTL", "cssClass", "gridSettings", "filterSettings"]);
+    setViewstate(ej.GroupButton, ["cssClass", "enabled", "enableRTL", "orientation", "selectedItemIndex"]);
     setViewstate(ej.MaskEdit, ["value", "maskFormat", "inputMode", "enabled", "readOnly", "cssClass" ]);
     setViewstate(ej.Menu, ["animationType", "enabled", "cssClass", "enableRTL", "orientation"]);
     setViewstate(ej.NumericTextbox, ["cssClass", "locale", "enabled", "enableRTL", "readOnly", "value"]);
@@ -28,6 +29,7 @@
     setViewstate(ej.ProgressBar, ["value", "text", "percentage", "minValue", "maxValue", "enabled", "cssClass", "enableRTL"]);
     setViewstate(ej.RadioButton, ["checked", "enabled", "cssClass", "enableRTL"]);
     setViewstate(ej.Rating, ["value", "minValue", "maxValue", "readOnly", "cssClass"]);
+    setViewstate(ej.RadialSlider, ["radius", "ticks", "value", "enableAnimation", "autoOpen"]);
     setViewstate(ej.RTE, ["cssClass", "locale", "enabled", "enableRTL", "value"]);
     setViewstate(ej.Slider, ["value", "values", "minValue", "maxValue", "incrementStep", "readOnly", "enabled", "enableRTL", "sliderType", "cssClass"]);
     setViewstate(ej.SplitButton, ["text", "cssClass", "enableRTL", "enabled"]);
@@ -46,19 +48,23 @@
     setViewstate(ej.TreeView, ["cssClass", "enabled", "enableRTL", "expandedNodes", "checkedNodes", "selectedNode"]);
     setViewstate(ej.Uploadbox, ["enabled", "multipleFilesSelection", "enableRTL", "cssClass", "showFileDetails"]);
     setViewstate(ej.PivotGrid, ["currentReport"]);
+	setViewstate(ej.PivotChart, ["currentReport"]);
+	setViewstate(ej.PivotClient, ["currentReport"]);
     setViewstate(ej.Schedule, ["currentDate", "currentView", "endHour", "startHour", "orientation", "timeMode", "views", "dateFormat", "timeZone", "highlightBusinessHours", "enablePersistence",
 	                           "showQuickWindow", "businessStartHour", "businessEndHour", "cellHeight", "cellWidth", "minDate", "maxDate", "locale", "readOnly", "enableRTL", "enableAppointmentNavigation",
 							   "appointmentTemplateId", "resourceHeaderTemplateId", "allowDragDrop", "enableAppointmentResize", "showCurrentTimeIndicator", "reminderSettings", "contextMenuSettings", "group",
 							   "allowKeyboardNavigation", "query", "renderDates", "categorizeSettings", "enableLoadOnDemand", "showAllDayRow", "isResponsive", "showHeaderBar", "agendaViewSettings", "firstDayOfWeek", "workWeek", "showDeleteConfirmationDialog", "showNextPrevMonth"]);
-    setViewstate(ej.Grid, ["allowFiltering", "allowGrouping", "allowKeyboardNavigation", "allowMultiSorting", "allowPaging", "allowReordering","allowTextWrap","allowCellMerging",
+    setViewstate(ej.Grid, ["allowFiltering", "allowGrouping", "allowKeyboardNavigation", "allowMultiSorting", "enableLoadOnDemand", "allowPaging", "allowReordering", "allowTextWrap", "allowCellMerging",
                                              "allowResizing", "allowScrolling", "allowSearching", "allowSelection", "allowSorting", "showSummary",
                                              "cssClass", "detailsTemplate", "enableAltRow", "enableHeaderHover", "enablePersistence", "enableRTL", "enableRowHover", "enableTouch", "locale",
                                              "query", "rowTemplate", "selectedRowIndex", "selectionType", "editSettings", "filterSettings", "groupSettings", "pageSettings",
-                                             "scrollSettings", "sortSettings", "toolbarSettings", "columns", "searchSettings", "_groupingCollapsed", "allowRowDragAndDrop", "textWrapSettings", "rowDropSettings"]);
+                                             "scrollSettings", "sortSettings", "toolbarSettings", "columns", "searchSettings", "_groupingCollapsed", "allowRowDragAndDrop", "textWrapSettings", "rowDropSettings", "resizeSettings"]);
 	setViewstate(ej.Kanban, ["allowFiltering", "allowKeyboardNavigation", "allowScrolling", "allowSearching", "allowSelection","cssClass","allowHover", "allowPrinting", "enableRTL", "keyField", "allowTitle","enableTouch", "locale",
                                              "query", "allowDragAndDrop", "allowPrinting", "selectionType", "editSettings", "filterSettings", "cardSettings", "fields",
                                              "scrollSettings", "sortSettings", "customToolbarItems", "columns", "searchSettings", "_collapsedCards", "tooltipSettings", "enableTotalCount","allowToggleColumn"]);										 
-    setViewstate(ej.Gantt, ["allowSorting", "allowColumnResize", "dataSource", "allowSelection", "highlightWeekends", "enableProgressBarResizing",
+    setViewstate(ej.Gantt, ["columns","leftTaskLabelMapping", "rightTaskLabelMapping", "leftTaskLabelTemplate", "resourceUnitMapping", "selectionType", "selectionMode", "workUnit", "taskType", "cellTooltipTemplate", "rightTaskLabelTemplate",
+	                        "showColumnOptions", "columnDialogFields", "enableWBS", "enableWBSPredecessor", "enableResize", "isResponsive", "sortSettings","taskSchedulingModeMapping","taskSchedulingMode","validateManualTasksOnLinking",
+							"allowSorting", "allowColumnResize", "dataSource", "allowSelection", "highlightWeekends", "enableProgressBarResizing",
                             "includeWeekend", "showTaskNames", "showGridCellTooltip", "showGridExpandCellTooltip", "showProgressStatus", "showResourceNames", "enableTaskbarDragTooltip",
                             "enableTaskbarTooltip", "allowKeyboardNavigation", "allowMultiSorting", "enableAltRow", "enableVirtualization", "allowGanttChartEditing",
                             "renderBaseline", "enableContextMenu", "showColumnChooser", "taskIdMapping", "parentTaskIdMapping", "taskNameMapping", "startDateMapping",
@@ -74,8 +80,6 @@
                              "enableAltRow", "enableVirtualization", "showColumnChooser", "idMapping", "parentIdMapping", "childMapping",
                              "cssClass", "locale", "rowHeight", "selectedRowIndex", "treeColumnIndex", "enableCollapseAll", "columns", "sortSettings",
                              "toolbarSettings", "contextMenuSettings", "editSettings", "filterSettings","showSummaryRow","showTotalSummary","isResponsive"]);
-    if (ej.olap)
-        setViewstate(ej.PivotChart, ["currentReport"]);
     if (ej.datavisualization) {
         setViewstate(ej.datavisualization.Chart, ["series"]);
         setViewstate(ej.datavisualization.Map, ["enablePan", "enableAnimation", "enableResize"]);

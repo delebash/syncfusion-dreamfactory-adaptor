@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.excelfilter.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -74,6 +74,9 @@
         this.maxItemOnQuery = 0; /*To prevent OData URI queryString length*/
         this.enableNormalize = true; /*To clean up redundant values after formatting */
         this.enableSelect = false;
+        this._onDemandSearch = false;
+        this._searchRequest = false;
+        this._isIndeterminate = false;
         this._selectAll = "<div class='e-ftrchk'><input type='checkbox' class='e-selectall' value='selectall' class='e-ftrchk' /><label class='e-ftrchk'>(" + this.localizedLabels.SelectAll + ")</label></div>";
         this._blanks = "<div class='e-ftrchk'><input type='checkbox' id='blanks' class='e-ftrchk' value='" + this._empties.join(this._spliter) + "' @@/><label class='e-ftrchk' for='blanks' value=''>(" + this.localizedLabels.Blanks + ")</label></div>";
         this._blank = undefined;
@@ -249,6 +252,7 @@
             this.filteredColumn = options["filteredColumns"] || this._ctrlInstance.model.filterSettings.filteredColumns;
             this.sortedColumns = options["sortedColumns"] || this._ctrlInstance.model.sortSettings.sortedColumns;
             this._displayName = options["displayName"];
+            this.query = options["query"] || new ej.Query();
             this._$key = options["key"] || 0;
 			this._$tableID = options["tableID"];
 			this._$blankVal = ej.isNullOrUndefined(this._$tableID) ? this._$blankVal : options["blank"];
@@ -274,7 +278,7 @@
             this._searchBox = this._openedFltr.find(".e-searchbox input");
             this._setPosition(this._openedFltr, options["position"]);
             this._openedFltr.addClass(options["cssClass"]);
-            this._openedFltr.fadeIn(300, "easeOutQuad", function () {
+            this._openedFltr.fadeIn(300, function () {
             });
 			var $popups = $("#" + this.id + this._$colType + "_MenuItem").find("li[ejfnrole='popup']");
             if (this._$enableColor) {
@@ -293,7 +297,7 @@
 				obj.scrollLeft(obj.content()[0].scrollWidth - obj.content()[0].clientWidth);
 				obj.refresh();
 			}
-            this._actualCount > this._maxCount ? this._openedFltr.find("div.e-status").removeClass("e-hide") : this._openedFltr.find("div.e-status").addClass("e-hide");            
+                        
             this._setDisable();
             var args = { requestType: "filterafteropen", filterModel: this, columnName: this.fName, columnType: this._$colType };
             if (this._ctrlInstance._trigger(this._onActionComplete, args))
@@ -302,12 +306,12 @@
         closeXFDialog: function (e) {
             if (e != null) {
                 var $target = $(e.target);
-                if ($target.closest("#"+ this.id + this._$colType + "_CustomFDlg").length)
+                if (!($target.closest("#" + this.id + this._$colType + "_CustomFDlg").length > 0 || $target.closest("#" + this.id + this._$colType + "_excelDlg").length > 0))
                     return;
             }            
             if (this._openedFltr) {
                 if (!this._openedFltr.hasClass("e-dlgcustom")) {
-                    this._openedFltr.fadeOut(300, "easeOutQuad", function () {
+                    this._openedFltr.fadeOut(300, function () {
                     });
                     this._listsWrap.ejWaitingPopup("hide");
                 }
@@ -441,7 +445,7 @@
         },
         _search: function (e) {
             var enterText = e.target.value, args = {}, parsed, operator, $target = $(e.target);
-            parsed = parseFloat(enterText) ? parseFloat(enterText) : enterText;
+            parsed = (this.getType() != "string" && parseFloat(enterText)) ? parseFloat(enterText) : enterText;
             operator ="contains" ;
             parsed = (parsed == "" || parsed == undefined) ? undefined : parsed;
             if (this._$colType == "boolean") {
@@ -457,7 +461,9 @@
                     return;
             }
             this._previousValue = parsed;
-            this._processListData({ type: "filterchoicesearch", value: parsed, operator: operator, matchcase: ["date", "datetime"].indexOf(this._$colType) != -1 ? false : this._matchCase });
+            delay = this._dataSource instanceof ej.DataManager && (this._ctrlInstance.model.pageSettings.totalRecordsCount > this._ctrlInstance.model.filterSettings.maxFilterChoices) ? 1500 : 0;
+            sender = { type: "filterchoicesearch", value: parsed, operator: operator, matchcase: ["date", "datetime"].indexOf(this._$colType) != -1 ? false : this._matchCase }
+            this._processSearch(sender, delay);
             if ($target.val() == "") {
                 $target.next().addClass("e-search");
                 $target.next().removeClass("e-cancel");
@@ -465,6 +471,25 @@
                 $target.next().addClass("e-cancel");
                 $target.next().removeClass("e-search");
             }
+        },
+        _processSearch: function (sender, delay) {
+            if (!this._alreadySearchProcessed) {
+                this._alreadySearchProcessed = true;
+                this._startTimer(sender, delay);
+            } else {
+                this._stopTimer();
+                this._startTimer(sender, delay);
+            }
+        },
+        _startTimer: function (sender, delay) {
+            this._timer = window.setTimeout(
+                function () {
+                    proxy._processListData(sender);
+                }, delay)
+        },
+        _stopTimer: function () {
+            if (this._timer != null)
+                window.clearTimeout(this._timer);
         },
         _getLocalizedLabel: function (property) {
             return ej.getLocalizedConstants("ej.ExcelFilter", this._locale);
@@ -487,7 +512,7 @@
         },
       
         _processListData: function (params) {
-            var result, promise, args = {}, query = new ej.Query(), evtArgs = {}; this._searchCount = 0;
+            var result, promise, args = {}, query = this.query, searchQuery = new ej.Query().requiresCount(), evtArgs = {}; this._searchCount = 0;
             var predicates = this._predicates[this._$key], pred;
 			var data = null, columnName = null, localJSON = null, result = null;
 			if(ej.isNullOrUndefined(this._$foreignField && this._$foreignData)){
@@ -511,7 +536,11 @@
                     pred = pred != undefined ? pred["and"](obj) : obj;
             }
             args.columnName = columnName;           
-            query.requiresCount();            
+            query.requiresCount();
+            if (this._dataSource instanceof ej.DataManager &&  !this._dataSource.dataSource.offline && this._ctrlInstance.model.pageSettings.totalRecordsCount > this._ctrlInstance.model.filterSettings.maxFilterChoices) {
+                query.take(this.maxFilterChoices);
+                this._onDemandSearch = true;
+            }
 		    pred && query.where(pred);
             evtArgs.requestType = params ? params.type : "filterchoicerequest",evtArgs.filterModel = this, evtArgs.query = query, evtArgs.dataSource = data;
             if (this._ctrlInstance._trigger(this._onActionBegin, evtArgs))
@@ -519,16 +548,22 @@
             if (this.enableSelect)
                 query.select(this.fName);
             if (params && params.type == "filterchoicesearch") {
-                params.value && query.where(columnName, params.operator, params.value, !params.matchcase);
-                if (!ej.isNullOrUndefined(this._$foreignField) && !ej.isNullOrUndefined(this._ctrlInstance._fkParentTblData)){
-                    this._localJSON = $.extend(true, this._localJSON, this._ctrlInstance._fkParentTblData );
-					this._localJSON = ej.DataManager(this._localJSON).executeLocal(new ej.Query().where(this._$foreignField, "notequal", null));
-				}
-                promise = ej.DataManager(this._localJSON).executeLocal(query);
-                args.data = this._currentData = promise.result;
+                var sQuery = new ej.Query();
                 args.type = params.type;
-                this._totalRcrd = this._searchCount =  promise.count;
-                this._setCheckBoxList(args);
+                if (this._$foreignField) query = searchQuery;
+                params.value && sQuery.where(columnName, params.operator, params.value, !params.matchcase);
+                if (this._dataSource instanceof ej.DataManager && this._ctrlInstance.model.pageSettings.totalRecordsCount > this._ctrlInstance.model.filterSettings.maxFilterChoices) {
+                    this._searchRequest = true;
+                    this._listsWrap.ejWaitingPopup("show");
+                    if (this._$foreignField) {
+                        var frKeyData = this._$foreignData instanceof ej.DataManager ? this._$foreignData : ej.DataManager(this._$foreignData);
+                        this._dataProcessing(frKeyData, query, args);
+                    }
+                    else
+                        this._dataProcessing(this._dataSource, query, args);
+                }
+                else
+                    this._dataProcessing(ej.DataManager(this._localJSON), sQuery, args);
             }
             else if (!(this._dataSource instanceof ej.DataManager)) {
 				var result = [];
@@ -565,7 +600,16 @@
                     });
                 }
             }           
-        },		
+        },
+        _dataProcessing: function (dataSource, query, args) {
+            var result, promise;
+            promise = dataSource.executeQuery(query);
+            promise.done(function (e) {
+                args.data = proxy._currentData = e.result;
+                proxy._totalRcrd = proxy._searchCount = e.result.length;
+                proxy._setCheckBoxList(args);
+            });
+        },
         _filterForeignData: function (fromPromise, args) {
             var custom = typeof args === "boolean", key = this._$foreignKey,
                field = this._$foreignField, type = this._$foreignKeyType,
@@ -612,6 +656,7 @@
                 sortedData = this.getDistinct(args.data, args.columnName, true, !!this._$foreignKey);
                 flag = this._isFiltered;                
                 this._actualCount = sortedData.length; sortedData.length = this._maxCount > this._actualCount ? this._actualCount : this._maxCount;               
+                (this._onDemandSearch && this._actualCount == 1000) || this._actualCount > this._maxCount ? this._openedFltr.find("div.e-status").removeClass("e-hide") : this._openedFltr.find("div.e-status").addClass("e-hide");
                 this._filterdCol = ej.DataManager(this.filteredColumn).executeLocal(ej.Query().where("field", "equal", this.fName));               
                 this._listsWrap.find("div:first").html([this._selectAll, $.render[this.id + this._$colType + "_listBox_Template"](sortedData), this._addAtLast ? this.replacer(blank, /@@/g, this._setCheckState, this._empties.join(this._spliter)) : ""].join(""));
                 this._chkList = this._listsWrap.find("input:checkbox").not(".e-selectall"), $inView = this._chkList.slice(0, 20);
@@ -623,19 +668,32 @@
 				this._listsWrap.find(".e-selectall").closest("span").siblings("label").attr("for", this.id + this._$colType + "SelectAll");
             }
             else
-                this._listsWrap.find("div:first").html(ej.buildTag("div.e-ftrchk", this.localizedLabels.NoResult, {}, {}));
+            {
+                this._listsWrap.find("div").first().html(ej.buildTag("div.e-ftrchk", this.localizedLabels.NoResult, {}, {}));
+                $("#" + this.id + this._$colType + "_OkBtn").ejButton("disable");
+            }
             if (!ej.isNullOrUndefined(this._chkList))
                 $checked = this._chkList.filter(":checked").length;
+            if (this._isFiltered && this._searchRequest && $checked == 0)
+                this._checkIsIndeterminate(args.columnName, this.filteredColumn);
             if (!this._isFiltered || this._actualCount == $checked)
                 this._listsWrap.find(".e-selectall").ejCheckBox({ checked: true });
-            else if ($checked > 0 && this._interDeterminateState)
+            else if ($checked > 0 || this._isIndeterminate && this._interDeterminateState)
                 this._listsWrap.find(".e-selectall").ejCheckBox('model.checkState', 'indeterminate');
             $("#" + this.id + this._$colType + "_OkBtn").ejButton({ enabled: $checked != 0 });
             this._listsWrap.ejScroller({ scrollTop: 0 }).ejScroller("refresh");
+             if(this._listsWrap.hasClass('e-waitingpopup'))
+                this._listsWrap.ejWaitingPopup("hide");
             if (this._ctrlInstance._trigger(this._onActionComplete, evtArgs))
                 return;
+            this._isIndeterminate = false;
         },
-     
+        _checkIsIndeterminate: function (colName, filteredCol) {
+            for (var i = 0 ; i < filteredCol.length; i++) {
+                if (colName == filteredCol[i].field)
+                    this._isIndeterminate = true;
+            }
+        },
         _createLiTag: function ($ul, menuData, isChild) {
             proxy = this;
             $.each(menuData, function (index, obj) {
@@ -696,7 +754,7 @@
 			    }
                 if(bgColor.length > 0){
                     $li = ej.buildTag("li.e-list e-bghdrcolor", "", "" , {"ejfnrole": selCellHdr });
-                    $a = ej.buildTag("a", cellcolor, {});
+                    $a = ej.buildTag("a.e-menulink", cellcolor, {});
                     $li.append($a);
                     $ul.append($li);
 			        for(var i = 0; i < bgColor.length; i++){
@@ -706,7 +764,7 @@
                 }
                 if(fgColor.length > 0){
 			        $li = ej.buildTag("li.e-list e-fghdrcolor", "", "" , {"ejfnrole": selFontHdr });
-                    $a = ej.buildTag("a", fontcolor, {});
+                    $a = ej.buildTag("a.e-menulink", fontcolor, {});
                     $li.append($a);
                     $ul.append($li);
                     for(var i = 0; i < fgColor.length; i++) {
@@ -788,7 +846,7 @@
                 canCheck = true;
             }
             else if (clen == 0 || !this._interDeterminateState) {
-                $selectall.removeProp("checked");
+                $selectall.prop("checked", false);
                 canCheck = false;
             }
             else if (args.isInteraction)
@@ -804,7 +862,7 @@
             }
             else if (args.checkState == "uncheck") {
                 this._chkList.filter(function () { if ($(this).hasClass("e-checkbox") && $(this).prop("checked")) return this; }).ejCheckBox({ checked: args.isChecked });
-                this._chkList.removeProp("checked"); this._chkList.removeAttr("checked");
+                this._chkList.prop("checked", false); this._chkList.removeAttr("checked");
             }
             $("#" + this.id + this._$colType + "_OkBtn").ejButton({ enabled: args.isChecked });
         },
@@ -885,7 +943,7 @@
         },
                      
         _openCustomFilter: function (operator) {
-            var oper = operator != "top10" ? this._$colType : operator, emptyOp = { text: "", value: "" };
+            var oper = operator != "top10" ? this._$colType : operator, emptyOp = { text: "", value: "" },proxy=this;
             var type = oper.replace(oper.charAt(0), oper.charAt(0).toUpperCase());
             var id = this.id + this._$colType;
             this.closeXFDialog();
@@ -921,18 +979,21 @@
                 this._openedFltr.find(".e-optable tr.e-top").addClass("e-hide");
                 this._openedFltr.find(".e-optable tr").not(".e-top").removeClass("e-hide");
             }
-            if(this._$colType == "string"){
-				var fName = this._$foreignField ? this._$foreignField : this.fName;
-				var data = this._$foreignData ? this._$foreignData : this._dataSource;
-                this._openedFltr.find(".e-autocomplete").ejAutocomplete({
-                    fields: { text: fName }, dataSource: data, focusIn: function (args) {
-                        var type = this.element.closest("td").siblings().find(".e-dropdownlist").ejDropDownList("getSelectedValue");
-                        var $matchCase = this.element.closest(".e-dialog-scroller").find(".e-checkbox").prop("checked");
-						 this.model.caseSensitiveSearch = $matchCase;
-						 this.model.filterType = type == "" ? this.model.filterType : type;
-                    }
-                });
-            }
+			if (this._$colType == "string") {
+			    var fName = this._$foreignField ? this._$foreignField : this.fName;
+			    var data = this._$foreignData && this._$foreignField ? this._$foreignData : this._dataSource;
+			    data = data instanceof ej.DataManager ? data : ej.DataManager(data);
+			    data.executeQuery(this.query).done(function (e) {
+			        proxy._openedFltr.find(".e-autocomplete").ejAutocomplete({
+			            fields: { text: fName }, dataSource: e.result, focusIn: function (args) {
+			                var type = this.element.closest("td").siblings().find(".e-dropdownlist").ejDropDownList("getSelectedValue");
+			                var $matchCase = this.element.closest(".e-dialog-scroller").find(".e-checkbox").prop("checked");
+			                this.model.caseSensitiveSearch = $matchCase;
+			                this.model.filterType = type == "" ? this.model.filterType : type;
+			            }
+			        });
+			    });
+			}
             if (this._$colType == "date" && this._$format != "")
                 this._openedFltr.find(".e-datepicker").ejDatePicker({ dateFormat: this._$format.replace(/{0:|}/g, function () { return "" }), enableStrictMode: true });
             else if (this._$colType == "datetime" && this._$format != "")
@@ -945,7 +1006,7 @@
 			if (this._ctrlInstance._trigger(this._onActionComplete, args))
                 return;
         },
-
+        
         _setFilteredData: function ($id, op) {
             var indx = $.inArray(this.fName, this.cFilteredCols);
             var fQM = [], optrs = [], fLen;
@@ -1002,36 +1063,10 @@
             if (filterObject.value != null) {
                 var $fltrVal = filterObject.value;
                 var $prevObj = $.extend(true, {}, filterObject);
-                var $nextObj = $.extend(true, {}, filterObject);
-                if (!ej.isNullOrUndefined(this._openedFltr) && this._openedFltr.hasClass("e-dlgcustom") && !ej.isNullOrUndefined(this._ctrlInstance.getColumnByField(filterObject.field).format)) {
-                    var formatString = this._ctrlInstance.getColumnByField(filterObject.field).format;
-                    if (formatString.indexOf("s") != -1) {
-                        $prevDate = new Date($prevObj.value.setSeconds($prevObj.value.getSeconds() - 1));
-                        $nextDate = new Date($nextObj.value.setSeconds($nextObj.value.getSeconds() + 2));
-                        filterObject.value = new Date(filterObject.value.setSeconds($nextObj.value.getSeconds() - 1));
-                    }
-                    else if (formatString.indexOf("m") != -1) {
-                        $prevDate = new Date($prevObj.value.setMinutes($prevObj.value.getMinutes() - 1));
-                        $nextDate = new Date($nextObj.value.setMinutes($nextObj.value.getMinutes() + 2));
-                        filterObject.value = new Date(filterObject.value.setMinutes($nextObj.value.getMinutes() - 1));
-                    }
-                    else if (formatString.indexOf("h") != -1) {
-                        $prevDate = new Date($prevObj.value.setHours($prevObj.value.getHours() - 1));
-                        $nextDate = new Date($nextObj.value.setHours($nextObj.value.getHours() + 2));
-                        filterObject.value = new Date(filterObject.value.setHours($nextObj.value.getHours() - 1));
-                    }
-                    else {
-                        $prevDate = new Date($prevObj.value.setDate($prevObj.value.getDate()));
-                        $prevDate = new Date($prevObj.value.setSeconds($prevObj.value.getSeconds() - 1));
-                        $nextDate = new Date($nextObj.value.setDate($nextObj.value.getDate() + 1));
-                        filterObject.value = new Date(filterObject.value.setDate($nextObj.value.getDate() - 1));
-                    }
-                }
-                else {
-                    var $prevDate = new Date($prevObj.value.setSeconds($prevObj.value.getSeconds() - 1));
-                    var $nextDate = new Date($nextObj.value.setSeconds($nextObj.value.getSeconds() + 2));
-                    filterObject.value = new Date(filterObject.value.setSeconds($nextObj.value.getSeconds() - 1));
-                }
+                var $nextObj = $.extend(true, {}, filterObject);                
+                var $prevDate = new Date($prevObj.value.setSeconds($prevObj.value.getSeconds() - 1));
+                var $nextDate = new Date($nextObj.value.setSeconds($nextObj.value.getSeconds() + 2));
+                filterObject.value = new Date(filterObject.value.setSeconds($nextObj.value.getSeconds() - 1));                
                 $prevObj.value = $prevDate;
                 $nextObj.value = $nextDate;
                 if (filterObject.operator == "equal") {
@@ -1129,6 +1164,14 @@
                 var cIndex = $.inArray(this.fName, this.cFilteredCols);
                 if(cIndex != -1)
                     this.cFilteredCols.splice(cIndex, 1);
+                if (this._isFiltered && this._searchRequest) {
+                    this._checkIsIndeterminate(this.fName, this.filteredColumn);
+                    if (this._isIndeterminate) {
+                        ej.merge(valColl, this.filteredColumn);
+                        valColl = ej.distinct(valColl, "value", true);
+                        this._searchRequest = false;
+                    }          
+                }
                 this.initiateFilter(valColl);
             }
             else {
@@ -1205,7 +1248,7 @@
 		            val = +val;
 		            break;
 		        case "boolean":		           
-		            val = val === "true" ? true : false;
+		            val = (!isNaN(val) && typeof (val) == "string") ? ej.parseInt(val) != 0 : val === "true" ? true : false;
 		            break;
 		    }		    		      
 		    return val;

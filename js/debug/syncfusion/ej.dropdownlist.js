@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.dropdownlist.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core","./../common/ej.data","./../common/ej.scroller","./../common/ej.draggable"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./../common/ej.globalize","./../common/ej.data","./../common/ej.scroller","./../common/ej.draggable"], fn) : fn();
 })
 (function () {
 	
@@ -36,6 +36,7 @@
         angular: {
             require: ['?ngModel', '^?form', '^?ngModelOptions']
         },
+        _requiresID: true,
       
 
 
@@ -255,7 +256,7 @@
                 this.popupListWrapper.removeClass('e-disable');
                 if (this._isIE8) this.drpbtnspan.removeClass("e-disable");
                 //Element not Maintain in Multiselection
-                this.container.bind("mousedown", $.proxy(this._OnDropdownClick, this));
+                this.container.on("mousedown", $.proxy(this._OnDropdownClick, this));
                 if (this.model.multiSelectMode == "visualmode") this._ulBox.removeClass("e-disable");
                 this.wrapper.attr('tabindex', '0');
             }
@@ -272,7 +273,7 @@
                 if (this._isIE8) this.drpbtnspan.addClass("e-disable");
                 if (this.model.multiSelectMode == "visualmode") this._ulBox.addClass("e-disable");
                 //Element not Maintain in Multiselection
-                this.container.unbind("mousedown", $.proxy(this._OnDropdownClick, this));
+                this.container.off("mousedown", $.proxy(this._OnDropdownClick, this));
                 this._unwireEvents();
                 this.wrapper.removeAttr('tabindex');
                 if (this._isPopupShown()) this._hideResult();
@@ -321,7 +322,7 @@
         },
 
         clearText: function () {
-            this._clearTextboxValue();
+            this._clearTextboxValue(); 
             if (!this._isWatermark)
                 this._setWatermark();
         },
@@ -343,8 +344,7 @@
             mapFld._selected = list[0][mapper._selected] ? mapper._selected : "selected";
             mapFld._category = list[0][mapper._category] ? mapper._category : "groupBy";
             this._generateLi(list, mapFld);
-            this._virtualUl.append($(this.dummyUl).clone(true));
-            this.ultag.append(this.dummyUl);
+            
             var i, listItems = this.dummyUl;
             for (var i = 0; i < list.length; i++)
                 this._listItem(list[i], "add");
@@ -352,7 +352,8 @@
                 this._appendCheckbox(listItems, true);               
             }
             else if (!this._isSingleSelect()) this._multiItemSelection(listItems, true);
-
+			this._virtualUl.append($(this.dummyUl).clone(true));
+            this.ultag.append(this.dummyUl);
 
             if (this._isPopupShown()) {
                 var scrollerPosition = this.scrollerObj ? this.scrollerObj.scrollTop() : 0;
@@ -629,15 +630,19 @@
             var values = this.element[0].value.split(this.model.delimiterChar);
             this.contains = false;
             for (var i = 0; i < values.length; i++) {
-                if (values[i] == chkValue) {
+                if (values[i] === chkValue) {
                     this.contains = true;
                     break;
                 }
             }
             return this.contains;
         },
+        _updateLocalConstant: function () {
+            this._localizedLabels = ej.getLocalizedConstants("ej.DropDownList", this.model.locale);
+        },
         _init: function () {
             var browserInfo = ej.browserInfo();
+            this._updateLocalConstant();
             this._isIE8 = (browserInfo.name == 'msie' && browserInfo.version == '8.0');
             this._textContent = this._isIE8 ? "innerText" : "textContent";
             if ((this.element.is("input") && (this.element.is("input[type=text]") || !this.element.attr('type'))) || this.element.is("select")) {
@@ -717,7 +722,9 @@
                     case "fields": this.model.fields = $.extend(this.model.fields, options[option]); this._checkModelDataBinding(this.model.dataSource, this.model.query); break;
                     case "itemsCount": this.model.itemsCount = options[option]; this._checkModelDataBinding(this.model.dataSource, this.model.query);; break;
                     case "template": this.model.template = options[option]; this._checkModelDataBinding(this.model.dataSource, this.model.query); break;
-                    case "value": if (ej.isNullOrUndefined(options[option]) || options[option] === "") this._clearTextboxValue();
+                    case "value": 
+					var optionValue = ej.util.getVal(options[option]);
+					if (ej.isNullOrUndefined(optionValue) || optionValue === "") this._clearTextboxValue();
                     else { this._setValue(ej.util.getVal(options[option])); options[option] = this.model.value; } break;
                     case "delimiterChar": 
 						var delchar = this.model.delimiterChar; 
@@ -781,6 +788,10 @@
                             }
                         }
                         break;
+                    case "locale":
+                        this.model.locale = options[option];
+                        this._updateLocalConstant();
+                        break;
                     case "validationMessage":
                         if (this.element.closest("form").length != 0) {
                             this.model.validationMessage = options[option];
@@ -815,6 +826,7 @@
                         if (this.model.multiSelectMode == "visualmode") {
                             this._swapUlandInput(false);
                             this._ulBox.remove();                         
+                            this._ulBox = null;                     
                         }
                         this.model.multiSelectMode = options[option];
                         var _text = this.model.text;
@@ -941,16 +953,18 @@
             var i, optionLength, optionText, item;
             this.inputElement = ej.buildTag("input.e-dropdownlist#" + this._id + "_input", "", {}, { "type": "text", "data-role": "none" });
             this.inputElement.insertAfter(this.element);
+			if (this.element.attr("name")) {
+                this.inputElement.attr("name", this.element.attr("name"));
+                this.element.removeAttr("name");
+            }
+			this.selectOptions = this.element;
+            this.selectOptions.attr('id', this._id);
+			if( this.model.dataSource == null ) {
             this.optionDiv = ej.buildTag("div#" + this._id + "_list");
             this.optionDiv.insertAfter(this.inputElement);
             this.optionUl = ej.buildTag("ul");
             this.optionDiv.append(this.optionUl);
-            if (this.element.attr("name")) {
-                this.inputElement.attr("name", this.element.attr("name"));
-                this.element.removeAttr("name");
-            }
-            this.selectOptions = this.element;
-            this.selectOptions.attr('id', this._id);
+
             this.selectOptionItems = this.element.children("option");
             optionLength = this.selectOptionItems.length;
             this.optionDummyUl = $();
@@ -972,6 +986,7 @@
             }
             this.optionUl.append(this.optionDummyUl);
 
+			}
             this.element.css('display', 'none');
             this.element = this.inputElement;
         },
@@ -1091,12 +1106,12 @@
                 this.dropdownbutton.addClass("e-load");
                 this.drpbtnspan.removeClass("e-icon e-arrow-sans-down");
             }
-            this.model.readOnly = true;
+            this._readOnly = true;
         },
         _removeLoadingClass: function () {
             this.dropdownbutton.removeClass("e-load");
             this.drpbtnspan.addClass("e-icon e-arrow-sans-down");
-            this.model.readOnly = false;
+            this._readOnly = false;
             this.popupListWrapper.removeClass("e-load");
         },
 
@@ -1106,7 +1121,7 @@
             this.element.removeAttr('accesskey');            
 			if(this.model.value == null && this.element.attr("value") != null)
 				this.model.value = this.element.attr("value");				
-			this.element.removeAttr('value');
+			this.element.attr("value","").val("");
             this._setAttr(this.element[0], { "type":"hidden","role": "combobox", "aria-expanded": false, "aria-autocomplete": "list", "aria-haspopup": true, "aria-owns": this._id + "_popup" }).element.hide();
             this.drpbtnspan = ej.buildTag("span.e-icon e-arrow-sans-down", "", {}, { "aria-label": "select", "unselectable": "on" });
             this.dropdownbutton = ej.buildTag("span.e-select#" + this._id + "_dropdown", "", {}, { "role": "button", "unselectable": "on" }).append(this.drpbtnspan);
@@ -1122,17 +1137,18 @@
             this._visibleInput.addClass("e-input ");
 			this._setAttr(this._visibleInput[0],{ "readonly": true, "tabindex": -1,"data-role": "none" });        
             if (!this._isWatermark) {
+				var watermark=(this.model.watermarkText != null)? this.model.watermarkText:this._localizedLabels.watermarkText;
                 this._hiddenSpan = ej.buildTag("span.e-input e-placeholder ").insertAfter(this.element);
-                this._hiddenSpan.text(this.model.watermarkText);
+                this._hiddenSpan.text(watermark);
                 this._hiddenSpan.css("display", "none");
-                this._hiddenSpan.bind("mousedown", $.proxy(this._OnDropdownClick, this));
+                this._hiddenSpan.on("mousedown", $.proxy(this._OnDropdownClick, this));
             }
             this._checkNameAttr();
             this._setDimentions();
             this._RightToLeft();
             this.ddWidth = (this.dropdownbutton.outerWidth() > 0) ? this.dropdownbutton.outerWidth() : 24;
             //Element not Maintain in Multiselection
-            this.container.bind("mousedown", $.proxy(this._OnDropdownClick, this));
+            this.container.on("mousedown", $.proxy(this._OnDropdownClick, this));
         },
 
         _checkNameAttr: function () {
@@ -1142,11 +1158,12 @@
         _addAttr: function (htmlAttr) {
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
-                if (key == "class") proxy.wrapper.addClass(value);
-                else if (key == "name") proxy._visibleInput.attr(key, value);
-                else if (key == "required") proxy.element.attr(key, value);
-                else if (key == "disabled" && value == "disabled") proxy.disable();
-                else if (key == "readOnly" && value == "readOnly") proxy.model.readOnly = true;
+				var keyName = key.toLowerCase();
+                if (keyName == "class") proxy.wrapper.addClass(value); 
+                else if (keyName == "disabled" && value == "disabled") proxy.disable();
+                else if (keyName == "readOnly" && value == "readOnly") proxy.model.readOnly = true; 
+                else if (keyName == "style") proxy.wrapper.attr(key, value);
+				else if (ej.isValidAttr(proxy._visibleInput[0], key)) $(proxy._visibleInput).attr(key, value);
                 else proxy.wrapper.attr(key, value)
             });
         },
@@ -1169,7 +1186,7 @@
         },
 
         _renderPopupPanelWrapper: function () {
-            var oldWrapper = $("#" + this.element.context.id + "_popup_wrapper").get(0);
+            var oldWrapper = $("#" + this.element[0].id + "_popup_wrapper").get(0);
             if (oldWrapper)
                 $(oldWrapper).remove();
             this.popupPanelWrapper = ej.buildTag("div#" + this._id + "_popup_wrapper");
@@ -1187,7 +1204,11 @@
             }
             this.popupListWrapper.append(this.popupList);
             this.popupPanelWrapper.append(this.popupListWrapper);
-            this.ultag.on({ mouseenter: $.proxy(this._OnMouseEnter, this), mouseleave: $.proxy(this._OnMouseLeave, this), mousedown: $.proxy(this._OnMouseClick, this) }, "li:not('.e-category')");
+            this.ultag.on({ mouseenter: $.proxy(this._OnMouseEnter, this), mouseleave: $.proxy(this._OnMouseLeave, this), click: $.proxy(this._OnMouseClick, this)}, "li:not('.e-category')");
+            if (ej.isTouchDevice())
+             {
+             this.ultag.on({tap:$.proxy(this._OnMouseEnter, this) }, "li:not('.e-category')");
+               }
             $(window).on("resize", $.proxy(this._OnWindowResize, this));
 
         },
@@ -1390,15 +1411,8 @@
                 this._off(this.popupListWrapper.find(".e-atc.e-search .e-cross-circle"), "mousedown", this._refreshSearch);
             }
             this._listItem(this._rawList);
-            if (this.model.allowVirtualScrolling && this.model.virtualScrollMode == "normal") {
-                this._removeCheckbox($("<span>").append(this._virtualUl));
-                this._virtualUl.find('.e-chkbox-wrap').remove();
-            }
-            this.ultag.empty().append(this._virtualUl.children().clone(true));
-            if (this.model.showCheckbox) {
-                this._appendCheckbox( this._getLi());
-            }
-            // this_onSearch variable will restrict the change and select event on searching
+            this.ultag.empty().append(this._virtualUl.children().clone(true));           
+            // this._onSearch variable will restrict the change and select event on searching
             this._onSearch = true;
             this._setValue(this.value());
             this._onSearch = false;
@@ -1490,6 +1504,7 @@
             if (this.model.enableSorting) {
                 var sortQuery = ej.Query().sortBy(this.mapFld._text, this.model.sortOrder, true);
                 list = ej.DataManager(list).executeLocal(sortQuery);
+				this.popupListItems = list;
             }
             if (this.model.allowGrouping || this.model.fields.groupBy) {
                 this.popupListWrapper.addClass("e-atc-popup");
@@ -1785,11 +1800,12 @@
         },
 
         _setWatermark: function () {
-            if ((this.model.watermarkText != null) && (this.element.val() == "") && this._trim(this._visibleInput.val()) == "") {
+            if ((this.element.val() == "") && this._trim(this._visibleInput.val()) == "") {
+				var watermark=(this.model.watermarkText != null)? this.model.watermarkText:this._localizedLabels.watermarkText;
                 if (this._isWatermark)
-                    this._visibleInput.attr("placeholder", this.model.watermarkText);
+                    this._visibleInput.attr("placeholder", watermark);
                 else
-                    this._hiddenSpan.css("display", "block").text(this.model.watermarkText);
+                    this._hiddenSpan.css("display", "block").text(watermark);
                 //In visual mode, to show watermark text when no items selected.
                 if (this.model.multiSelectMode == "visualmode" && this._ulBox && this._ulBox.find('li').length == 0) this._swapUlandInput(false);
             }
@@ -1807,6 +1823,7 @@
             else
                 this._removeCheck(this.popupList);
             this.model.showCheckbox = value;
+			this._virtualUl = this.ultag.clone(true);
         },
         
         _setCheckAll: function (value) {
@@ -1866,6 +1883,8 @@
                         if (!this._initValue)
                             this._trigger('checkChange', { isChecked: this.checkedStatus, data: this.model });
                         args = { text: this._visibleInput[0].value, selectedText: this._currentText, itemId: i, selectedValue: this._selectedValue, value: this._selectedValue, isChecked: this.checkedStatus };
+                        this._updateValue(this.element.val());
+                        this._updateText();
                         if (!this._initValue)
                             this._trigger("change", args);
                         this._activeItem = i;
@@ -1873,8 +1892,6 @@
                         this._cascadeAction();
                     }
                 }
-                this._updateValue(this.element.val());
-                this._updateText();
                 this.model.itemValue = this._selectedValue;
                 this.model.uncheckAll = false;
                 this.model.checkAll = true;
@@ -1949,6 +1966,8 @@
                         if (!this._initValue)
                             this._trigger('checkChange', { isChecked: this.checkedStatus, data: this.model });
                         args = { text: this._visibleInput[0].value, selectedText: this._currentText, itemId: i, selectedValue: this._selectedValue, value: this._selectedValue, isChecked: this.checkedStatus };
+                        this._updateValue(this.element.val());
+                        this._updateText();
                         if (!this._initValue)
                             this._trigger("change", args);
                         this._cascadeAction();
@@ -1960,8 +1979,6 @@
                     }
                     
                 }
-                this._updateValue(this.element.val());
-                this._updateText();
                 this.model.itemValue = this._selectedValue;
                 this.model.checkAll = false;
                 this.model.uncheckAll = true;
@@ -1989,7 +2006,7 @@
             var flag = this._isPopupShown();
             this.popupListWrapper.css("display", "block");
             this.popupList.css({ "display": "block" });  // For get the height of the popup
-            this.scrollerObj.model.height = this._getPopupHeight();
+            this.scrollerObj.model.height = Math.ceil(this._getPopupHeight());
             this.scrollerObj.refresh();
             if (!this.model.enablePopupResize) { // to set popup height as per the no.of list items
                 this.popupList.css("height", "auto");
@@ -2119,12 +2136,12 @@
             var args = { text: this._visibleInput[0].value, value: this._selectedValue, refreshPopup: true };
             if (this._trigger("beforePopupShown", args)) return;
             if (args.refreshPopup) this._refreshPopup();
-            $(this.popupListWrapper).slideDown(this.model.enableAnimation ? 200 : 1, "easeOutQuad", function () {
+            $(this.popupListWrapper).slideDown(this.model.enableAnimation ? 200 : 1, function () {
                 $(document).on("mousedown", $.proxy(proxy._OnDocumentClick, proxy));
                 proxy._on(ej.getScrollableParents(proxy.wrapper), "scroll", proxy._hideResult);
             });
             this.element[0].setAttribute("aria-expanded", true);
-            this._listSize =  this._getLi().size();
+            this._listSize =  this._getLi().length;
             this._trigger("popupShown", { text: this._visibleInput[0].value, value: this._selectedValue });
             this.scrollerObj.setModel({ scrollTop: this._calcScrollTop('active') });
         },
@@ -2134,11 +2151,15 @@
                 this._refreshPopup();
             }
         },
-        _hideResult: function () {
+        _hideResult: function (e) {
             if (this.model && this._isPopupShown()) {
+				if (!ej.isNullOrUndefined(e) && !ej.isNullOrUndefined(this.inputSearch) && $(this.inputSearch).is(":focus")){
+					if(e.type == "scroll" && ej.isTouchDevice())
+						return false;
+				}
                 var proxy = this;
                 if (this._trigger("beforePopupHide", { text: this._visibleInput[0].value, value: this._selectedValue })) return;
-                $(this.popupListWrapper).slideUp(this.model.enableAnimation ? 100 : 0, "easeOutQuad", function () {
+                $(this.popupListWrapper).slideUp(this.model.enableAnimation ? 100 : 0, function () {
                     $(document).off("mousedown", $.proxy(proxy._OnDocumentClick, proxy));
                 });
                 if (this.element != null)
@@ -2258,7 +2279,7 @@
                 this._currentText = this._decode(this._getField(this.popupListItems[this._activeItem], this.mapFld._text));
                 this._currentText = (this._currentText === "" || this._currentText == null) ? this.activeItem.text() : this._currentText;
                 this._selectedValue = this._getField(this.popupListItems[this._activeItem], this.mapFld._value);
-                this._selectedValue = this._selectedValue ? this._selectedValue : this._currentText;
+                this._selectedValue = (this._selectedValue != null) ? this._selectedValue : this._currentText;
                 this._itemID = this._getField(this.popupListItems[this._activeItem], this.mapFld._id);
             } else {
                 this._currentText = this.activeItem.text();
@@ -2335,7 +2356,7 @@
             }
 			this.checkedStatus = false;            
             this._onValueChange();
-            if ((this.model.cascadeTo != null) && this.model.showCheckbox) this._cascadeAction();
+            if ((this.model.cascadeTo != null) && !this._isSingleSelect() ) this._cascadeAction();
             this.model.checkAll = false;
             this._setWatermark();
         },
@@ -2409,10 +2430,10 @@
             tempSpan.remove();
         },
         _destroyBoxModel: function () {
-            this.container.prepend(this._visibleInput);
             this._visibleInput.css('display', 'block');
             this.wrapper.height(this.model.height);
             this._ulBox.remove();
+			this._ulBox = null;
             this._off(this.container, "click");
         },
 
@@ -2479,7 +2500,7 @@
             this.element.insertAfter(this.wrapper);
             this.element.width(this.element.width() + this.dropdownbutton.outerWidth());
             this.wrapper.remove();
-            this.container.unbind("mousedown", $.proxy(this._OnDropdownClick, this));
+            this.container.off("mousedown", $.proxy(this._OnDropdownClick, this));
         },
 
 
@@ -2506,7 +2527,7 @@
             this._preventDefaultAction(e);
             if (($(e.target).is("li") && $(e.target).parent().hasClass("e-boxes")) || ($(e.target).parents("ul").hasClass("e-boxes") && $(e.target).hasClass("e-icon e-close")))
                 return false;
-            if (this.model.readOnly) return false;
+            if (this.model.readOnly || this._readOnly) return false;
             if (this.ultag.find('li').length > 0 && ((e.which && e.which == 1 ) ||(e.button && e.button == 0) )) {
                 this._OnPopupHideShow();
             }
@@ -2542,6 +2563,7 @@
                 this._totalCount = listItem.count;
                 this._listItem(listItem.result ? listItem.result : listItem);
                 this._renderPopupList();
+                this._rawList = this.popupListItems;
             }
         },
 
@@ -2604,6 +2626,7 @@
         },
 
         _cascadeDataBind: function (cascadeDropDownObj, changedSource, status) {
+			var cascadeVal  = cascadeDropDownObj.value();
             if ((this.model.showCheckbox && status) || (this.model.multiSelectMode != "none" && this.activeItem.hasClass("e-active"))) {
                 this._changedSource = (!ej.isNullOrUndefined(this._changedSource)) ? this._changedSource.concat(changedSource) : changedSource;
             }
@@ -2623,6 +2646,7 @@
             }
             var cascadeModel = JSON.parse(JSON.stringify(cascadeDropDownObj.model)),enable;
             cascadeDropDownObj.setModel({ dataSource: this._changedSource, enabled: this._changedSource.length > 0 });
+			if( !this._isSingleSelect() ) cascadeDropDownObj.selectItemByValue(cascadeVal);
             if (cascadeDropDownObj.model.showCheckbox || cascadeDropDownObj.model.multiSelectMode != "none") {
                 $("input:hidden[id^='#'][name=" + cascadeDropDownObj._id + "]").remove();
                 cascadeDropDownObj._visibleInput.attr('name', cascadeDropDownObj._name);
@@ -2641,7 +2665,7 @@
         },        
 
         _OnMouseEnter: function (e) {
-            if (!this.model.enabled || this.model.readOnly) return false;
+            if (!this.model.enabled || this.model.readOnly || this._readOnly) return false;
             var targetEle;
             this.ultag.children("li").removeClass("e-hover");
             if ($(e.target).is("li:not('.e-category')")) { $(e.target).addClass("e-hover"); }
@@ -2661,12 +2685,12 @@
             this._activeItem = activeItem;
         },
         _OnMouseLeave: function (e) {
-            if (!this.model.enabled || this.model.readOnly) return false;
+            if (!this.model.enabled || this.model.readOnly || this._readOnly) return false;
             this.ultag.children("li").removeClass("e-hover");
         },
         _OnMouseClick: function (e) {
             this._uiInteract = true;
-            if (!this.model.enabled || this.model.readOnly) return false;
+            if (!this.model.enabled || this.model.readOnly || this._readOnly) return false;
             if (this.model.enableFilterSearch && $(e.target).is("li") && $(e.target).hasClass('e-nosuggestion')) return false;
             else if (($(e.target).is("li") && !$(e.target).hasClass('e-disable')) || (!$(e.target).is("li") && !$(e.target).closest("li").hasClass('e-disable'))) {
                 if (this._isSingleSelect()) {
@@ -2690,7 +2714,7 @@
         },        
 
         _OnDocumentClick: function (e) {
-            if (this.model && (!this.model.enabled || this.model.readOnly)) return false;
+            if (this.model && (!this.model.enabled || this.model.readOnly || this._readOnly)) return false;
             if (!$(e.target).is(this.popupList) && !$(e.target).parents(".e-ddl-popup").is(this.popupListWrapper) &&
                 !$(e.target).is(this._visibleInput) && !$(e.target).parents(".e-ddl").is(this.wrapper)) {
                 this._hideResult();
@@ -2714,9 +2738,8 @@
             if (this._incqueryString.length > 0) {
                 setTimeout(function () { proxy._incqueryString = ""; }, 1000);
             }
-            var list = this._getLi(), i, strlen,
-            caseSence = this.model.caseSensitiveSearch, mapper = this.model.fields,
-            tempSuggestion = [],
+            var list = this._getLi(), i,
+            caseSence = this.model.caseSensitiveSearch,            
             str, queryStr = this._incqueryString,
             querylength = this._incqueryString.length, searchflag = false;
 
@@ -2726,26 +2749,17 @@
                 str = $(list[i]).text();
                 str = caseSence ? str : str.toLowerCase();
                 if (str.substr(0, querylength) == queryStr) {
-                    if (this._isPopupShown()) {
-                        this._removeListHover();
-                        this._activeItem = i;
-                        if (!this.model.showCheckbox && this.model.multiSelectMode == "none")
-                            this._enterTextBoxValue();
+                    this._activeItem = i;
+                    if (this._isSingleSelect()){
+						this._enterTextBoxValue();
+						this.scrollerObj.setModel({ scrollTop: this._calcScrollTop('active') });
+					}
+                    else if (this._isPopupShown()) {
+                        this._removeListHover();                      
                         this._addListHover();
-                    } else {
-                        this._activeItem = i;
-                        if (!this.model.showCheckbox && this.model.multiSelectMode == "none")
-                            this._enterTextBoxValue();
-                    }
+                    } 
                     searchflag = true;
-                } else if ((i == list.length - 1) && (searchflag == false)) {
-                    if (this.model.itemValue == "") {
-                        this._activeItem = null;
-                        if (!this.model.showCheckbox && this.model.multiSelectMode == "none")
-                            this._visibleInput.val("");
-                    }
-                    searchflag = true;
-                }
+                }                 
                 if (searchflag) break;
             }
 
@@ -2975,7 +2989,7 @@
             if (this.model.enabled) {
                 this._itemId = null;
                 var _popupListItems = this._getLi(), liH, popupH, activeitem, flag;
-                this._listSize = _popupListItems.size();                
+                this._listSize = _popupListItems.length;                
                 popupH = this.popupList.height();
                 liH = this.ultag.children("li").outerHeight();
                 activeitem = Math.round(popupH / liH) != 0 ? Math.round(popupH / liH) : 5;
@@ -2991,6 +3005,9 @@
                         case 33: /* page up */
                             var step = e.keyCode == 33 ? activeitem : 1;
                             this._moveUp(this._activeItem, step);
+                            this._preventDefaultAction(e,true);
+                            break;
+					    case 8:
                             this._preventDefaultAction(e);
                             break;
                         case 40: /* down arrow*/
@@ -3002,7 +3019,7 @@
                         case 34: /* page down */
                             var step = e.keyCode == 34 ? activeitem : 1;
                             this._moveDown(this._activeItem, step);
-                            this._preventDefaultAction(e);
+                            this._preventDefaultAction(e,true);
                             break;
                         case 37 /* left arrow*/:
                             if (this.model.enableRTL) this._moveDown(this._activeItem, 1);
@@ -3050,6 +3067,9 @@
                             }
                             else this._moveUp(this._activeItem, activeitem, e.ctrlKey);
 
+                            this._preventDefaultAction(e);
+                            break;
+						case 8:
                             this._preventDefaultAction(e);
                             break;
                         case 40: /* down arrow*/
@@ -3199,7 +3219,7 @@
         },
 
 		_getLocalizedLabels: function (property) {
-            return ej.DropDownList.Locale[this.model.locale][property] === undefined ? ej.DropDownList.Locale["en-US"][property] : ej.DropDownList.Locale[this.model.locale][property]
+            return this._localizedLabels[property] === undefined ? ej.DropDownList.Locale["en-US"][property] : this._localizedLabels[property]
         },
         _wireEvents: function () {
             this._on(this.wrapper, "focus", this._targetFocus);
@@ -3221,7 +3241,7 @@
             this._off(this.wrapper, "keyup", this._OnKeyUp);
             this._off(this.popupList, "keypress", this._OnKeyPress);
             this._off(this.wrapper, "keypress", this._OnKeyPress);
-			this._off("resize", this._reSizeHandler);
+			$(window).off("resize", $.proxy(this._OnWindowResize, this));
         },
 
         _multiItemSelection: function (listItems, isAddItem) {
@@ -3285,7 +3305,8 @@
     });
 	ej.DropDownList.Locale = ej.DropDownList.Locale || {};
     ej.DropDownList.Locale["default"] = ej.DropDownList.Locale["en-US"] = {        
-        emptyResultText: "No suggestions"        
+        emptyResultText: "No suggestions",  
+		watermarkText:""
     };
     ej.MultiSelectMode = {
         /** Supports to selection mode with none only */

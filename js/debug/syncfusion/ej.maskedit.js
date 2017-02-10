@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.maskedit.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core"], fn) : fn();
 })
 (function () {
 	
@@ -34,7 +34,8 @@
         _setFirst: false,
         type: "editor",
         angular: {
-            require: ['?ngModel', '^?form', '^?ngModelOptions']
+            require: ['?ngModel', '^?form', '^?ngModelOptions'],
+            requireFormatters: true
         },
 
         defaults: {
@@ -120,7 +121,9 @@
         _setModel: function (jsondata) {
             for (var key in jsondata) {
                 switch (key) {
-                    case "value": this._setValue(jsondata[key]); jsondata[key] = this.get_UnstrippedValue(); this._raiseEvents("change", true); break;
+                    case "value":
+                        if (ej.isPlainObject(jsondata[key])) jsondata[key] = null;
+                        this._setValue(jsondata[key]); jsondata[key] = this.get_UnstrippedValue(); this._raiseEvents("change", true); break;
                     case "width": this._setWidth(jsondata[key]); break;
                     case "height": this._setHeight(jsondata[key]); break;
                     case "watermarkText": this.model.watermarkText = jsondata[key]; this._changeWatermark(jsondata[key]); break;
@@ -200,6 +203,8 @@
                 this._destroy();
                 return false;
             }
+            if (options && options.value != undefined && this.model.value !== options.value)
+                this._trigger("_change", { value: this.get_UnstrippedValue(), unmaskedValue: this.get_StrippedValue()});            
         },
 
         _initValidator: function () {
@@ -208,13 +213,13 @@
         _addAttr: function (htmlAttr) {
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
-                if (key == "class") proxy.wrapper.addClass(value);
-                else if (key == "name") proxy.element.attr(key, value);
-                else if (key == "required") proxy.element.attr(key, value);
-                else if (key == "disabled" && value == "disabled") proxy.disable();
-                else if (key == "readOnly" && value == "readOnly") proxy._setReadOnly(true);
-                else if(key=="tabindex") proxy.element.attr(key,value);
-				else proxy.wrapper.attr(key, value);
+                var keyName = key.toLowerCase();
+                if (keyName == "class") proxy.wrapper.addClass(value);
+                else if (keyName == "disabled" && value == "disabled") proxy.disable();
+                else if (keyName == "readonly" && value == "readOnly") proxy._setReadOnly(true);
+                else if (keyName == "style" || keyName == "id") proxy.wrapper.attr(key, value);
+                else if (ej.isValidAttr(proxy.element[0], key)) proxy.element.attr(key, value);
+                else proxy.wrapper.attr(key, value);
             });
         },
         _setValidation: function () {
@@ -259,7 +264,7 @@
                 '&': '[^\x7f]+',
                 '<': "",
                 '>': "",
-                'C': "[A-Za-z ]",
+                'C': this.model.customCharacter != null ? "[" + this.model.customCharacter + "]" : "[A-Za-z ]",
                 '?': "[A-Za-z]",
             };
         },
@@ -386,8 +391,10 @@
             if (this.model.watermarkText) {
                 if (this._isWatermark)
                     this.element.attr("placeholder", this.model.watermarkText);
-                else
-                    this._hiddenSpan.css("display", "block").text(this.model.watermarkText);
+                else {
+                    if (this._textbox.value) this._hiddenSpan.css("display", "none").text(this.model.watermarkText);
+                    else this._hiddenSpan.css("display", "block").text(this.model.watermarkText);
+                }
             }
             if (!this.model.watermarkText && !this._textbox.value && this.model.maskFormat) {
                 if (!this.model.hidePromptOnLeave) this._textbox.value = formatValue;
@@ -465,7 +472,7 @@
             }
             else {
                 var replacestring = this.model.value.toString();
-                if (!((this.model.maskFormat.indexOf("\\") >= 0)))
+                if (!((this.model.maskFormat.indexOf("\\") >= 0)) && this.model.customCharacter == null)
                     tempValue = this.model.value = replacestring.replace(/[\(\)-]/g, "");
                 else
                     tempValue = this.model.value;
@@ -491,7 +498,7 @@
                         tempModel = strBefore + oldvalue.charAt(i) + strAfter.substr(1, strAfter.length);
                         maskIndex++;
                         i++;
-                    }
+                    } else maskIndex++;
                 } 
                 else if (typeof rule !== "string") {
                     if (chr.match(this._rules[maskIndex].rule)) {
@@ -595,7 +602,7 @@
 
 
         _selectionText: function (begin, end) {
-            var replaceValue = this._maskModel.substring(begin, end);
+            var replaceValue = !ej.isNullOrUndefined(this._maskModel)?this._maskModel.substring(begin, end):"";
             this._textbox.value = this._textbox.value.substring(0, begin) + replaceValue + this._textbox.value.substring(end);
             if (this._keydownFlag == 1) {
                 this._setCaretPosition(begin);
@@ -908,7 +915,7 @@
             else if (!this.model.watermarkText && this._textbox.value != this._maskModel) {
                 if (!this.model.maskFormat) {
                     unstripVal = this._unStrippedMask.replace(/[_]/g, " ");
-                    this._textbox.value = $.trim(unstripVal.replace(/[\(\)-]/g, ""));
+                    this._textbox.value = (this.model.customCharacter == null) ? $.trim(unstripVal.replace(/[\(\)-]/g, "")) : $.trim(unstripVal);
                     this._unStrippedMask = this._textbox.value;
                 }
                 else if (this.model.hidePromptOnLeave) {
@@ -921,14 +928,16 @@
         },
 
         enable: function () {
-            this.element.disabled = false;
+            this.element.disabled = false;			
             this.element.removeAttr("disabled").removeClass('e-disable').attr({ "aria-disabled": false });
+			this.wrapper.removeClass('e-disable-wrap');
             this.model.enabled = true;
         },
 
         disable: function () {
             this.element.disabled = true;
             this.element.attr("disabled", "disabled").addClass('e-disable').attr({ "aria-disabled": true });
+			this.wrapper.addClass('e-disable-wrap');
             this.model.enabled = false;
         },
 
@@ -948,9 +957,8 @@
             this._on(this.element, 'cut', this._OnCutHandler);
         },
 
-
         _OnCutHandler: function (e) {
-            var selectedValue = this._maskModel.substring(this._textbox.selectionStart, this._textbox.selectionEnd);
+            var selectedValue = !ej.isNullOrUndefined(this._maskModel)?this._maskModel.substring(this._textbox.selectionStart, this._textbox.selectionEnd):"";
             var beforeSelection = this._textbox.value.substring(0, this._textbox.selectionStart);
             var afterSelection = this._textbox.value.substring(this._textbox.selectionEnd);
             var cursorPosition = this._textbox.selectionStart;
@@ -1065,7 +1073,7 @@
         _OnKeyDownHandler: function (e) {
             if (this.model.readOnly) return;
             this._keypressFlag = 0;
-            this._raiseEvents("onKeyDown");
+            this._raiseEvents("onKeyDown", null, { keyCode: e.keyCode, altKey: e.altKey, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, originalArgs: e });
 
             this.element.removeClass("error");
 
@@ -1172,7 +1180,7 @@
 
         _OnKeyPressHandler: function (e) {
             if (this.model.readOnly) return;
-            this._raiseEvents("keyPress");
+            this._raiseEvents("keyPress", null, { keyCode: e.keyCode, altKey: e.altKey, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, originalArgs: e });
             if (this._maskLength == 0)
                 return true;
 
@@ -1191,10 +1199,10 @@
                     if (this.model.maskFormat.indexOf("\\") >= 0) {
                         if (currentPos < this._maskLength)
                             this._writeBuffer(actualkey, currentPos);
-                    }
+                }
                     else
                         this._writeBuffer(actualkey, currentPos);
-                }
+            }
             }
             else
                 if (((val == "mozilla") || (val == "opera")) && (e.keyCode == 35 || e.keyCode == 36 || e.keyCode == 37 || e.keyCode == 39)) {
@@ -1223,19 +1231,18 @@
                 else
                     this._ErrorHandler(currentPos);
 
-
             if (!this._keypressFlag && unicode != 9) {
                 this._keypressFlag = 0;
                 e.preventDefault();
                 return false;
             }
             this._keypressFlag = 0;
-
         },
 
         _OnKeyUpHandler: function (e) {
             if (this._maskLength == 0) this._raiseEvents("change");
-            this._raiseEvents("keyUp");
+            this._raiseEvents("keyUp", null, { keyCode: e.keyCode, altKey: e.altKey, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, originalArgs: e });
+            if (!ej.isNullOrUndefined(this.model.validationRules)) this._hiddenInput.valid();
         },
 
 
@@ -1249,9 +1256,9 @@
         },
 
 
-        _raiseEvents: function (eventName, isCode) {
+        _raiseEvents: function (eventName, isCode, additionalArgs) {
             var eventArgs, strippedVal = this.get_StrippedValue(), unstrippedVal = this.get_UnstrippedValue();
-            this.model.value = unstrippedVal !== null ? $.trim(unstrippedVal.replace(/[\(\)-]/g, "")) == "" ? null : unstrippedVal : null;
+            this.model.value = unstrippedVal !== null ? (this.model.customCharacter == null && $.trim(unstrippedVal.replace(/[\(\)-]/g, "")) == "") ? null : unstrippedVal : null;
             if (eventName == "change") {
                 if (this.previousValue != this.model.value) {
                     this.previousValue = this.model.value;
@@ -1262,6 +1269,7 @@
             eventArgs = { value: unstrippedVal, unmaskedValue: strippedVal };
             if (eventName == "change") eventArgs["isInteraction"] = !isCode ;
             if (eventName == "change") this._trigger("_change", eventArgs);
+            if (additionalArgs) $.extend(true, eventArgs, additionalArgs);
 			this._trigger(eventName, eventArgs);
             this._hiddenInput.val(strippedVal);
         },

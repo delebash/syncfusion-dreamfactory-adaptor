@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.radialmenu.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -475,6 +475,7 @@
             this._badge(index).hide();
         },
         _setModel: function (options) {
+            if (options.items) this.model.items = options.items;
             this._refresh();
         },
         _refresh: function () {
@@ -503,6 +504,7 @@
         _rootCSS: "e-radialmenu",
         element: null,
         model: null,
+         validTags: ["div"],
         _setFirst: true,
         defaults: {
             imageClass: "e-radialimage",
@@ -573,7 +575,7 @@
         },
         _itemClickHandler: function (e) {
             var targetEle = $(e.target);
-            if (targetEle.attr("class") == "e-active" || e.target.tagName == "polygon") {
+            if (targetEle.attr("class") == "e-active" || e.target.tagName == "polygon" || ( !ej.isNullOrUndefined(e.type) && e.type == "touchend" && targetEle.attr("class") == "e-childdefault" )) {
                 this._index = parseInt(targetEle.attr("index"));
                 this._ejMenuBaseItemsRemove();
                 var currentItem = this.model.items[this._index];
@@ -620,7 +622,7 @@
             this._targetElement = $("#" + this.model.targetElementId + "");
             if (this.model.autoOpen) {
                 if (this.model.position.x != null && this.model.position.y != null)
-                    this.element.css({ "top": this.model.position.y + "px", "left": this.model.position.x + "px" });
+                    this.element.css({ "top": this.model.position.y, "left": this.model.position.x });
                 else if (this.model.targetElementId)
                     this.element.css({ "top": this._targetElement.height() / 2 - this.model.radius + "px", "left": this._targetElement.width() / 2 - this.model.radius + "px" });
                 this.show();
@@ -637,14 +639,17 @@
         _arcOverHandler: function (e) {
             var targetEle = $(e.target),
                 index = parseInt(targetEle.attr("index")),
-                targetGroupEle = $(this._childArcGroup.find('path[index=' + index + ']'));
+                targetGroupEle = $(this._childArcGroup.find('path[index=' + index + ']')),
+                polygonEle = $(this._polygonGroup.find('polygon[index=' + index + ']'));
             if (e.type == "mouseenter") {
+                polygonEle.attr('fill', '#808080');
                 if (targetEle.attr("class") == "e-childdefault")
                     targetEle.attr("class", "e-active");
                 else
                     targetGroupEle.attr("class", "e-active");
             }
             else {
+                polygonEle.attr('fill', '#FFFFFF');
                 if (targetEle.attr("class") == "e-active")
                     targetEle.attr("class", "e-childdefault");
                 else
@@ -680,6 +685,9 @@
             if (menuTarget == 0 && $(targetEle.closest(this._targetElement)).length == 0 && this.model.targetElementId) {
                 menuState ? this.hide() : this.hideMenu();
             }
+			else if( this.model.position.x && this.model.position.y ) {
+				this.element.css({ "top": this.model.position.y, "left": this.model.position.x });
+			}
             else if ($(targetEle.closest("div.e-radial")).length == 0 && menuState) {
                 var left = x > width - this.model.radius ? width - this._diameter : (x > this.model.radius ? x - this.model.radius : 0),
                     top = y > height - this.model.radius ? height - this._diameter : (y > this.model.radius ? y - this.model.radius : 0);

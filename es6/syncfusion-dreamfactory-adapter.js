@@ -44,6 +44,28 @@ export class DreamFactoryAdapter {
             "IS NOT IN": " IS NOT IN ",
             "IS IN": " IS IN "
         },
+        // convertToQueryString: function (req, query, dm) {
+        //   if (dm.dataSource.url && dm.dataSource.url.indexOf("?") !== -1)
+        //     return $.param(req);
+        //   return "?" + $.param(req);
+        // },
+        convertToQueryString: function (req, query, dm) {
+            var res = [], tableName = req.table || "";
+            delete req.table;
+
+            if (dm.dataSource.requiresFormat)
+                req["$format"] = "json";
+
+            for (var prop in req)
+                res.push(prop + "=" + req[prop]);
+
+            res = res.join("&");
+
+            if (dm.dataSource.url && dm.dataSource.url.indexOf("?") !== -1 && !tableName)
+                return res;
+
+            return res.length ? tableName + "?" + res : tableName || "";
+        },
         onPredicate: function (pred, query, requiresCast) {
             //   query._fromTable ="contact"
             let returnValue = "",
@@ -124,17 +146,20 @@ export class DreamFactoryAdapter {
 
             if (data.table)
                 table = data.table;
-            if (data.count === true) {
-                delete data.count;
-                count = 'include_count=true';
-            }
 
+            //Which action CRUD?
             if (settings.action) {
                 settings.url = settings.url + table;
             } else {
+                //read request
+                if (data.count === true) {
+                    delete data.count;
+                    count = 'include_count=true';
+                }
                 settings.url = settings.url + table + '?method=GET&' + count + '';
             }
 
+            //settings.requestType = this.options.requestType
             settings.data = JSON.stringify(data)
         }
 

@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.radiobutton.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -28,7 +28,7 @@
         _rootCSS: "e-radiobtn",
 
         element: null,
-
+        _requiresID: true,
         model: null,
         validTags: ["input"],
         _addToPersist: ["checked"],
@@ -80,7 +80,6 @@
         dataTypes: {
             id: "string",
             name: "string",
-            checked: "boolean",
             enablePersistence: "boolean",
             size: "enum",
             enabled: "boolean",
@@ -90,16 +89,18 @@
             htmlAttributes: "data"
         },
 
-        observables: ["value"],
-        value: ej.util.valueFunction("value"),
+        observables: ["checked"],
+        checked: ej.util.valueFunction("checked"),
 
         _init: function () {
             var browserInfo = ej.browserInfo();
+            this._cloneElement = this.element.clone();
             this._isIE8 = (browserInfo.name == 'msie' && browserInfo.version == '8.0') ? true : false;
             this._setValue();
             this._renderControl();
             if (this.isChecked)
                 this._checkedHandler();
+            if(!ej.isNullOrUndefined(this.radbtn.attr("disabled"))) this.model.enabled = false;
             this._setEnabled(this.model.enabled);
             this._addAttr(this.model.htmlAttributes);
             if (this.model.validationRules != null) {
@@ -113,7 +114,7 @@
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
                 if (key == "class") proxy.div.addClass(value);
-                else if(key == "name") proxy.radbtn.attr(key, value);
+                else if (key == "name") proxy.radbtn.attr(key, value);
                 else if (key == "required") proxy.radbtn.attr(key, value);
                 else if (key == "disabled" && value == "disabled") proxy.disable();
                 else if (key == "checked" && value == "checked") proxy._checkedChange(true, true);
@@ -127,7 +128,7 @@
         _setValidation: function () {
             this.element.find("input").rules("add", this.model.validationRules);
             var validator = this.element.closest("form").data("validator");
-            validator = validator? validator : this.element.closest("form").validate();
+            validator = validator ? validator : this.element.closest("form").validate();
             name = this.element.find('input').attr("name");
             validator.settings.messages[name] = {};
             for (var ruleName in this.model.validationRules) {
@@ -152,9 +153,9 @@
                     case "cssClass": this._changeSkin(options[prop]); break;
                     case "enableRTL":
                         if (this.model.text)
-                            (options[prop]) ? this.textWrapDiv.addClass("e-rtl") : this.textWrapDiv.removeClass("e-rtl");
-                        else 
-	                    	(options[prop]) ? this.element.closest('.e-radiobtn-wrap').addClass('e-rtl') : this.element.closest('.e-radiobtn-wrap').removeClass('e-rtl');
+                            (options[prop]) ? this.textWrapDiv.addClass("e-rtl") : this.textWrapDiv.removeClass("e-rtl") && this.element.closest('.e-radiobtn-wrap').hasClass('e-rtl') ? this.element.closest('.e-radiobtn-wrap').removeClass('e-rtl') : "";
+                        else
+                            (options[prop]) ? this.element.closest('.e-radiobtn-wrap').addClass('e-rtl') : this.element.closest('.e-radiobtn-wrap').removeClass('e-rtl');
                         break;
                     case "text": this._setText(options[prop]); break;
                     case "size": this._setSize(options[prop]); break;
@@ -176,29 +177,32 @@
                             this._setValidation();
                         }
                         break;
-                    case "checked": this.model.checked = options[prop]; this._checkedChange(this.model.checked); break;
+                    case "checked":
+                        if (typeof this.checked() == "boolean") {
+                            this.model.checked = options[prop];
+                            this._checkedChange(this.model.checked);
+                        }
+                        else if (options[prop]() != null) {
+                            if (options[prop]() == this.element.find(".e-input").attr("value"))
+                                this._checkedChange(options[prop]());
+                        }
+                        break;
                     case "enabled": this._setEnabled(options[prop]); break;
                     case "id": this._setIdAttr(options[prop]); break;
                     case "name": this.radbtn.attr('name', options[prop]); break;
-                    case "value": 
-						if (typeof options[prop] == "function") { 
-							if (ej.util.getVal(options[prop]) == this._hiddenValue && this.model.checked == false) {
-								this.model.checked = true; this._isAngularbind = true;
-								this._checkedChange(true,false); 
-							}
-						}
-						else this.element.attr("value",options[prop]);
-					break;
+                    case "value":
+                        this.radbtn.attr("value", options[prop]);
+                        break;
                     case "htmlAttributes": this._addAttr(options[prop]); break;
                 }
             }
         },
 
         _destroy: function () {
-            this.radbtn.removeClass("e-radiobtn e-input");
-            this.radbtn.insertBefore(this.element);
+            this.radbtn.remove();
+            this._cloneElement.removeClass("e-js e-input e-radiobtn");
+            this._cloneElement.insertBefore(this.element)
             this.element.remove();
-            this.element = this.radbtn;
         },
 
         _changeSkin: function (skin) {
@@ -209,21 +213,22 @@
         },
 
         _setValue: function () {
+            if (ej.isNullOrUndefined(this.element.attr("type")))
+                this.element.attr("type", "radio");
             if (!ej.isNullOrUndefined(this.element.attr("id")))
                 this.model.id = this.element.attr("id");
             if (!ej.isNullOrUndefined(this.element.attr("name")))
                 this.model.name = this.element.attr("name");
-			if (this.value() == null) 
-				this.value(this.element.attr("value"));
-			if (!ej.isNullOrUndefined(this.element.attr("value")) && this.value() == null )
-                this.value(this.element.attr("value"));
-            this.element.attr({ "id": this.model.id, "name": this.model.name});
-            if (!this.model.checked && !ej.isNullOrUndefined(this.element.attr('checked')))
-                this.model.checked = this.isChecked = true;
+            if (!ej.isNullOrUndefined(this.element.attr("value")))
+                this.model.value = (this.element.attr("value"));
+            this.element.attr({ "id": this.model.id, "name": this.model.name, "value": this.model.value });
+            if (typeof this.checked() == "boolean")
+                this.model.checked = this.isChecked = this.model.checked || this.element.attr('checked') == "checked"
             else
-                this.isChecked = this.model.checked;
-			this._hiddenValue = this.element.attr("value");
-			this._isAngularbind = false;
+                this.isChecked = this.element.attr("value") == this.checked();
+            if (this.isChecked) this.element.attr('checked', 'checked');
+            this._hiddenValue = this.element.attr("value");
+            this._isAngularbind = false;
         },
 
         _setIdAttr: function (val) {
@@ -260,8 +265,6 @@
             this._setSize(this.model.size);
             this.spanImg = $('<span class="e-rad-icon e-icon e-rad-select"></span>', "", {}, { "role": "presentation" });
             this.element.addClass("e-input");
-            this.model.name = ej.isNullOrUndefined(this.model.name) ? this.model.id : this.model.name;
-            this.element.attr({ "id": this.model.id, "name": this.model.name, "value": this.value() });
             this.div.addClass(this.model.cssClass);
             this.span.append(this.spanImg);
             this.div.insertBefore(this.element);
@@ -270,9 +273,6 @@
             this._setTextWrapper(this.model.text);
             this.radbtn = this.element;
             this.element = this.div;
-            if (this.isChecked) {
-                this.element.find(".e-input").attr('checked', true);
-            }
         },
 
         _setTextWrapper: function (val) {
@@ -303,11 +303,11 @@
         },
         _focusIn: function (evt) {
             $(this.element).addClass("e-focus");
-            $(this.element).bind("keydown", $.proxy(this._checkUnCheck, this));
+            $(this.element).on("keydown", $.proxy(this._checkUnCheck, this));
         },
         _focusOut: function (evt) {
             $(this.element).removeClass("e-focus");
-            $(this.element).unbind("keydown", $.proxy(this._checkUnCheck, this));
+            $(this.element).off("keydown", $.proxy(this._checkUnCheck, this));
         },
 
         _checkUnCheck: function (evt) {
@@ -317,17 +317,20 @@
                 this._checkedHandler();
             }
         },
+
         _checkedHandler: function (evt) {
             if (!this.element.hasClass('e-disable')) {
-                this.isChecked = this.element.find('input.e-radiobtn:radio').attr('checked') == 'checked' ? true : false;
+                if (typeof this.checked() == "boolean")
+                    this.isChecked = this.radbtn.attr('checked') == 'checked' ? true : false;
+                else
+                    this.isChecked = this.checked() == this.radbtn.attr('value');
                 if (!$(this.element).find(".e-rad-icon").hasClass("e-circle_01")) this._changeEvent(true);
             }
         },
 
         _checkedChange: function (val, interaction) {
             this.isChecked = val;
-            if (this.isChecked)
-                this._changeEvent(interaction);
+            this._changeEvent(interaction);
         },
 
         _changeEvent: function (interaction) {
@@ -336,6 +339,7 @@
                 if (true == this._trigger("beforeChange", data))
                     return false;
             }
+
             if (!$(this.element).find(".e-rad-icon").hasClass("e-circle_01")) {
                 var curname = this.element.find(".e-input").attr('name'),
                 input = $('input.e-radiobtn[name="' + curname + '"]:radio'),
@@ -344,35 +348,46 @@
                 currObj = $(currElement).data("ejRadioButton");
                 if (data.isChecked) {
                     this.spanImg.addClass("e-circle_01").removeClass('e-rad-select');
+                    this.span.addClass("e-rad-active");
                     this.div.attr({ "tabindex": 0, "aria-checked": true });
+                    this.radbtn.attr("checked", "checked");
                 }
                 $.each(input, function (i, obj) {
                     $(obj).closest(".e-radiobtn-wrap").find(".e-rad-icon").removeClass("e-circle_01").addClass("e-rad-select");
+                    $(obj).closest(".e-radiobtn-wrap").find(".e-spanicon").removeClass("e-rad-active");
                     $(obj).closest(".e-radiobtn-wrap").attr({ "tabindex": 0, "aria-checked": false });
                     var prevObj = $(obj).data("ejRadioButton");
-                    if (prevObj != null) {
+                    if (prevObj != null && prevObj.checked() != null && typeof prevObj.checked() == "boolean")
                         prevObj.model.checked = false;
-                    }
                 });
-                if (currObj != null)
+                if (currObj != null && currObj.checked() != null && typeof currObj.checked() == "boolean")
                     currObj.model.checked = true;
+                else
+                    currObj.checked(currObj.radbtn.attr("value"));
                 this.element.find(".e-rad-icon").addClass("e-circle_01").removeClass("e-rad-select");
+                this.span.addClass("e-rad-active");
                 this.div.attr({ "tabindex": 0, "aria-checked": true });
                 if (!this._isAngularbind) this.element.find(".e-input").click();
                 this.isChecked = true;
             }
-			
+            else {
+                this.spanImg.removeClass("e-circle_01").addClass('e-rad-select');
+                this.span.removeClass("e-rad-active");
+                this.div.attr({ "tabindex": 0, "aria-checked": false });
+                this.radbtn.removeAttr("checked");
+            }
+
             var data = { isChecked: this.isChecked, isInteraction: !!interaction };
             if (!this.initialRender)
                 this._trigger("change", data);
-				if (interaction) this._trigger("_change", { value: this._hiddenValue});
+            if (interaction) this._trigger("_change", { value: this._hiddenValue });
         },
 
         disable: function () {
             if (!this.element.hasClass("e-disable")) {
                 this.element.addClass("e-disable");
-			this.radbtn.attr("disabled","disabled");
-			}
+                this.radbtn.attr("disabled", "disabled");
+            }
             if (this._isIE8) this.span.addClass("e-disable");
             this.div.attr("aria-disabled", true);
             this.model.enabled = false;
@@ -381,8 +396,8 @@
         enable: function () {
             if (this.element.hasClass("e-disable")) {
                 this.element.removeClass("e-disable");
-				this.radbtn.removeAttr("disabled");
-			}
+                this.radbtn.prop("disabled", false);
+            }
             if (this._isIE8) this.span.removeClass("e-disable");
             this.div.attr("aria-disabled", false);
             this.model.enabled = true;

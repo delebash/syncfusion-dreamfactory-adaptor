@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.gantt.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./ej.treegrid","jquery-easing","./../common/ej.globalize","jsrender","./../common/ej.core","./../common/ej.data","./../common/ej.draggable","./../common/ej.scroller","./ej.button","./ej.splitter","./ej.dialog","./ej.datepicker","./ej.datetimepicker","./ej.checkbox","./ej.dropdownlist","./ej.editor","./ej.maskedit","./ej.toolbar"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./ej.treegrid","./../common/ej.globalize","jsrender","./../common/ej.core","./../common/ej.data","./../common/ej.draggable","./../common/ej.scroller","./ej.button","./ej.splitter","./ej.dialog","./ej.datepicker","./ej.datetimepicker","./ej.checkbox","./ej.dropdownlist","./ej.editor","./ej.maskedit","./ej.toolbar"], fn) : fn();
 })
 (function () {
 	
@@ -58,6 +58,11 @@
          {
             tag: "sortSettings.sortedColumns",
             attr: ["field","direction"]
+         },
+         {
+             tag: "dayWorkingTime",
+             attr: ["from", "to"],
+             singular: "dayWorkingTime"
          }
         ],
         _holidays: function (index, property, value, old) {
@@ -79,6 +84,7 @@
             allowSorting: false,
             allowColumnResize: false,
             allowSelection: true,
+            allowMultipleExporting: false,
             allowDragAndDrop: false,
             dragTooltip: {
                 showTooltip: false,
@@ -104,17 +110,27 @@
             childMapping: "",
             durationMapping: "",
             milestoneMapping: "",
-            progressMapping: "Progress",
+            progressMapping: "",
             predecessorMapping: "",
-            resourceInfoMapping: "",           
+            resourceInfoMapping: "",
+            taskSchedulingModeMapping: "",
+            notesMapping:"",
             resources: [],
             holidays: [],
+            searchSettings: {
+                fields: [],
+                key: "",
+                operator: "contains",
+                ignoreCase: true
+            },
             highlightWeekends: true,
             scheduleStartDate: null,
             scheduleEndDate: null,
             enableProgressBarResizing: true,
             rowHeight: 30,
             includeWeekend: true,
+            taskSchedulingMode: "auto",
+            validateManualTasksOnLinking: false,
             toolbarSettings: {
                 showToolbar: false,
                 toolbarItems: []
@@ -123,6 +139,8 @@
             workingTimeScale: 'TimeScale8Hours',
             roundOffDayworkingTime: true,
             durationUnit: 'day',
+            workUnit: 'hours',
+            taskType: "fixedUnit",
             scheduleHeaderSettings:
             {
                 weekHeaderFormat: "MMM dd , yyyy",
@@ -163,7 +181,7 @@
                 allowIndent: false,               
                 editMode: "normal",
                 beginEditAction: "dblclick",
-                rowPosition: "belowSelectedRow"
+                rowPosition: "belowselectedrow"
             },
             flatRecords: [],
             parentRecords: [],
@@ -186,6 +204,7 @@
             dateFormat: "",
             resourceIdMapping: "",
             resourceNameMapping: "",
+            resourceUnitMapping: "",
             progressbarTooltipTemplateId: "",
             taskbarEditingTooltipTemplateId: "",
             taskbarEditingTooltipTemplate: "",
@@ -211,6 +230,13 @@
             isResponsive: true,
             enableCollapseAll: false,
             enablePredecessorValidation: true,
+            taskbarTemplate: "",
+            parentTaskbarTemplate: "",
+            milestoneTemplate: "",
+            durationUnitMapping: "",
+            dayWorkingTime: [{ "from": "08:00 AM", "to": "12:00 PM" }, { "from": "01:00 PM", "to": "05:00 PM" }],//, { from: "4:00 PM", to: "5:00 PM" }
+            exportToExcelAction: "",
+            /*Events*/
             rowSelecting: null,
             rowSelected: null,
             rowDragStart: null,
@@ -234,6 +260,7 @@
             load: null,
             create:null,
             contextMenuOpen: null,
+            taskbarClick: null
         },
 
         dataTypes: {
@@ -255,14 +282,18 @@
             progressMapping: "string",
             predecessorMapping: "string",
             resourceInfoMapping: "string",
+            taskSchedulingModeMapping: "string",
             resources: "array",
             holidays: "array",
+            dayWorkingTime: "array",
             highlightWeekends: "boolean",
             scheduleStartDate: "data",
             scheduleEndDate: "data",
             enableProgressBarResizing: "boolean",
             rowHeight: "number",
             includeWeekend: "boolean",
+            taskSchedulingMode: "string",
+            validateManualTasksOnLinking: "boolean",
             toolbarSettings: {
                 showToolbar: "boolean",
                 toolbarItems: "array"
@@ -309,6 +340,7 @@
             dateFormat: "string",
             resourceIdMapping: "string",
             resourceNameMapping: "string",
+            resourceUnitMapping: "string",
             progressbarTooltipTemplateId: "string",
             taskbarEditingTooltipTemplateId: "string",
             taskbarEditingTooltipTemplate: "string",
@@ -330,8 +362,15 @@
             isResponsive: "boolean",
             enableCollapseAll: "boolean",
             enablePredecessorValidation: "boolean",
+            durationUnitMapping: "string",
+            taskbarTemplate: "string",
+            parentTaskbarTemplate: "string",
+            milestoneTemplate: "string"
         },
-
+        ignoreOnExport: [
+            "isEdit", "toolbarClick", "query", "queryCellInfo", "selectionType", "currentViewData", "enableRTL", "rowDataBound",
+              "editSettings", "localization", "cssClass", "dataSource", "allowKeyboardNavigation"
+        ],
         observables: ["selectedItem", "selectedRowIndex", "selectedCellIndexes", "splitterPosition", "dataSource","splitterSettings.position"],
         selectedItem: ej.util.valueFunction("selectedItem"),
         selectedRowIndex: ej.util.valueFunction("selectedRowIndex"),
@@ -385,19 +424,11 @@
             }
 
             if (!(model.scheduleStartDate || model.scheduleEndDate) && interval == "auto")
-                model.scheduleHeaderSettings.minutesPerInterval = ej.Gantt.minutesPerInterval.FiveMinutes;
+                model.scheduleHeaderSettings.minutesPerInterval = ej.Gantt.minutesPerInterval.FiveMinutes;            
             proxy._initPrivateProperties();
             //Load event triggered
             proxy._trigger("load");
             proxy.element.addClass("e-gantt-core");
-
-            if (model.durationUnit == "hours") {
-                model.durationUnit = "hour";
-            }
-            if (model.scheduleHeaderSettings.scheduleHeaderType == "hour") {
-                if (durationUnit != "hour")
-                    model.durationUnit = "minute";
-            }
             if (this.dataSource() !== null) {
                 this._checkDataBinding();
             }
@@ -418,6 +449,7 @@
         //populate gantt records from data source
         _checkDataBinding: function () {
             var proxy = this, model = proxy.model;
+           
             if (this.dataSource() == null) {
                 this.dataSource([]);
             }
@@ -426,16 +458,16 @@
             }
             else if (this.dataSource().length > 0) {
                 if ((model.taskIdMapping.length > 0) && (model.parentTaskIdMapping.length > 0)) {
-
-                    //cloning the datasource
-                    var dataArray = this.dataSource().slice(0);
+                    var dataArray = proxy.dataSource();
+                    //cloning the datasource                   
                     var data = [];
-                    $.each(dataArray, function (indx, value) {
-                        data.push(jQuery.extend(true, {}, value));
-                    });
-                    if (!model.childMapping) {
-                        model.childMapping = "Children";
+                    for (var i in dataArray) {
+                        var tempData = dataArray[i];
+                        data.push($.extend(true, {}, tempData));
+                        if (tempData[model.taskIdMapping]) proxy._taskIds.push(tempData[model.taskIdMapping]);
                     }
+                  
+                    if (!model.childMapping) model.childMapping = "Children";                                        
                     proxy._reconstructDatasource(data);
                     proxy._createGanttRecords(proxy.secondaryDatasource);
                 }
@@ -453,7 +485,6 @@
         _initDataSource: function () {
             var proxy = this, model = proxy.model;     
             var query = this._columnToSelect();
-            var proxy = this;
             var queryPromise = this.dataSource().executeQuery(query);
             queryPromise.done(ej.proxy(function (e) {
                 if (proxy.dataSource().dataSource.offline) {
@@ -461,20 +492,23 @@
                 } else {
                     proxy._retrivedData = e.result;
                 }
+               
                 if ((model.taskIdMapping.length > 0) && (model.parentTaskIdMapping.length > 0)) {
                     //cloning the datasource
-                    var dataArray = e.result.slice(0);
+                    var dataArray = e.result;
                     var data = [];
-                    $.each(dataArray, function (indx, value) {
-                        data.push(jQuery.extend(true, {}, value));
-                    });
+                    for (var i in dataArray) {
+                        var tempData = dataArray[i];
+                        data.push($.extend(true, {}, tempData));
+                        if (tempData[model.taskIdMapping]) proxy._taskIds.push(tempData[model.taskIdMapping]);
+                    }
                     if (!model.childMapping) {
                         model.childMapping = "Children";
                     }
                     proxy._reconstructDatasource(data);
                 }
                 else {
-                    proxy._reconstructDatasource(e.result);
+                    proxy.secondaryDatasource = proxy._retrivedData;
                 }
                 proxy._createGanttRecords(proxy.secondaryDatasource);
                 proxy._initialize();
@@ -491,110 +525,45 @@
             return queryManager;
         },
 
+        _intersectionObjects: function (flatCollection, rootCollection) {
+            var result = [];
+            while (flatCollection.length > 0 && rootCollection.length > 0) {
+                var index = rootCollection.indexOf(flatCollection[0]);
+                if (index == -1) {
+                    flatCollection.shift();
+                }
+                else {
+                    result.push(flatCollection.shift())
+                    rootCollection.splice(index, 1);
+                }
+            }
+
+            return result;
+        },
+
         //If parentIdMapping is given data source is changed in hierarchical order
         _reconstructDatasource: function (datasource) {
             var proxy = this, model = proxy.model,
-                childItems, data,tempRecord=[];
-            
-            for (var i = 0; i < datasource.length; i++) {
-                var data = {};
-                data = ej.DataManager(datasource).executeLocal(ej.Query().where(model.parentTaskIdMapping,
-                    ej.FilterOperators.equal,
-                    datasource[i][model.taskIdMapping]));
-               
+                data, filter;
 
-                if ((ej.isNullOrUndefined(datasource[i][model.parentTaskIdMapping]))
-                    && data.length > 0) {
-                    datasource[i][model.childMapping] = data;
-                    proxy.secondaryDatasource.push(datasource[i]);
-                }
-                else if (ej.isNullOrUndefined(datasource[i][model.parentTaskIdMapping]) && !(data && data.length > 0)) {
-                    proxy.secondaryDatasource.push(datasource[i]);
-                }
+            filter = ej.Predicate(model.parentTaskIdMapping, ej.FilterOperators.notEqual, "null");
+            data = ej.DataManager(datasource).executeLocal(ej.Query().where(filter).group(model.parentTaskIdMapping));
+            var tempParent = [];
+            for (var i = 0; i < data.length; i++) {
+                if (!ej.isNullOrUndefined(data[i].key)) {
 
-                else if (data && data.length > 0 && !(ej.isNullOrUndefined(data[0][model.parentTaskIdMapping]))) {
-                    proxy._appendChildDataItems(proxy.secondaryDatasource, data);
-                }
-                else if ((ej.isNullOrUndefined(datasource[i][model.parentTaskIdMapping]))
-                    && data.length == 0) {
-                    proxy.secondaryDatasource.push(datasource[i]);
-                }
-
-                if (data && data.length > 0) {
-
-                    proxy._datasourceChildItems = proxy._reconstructDatasource(data);
-                    if (ej.isNullOrUndefined(datasource[i][model.childMapping])) {
-                        datasource[i][model.childMapping] = proxy._datasourceChildItems;
-                        proxy._getParentIndex(datasource);
-                    }
-                    proxy._datasourceChildItems = [];
-
-                }
-                
-                else if (!(ej.isNullOrUndefined(datasource[i][model.parentTaskIdMapping]))) {
-                    tempRecord.push(datasource[i]);
-                }
-            }
-
-            if (tempRecord && tempRecord.length > 0) {
-                return tempRecord;
-            }
-        },
-
-        //add child item in parent record in reference data source
-        _appendChildDataItems: function (parentDatasource, data) {
-            var proxy = this,
-                model = proxy.model;
-
-            for (var count = 0; count < parentDatasource.length; count++) {
-
-                if (parentDatasource[count][model.taskIdMapping] === data[0][model.parentTaskIdMapping]) {
-                    parentDatasource[count][model.childMapping] = data;
-                }
-                else if (!(ej.isNullOrUndefined(parentDatasource[count][model.childMapping])) &&
-                    parentDatasource[count][model.childMapping].length > 0) {
-                    proxy._appendChildDataItems(parentDatasource[count], data);
-                }
-            }
-
-            if ((ej.isNullOrUndefined(parentDatasource.length)) && parentDatasource) {
-                if (parentDatasource[model.taskIdMapping] === data[0][model.parentTaskIdMapping]) {
-                    parentDatasource[model.childMapping] = data;
-                }
-                else if (!(ej.isNullOrUndefined(parentDatasource[model.childMapping])) &&
-                    parentDatasource[model.childMapping].length > 0) {
-                    proxy._appendChildDataItems(parentDatasource[model.childMapping], data);
-                }
-            }
-
-        },
-        //Get corresponding parent index while reconstrunting referencing data source
-        _getParentIndex: function (datasource) {
-            var proxy = this, model = proxy.model,
-                dataArr = proxy.secondaryDatasource, parentIndex = 0;
-
-            if (datasource.length > 0) {
-                parentIndex = datasource[0][model.parentTaskIdMapping];
-            }
-            for (var i = 0; i < dataArr.length; i++) {
-                if (dataArr[i][model.taskIdMapping] == parentIndex && ej.isNullOrUndefined(dataArr[i][model.childMapping])) {
-                    dataArr[i][model.childMapping] = (datasource);
-                    return true;
-                }
-                else {
-                    var childItems = dataArr[i][model.childMapping];
-                    if (childItems) {
-                        for (var i = 0; i < childItems.length; i++) {
-                            if (childItems[i][model.taskIdMapping] == parentIndex && ej.isNullOrUndefined(childItems[i][model.childMapping])) {
-                                childItems[i][model.childMapping] = (datasource);
-                                return true;
-                            }
-                        }
+                    var index = proxy._taskIds.indexOf(data[i].key);
+                    if (index > -1) {
+                        datasource[index][model.childMapping] = data[i].items;
+                        continue;
                     }
                 }
+                var items = data[i].items;
+                for (var item in data[i].items)
+                    tempParent.push(items[item]);
             }
-
-        },
+            proxy.secondaryDatasource = proxy._intersectionObjects(datasource, tempParent);
+        },       
 
         //refresh the chart with updated schedule dates
         updateScheduleDates: function (startDate, endDate) {
@@ -660,10 +629,7 @@
                 case ej.Gantt.ScheduleHeaderType.Day:
                     model.scheduleHeaderSettings.scheduleHeaderType = ej.Gantt.ScheduleHeaderType.Day;
                     proxy._perHourWidth = 20;
-                    if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours)
-                        proxy._perDayWidth = (proxy._perHourWidth * 24);//24 hours
-                    else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours)
-                        proxy._perDayWidth = (proxy._perHourWidth * 24);//9 hours
+                    proxy._perDayWidth = (proxy._perHourWidth * 24);//24 hours
                     proxy._calculateDaySplit(startDate, endDate);
                     break;
 
@@ -729,10 +695,44 @@
                     proxy._calculateHourSplit(startDate, endDate);
                     break;
             }
-            proxy.element.ejGantt("destroy").ejGantt(model)
+            proxy.element.ejGantt("destroy").ejGantt(model);
             proxy._isTreeGridRendered = false;
             proxy._isGanttChartRendered = false;
 
+        },
+
+        changeTaskMode:function(record, taskMode){
+            var proxy = this, model = proxy.model, args = {};
+            args.data = record;
+
+            proxy._isValidationEnabled = true;
+            if (taskMode == ej.Gantt.TaskSchedulingMode.Manual) {
+                record.isAutoSchedule = false;
+                record.item[model.taskSchedulingModeMapping] = true;                
+            }
+            else if (taskMode == ej.Gantt.TaskSchedulingMode.Auto) {
+                record.isAutoSchedule = true;
+                record.item[model.taskSchedulingModeMapping] = false;                
+            }
+            args.columnName = "taskMode";
+            proxy._updateEditedGanttRecords(args);
+            proxy._isValidationEnabled = false;
+        },
+        autoSchedule: function (taskId) {
+            var proxy = this, model = proxy.model, targetRecord,
+                updatedRecords = model.updatedRecords;
+            targetRecord = updatedRecords.filter(function (record) {
+                return record.taskId === taskId;
+            });
+            proxy.changeTaskMode(targetRecord[0], ej.Gantt.TaskSchedulingMode.Auto);
+        },
+        manualSchedule: function (taskId) {
+            var proxy = this, model = proxy.model, targetRecord,
+                updatedRecords = model.updatedRecords;
+            targetRecord = updatedRecords.filter(function (record) {
+                return record.taskId === taskId;
+            });
+            proxy.changeTaskMode(targetRecord[0], ej.Gantt.TaskSchedulingMode.Manual);
         },
         //update the all gantt records width,progresswidth and left value
         _updateGanttRecords: function () {
@@ -745,15 +745,14 @@
             for (var i = 0; i < length; i++) {
                 currentRecord = flatRecords[i];
                 if (currentRecord.hasChildRecords === false) {
-                    currentRecord.left = currentRecord._calculateLeft(proxy._projectStartDate, proxy._perDayWidth, proxy._holidaysList, model);
-                    currentRecord.width = currentRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
+                    currentRecord.left = currentRecord._calculateLeft(this);
+                    currentRecord.width = currentRecord._calculateWidth(this);
                     currentRecord.width = currentRecord.isMilestone == true ? proxy._milesStoneWidth : model.flatRecords[i].width;
                     currentRecord.progressWidth = currentRecord._calculateProgressWidth(currentRecord.width, currentRecord.status);
                 }
                 if (currentRecord.baselineStartDate && currentRecord.baselineEndDate) {
-                    currentRecord.baselineLeft = currentRecord._calculateBaselineLeft(proxy._projectStartDate, proxy._perDayWidth,
-                        model.includeWeekend, model.dateFormat, model, model.endDateMapping, proxy._holidaysList);
-                    currentRecord.baselineWidth = currentRecord._calculateBaseLineWidth(proxy._perDayWidth, model);
+                    currentRecord.baselineLeft = currentRecord._calculateBaselineLeft(this);
+                    currentRecord.baselineWidth = currentRecord._calculateBaseLineWidth(this);
                 } else {
                     currentRecord.baselineLeft = 0;
                     currentRecord.baselineWidth = 0;
@@ -763,8 +762,11 @@
                 childRecords = parentItem && parentItem.childRecords;
 
                 if (parentItem && childRecords.indexOf(currentRecord) == childRecords.length - 1 && currentRecord.hasChildRecords === false) {
+                    if (parentItem.isAutoSchedule)
                         proxy._updateParentItem(currentRecord);
-                }
+                    else
+                        proxy._updateManualParentItem(currentRecord);
+                }                
             }
 
         },
@@ -779,8 +781,10 @@
             proxy._disabledToolItems = [],
             proxy._id = proxy.element.attr('id'),
             proxy._scheduleWeeks = [],
+            proxy._taskIds = [],
             proxy._duplicate = false,          
             proxy._wrongenddate=false,
+            proxy._addPosition = null,
             proxy._scheduleYears = [],//new property for year schedule modes
 
             proxy._scheduleMonths = [], //new property for month
@@ -850,6 +854,10 @@
             proxy._editDialogTexts = null;
             proxy._toolboxTooltipTexts = null;
             proxy._durationUnitTexts = null;
+            proxy._durationUnitEditText = null;
+            proxy._workUnitTexts = null;
+            proxy._taskTypeTexts = null;
+            proxy._effortDrivenTexts = null;
             proxy._contextMenuTexts = null;
             proxy._columnMenuTexts = null;
             proxy._columnDialogTitle = null;
@@ -861,6 +869,13 @@
             proxy._newTaskTexts = null;
             proxy._months = null;  
             proxy._days = null;
+            proxy._dialogTabTitleTexts = null;
+            proxy._isLoad = true;
+            proxy._updatedColumn = "";
+            proxy._isExistingUnitIsUpdated = false;
+            proxy._isDurationUpdated = false;
+            proxy._isResourceAddedOrRemoved = false;
+            proxy._newRecordResourceCollection = [];//maintan newly added row resources and its units.
 
             /*alert text localization*/
             proxy._alertTexts = null;
@@ -877,6 +892,19 @@
             proxy._retrivedData = this.dataSource();
             proxy._isInExpandCollapseAll = false;
             proxy._preTableCollection = [];
+            proxy._defaultStartTime = null;
+            proxy._defaultEndTime = null;
+            proxy._workingTimeRanges = [];
+            proxy._nonWorkingHours = [];
+            this._validateTimeRange();
+            //deprecate working timescaale API with dayWorkingTime API
+            if (JSON.stringify(model.dayWorkingTime) == '[{\"from\":\"08:00 AM\",\"to\":\"12:00 PM\"},{\"from\":\"01:00 PM\",\"to\":\"05:00 PM\"}]') {
+                if (model.workingTimeScale != ej.Gantt.workingTimeScale.TimeScale8Hours)
+                    model.dayWorkingTime = [{ from: "12:00 AM", to: "12:00 AM" }];
+                else
+                    model.dayWorkingTime = [{ from: "08:00 AM", to: "12:00 PM" }, { from: "01:00 PM", to: "05:00 PM" }];
+            }
+            proxy._secondsPerDay = proxy._getSecondsPerDay();
             if (scheduleMode == "week") {
                 proxy._perDayWidth = 30;
                 proxy._perMinuteWidth = proxy._perDayWidth / (24 * 60);
@@ -895,10 +923,7 @@
             else if (scheduleMode == "day") {
                 proxy._perHourWidth = 20;
                 proxy._perMinuteWidth = proxy._perHourWidth / 60;
-                if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours)
-                    proxy._perDayWidth = (proxy._perHourWidth * 24);//24 hours
-                else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours)
-                    proxy._perDayWidth = (proxy._perHourWidth * 24);//9 hours
+                proxy._perDayWidth = (proxy._perHourWidth * 24);//24 hours
             }
             else if (scheduleMode == "hour") {
                 var minutesPerInterval = model.scheduleHeaderSettings.minutesPerInterval,
@@ -948,11 +973,17 @@
                     }
                 }                
             }
+            proxy._predecessorCollectionText = "";
             proxy._localizedLabels = proxy._getLocalizedLabels();
             //culture info assigned for private variables
             proxy._setCultureInfo();
             //Column collection populated
             proxy.setColumns(model.columns && model.columns.length ? model.columns : proxy.createTreeGridColumns());
+
+            //update columns dropdown data while changing localization dynamically.
+            if (model.isRerender)
+                proxy._updateColumnDropDownData();
+
             proxy._updateColumnLocaleText();
             /* flag for refreshing newly added record */
             proxy._isRefreshAddedRecord = false;
@@ -963,7 +994,398 @@
             proxy._isAddEditDialogSave = false;
             /*MilesStone width as by rowHeight*/
             proxy._milesStoneWidth = (Math.floor((model.rowHeight - 6) / 2) * 2 + 6);// 6 ->  gantt chart row paddingTop and bottom
+            proxy.isCriticalPathEnable = false;
+            proxy.criticalPathCollection = [];
+            proxy.detailPredecessorCollection = [];
+            proxy.collectionTaskId = [];
+            proxy._enableDisableCriticalIcon = false;
+            proxy._generalTabColumnFields = [];
+            proxy._addDialogGeneralColumns = [];
+            proxy._addDialogcustomColumns = [];
+            proxy._editDialogGeneralColumns = [];
+            proxy._editDialogCustomColumns = [];
+            //update resource unit mapping value
+            if (model.resourceUnitMapping == "")
+                model.resourceUnitMapping = "unit";
+            proxy._dialogTab = ["General", "Predecessors", "Resources", "Custom Fields", "Notes"];
         },
+        /*validate dayWorkingTime API if it is not valid assign default value to this API*/
+        _validateTimeRange: function () {
+            var tempDay = "01/01/2016", tempEndDay = "01/02/2016", proxy = this, model = this.model,
+               length = model.dayWorkingTime.length, isValid = true, prevTimeline = null;//MM/dd/yyyy
+            for (var count = 0; count < length; count++) {
+                var currentRange = model.dayWorkingTime[count];
+                if (currentRange.from && currentRange.to) {
+                    var startHour = ej.parseDate(tempDay + " " + currentRange.from, "MM/dd/yyyy h:mm tt", "en-US"),
+                        endHour = currentRange.to != "12:00 AM" ? ej.parseDate(tempDay + " " + currentRange.to, "MM/dd/yyyy h:mm tt", "en-US") : ej.parseDate(tempEndDay + " " + currentRange.to, "MM/dd/yyyy h:mm tt", "en-US"),
+                        timeDiff = endHour.getTime() - startHour.getTime(),
+                        sdHour = this._getSecondsInDecimal(startHour),
+                        edHour = this._getSecondsInDecimal(endHour);
+                    if (edHour == 0)
+                        edHour = 86400; // second in a day
+                    if (sdHour >= edHour) {
+                        isValid = false;
+                    }
+                    else {
+                        if (prevTimeline == null)
+                            prevTimeline = edHour;
+                        else if (prevTimeline >= sdHour || prevTimeline >= edHour)
+                            isValid = false;
+                    }
+                }
+                else {
+                    isValid = false;
+                }
+            }
+            if (!isValid) {
+                model.dayWorkingTime = [{ from: "08:00 AM", to: "12:00 PM" }, { from: "01:00 PM", to: "05:00 PM" }];
+            }
+        },
+        /*Get date from string*/
+        _getParsedDate: function (value, format, locale) {
+            return ej.parseDate(value, format, locale);
+        },
+        _setTime: function (seconds, date) {
+            var hour = parseInt(seconds / (3600)),
+                min = parseInt((seconds - (hour * 3600)) / 60),
+                sec = seconds - (hour * 3600) - (min * 60);
+            date.setHours(hour, min, sec, 0);
+        },
+        // Update date next recent working hours
+        _checkStartDate: function (date, record) {
+            var cloneDate = new Date(date), model = this.model, hour = this._getSecondsInDecimal(cloneDate), startRangeIndex = -1;
+            if (hour < this._defaultStartTime) {
+                //cloneDate.setHours(this._defaultStartTime, 0, 0, 0);
+                this._setTime(this._defaultStartTime, cloneDate);
+            } else if (hour >= this._defaultEndTime) {
+                cloneDate.setDate(cloneDate.getDate() + 1);
+                this._setTime(this._defaultStartTime, cloneDate);
+                //cloneDate.setHours(this._defaultStartTime, 0, 0, 0);
+            } else if (hour > this._defaultStartTime && hour < this._defaultEndTime) {
+                for (var i = 0; i < this._workingTimeRanges.length; i++) {
+                    var val = this._workingTimeRanges[i];
+                    if (hour >= val.to && (this._workingTimeRanges[i + 1] && hour < this._workingTimeRanges[i + 1].from)) {
+                        this._setTime(this._workingTimeRanges[i + 1].from, cloneDate);
+                        break;
+                    }
+                }
+            }
+            var tempStartDate;
+            do{
+                tempStartDate = new Date(cloneDate);
+                //check holidays and weekends
+                if ((!ej.isNullOrUndefined(record) && record.isAutoSchedule && (!model.includeWeekend || model.holidays.length > 0)) || (ej.isNullOrUndefined(record) && (!model.includeWeekend || model.holidays.length > 0))) {
+                    if (!model.includeWeekend) {
+                        if (cloneDate.getDay() == 0) {
+                            cloneDate.setDate(cloneDate.getDate() + 1);
+                            this._setTime(this._defaultStartTime, cloneDate);
+                            //cloneDate.setHours(this._defaultStartTime, 0, 0, 0);
+                        }
+                        else if (cloneDate.getDay() == 6) {
+                            cloneDate.setDate(cloneDate.getDate() + 2);
+                            this._setTime(this._defaultStartTime, cloneDate);
+                           // cloneDate.setHours(this._defaultStartTime, 0, 0, 0);
+                        }
+                    }
+                    for (var count = 0; count < model.holidays.length; count++) {
+                        var holidayFrom = this._getDateFromFormat(model.holidays[count].day),
+                            holidayTo = new Date(holidayFrom);
+                        holidayFrom.setHours(0, 0, 0, 0);
+                        holidayTo.setHours(23, 59, 59, 59);
+                        if (cloneDate.getTime() >= holidayFrom.getTime() && cloneDate.getTime() < holidayTo.getTime()) {
+                            cloneDate.setDate(cloneDate.getDate() + 1);
+                            this._setTime(this._defaultStartTime, cloneDate);
+                            //cloneDate.setHours(this._defaultStartTime, 0, 0, 0);
+                        }
+                    }
+                }
+            } while (tempStartDate.getTime() != cloneDate.getTime());
+            return new Date(cloneDate);
+            //Holiday Update
+        },
+        //Update the date to previous working time
+        _checkEndDate: function (date, record) {
+            var cloneDate = new Date(date), model = this.model, hour = this._getSecondsInDecimal(cloneDate), endRangeIndex = -1;
+            if (hour > this._defaultEndTime) {
+                this._setTime(this._defaultEndTime, cloneDate);
+            //    cloneDate.setHours(this._defaultEndTime, 0, 0, 0);
+            } else if (hour <= this._defaultStartTime) {
+                cloneDate.setDate(cloneDate.getDate() - 1);
+                this._setTime(this._defaultEndTime, cloneDate);
+              //  cloneDate.setHours(this._defaultEndTime, 0, 0, 0);
+            } else if (hour > this._defaultStartTime && hour < this._defaultEndTime) {
+                for (var i = 0; i < this._workingTimeRanges.length; i++) {
+                    var val = this._workingTimeRanges[i];
+                    if (hour > val.to && (this._workingTimeRanges[i + 1] && hour <= this._workingTimeRanges[i + 1].from)) {
+                        this._setTime(this._workingTimeRanges[i].to, cloneDate);
+                        //cloneDate.setHours(this._workingTimeRanges[i].to, 0, 0, 0);
+                        break;
+                    }
+                }
+            }
+            var tempCheckDate;
+            do {
+                tempCheckDate = new Date(cloneDate);
+                if ((!ej.isNullOrUndefined(record) && record.isAutoSchedule && (!model.includeWeekend || model.holidays.length > 0)) || (ej.isNullOrUndefined(record) && (!model.includeWeekend || model.holidays.length > 0))) {
+
+                    //Update Weekend and holidays
+                    if (!model.includeWeekend) {
+                        if (cloneDate.getDay() == 0) {
+                            cloneDate.setDate(cloneDate.getDate() - 2);
+                            this._setTime(this._defaultEndTime, cloneDate);
+                            //cloneDate.setHours(this._defaultEndTime, 0, 0, 0);
+                        }
+                        else if (cloneDate.getDay() == 6) {
+                            cloneDate.setDate(cloneDate.getDate() - 1);
+                            this._setTime(this._defaultEndTime, cloneDate);
+                            //cloneDate.setHours(this._defaultEndTime, 0, 0, 0);
+                        }
+                        else if (cloneDate.getDay() == 1 && this._defaultEndTime == 86400 && this._getSecondsInDecimal(cloneDate) == 0) {
+                            cloneDate.setDate(cloneDate.getDate() - 2);
+                        }
+                    }
+                    for (var count = 0; count < model.holidays.length; count++) {
+                        var holidayFrom = this._getDateFromFormat(model.holidays[count].day),
+                            holidayTo = new Date(holidayFrom),
+                            tempHoliDay = new Date(cloneDate);
+                        tempHoliDay.setMinutes(cloneDate.getMinutes() - 2);
+                        holidayFrom.setHours(0, 0, 0, 0);
+                        holidayTo.setHours(23, 59, 59, 59);
+                        if (cloneDate.getTime() >= holidayFrom.getTime() && cloneDate.getTime() < holidayTo.getTime() || (tempHoliDay.getTime() >= holidayFrom.getTime() && tempHoliDay.getTime() < holidayTo.getTime())) {
+                            cloneDate.setDate(cloneDate.getDate() - 1);
+                            if (!(cloneDate.getTime() == holidayFrom.getTime() && this._defaultEndTime == 86400 && this._getSecondsInDecimal(cloneDate) == 0))
+                                this._setTime(this._defaultEndTime, cloneDate);
+                                //cloneDate.setHours(this._defaultEndTime, 0, 0, 0);
+                        }
+                    }
+                }
+            } while (tempCheckDate.getTime() != cloneDate.getTime());
+            return new Date(cloneDate);
+        },
+        /*get left value of task with schedule start*/
+        _getTaskLeft: function (currentDate) {
+            var date = new Date(currentDate), model = this.model,
+                headerType = model.scheduleHeaderSettings.scheduleHeaderType;
+            if (headerType == ej.Gantt.ScheduleHeaderType.Week || headerType == ej.Gantt.ScheduleHeaderType.Month
+                || headerType == ej.Gantt.ScheduleHeaderType.Year) {
+                if (this._getSecondsInDecimal(date) == this._defaultStartTime) {
+                    date.setHours(0, 0, 0, 0);
+                }
+            }
+            if (this._projectStartDate)
+                return (((date.getTime() - this._projectStartDate.getTime()) / (1000 * 60 * 60 * 24)) * this._perDayWidth);//this._perMinuteWidth
+            else
+                return 0;
+        },
+        /*get width value of task*/
+        _getTaskWidth: function (startDate, endDate) {
+            var sDate = new Date(startDate), eDate = new Date(endDate), model = this.model,
+               headerType = model.scheduleHeaderSettings.scheduleHeaderType;
+
+            if (headerType == ej.Gantt.ScheduleHeaderType.Week || headerType == ej.Gantt.ScheduleHeaderType.Month
+                || headerType == ej.Gantt.ScheduleHeaderType.Year) {
+                if (this._getSecondsInDecimal(sDate) == this._defaultStartTime) {
+                    sDate.setHours(0, 0, 0, 0);
+                }
+                if (this._getSecondsInDecimal(eDate) == this._defaultEndTime) {
+                    eDate.setHours(24);
+                }
+            }
+            timeDiff = eDate.getTime() - sDate.getTime();
+
+            return ((timeDiff / (1000 * 60 * 60 * 24)) * this._perDayWidth);//per day width
+        },
+        /*Get holidays betwwen two dates range*/
+        _getHolidaysCount: function (startDate, endDate) {
+            var model = this.model,
+                holidays = this.model.holidays,
+                holidaysCount = 0;
+            for (var i = 0; i < holidays.length; i++) {
+                var currentHoliday = this._getDateFromFormat(holidays[i].day);
+                if (startDate.getTime() < currentHoliday.getTime() && endDate.getTime() >= currentHoliday.getTime())
+                    if (!model.includeWeekend && currentHoliday.getDay() != 0 && currentHoliday.getDay() != 6)
+                        holidaysCount += 1;
+                    else if (model.includeWeekend) {
+                        holidaysCount += 1;
+                    }
+            }
+            return holidaysCount;
+        },
+
+        //get weekend days between two dates without including args dates
+        _getWeekendCount: function (startDate, endDate) {
+            var sDay = new Date(startDate), eDay = new Date(endDate), weekEndCount = 0;
+            sDay.setHours(0, 0, 0, 0);
+            sDay.setDate(sDay.getDate() + 1);
+            eDay.setHours(0, 0, 0, 0);
+            while (sDay.getTime() < eDay.getTime()) {
+                if (sDay.getDay() == 0) {
+                    weekEndCount += 1;
+                    sDay.setDate(sDay.getDate() + 5);
+                }
+                if (sDay.getTime() < endDate.getTime() && sDay.getDay() == 6) {
+                    weekEndCount += 1;
+                }
+                sDay.setDate(sDay.getDate() + 1);
+            }
+            return weekEndCount;
+        },
+        /*get days between two dates*/
+        _getDayDiff: function (startDate, endDate) {
+            return (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+        },
+        //Get seconds between two Dates
+        _getNumberOfSeconds: function (startDate, endDate) {
+            var sDay = new Date(startDate), eDay = new Date(endDate), weekEndCount = 0, timeDiff = 0;
+            sDay.setHours(0, 0, 0, 0);
+            sDay.setDate(sDay.getDate() + 1);
+            eDay.setHours(0, 0, 0, 0);
+            if (sDay.getTime() < eDay.getTime())
+                timeDiff = (eDay.getTime() - sDay.getTime()) / 1000;
+            return timeDiff;
+        },
+        //Calculate end date with startDate,duration ,duration Unit
+        _getEndDate: function (startDate, duration, durationUnit, record) {
+            var secondDuration = 0, sHour = -1, nextAvailDuration = 0, endDate = new Date(startDate), startRangeIndex = -1;
+            if (!durationUnit || durationUnit == ej.Gantt.DurationUnit.Day)
+                secondDuration = this._secondsPerDay * duration;
+            else if (durationUnit == ej.Gantt.DurationUnit.Hour)
+                secondDuration = duration * 3600;
+            else
+                secondDuration = duration * 60;
+
+            while (secondDuration > 0) {
+                sHour = this._getSecondsInDecimal(endDate);
+                for (var i = 0; i < this._workingTimeRanges.length; i++) {
+                    var val = this._workingTimeRanges[i];
+                    if (sHour >= val.from && sHour <= val.to) {
+                        startRangeIndex = i;
+                        break;
+                    }
+                }
+                nextAvailDuration = Math.round(this._workingTimeRanges[startRangeIndex].to - sHour);
+                if (nextAvailDuration <= secondDuration) {
+                    endDate.setSeconds(endDate.getSeconds() + nextAvailDuration);
+                    secondDuration -= nextAvailDuration;
+                } else {
+                    endDate.setSeconds(endDate.getSeconds() + secondDuration);
+                    break;
+                }
+                if (secondDuration > 0)
+                    endDate = this._checkStartDate(endDate, record);
+            }
+            return endDate;
+        },
+        //Calculate start date with endDate,duration ,duration Unit
+        _getStartDate: function (endDate, duration, durationUnit, record) {
+            var minuteDuraion = 0, sHour = -1, nextAvailDuration = 0, startDate = new Date(endDate), startRangeIndex = -1;
+            if (!durationUnit || durationUnit == ej.Gantt.DurationUnit.Day)
+                minuteDuraion = this._secondsPerDay * duration;
+            else if (durationUnit == ej.Gantt.DurationUnit.Hour)
+                minuteDuraion = duration * 3600;
+            else
+                minuteDuraion = duration * 60;
+
+            while (minuteDuraion > 0) {
+                sHour = this._getSecondsInDecimal(startDate);
+                if (this._workingTimeRanges.length > 0 && this._workingTimeRanges[this._workingTimeRanges.length - 1].to == 86400 && sHour == 0) {
+                    sHour = 86400;
+                }
+                for (var i = 0; i < this._workingTimeRanges.length; i++) {
+                    var val = this._workingTimeRanges[i];
+                    if (sHour >= val.from && sHour <= val.to) {
+                        startRangeIndex = i;
+                        break;
+                    }
+                }
+                nextAvailDuration = Math.round(sHour - this._workingTimeRanges[startRangeIndex].from);//In Minutes
+                if (nextAvailDuration <= minuteDuraion) {
+                    startDate.setSeconds(startDate.getSeconds() - nextAvailDuration);
+                    minuteDuraion -= nextAvailDuration;
+                } else {
+                    startDate.setSeconds(startDate.getSeconds() - minuteDuraion);
+                    break;
+                }
+                if (minuteDuraion > 0)
+                    startDate = this._checkEndDate(startDate, record);
+            }
+            return startDate;
+        },
+        /*get duration betwwen two dates according to duration unit value*/
+        _getDuration: function (sDate, eDate, durationUnit, isAutoSchedule) {
+            var timeDiff = eDate.getTime() - sDate.getTime(), durationValue,
+               weekendCount = !this.model.includeWeekend && isAutoSchedule ? this._getWeekendCount(sDate, eDate) : 0,
+               nonWrkHours = 0, durationHrs = 0, totalHours = this._getNumberOfSeconds(sDate, eDate),
+               holidaysCount = isAutoSchedule ? this._getHolidaysCount(sDate, eDate) : 0;
+            timeDiff = timeDiff / 1000;
+            totalHours = (totalHours - (weekendCount * 86400) - (holidaysCount * 86400)) / 86400; // days between two dates
+            nonWrkHours = this._getNonWorkingSecondsOnDate(sDate, eDate);
+            durationHrs = timeDiff - (totalHours * (86400 - this._secondsPerDay)) - (weekendCount * 86400) - (holidaysCount * 86400) - nonWrkHours;
+            if (!durationUnit || durationUnit == ej.Gantt.DurationUnit.Day) {
+                durationValue = durationHrs / this._secondsPerDay;
+            } else if (durationUnit == ej.Gantt.DurationUnit.Minute) {
+                durationValue = durationHrs / 60;
+            } else {
+                durationValue = durationHrs / 3600;
+            }
+            return parseFloat(durationValue.toFixed(2));
+        },
+        /*Get four infomration in date*/
+        _getSecondsInDecimal: function (date) {
+            return (date.getHours() * 60 * 60) + (date.getMinutes() * 60) + date.getSeconds() + (date.getMilliseconds() / 1000);
+        },
+        /*get non working hours betwwen two dates*/
+        _getNonWorkingSecondsOnDate: function (startDate, endDate) {
+
+            var proxy = this, sHour = this._getSecondsInDecimal(startDate), eHour = this._getSecondsInDecimal(endDate), startRangeIndex = -1, endRangeIndex = -1, totNonWrkSecs = 0;
+            for (var i = 0; i < this._workingTimeRanges.length; i++) {
+                var val = this._workingTimeRanges[i];
+                if (sHour >= val.from && sHour <= val.to)
+                    startRangeIndex = i;
+                if (eHour >= val.from && eHour <= val.to)
+                    endRangeIndex = i;
+            }
+            if (startDate.getDate() != endDate.getDate()) {
+                totNonWrkSecs = proxy._nonWorkingHours[proxy._nonWorkingHours.length - 1 - startRangeIndex] + 86400 - proxy._defaultEndTime;
+                totNonWrkSecs += proxy._nonWorkingHours[endRangeIndex] + proxy._defaultStartTime;
+            }
+            else {
+                if (startRangeIndex != endRangeIndex) {
+                    totNonWrkSecs = proxy._nonWorkingHours[endRangeIndex] - proxy._nonWorkingHours[startRangeIndex];
+                }
+            }
+            return totNonWrkSecs;
+        },
+        /*Get working hours between work time range value*/
+        _getSecondsPerDay: function () {
+            var tempDay = "01/01/2016", tempEndDay = "01/02/2016", proxy = this, model = this.model,
+                length = model.dayWorkingTime.length, totalSeconds = 0;//MM/dd/yyyy
+            for (var count = 0; count < length; count++) {
+                var currentRange = model.dayWorkingTime[count];
+                if (currentRange.from && currentRange.to) {
+
+                    var startHour = ej.parseDate(tempDay + " " + currentRange.from, "MM/dd/yyyy h:mm tt", "en-US"),
+                        endHour = currentRange.to != "12:00 AM" ? ej.parseDate(tempDay + " " + currentRange.to, "MM/dd/yyyy h:mm tt", "en-US") : ej.parseDate(tempEndDay + " " + currentRange.to, "MM/dd/yyyy h:mm tt", "en-US"),
+                        timeDiff = endHour.getTime() - startHour.getTime(),
+                        sdHour = this._getSecondsInDecimal(startHour),
+                        edHour = this._getSecondsInDecimal(endHour);
+                    if (edHour == 0)
+                        edHour = 86400; // second in a day
+                    totalSeconds += timeDiff / 1000;
+                    if (count == 0)
+                        proxy._defaultStartTime = sdHour;
+                    if (count == length - 1)
+                        proxy._defaultEndTime = edHour;
+                    if (count > 0)
+                        proxy._nonWorkingHours.push(proxy._nonWorkingHours[proxy._nonWorkingHours.length - 1] + sdHour - proxy._workingTimeRanges[count - 1].to);
+                    else
+                        proxy._nonWorkingHours.push(0);
+                    proxy._workingTimeRanges.push({ from: sdHour, to: edHour });
+                }
+            }
+            return totalSeconds;
+        },
+
         _updateColumnLocaleText: function () {
             var model = this.model,
                 columns = model.columns;
@@ -1036,6 +1458,12 @@
             
             proxy._columnHeaderTexts = $.extend({}, defaultLocalization["columnHeaderTexts"], proxy._columnHeaderTexts);
 
+            //taskModeDropDownValue to be displayed in treegrid
+            proxy._taskModeTexts = (localization && localization["taskModeTexts"]) ?
+                localization["taskModeTexts"] : defaultLocalization["taskModeTexts"];
+
+            proxy._taskModeTexts = $.extend({}, defaultLocalization["taskModeTexts"], proxy._taskModeTexts);
+
             //EditDialog Text to be displayed in popup window
             proxy._editDialogTexts = (localization && localization["editDialogTexts"]) ?
                 localization["editDialogTexts"] : defaultLocalization["editDialogTexts"];
@@ -1056,7 +1484,33 @@
             proxy._durationUnitTexts = (localization && localization["durationUnitTexts"]) ?
                 localization["durationUnitTexts"] : defaultLocalization["durationUnitTexts"];
 
-            proxy._durationUnitTexts = $.extend({}, defaultLocalization["durationUnitTexts"],proxy._durationUnitTexts);
+            proxy._durationUnitTexts = $.extend({}, defaultLocalization["durationUnitTexts"], proxy._durationUnitTexts);
+
+            //Tooltip Text to be displayed on the Taskbar for duration units
+            proxy._durationUnitEditText = (localization && localization["durationUnitEditText"]) ?
+                localization["durationUnitEditText"] : defaultLocalization["durationUnitEditText"];
+
+            proxy._durationUnitEditText = $.extend({}, defaultLocalization["durationUnitEditText"], proxy._durationUnitEditText);
+
+
+            //Unit text to display in Work field.
+            proxy._workUnitTexts = (localization && localization["workUnitTexts"]) ?
+                localization["workUnitTexts"] : defaultLocalization["workUnitTexts"];
+            
+            proxy._workUnitTexts = $.extend({}, defaultLocalization["workUnitTexts"], proxy._workUnitTexts);
+            
+            //Text to be displayed in type drop down.
+            proxy._taskTypeTexts = (localization && localization["taskTypeTexts"]) ?
+                localization["taskTypeTexts"] : defaultLocalization["taskTypeTexts"];
+            
+            proxy._taskTypeTexts = $.extend({}, defaultLocalization["taskTypeTexts"], proxy._taskTypeTexts);
+            
+            //Text to be displayed in default type drop down.
+            proxy._effortDrivenTexts = (localization && localization["effortDrivenTexts"]) ?
+                localization["effortDrivenTexts"] : defaultLocalization["effortDrivenTexts"];
+            
+            proxy._effortDrivenTexts = $.extend({}, defaultLocalization["effortDrivenTexts"], proxy._effortDrivenTexts);
+
             //Context Menu Text
             proxy._contextMenuTexts = (localization && localization["contextMenuTexts"]) ?
                 localization["contextMenuTexts"] : defaultLocalization["contextMenuTexts"];
@@ -1114,6 +1568,14 @@
 
             proxy._alertTexts = $.extend({}, defaultLocalization["alertTexts"], proxy._alertTexts);
             
+            //TabDialogText to be displayed in Gantt add and edit dialog
+            proxy._dialogTabTitleTexts = (localization && localization["dialogTabTitleTexts"]) ?
+                localization["dialogTabTitleTexts"] : defaultLocalization["dialogTabTitleTexts"];
+
+            proxy._dialogTabTitleTexts = $.extend({}, defaultLocalization["dialogTabTitleTexts"], proxy._dialogTabTitleTexts);
+
+            proxy._predecessorCollectionText = localization && localization["predecessorCollectionText"] ?
+                localization["predecessorCollectionText"] : defaultLocalization["predecessorCollectionText"];
         },
 
         //Populate available fields
@@ -1205,6 +1667,7 @@
                 proxy._renderGanttChart();
                 proxy._enableCreateCollection = true;
                 proxy._isValidationEnabled = false;          //no validation require here
+                proxy._isLoad = false,
                 model.predecessorMapping && proxy._createConnectorLinesCollection();//connectorline oboject creates here
                 proxy._isValidationEnabled = true;//reassign this value
                 proxy._$treegridPane.css({ 'overflow': 'hidden' });
@@ -1246,7 +1709,7 @@
                 rowSelectingArgs.previousIndex = model.selectedItem ? model.updatedRecords.indexOf(model.selectedItem) : -1;
                 if (proxy.rowSelecting(rowSelectingArgs)) {
                     proxy.selectRows(proxy.selectedRowIndex());
-                    proxy._$treegrid.focus();
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                 }
             }  
         },
@@ -1318,12 +1781,16 @@
 
             var proxy = this,
                 model = proxy.model,
-                columns = proxy._columns,
+                columns = $.extend([], proxy._columns),
                 length = columns.length,
-                emptyDataColumns = [], model = proxy.model, column, predecessorColoumnIndex = -1,
+                emptyDataColumns = [], model = proxy.model, column, predecessorColoumnIndex = -1, resourceColumnIndex = -1,
                 treeGridObj = proxy._$treegridHelper.data("ejTreeGrid"),
-                columnIndex;
-
+                columnIndex,
+                dialogTab = proxy._dialogTab,
+                tabLength = dialogTab.length;
+            proxy._editDialogGeneralColumns = [];
+            proxy._editDialogCustomColumns = [];            
+            proxy._generalTabColumnFields = ["taskId", "taskMode", "taskName", "startDate", "endDate", "duration", "resourceInfo", "status", "work", "taskType", "effortDriven", "baselineStartDate", "baselineEndDate", "predecessor", "WBS", "notes"];
             proxy._mappingItems = proxy._getMappingItems();
 
             if (length == 0)
@@ -1331,15 +1798,14 @@
 
             if (model.editDialogFields.length > 0) {
                 var filteredColumns = [];
-                var count=0,resultColumn;
-                for(;count<model.editDialogFields.length;count++)
-                {
+                var count = 0, resultColumn;
+                for (; count < model.editDialogFields.length; count++) {
                     resultColumn = $.grep(proxy._columns, function (val) {
                         return val.mappingName === model.editDialogFields[count].field;
                     });
                     resultColumn.length && filteredColumns.push(resultColumn[0]);
-                } 
-                columns = filteredColumns;
+                }
+                columns = filteredColumns;                
             }
             else {
                 //To hide the WBS predecessor field
@@ -1354,97 +1820,184 @@
                         columns = finalColumns;
                 }
             }
-           
-            var $tbody = ej.buildTag('div', "", {}, { 'unselectable': 'on' });
-            $form = ej.buildTag('form', "", { 'height': 'auto', 'width': 'auto', 'font-size': '14px' }, { id: proxy._id + "EditForm" });
-            $table = ej.buildTag('table', "", { width: "500px" }, { 'unselectable': "on" });
-            $tr = ej.buildTag('tr');
-            for (var i = 0; i < columns.length; i++) {
+            var index = $.map(columns, function (column, index) {
+                if (column.mappingName == model.taskNameMapping) {
+                    return index;
+                }
+            });
+            if ((index[0] + 1) % 3 == 0) {
+                columns.splice(index[0] - 1, 0, columns.splice(index[0], 1)[0]);
+            }
+            length = columns.length;
+            for (var i = 0; i < length; i++) {
                 if ($.inArray(columns[i].mappingName, proxy._mappingItems) != -1) {
-                    if (columns[i].mappingName !== model.predecessorMapping && columns[i].mappingName !== model.baselineStartDateMapping &&
-                            columns[i].mappingName !== model.baselineEndDateMapping)
-                    {
-                        if ($tr.children("td").length < 2) {
-                            $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '5px 15px 0', 'font-weight': 'normal', "outline": "none" }, { 'unselectable': "on" });
-                            $innerTable = ej.buildTag('table', "", { "outline": "none" }, { 'unselectable': "on" });
-
-                            $inTr = ej.buildTag('tr');
-
-                            $inTd = ej.buildTag('td.editLabel', "", { "outline": "none" }, { 'unselectable': "on" });
-                            $inTd.append("<label for='" + columns[i].field + "' style='font-weight:normal;'>" + proxy._columnHeaderTexts[columns[i].field] + "</label>");
-
-                            $inTr.append($inTd);
-
-                            $innerTable.append($inTr);
-
-                            $inTr2 = ej.buildTag('tr');
-                            $inTd2 = ej.buildTag('td.e-editValue');
-
-                            columnIndex = proxy._columns.indexOf(columns[i])
-                            ej.TreeGrid._initCellEditType(treeGridObj, $inTd2, proxy._id, columnIndex);
-
-                            $inTr2.append($inTd2);
-                            $innerTable.append($inTr2);
-
-                            $td.append($innerTable);
-                            $tr.append($td);
+                    if (!model.resourceInfoMapping && (columns[i].field == "work" || columns[i].field == "taskType" || columns[i].field == "effortDriven"))
+                        continue;
+                    if (columns[i].mappingName !== model.predecessorMapping && columns[i].mappingName != model.resourceInfoMapping && columns[i].mappingName != model.notesMapping + "Text" &&
+                        columns[i].mappingName !== model.baselineStartDateMapping && columns[i].mappingName !== model.baselineEndDateMapping) {
+                        var index = $.map(proxy._generalTabColumnFields, function (field, index) {
+                            if (field == columns[i].field) {
+                                return index;
+                            }
+                        });
+                        if (index.length > 0) {
+                            proxy._editDialogGeneralColumns.push(columns[i]);
                         }
                         else {
-                            $table.append($tr);
-                            $tr = $tempTr = ej.buildTag('tr');
-                            i--;
+                            proxy._editDialogCustomColumns.push(columns[i]);
                         }
-                    }else
-                    {
-                        predecessorColoumnIndex=i;
+                    }
+                    else {
+                        if (columns[i].mappingName !== model.baselineStartDateMapping && columns[i].mappingName !== model.baselineEndDateMapping) {
+                            if (columns[i].mappingName !== model.predecessorMapping)
+                                resourceColumnIndex = i;
+                            else
+                                predecessorColoumnIndex = i;
+                        }
                     }
                 }
             }
-            $table.append($tr);
-            //      $("body").append($table);
-            $tr = ej.buildTag("tr");
-
-            if (model.predecessorMapping && predecessorColoumnIndex != -1) {
-
-                $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '10px 15px 0', 'font-weight': 'normal',"outline":"none" }, { colspan: 2, 'unselectable': "on" });
-
-                $innerTable = ej.buildTag('table#' + proxy._id + 'predecessoreditTable', "", { "width": "100%", "outline": "none" }, { 'unselectable': "on" });
-
-                $inTr3 = ej.buildTag('tr');
-                $inTd3 = ej.buildTag('td.editLabel', "", { "outline": "none" }, { 'unselectable': "on" });
-                $inTd3.append("<label for='predecessor' style='font-weight:normal;'>" + proxy._columnHeaderTexts["predecessor"] + "</label>");
-
-                $inTr3.append($inTd3);
-                $innerTable.append($inTr3);
-
-                $inTr = ej.buildTag('tr');
-                $inTd = ej.buildTag('td.editLabel', "", {"outline":"none"}, { 'unselectable': "on" });
-                
-                $inTd.append("<span class='e-addpre e-icon e-enable e-edit-dialog' style='cursor:pointer; width: auto;'>" + proxy._editDialogTexts["addPredecessor"] + "</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class='e-deletepre e-icon e-disable e-edit-dialog' style='cursor:pointer; width: auto;'>&nbsp;&nbsp;" + proxy._editDialogTexts["removePredecessor"] + "</span>");
-
-                $inTr.append($inTd);
-                $innerTable.append($inTr);
-
-                $inTr2 = ej.buildTag('tr');
-                $inTd2 = ej.buildTag('td.e-editValue');
-
-                $preDiv = ej.buildTag("div#treegrid" + proxy._id + "predecessoredit", "", { "width": "100%", "height": "150px" }, {});
-
-                $inTd2.append($preDiv);
-             
-                $inTr2.append($inTd2);
-                $innerTable.append($inTr2);
-
-                $td.append($innerTable);
-                $tr.append($td);
-                $table.append($tr);
+            var $tbody = ej.buildTag('div', "", {}, {}),
+                $tab = ej.buildTag('div', "", {}, { id: proxy._id + "EditTab" }),
+                $ul = ej.buildTag('ul', "", {}, {});
+            $tab.append($ul);
+            $tbody.append($tab);
+            for (var tabIndex = 0; tabIndex < tabLength; tabIndex++) {
+                switch (dialogTab[tabIndex]) {
+                    //General Tab
+                    case "General":
+                        $ul.append("<li><a href='#" + proxy._id + "EditGeneral'>" + proxy._dialogTabTitleTexts["generalTabText"] + "</a></li>");
+                        var $general = ej.buildTag('div', "", { "padding": "4px" }, { id: proxy._id + "EditGeneral" }),
+                            $genearlForm = ej.buildTag('form', "", { 'height': 'auto', 'width': 'auto', 'font-size': '14px' }, { id: proxy._id + "GeneralEditForm" });
+                        $general.append($genearlForm);
+                        $tab.append($general);
+                        $form = ej.buildTag('form', "", { 'height': 'auto', 'width': 'auto', 'font-size': '14px' }, { id: proxy._id + "EditForm" });
+                        $genearlTable = ej.buildTag('table', "", { "border-spacing": "2px", "border-collapse": "separate" }, {});
+                        $tr = ej.buildTag('tr');
+                        var columnCount = 0,
+                            generalColumns = proxy._editDialogGeneralColumns,
+                            length = generalColumns.length;
+                        for (var i = 0; i < length; i++) {
+                            if (columnCount < 3) {
+                                if (generalColumns[i].mappingName !== model.taskNameMapping) {
+                                    columnCount++;
+                                    $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '5px 5px 0', 'font-weight': 'normal', "outline": "none" }, {});
+                                }
+                                else {
+                                    columnCount += 2;
+                                    $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '5px 5px 0', 'font-weight': 'normal', "outline": "none" }, { "colspan": "2" });
+                                }
+                                $innerTable = ej.buildTag('table', "", { "outline": "none", "border-spacing": "2px", "border-collapse": "separate" }, {});
+                                $inTr = ej.buildTag('tr', "", { "line-height": "1.4" }, {});
+                                $inTd = ej.buildTag('td.editLabel', "", { "outline": "none", "padding": "1px" }, {});
+                                $inTd.append("<label for='" + generalColumns[i].field + "' style='font-weight:normal;margin-bottom:0px;'>" + proxy._columnHeaderTexts[generalColumns[i].field] + "</label>");
+                                $inTr.append($inTd);
+                                $innerTable.append($inTr);
+                                $inTr2 = ej.buildTag('tr');
+                                $inTd2 = ej.buildTag('td.e-editValue', "", { "padding": "1px" }, {});
+                                columnIndex = proxy._columns.indexOf(generalColumns[i])
+                                ej.TreeGrid._initCellEditType(treeGridObj, $inTd2, proxy._id, columnIndex, "Edit");
+                                $inTr2.append($inTd2);
+                                $innerTable.append($inTr2);
+                                $td.append($innerTable);
+                                $tr.append($td);
+                            }
+                            else {
+                                $genearlTable.append($tr);
+                                $tr = $tempTr = ej.buildTag('tr');
+                                i--;
+                                columnCount = 0;
+                            }
+                        }
+                        $genearlTable.append($tr);
+                        $genearlForm.append($genearlTable);
+                        break;
+                    case "Predecessors":
+                        //Predecessor Tab
+                        if (model.predecessorMapping && predecessorColoumnIndex != -1) {
+                            $ul.append("<li><a href='#" + proxy._id + "EditPredecessors'>" + proxy._dialogTabTitleTexts["predecessorsTabText"] + "</a></li>");
+                            var $predecessor = ej.buildTag('div', "", { "padding": "0px" }, { id: proxy._id + "EditPredecessors" }),
+                                $predecessorForm = ej.buildTag('form', "", { 'height': 'auto', 'width': '592px', 'font-size': '14px' }, { id: proxy._id + "PredecessorEditForm" });
+                            $predecessor.append($predecessorForm);
+                            $tab.append($predecessor);
+                            $predecessorTable = ej.buildTag('table#' + proxy._id + 'predecessoreditTable', "", { "width": "100%", "outline": "none", "border-collapse": "collapse", "position": "relative", "left": "-2px" }, {});
+                            $inTr = ej.buildTag('tr', "", { "border-collapse": "collapse", "height": "40px" }, "");
+                            $inTd = ej.buildTag('td.editLabel', "", { "outline": "none", "border-collapse": "collapse", "padding": "1px" }, {});
+                            $inTd.append("<span id='" + proxy._id + "EditDialog_PredecesorAdd' class='e-addpre e-icon e-enable e-edit-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["addPredecessor"] + "</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id='" + proxy._id + "EditDialog_PredecesorDelete' class='e-deletepre e-icon e-disable e-edit-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["removePredecessor"] + "</span>");
+                            $inTr.append($inTd);
+                            $predecessorTable.append($inTr);
+                            $inTr2 = ej.buildTag('tr', "", { "border-collapse": "collapse" }, {});
+                            $inTd2 = ej.buildTag('td.e-editValue', "", { "border-collapse": "collapse", "padding": "1px" }, {});
+                            $preDiv = ej.buildTag("div#treegrid" + proxy._id + "predecessorEdit", "", { "width": "100%", "height": "150px" }, {});
+                            $inTd2.append($preDiv);
+                            $inTr2.append($inTd2);
+                            $predecessorTable.append($inTr2);
+                            $predecessorForm.append($predecessorTable);
+                        }
+                        break;
+                    case "Resources":
+                        // Resource tab
+                        if (model.resourceInfoMapping && resourceColumnIndex != -1) {
+                            $ul.append("<li><a href='#" + proxy._id + "EditResources'>" + proxy._dialogTabTitleTexts["resourcesTabText"] + "</a></li>");
+                            var $resource = ej.buildTag('div', "", { "padding": "0px" }, { id: proxy._id + "EditResources" }),
+                                $resourceForm = ej.buildTag('form', "", { 'height': 'auto', 'width': '592px', 'font-size': '14px' }, { id: proxy._id + "ResourceEditForm" });
+                            $resource.append($resourceForm);
+                            $tab.append($resource);
+                            $resourceTable = ej.buildTag('table#' + proxy._id + 'resourceeditTable', "", { "width": "100%", "outline": "none", "border-collapse": "collapse", "position": "relative", "left": "-2px" }, {});
+                            $inTr = ej.buildTag('tr', "", { "border-collapse": "collapse", "height": "40px" }, {});
+                            $inTd = ej.buildTag('td.editLabel', "", { "outline": "none", "border-collapse": "collapse", "padding": "1px" }, {});
+                            $inTd.append("<span id='" + proxy._id + "EditDialog_ResourceAdd' class='e-addpre e-icon e-enable e-edit-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["addPredecessor"] + "</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id='" + proxy._id + "EditDialog_ResourceDelete' class='e-deletepre e-icon e-disable e-edit-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["removePredecessor"] + "</span>");
+                            $inTr.append($inTd);
+                            $resourceTable.append($inTr);
+                            $inTr2 = ej.buildTag('tr', "", { "border-collapse": "collapse" }, {});
+                            $inTd2 = ej.buildTag('td.e-editValue', "", { "border-collapse": "collapse", "padding": "1px" }, {});
+                            $preDiv = ej.buildTag("div#treegrid" + proxy._id + "resourceEdit", "", { "width": "100%", "height": "150px" }, {});
+                            $inTd2.append($preDiv);
+                            $inTr2.append($inTd2);
+                            $resourceTable.append($inTr2);
+                            $resourceForm.append($resourceTable);
+                        }
+                        break;
+                    case "Custom Fields":
+                        // Custom Field Tab
+                        if (proxy._editDialogCustomColumns.length > 0) {
+                            $ul.append("<li><a href='#" + proxy._id + "EditCustomFields'>" + proxy._dialogTabTitleTexts["customFieldsTabText"] + "</a></li>");
+                            var $customField = ej.buildTag('div', "", { "padding": "0px" }, { id: proxy._id + "EditCustomFields" }),
+                                $customFieldForm = ej.buildTag('form', "", { 'height': 'auto', 'width': '592px', 'font-size': '14px' }, { id: proxy._id + "CustomFieldsEditForm" });
+                            $customField.append($customFieldForm);
+                            $tab.append($customField);
+                            $customFieldTable = ej.buildTag('table#' + proxy._id + 'customFieldeditTable', "", { "width": "100%", "outline": "none", "position": "relative", "left": "-2px", "top": "4px", "border-collapse": "collapse" }, {});
+                            $inTr = ej.buildTag('tr', "", { "border-collapse": "collapse" }, "");
+                            $inTd = ej.buildTag('td.e-editValue', "", { "border-collapse": "collapse", "padding": "1px" }, {});
+                            $preDiv = ej.buildTag("div#treegrid" + proxy._id + "customFieldEdit", "", {}, {});
+                            $inTd.append($preDiv);
+                            $inTr.append($inTd);
+                            $customFieldTable.append($inTr);
+                            $customFieldForm.append($customFieldTable);
+                        }
+                        break;
+                    case "Notes":
+                        //Notes Tab
+                        var editDialogFields = model.editDialogFields,
+                            length = editDialogFields.length,
+                            index = $.map(editDialogFields, function (dialogField, index) {
+                                if (dialogField.field == model.notesMapping) {
+                                    return index;
+                                }
+                            });
+                        if ((model.notesMapping && length == 0) || (length > 0 && index.length > 0)) {
+                            $ul.append("<li><a href='#" + proxy._id + "EditNotes'>" + proxy._dialogTabTitleTexts["notesTabText"] + "</a></li>");
+                            var $notes = ej.buildTag('div', "", { "padding": "0px" }, { id: proxy._id + "EditNotes" }),
+                                $notesDiv = ej.buildTag('div', "", { "padding": "0px", "position": "relative", "top": "5px", "left": "-1px" }, {}),
+                                $noteTextArea = ej.buildTag('textarea', "", {}, { id: proxy._id + "EditAreaNotes" });
+                            $notesDiv.append($noteTextArea);
+                            $notes.append($notesDiv);
+                            $tab.append($notes);
+                        }
+                        break;
+                }
             }
-
-            
-            $form.append($table);
-            $form.appendTo($tbody);
-           
-            $tbody = proxy.renderDiaglogButton($form, $tbody);
+            $tbody = proxy.renderDiaglogButton("edit", $tbody);
             $.templates(proxy._id + "_JSONDialogEditingTemplate", $tbody.html());
         },
         //create template for add dialog
@@ -1452,12 +2005,16 @@
 
             var proxy = this,
                 model = proxy.model,
-                columns = proxy._columns,
+                columns = $.extend([], proxy._columns),
                 length = columns.length,
-                emptyDataColumns = [], model = proxy.model, column, predecessorColoumnIndex = -1,
+                emptyDataColumns = [], model = proxy.model, column, predecessorColoumnIndex = -1, resourceColumnIndex = -1,
                 treeGridObj = proxy._$treegridHelper.data("ejTreeGrid"),
-                columnIndex;
-
+                columnIndex,
+                dialogTab = proxy._dialogTab,
+                tabLength = dialogTab.length;
+            proxy._addDialogGeneralColumns = [];
+            proxy._addDialogCustomColumns = [];            
+            proxy._generalTabColumnFields = ["taskId", "taskMode", "taskName", "startDate", "endDate", "duration", "resourceInfo", "status", "work", "taskType", "effortDriven", "baselineStartDate", "baselineEndDate", "predecessor", "WBS", "notes"];
             proxy._mappingItems = proxy._getMappingItems();
 
             if (length == 0)
@@ -1487,96 +2044,182 @@
                         columns = finalColumns;
                 }
             }
-
-            var $tbody = ej.buildTag('div', "", {}, { 'unselectable': 'on' });
-            $form = ej.buildTag('form', "", { 'height': 'auto', 'width': 'auto','font-size': '14px' }, { id: proxy._id + "AddForm" });
-            $table = ej.buildTag('table', "", { width: "500px" }, { 'unselectable': "on" });
-            $tr = ej.buildTag('tr');
-            for (var i = 0; i < columns.length; i++) {
+            var index = $.map(columns, function (column, index) {
+                if (column.mappingName == model.taskNameMapping) {
+                    return index;
+                }
+            });
+            if ((index[0] + 1) % 3 == 0) {
+                columns.splice(index[0] - 1, 0, columns.splice(index[0], 1)[0]);
+            }
+            var $tbody = ej.buildTag('div', "", {}, {}),
+                $tab = ej.buildTag('div', "", {}, { id: proxy._id + "AddTab" }),
+                $ul = ej.buildTag('ul', "", {}, {});
+            $tab.append($ul);
+            $tbody.append($tab);
+            length = columns.length;
+            for (var i = 0; i < length; i++) {
                 if ($.inArray(columns[i].mappingName, proxy._mappingItems) != -1) {
-                    if (columns[i].mappingName !== model.predecessorMapping) {
-                        if ($tr.children("td").length < 2) {
-                            $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '5px 15px 0', 'font-weight': 'normal', "outline": "none" }, { 'unselectable': "on" });
-                            $innerTable = ej.buildTag('table', "", { "outline": "none" }, { 'unselectable': "on" });
-
-                            $inTr = ej.buildTag('tr');
-
-                            $inTd = ej.buildTag('td.editLabel', "", { "outline": "none" }, { 'unselectable': "on" });
-                            $inTd.append("<label for='" + columns[i].field + "' style='font-weight:normal;'>" + proxy._columnHeaderTexts[columns[i].field] + "</label>");
-
-                            $inTr.append($inTd);
-
-                            $innerTable.append($inTr);
-
-                            $inTr2 = ej.buildTag('tr');
-                            $inTd2 = ej.buildTag('td.e-editValue');
-
-                            columnIndex = proxy._columns.indexOf(columns[i])
-                            ej.TreeGrid._initCellEditType(treeGridObj, $inTd2, proxy._id, columnIndex, "Add");
-                            //proxy.initCellEditType(column, $inTd2, "Add");
-
-                            $inTr2.append($inTd2);
-                            $innerTable.append($inTr2);
-
-                            $td.append($innerTable);
-                            $tr.append($td);
-
+                    if (columns[i].field == "work" || columns[i].field == "taskType" || columns[i].field == "effortDriven")
+                        continue;
+                    if (columns[i].mappingName !== model.predecessorMapping && columns[i].mappingName != model.resourceInfoMapping && columns[i].mappingName != model.notesMapping + "Text") {
+                        var index = $.map(proxy._generalTabColumnFields, function (field, index) {
+                            if (field == columns[i].field) {
+                                return index;
+                            }
+                        });
+                        if (index.length > 0) {
+                            proxy._addDialogGeneralColumns.push(columns[i]);
                         }
                         else {
-                            $table.append($tr);
-                            $tr = $tempTr = ej.buildTag('tr');
-                            i--;
+                            proxy._addDialogCustomColumns.push(columns[i]);
                         }
-                    } else {
-                        predecessorColoumnIndex = i;
+                    }
+                    else {
+                        if (columns[i].mappingName === model.predecessorMapping)
+                            predecessorColoumnIndex = i;
+                        else if (columns[i].mappingName === model.resourceInfoMapping)
+                            resourceColumnIndex = i;
                     }
                 }
             }
-            $table.append($tr);
-
-            $tr = ej.buildTag("tr");
-
-            if (model.predecessorMapping && predecessorColoumnIndex != -1) {
-
-                $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '10px 15px 0', 'font-weight': 'normal', "outline": "none" }, { colspan: 2, 'unselectable': "on" });
-
-                $innerTable = ej.buildTag('table#' + proxy._id + 'predecessoraddTable', "", { "width": "100%", "outline": "none" }, { 'unselectable': "on" });
-
-                $inTr3 = ej.buildTag('tr');
-                $inTd3 = ej.buildTag('td.editLabel', "", { "outline": "none" }, { 'unselectable': "on" });
-                $inTd3.append("<label for='predecessor' style='font-weight:normal;'>" + proxy._columnHeaderTexts["predecessor"] + "</label>");
-
-                $inTr3.append($inTd3);
-                $innerTable.append($inTr3);
-                
-                $inTr = ej.buildTag('tr');
-                $inTd = ej.buildTag('td.editLabel', "", { "outline": "none" }, { 'unselectable': "on" });
-
-                $inTd.append("<span class='e-addpre e-icon e-enable e-add-dialog' style='cursor:pointer; width: auto;'>" + proxy._editDialogTexts["addPredecessor"] + "</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class='e-deletepre e-icon e-disable e-add-dialog' style='cursor:pointer; width: auto;'>&nbsp;&nbsp;" + proxy._editDialogTexts["removePredecessor"] + "</span>");
-
-                $inTr.append($inTd);
-                $innerTable.append($inTr);
-
-                $inTr2 = ej.buildTag('tr');
-                $inTd2 = ej.buildTag('td.e-editValue');
-
-                $preDiv = ej.buildTag("div#treegrid" + proxy._id + "predecessorAdd", "", { "width": "100%", "height": "150px" }, {});
-
-                $inTd2.append($preDiv);
-
-                $inTr2.append($inTd2);
-                $innerTable.append($inTr2);
-
-                $td.append($innerTable);
-                $tr.append($td);
-                $table.append($tr);
+            for (var tabIndex = 0; tabIndex < tabLength; tabIndex++) {
+                switch (dialogTab[tabIndex]) {
+                    // General Tab
+                    case "General":
+                        $ul.append("<li><a href='#" + proxy._id + "AddGeneral'>" + proxy._dialogTabTitleTexts["generalTabText"] + "</a></li>");
+                        var $general = ej.buildTag('div', "", { "padding": "4px" }, { id: proxy._id + "AddGeneral" }),
+                            $genearlForm = ej.buildTag('form', "", { 'height': 'auto', 'width': 'auto', 'font-size': '14px' }, { id: proxy._id + "GeneralAddForm" });
+                        $general.append($genearlForm);
+                        $tab.append($general);
+                        $form = ej.buildTag('form', "", { 'height': 'auto', 'width': 'auto', 'font-size': '14px' }, { id: proxy._id + "AddForm" });
+                        $genearlTable = ej.buildTag('table', "", { "border-spacing": "2px", "border-collapse": "separate" }, {});
+                        $tr = ej.buildTag('tr');
+                        var columnCount = 0,
+                            generalColumns = proxy._addDialogGeneralColumns,
+                            length = generalColumns.length;
+                        for (var i = 0; i < length; i++) {
+                            if (columnCount < 3) {
+                                if (generalColumns[i].mappingName !== model.taskNameMapping) {
+                                    columnCount++;
+                                    $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '5px 5px 0', 'font-weight': 'normal', "outline": "none" }, {});
+                                }
+                                else {
+                                    columnCount += 2;
+                                    $td = ej.buildTag('td', "", { "text-align": "left", 'padding': '5px 5px 0', 'font-weight': 'normal', "outline": "none" }, { "colspan": "2" });
+                                }
+                                $innerTable = ej.buildTag('table', "", { "outline": "none", "border-spacing": "2px", "border-collapse": "separate" }, {});
+                                $inTr = ej.buildTag('tr', "", { "line-height": "1.4" }, {});
+                                $inTd = ej.buildTag('td.editLabel', "", { "outline": "none", "padding": "1px" }, {});
+                                $inTd.append("<label for='" + generalColumns[i].field + "' style='font-weight:normal;margin-bottom:0px'>" + proxy._columnHeaderTexts[generalColumns[i].field] + "</label>");
+                                $inTr.append($inTd);
+                                $innerTable.append($inTr);
+                                $inTr2 = ej.buildTag('tr');
+                                $inTd2 = ej.buildTag('td.e-editValue', "", { "padding": "1px" }, {});
+                                columnIndex = proxy._columns.indexOf(generalColumns[i])
+                                ej.TreeGrid._initCellEditType(treeGridObj, $inTd2, proxy._id, columnIndex, "Add");
+                                $inTr2.append($inTd2);
+                                $innerTable.append($inTr2);
+                                $td.append($innerTable);
+                                $tr.append($td);
+                            }
+                            else {
+                                $genearlTable.append($tr);
+                                $tr = $tempTr = ej.buildTag('tr');
+                                i--;
+                                columnCount = 0;
+                            }
+                        }
+                        $genearlTable.append($tr);
+                        $genearlForm.append($genearlTable);
+                        break;
+                    case "Predecessors":
+                        //Predecessor Tab
+                        if (model.predecessorMapping && predecessorColoumnIndex != -1) {
+                            $ul.append("<li><a href='#" + proxy._id + "AddPredecessors'>" + proxy._dialogTabTitleTexts["predecessorsTabText"] + "</a></li>");
+                            var $predecessor = ej.buildTag('div', "", { "padding": "0px", "overflow": "visible" }, { id: proxy._id + "AddPredecessors" }),
+                                $predecessorForm = ej.buildTag('form', "", { 'height': 'auto', 'width': '592px', 'font-size': '14px' }, { id: proxy._id + "PredecessorAddForm" });
+                            $predecessor.append($predecessorForm);
+                            $tab.append($predecessor);
+                            $predecessorTable = ej.buildTag('table#' + proxy._id + 'predecessoraddTable', "", { "width": "100%", "outline": "none", "border-collapse": "collapse", "position": "relative", "left": "-2px" }, {});
+                            $inTr = ej.buildTag('tr', "", { "border-collapse": "collapse", "height": "40px" }, {});
+                            $inTd = ej.buildTag('td.editLabel', "", { "outline": "none", "border-collapse": "collapse", "padding": "1px" }, {});
+                            $inTd.append("<span id='" + proxy._id + "AddDialog_PredecesorAdd' class='e-addpre e-icon e-enable e-add-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["addPredecessor"] + "</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id='" + proxy._id + "AddDialog_PredecesorDelete' class='e-deletepre e-icon e-disable e-add-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["removePredecessor"] + "</span>");
+                            $inTr.append($inTd);
+                            $predecessorTable.append($inTr);
+                            $inTr2 = ej.buildTag('tr', "", { "border-collapse": "collapse" }, {});
+                            $inTd2 = ej.buildTag('td.e-editValue', "", { "border-collapse": "collapse", "padding": "1px" }, {});
+                            $preDiv = ej.buildTag("div#treegrid" + proxy._id + "predecessorAdd", "", { "width": "100%", "height": "150px" }, {});
+                            $inTd2.append($preDiv);
+                            $inTr2.append($inTd2);
+                            $predecessorTable.append($inTr2);
+                            $predecessorForm.append($predecessorTable);
+                        }
+                        break;
+                    case "Resources":
+                        // Resource tab
+                        if (model.resourceInfoMapping && resourceColumnIndex != -1) {
+                            $ul.append("<li><a href='#" + proxy._id + "AddResources'>" + proxy._dialogTabTitleTexts["resourcesTabText"] + "</a></li>");
+                            var $resource = ej.buildTag('div', "", { "padding": "0px" }, { id: proxy._id + "AddResources" }),
+                                $resourceForm = ej.buildTag('form', "", { 'height': 'auto', 'width': '592px', 'font-size': '14px' }, { id: proxy._id + "ResourceAddForm" });
+                            $resource.append($resourceForm);
+                            $tab.append($resource);
+                            $resourceTable = ej.buildTag('table#' + proxy._id + 'resourceaddTable', "", { "width": "100%", "outline": "none", "border-collapse": "collapse", "position": "relative", "left": "-2px" }, {});
+                            $inTr = ej.buildTag('tr', "", { "border-collapse": "collapse", "height": "40px" }, {});
+                            $inTd = ej.buildTag('td.editLabel', "", { "outline": "none", "border-collapse": "collapse", "padding": "1px" }, {});
+                            $inTd.append("<span id='" + proxy._id + "AddDialog_ResourceAdd' class='e-addpre e-icon e-enable e-add-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["addPredecessor"] + "</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id='" + proxy._id + "AddDialog_ResourceDelete' class='e-deletepre e-icon e-disable e-add-dialog' style='cursor:pointer; width: auto;position:relative;left:10px;'>&nbsp;&nbsp;" + proxy._editDialogTexts["removePredecessor"] + "</span>");
+                            $inTr.append($inTd);
+                            $resourceTable.append($inTr);
+                            $inTr2 = ej.buildTag('tr', "", { "border-collapse": "collapse" }, {});
+                            $inTd2 = ej.buildTag('td.e-editValue', "", { "border-collapse": "collapse", "padding": "1px" }, {});
+                            $preDiv = ej.buildTag("div#treegrid" + proxy._id + "resourceAdd", "", { "width": "100%", "height": "150px" }, {});
+                            $inTd2.append($preDiv);
+                            $inTr2.append($inTd2);
+                            $resourceTable.append($inTr2);
+                            $resourceForm.append($resourceTable);
+                        }
+                        break;
+                    case "Custom Fields":
+                        // Custom Field Tab
+                        if (proxy._addDialogCustomColumns.length > 0) {
+                            $ul.append("<li><a href='#" + proxy._id + "AddCustomFields'>" + proxy._dialogTabTitleTexts["customFieldsTabText"] + "</a></li>");
+                            var $customField = ej.buildTag('div', "", { "padding": "0px" }, { id: proxy._id + "AddCustomFields" }),
+                                $customFieldForm = ej.buildTag('form', "", { 'height': 'auto', 'width': '592px', 'font-size': '14px' }, { id: proxy._id + "CustomfFieldsAddForm" });
+                            $customField.append($customFieldForm);
+                            $tab.append($customField);
+                            $customFieldTable = ej.buildTag('table#' + proxy._id + 'customfieldaddTable', "", { "width": "100%", "outline": "none", "border-collapse": "collapse", "position": "relative", "left": "-2px", "top": "4px" }, {});
+                            $inTr = ej.buildTag('tr', "", { "border-collapse": "collapse" }, {});
+                            $inTd = ej.buildTag('td.e-editValue', "", { "border-collapse": "collapse", "padding": "1px" }, {});
+                            $preDiv = ej.buildTag("div#treegrid" + proxy._id + "customFieldAdd", "", {}, {});
+                            $inTd.append($preDiv);
+                            $inTr.append($inTd);
+                            $customFieldTable.append($inTr);
+                            $customFieldForm.append($customFieldTable);
+                        }
+                        break;
+                    case "Notes":
+                        //Notes Tab
+                        var addDialogFields = model.addDialogFields,
+                            length = addDialogFields.length,
+                            index = $.map(addDialogFields, function (dialogField, index) {
+                                if (dialogField.field == model.notesMapping) {
+                                    return index;
+                                }
+                            });
+                        if (model.notesMapping && (length == 0) || (length > 0 && index.length > 0)) {
+                            $ul.append("<li><a href='#" + proxy._id + "AddNotes'>" + proxy._dialogTabTitleTexts["notesTabText"] + "</a></li>");
+                            var $notes = ej.buildTag('div', "", { "padding": "0px" }, { id: proxy._id + "AddNotes" }),
+                                $notesDiv = ej.buildTag('div', "", { "padding": "0px", "position": "relative", "top": "5px", "left": "-1px" }, {}),
+                                $noteTextArea = ej.buildTag('textarea', "", {}, { id: proxy._id + "AddAreaNotes" });
+                            $notesDiv.append($noteTextArea);
+                            $notes.append($notesDiv);
+                            $tab.append($notes);
+                        }
+                        break;
+                }
             }
 
-
-            $form.append($table);
-            $form.appendTo($tbody);
-
-            $tbody = proxy.renderDiaglogButton($form, $tbody);
+            $tbody = proxy.renderDiaglogButton("add", $tbody);
             $.templates(proxy._id + "_JSONDialogAddingTemplate", $tbody.html());
         },
         //remove contextmenu from DOM
@@ -1687,7 +2330,7 @@
                 includeWeekend = proxy.model.includeWeekend;
 
 
-            if (holidays && holidays.length) {
+            if (isAutoSchedule && holidays && holidays.length) {
                 var holidayIndex = 0,
                     holidayslength = holidays.length,
                     holiday, flag;
@@ -1717,7 +2360,7 @@
                 includeWeekend = proxy.model.includeWeekend;
                 
 
-            if (holidays && holidays.length) {
+            if (isAutoSchedule && holidays && holidays.length && !proxy.hasChildRecords) {
                 var holidayIndex = 0,
                     holidayslength = holidays.length,
                     holiday, flag;
@@ -1746,8 +2389,43 @@
                 return startDate;
             }
         },
+        /*get duration and duration unit value from given string*/
+        _getDurationValues: function (val, isFromDialog) {
+            var duration = 0,
+                model = this.model,
+                durationUnit = model.durationUnit, unitIndex;
+
+            if (typeof val == "string") {
+                var values = val.match(/(\d*\.*\d+|[A-z]+)/g);
+                if (values && values.length <= 2) {
+                    duration = parseFloat(values[0]);
+                    durationUnit = values[1] ? values[1].toLowerCase() : "";
+                    if (this._durationUnitEditText.minute.indexOf(durationUnit) != -1)
+                        durationUnit = ej.Gantt.DurationUnit.Minute;
+                    else if (this._durationUnitEditText.hour.indexOf(durationUnit) != -1)
+                        durationUnit = ej.Gantt.DurationUnit.Hour;
+                    else if (this._durationUnitEditText.day.indexOf(durationUnit) != -1)
+                        durationUnit = ej.Gantt.DurationUnit.Day;
+                    else
+                        durationUnit = model.durationUnit;
+                } 
+            } else {
+                duration = val;
+                durationUnit = model.durationUnit;
+            }
+
+            if (isNaN(duration)) {
+                duration = isFromDialog ? this._editedDialogRecord.duration : 0;
+                durationUnit = isFromDialog ? this._editedDialogRecord.durationUnit : model.durationUnit;
+            }
+            var output = {};
+            output.duration = duration;
+            output.durationUnit = durationUnit;
+            return output;
+        },
+
         //calculate end date and duration on date change in edit dialog
-        _editStartDateChange:function(element,args)
+        _editStartDateChange: function (element, args)
         {
             var proxy = this,
                 id = proxy._id,
@@ -1757,266 +2435,150 @@
                 dialog = element.attr("dialog"),
                 selectedItem = model.selectionMode == "row" ? this.selectedItem() : model.updatedRecords[proxy._rowIndexOfLastSelectedCell],
                 editedObj = this._editedDialogRecord,
-                startDateId, endDateId, durationId, baselineStartDateId, baselineEndDateId;
-               
+                effortDriven = editedObj.effortDriven == "true" ? true : false,
+                startDateId, endDateId, durationId, baselineStartDateId, baselineEndDateId, durationVal, durationUnit;
 
-                if (dialog === "Add")
-                {
-                    startDateId = "#" + id + "startDateAdd";
-                    endDateId = "#" + id + "endDateAdd";
-                    durationId = "#" + id + "durationAdd";
-                    baselineStartDateId = "#" + id + "baselineStartDateAdd";
-                    baselineEndDateId = "#" + id + "baselineEndDateAdd";
-                }
-                else
-                {
-                    startDateId = "#" + id + "startDate";
-                    endDateId = "#" + id + "endDate";
-                    durationId = "#" + id + "duration";
-                }
+            if (this._editedDialogRecord.isUpdatedFromDialog)
+                return;
+            this._editedDialogRecord.isUpdatedFromDialog = true;
 
-                var startDate = $(startDateId).val();
-                endDate = $(endDateId).val();
-                duration = parseInt($(durationId).val());
+            if (dialog === "Add") {
+                startDateId = "#" + id + "startDateAdd";
+                endDateId = "#" + id + "endDateAdd";
+                durationId = "#" + id + "durationAdd";
+                effortDrivenId = "#" + id + "effortDrivenAdd";
+                typeId = "#" + id + "taskTypeAdd";
+                workId = "#" + id + "workAdd";
+                baselineStartDateId = "#" + id + "baselineStartDateAdd";
+                baselineEndDateId = "#" + id + "baselineEndDateAdd";
+            }
+            else {
+                startDateId = "#" + id + "startDateEdit";
+                endDateId = "#" + id + "endDateEdit";
+                durationId = "#" + id + "durationEdit";
+                effortDrivenId = "#" + id + "effortDrivenEdit";
+                typeId = "#" + id + "taskTypeEdit";
+                workId = "#" + id + "workEdit";
+            }
+            var startDate = $(startDateId).val(),
+                endDate = $(endDateId).val(),
+                duration = $(durationId).val(),
+                work = $(workId).val();
+            if ((targetId === id + "startDateEdit") || (targetId === id + "startDateAdd"))
+            if (!startDate) {
+                startDate = editedObj ? editedObj.startDate : undefined;
+            }
+            if (!duration) {
+                duration = editedObj ? editedObj.duration : undefined;
+            }
+            if (!endDate) {
+                endDate = editedObj ? editedObj.endDate : undefined;
+            }
+            if ((targetId === id + "startDateEdit") || (targetId === id + "startDateAdd")){
+                startDate = args.value ? proxy._getDateFromFormat(args.value) : startDate;
+                startDate = proxy._checkStartDate(startDate, editedObj);
+                if (proxy.getFormatedDate(startDate) != args.value) {
 
-                if (!startDate)
-                {
-                    startDate = editedObj?editedObj.startDate:undefined;
-                }
-                if (isNaN(duration)) {
-                    duration = editedObj ? editedObj.duration : undefined;
-                }
-                if (!endDate) {
-                    endDate = editedObj ? editedObj.endDate : undefined;
-                }
-
-                if ((targetId === id + "startDate") || (targetId === id + "startDateAdd"))
-                { 
-                    startDate = proxy._getDateFromFormat(args.value);
-                    var tempEndDate = new Date();
-                    stratDate=proxy._onHoliDayCheck(startDate);
-                    //check start date is in week end days
-                    if (this.model.includeWeekend === false) {
-                        if (startDate.getDay() === 0) {
-                            startDate.setDate(startDate.getDate() + 1);
-                        }
-                        else if (startDate.getDay() === 6) {
-                            startDate.setDate(startDate.getDate() + 2);
-                        }
-                    }
-                    tempEndDate = startDate;
-                    startDate = new Date(startDate);
-                    //$("#" + id + "startDate").val(startDate);
-                    if (editedObj)
-                        editedObj.startDate = new Date(startDate);
-
-                if (model.dateFormat.toLowerCase().indexOf("hh")!=-1)
-                    $(startDateId).ejDateTimePicker("option", "value", startDate);
-                else
-                    $(startDateId).ejDatePicker("option", "value", startDate);
-
-                if (!endDate || isNaN(duration))
-                    return;
-
-                if (model.durationMapping) {
-
-                    //check week end is inside the period
-
-                    if (this.model.includeWeekend === false) {
-                        for (count = 1; count < duration; count++) {
-                            if (tempEndDate.getDay() == 0)
-                                tempEndDate.setDate(tempEndDate.getDate() + 1);
-                            else if (tempEndDate.getDay() == 6)
-                                tempEndDate.setDate(tempEndDate.getDate() + 2);
-                            tempEndDate.setDate(tempEndDate.getDate() + 1);
-                        }
-                    } else if (duration > 0) {
-                        tempEndDate.setDate(tempEndDate.getDate() + duration - 1);
-                    }
-
-                    if (this.model.includeWeekend === false) {
-                        if (tempEndDate.getDay() == 0)
-                            tempEndDate.setDate(tempEndDate.getDate() + 1);
-                        else if (tempEndDate.getDay() == 6)
-                            tempEndDate.setDate(tempEndDate.getDate() + 2);
-                    }
-
-                    //holiday collection checking in end date
-                    if (holidays && holidays.length) {
-                        var holidayIndex = 0,
-                            holidayslength = holidays.length,
-                            holiday;
-                        for (holidayIndex = 0; holidayIndex < holidayslength; holidayIndex++) {
-                            holiday = proxy._getDateFromFormat(holidays[holidayIndex].day);
-                            if (holiday >= proxy._getDateFromFormat(new Date(startDate), this.model.dateFormat) && holiday <= tempEndDate) {
-                                tempEndDate.setDate(tempEndDate.getDate() + 1);
-                                if (this.model.includeWeekend === false) {
-                                    if (tempEndDate.getDay() == 0) {
-                                        tempEndDate.setDate(tempEndDate.getDate() + 1);
-                                    } else if (tempEndDate.getDay() == 6) {
-                                        tempEndDate.setDate(tempEndDate.getDate() + 2);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (this.model.includeWeekend === false) {
-                        if (tempEndDate.getDay() == 0)
-                            tempEndDate.setDate(tempEndDate.getDate() + 1);
-                        else if (tempEndDate.getDay() == 6)
-                            tempEndDate.setDate(tempEndDate.getDate() + 2);
-                    }
-
-                    tempEndDate = new Date(tempEndDate);
-
-                    //temp =this._calculateFormatedDate(temp, this.model.dateFormat);
-                    if (editedObj)
-                        editedObj.endDate = new Date(tempEndDate);
 
                     if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                        $(endDateId).ejDateTimePicker("option", "value", tempEndDate);
+                        $(startDateId).ejDateTimePicker("option", "value", startDate);
                     else
-                        $(endDateId).ejDatePicker("option", "value", tempEndDate);
-
-                    //$("#" + id + "endDate").val(tempEndDate);
-                    //$("#" + id + "endDate").attr("value", tempEndDate);
+                        $(startDateId).ejDatePicker("option", "value", startDate);
                 }
-                else {
-                    var dateDiff = proxy._daydiff(new Date(selectedItem.startDate), new Date(editedObj.startDate));
-                    editedObj.duration -= dateDiff;
-                }
-            }
-
-            else if((targetId=== id + "endDate") ||(targetId===id + "endDateAdd"))
-            {
-                endDate = proxy._getDateFromFormat(args.value);
-
-                endDate = proxy._onHoliDayCheck(endDate);
-                if (this.model.includeWeekend === false) {
-                    if (endDate.getDay() === 0) {
-                        endDate.setDate(endDate.getDate() - 2);
-                    }
-                    else if (endDate.getDay() === 6) {
-                        endDate.setDate(endDate.getDate() - 1);
-                    }
-                }
-                endDate = new Date(endDate);
-
-                if (editedObj)
-                    editedObj.endDate = new Date(endDate);
-
-                if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                    $(endDateId).ejDateTimePicker("option", "value", endDate);
-                else
-                    $(endDateId).ejDatePicker("option", "value", endDate);
-             
-                if (!startDate || isNaN(duration))
-                    return;
-
-                startDate = proxy._getDateFromFormat(startDate);
-                endDate = proxy._getDateFromFormat(endDate);
-
-                if (startDate.getTime() <= endDate.getTime())
-                {
-                        
-                    var tempDuration = 0;
-                    dateDiff = proxy._daydiff(proxy._getDateFromFormat(startDate), proxy._getDateFromFormat(endDate));
-
-                    if (this.model.includeWeekend === false) {
-                        offset = proxy._calculateDateDifference(new Date(startDate), dateDiff);
-                        offset += 1;
-                    }
-                    else
-                        offset = dateDiff + 1;
-
-                    for (var count = 0; count < holidays.length; count++) {
-                        if (proxy._getDateFromFormat(holidays[count].day) >= new Date(startDate) && proxy._getDateFromFormat(holidays[count].day) <= new Date(endDate)) {
-                            offset--;
-                        }
-                    }
-                    tempDuration = offset;
-                    if (editedObj)
-                        editedObj.duration = tempDuration;
-
-                    $(durationId).ejNumericTextbox("option", "value", tempDuration);
-                }
-                else {
-                    if (editedObj)
-                        editedObj.endDate = this._getDateFromFormat(args.prevDate);
-
-                    if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                        $(endDateId).ejDateTimePicker("option", "value", args.prevDate);
-                    else
-                        $(endDateId).ejDatePicker("option", "value", args.prevDate);
-
-                }
-            }
-            else if ((targetId === id + "duration") || (targetId === id + "durationAdd"))
-            {
-                startDate = proxy._getDateFromFormat(startDate);
-                var tempEndDate = new Date(startDate);
-
-                if (!endDate || !startDate)
-                    return;
-
-                duration = args.value;
-
-                //check week end is inside the period
-                if (this.model.includeWeekend === false) {
-                    for (count = 1; count < duration; count++) {
-                        if (tempEndDate.getDay() == 0)
-                            tempEndDate.setDate(tempEndDate.getDate() + 1);
-                        else if (tempEndDate.getDay() == 6)
-                            tempEndDate.setDate(tempEndDate.getDate() + 2);
-                        tempEndDate.setDate(tempEndDate.getDate() + 1);
-                    }
-                } else if (duration > 0) {
-                    tempEndDate.setDate(tempEndDate.getDate() + duration - 1);
-                }
-
-                if (this.model.includeWeekend === false) {
-                    if (tempEndDate.getDay() == 0)
-                        tempEndDate.setDate(tempEndDate.getDate() + 1);
-                    else if (tempEndDate.getDay() == 6)
-                        tempEndDate.setDate(tempEndDate.getDate() + 2);
-                }
-                //holiday collection checking in end date
-                if (holidays && holidays.length) {
-                    var holidayIndex = 0,
-                        holidayslength = holidays.length,
-                        holiday;
-                    for (holidayIndex = 0; holidayIndex < holidayslength; holidayIndex++) {
-                        holiday = proxy._getDateFromFormat(holidays[holidayIndex].day);
-                        if (holiday >= proxy._getDateFromFormat(startDate, this.model.dateFormat) && holiday <= tempEndDate) {
-                            tempEndDate.setDate(tempEndDate.getDate() + 1);
-                            if (this.model.includeWeekend === false) {
-                                if (tempEndDate.getDay() == 0) {
-                                    tempEndDate.setDate(tempEndDate.getDate() + 1);
-                                } else if (tempEndDate.getDay() == 6) {
-                                    tempEndDate.setDate(tempEndDate.getDate() + 2);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (this.model.includeWeekend === false) {
-                    if (tempEndDate.getDay() == 0)
-                        tempEndDate.setDate(tempEndDate.getDate() + 1);
-                    else if (tempEndDate.getDay() == 6)
-                        tempEndDate.setDate(tempEndDate.getDate() + 2);
-                }
-                tempEndDate = new Date(tempEndDate);
-
-                if (editedObj) {
-                    editedObj.endDate = new Date(tempEndDate);
-                    editedObj.duration = duration;
-                }
-                if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
+                var tempEndDate = proxy._getEndDate(startDate, editedObj.duration, editedObj.durationUnit, editedObj);
+                editedObj.startDate = startDate;
+                editedObj.endDate = tempEndDate;
+                if (model.dateFormat.indexOf("hh") != -1)
                     $(endDateId).ejDateTimePicker("option", "value", tempEndDate);
                 else
                     $(endDateId).ejDatePicker("option", "value", tempEndDate);
+            }
+
+            else if((targetId=== id + "endDateEdit") ||(targetId===id + "endDateAdd")){
+                endDate = args.value ? proxy._getDateFromFormat(args.value) : endDate;
+                if (endDate.getHours() == 0 && this._defaultEndTime != 86400)
+                    this._setTime(this._defaultEndTime, endDate);
+                endDate = this._checkEndDate(endDate, editedObj);
+                if (proxy.getFormatedDate(endDate) != args.value) {
+                    if (model.dateFormat.indexOf("hh") != -1)
+                        $(endDateId).ejDateTimePicker("option", "value", endDate);
+                    else
+                        $(endDateId).ejDatePicker("option", "value", endDate);
+                }
+
+                if (editedObj.isMilestone) {
+                    editedObj.startDate = this._checkStartDate(editedObj.startDate, editedObj);
+
+                    if (proxy.getFormatedDate(editedObj.startDate) != startDate) {
+                        if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
+                            $(startDateId).ejDateTimePicker("option", "value", editedObj.startDate);
+                        else
+                            $(startDateId).ejDatePicker("option", "value", editedObj.startDate);
+                    }
+                proxy._updateResourceRelatedFields(editedObj);
+                $(workId).ejNumericTextbox("option", "value", editedObj.work);
+                $(durationId).val(proxy._getDurationStringValue(editedObj));
+                }
+                if (editedObj.startDate.getTime() <= endDate.getTime()) {
+                    editedObj.endDate = endDate;
+                    editedObj.duration = this._getDuration(editedObj.startDate, endDate, editedObj.durationUnit, editedObj.isAutoSchedule);
+                    duration = proxy._getDurationStringValue(editedObj);
+                    $(durationId).val(duration);
+                } else {
+
+                    if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
+                        $(endDateId).ejDateTimePicker("option", "value", editedObj.endDate);
+                    else
+                        $(endDateId).ejDatePicker("option", "value", editedObj.endDate);
+
+                }
+            }
+              
+            else if ((targetId === id + "durationEdit") || (targetId === id + "durationAdd")) {
+                var values = proxy._getDurationValues(duration, true);
+                durationVal = values.duration;
+                durationUnit = values.durationUnit;
+                if (editedObj.duration != durationVal || editedObj.durationUnit != durationUnit) {
+                    //calculate end date and update it
+                    editedObj.duration = durationVal;
+                    editedObj.durationUnit = durationUnit;
+                    if (editedObj.isMilestone) {
+                        editedObj.startDate = this._checkStartDate(editedObj.startDate, editedObj);
+                        if (proxy.getFormatedDate(editedObj.startDate) != startDate) {
+                            if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
+                                $(startDateId).ejDateTimePicker("option", "value", editedObj.startDate);
+                            else
+                                $(startDateId).ejDatePicker("option", "value", editedObj.startDate);
+                        }
+                    }
+                    endDate = this._getEndDate(editedObj.startDate, durationVal, durationUnit, editedObj);
+                    editedObj.endDate = endDate;
+                    if (model.dateFormat.indexOf("hh") != -1)
+                        $(endDateId).ejDateTimePicker("option", "value", endDate);
+                    else
+                        $(endDateId).ejDatePicker("option", "value", endDate);
+                }
+                proxy._updateResourceRelatedFields(editedObj);
+                if (!effortDriven)
+                    $(workId).ejNumericTextbox("option", "value", editedObj.work);
+                $(durationId).val(proxy._getDurationStringValue(editedObj));
+                if (editedObj.taskType == "fixedWork")
+                    proxy._updateResourceDataSource(editedObj);                                   
+            }
+            else if ((targetId === id + "workEdit") || (targetId === id + "workAdd")) {
+                editedObj.work = parseInt(work);
+                proxy._updateResourceRelatedFields(editedObj);
+                if (editedObj.taskType != "fixedDuration" && editedObj.isAutoSchedule) {                    
+                    $(durationId).val(proxy._getDurationStringValue(editedObj));
+                    endDate = this._getEndDate(editedObj.startDate, editedObj.duration, editedObj.durationUnit, editedObj);
+                    editedObj.endDate = endDate;
+                    if (model.dateFormat.indexOf("hh") != -1)
+                        $(endDateId).ejDateTimePicker("option", "value", endDate);
+                    else
+                        $(endDateId).ejDatePicker("option", "value", endDate);
+                }
+                else
+                    proxy._updateResourceDataSource(editedObj);
             }
             else if (targetId === id + "baselineStartDateAdd") {
                 if ($(baselineEndDateId).length > 0) {
@@ -2042,6 +2604,7 @@
                     }
                 }
             }
+            this._editedDialogRecord.isUpdatedFromDialog = false;
         },
 
         //Create task name collection from records for edit dialog
@@ -2108,14 +2671,14 @@
         },
 
         //handle end edit event in dialog box predecessor editing
-        _preEndEdit:function(editDialogId,args)
+        _preEndEdit:function(editDialogId,dialogType,args)
         {
             var proxy = this,
                 dataSource = args.model.dataSource,
                 selectedItem = args.model.selectedItem,
                 tempId;
             proxy._taskNameCollection();
-            if (args.value !== null) {
+            if (args.value !== null && (args.columnName === "name" || args.columnName === "id")) {
                 if (args.columnName === "name" && args.value.length > 0) {
                     tempId = args.value.split('-');
                     var id = $.map(proxy._preTableCollection[1], function (obj, index) {
@@ -2158,17 +2721,31 @@
                 }
                 $(editDialogId).ejTreeGrid("refreshRow", args.model.selectedRowIndex);
                 $(editDialogId).ejTreeGrid("selectRows", args.model.selectedRowIndex);
-                proxy.enbleDisableAddPreButton('enable');
+                proxy._enbleDisablePredecessorAddButton('enable', dialogType);
             }
         },
-        //udapte the status of predecessor buttons in dialog
-        _deleteDisableEnable:function(args)
+        //udapte the status of predecessor delete button in dialog
+        _enableDisablePredecessorDelete: function (dialogType, args)
         {
-            var proxy = this;
-            $(".e-deletepre").unbind("click", $.proxy(proxy._deletepredecessor, proxy));
-            $(".e-deletepre").bind("click", $.proxy(proxy._deletepredecessor, proxy));
-            $(".e-deletepre").removeClass("e-disable");
-            $(".e-deletepre").addClass("e-enable");
+            var proxy = this,
+                predecessorDelete;
+            if (dialogType == "add")
+                predecessorDelete = $("#" + proxy._id + "AddDialog_PredecesorDelete");
+            else
+                predecessorDelete = $("#" + proxy._id + "EditDialog_PredecesorDelete");
+            $(predecessorDelete).unbind("click", $.proxy(proxy._deletepredecessor, proxy)).bind("click", $.proxy(proxy._deletepredecessor, proxy));
+            $(predecessorDelete).removeClass("e-disable").addClass("e-enable");
+        },
+
+        //udapte the status of resource delete button in dialog
+        _enableDisableResouceDelete: function (dialogType,args) {
+            var proxy = this, resourceDelete;
+            if (dialogType == "add")
+                resourceDelete = $("#" + proxy._id + "AddDialog_ResourceDelete");
+            else
+                resourceDelete = $("#" + proxy._id + "EditDialog_ResourceDelete");
+            $(resourceDelete).unbind("click", $.proxy(proxy._deleteResource, proxy)).bind("click", $.proxy(proxy._deleteResource, proxy));
+            $(resourceDelete).removeClass("e-disable").addClass("e-enable");
         },
 
         //prepare data source for dropdown in predecessor edit in dialog box
@@ -2181,11 +2758,8 @@
                types,
                data = [],
                selectedItem;
-            gridId = "#" + proxy._id + "predecessor";
-            types = [{ id: "SS", text: "Start-Start", value: "Start-Start" },
-                     { id: "SF", text: "Start-Finish", value: "Start-Finish" },
-                     { id: "FS", text: "Finish-Start", value: "Finish-Start" },
-                     { id: "FF", text: "Finish-Finish", value: "Finish-Finish" }];
+            gridId = "#" + proxy._id + "predecessor";            
+            types = proxy._predecessorCollectionText;
             data = [];
             selectedItem = model.selectedItem;
             proxy._taskNameCollection();
@@ -2212,7 +2786,16 @@
                                 type = types[k].text;
                             }
                         }
-                        lags = predecessor[i].offset;
+
+                        var multiple = predecessor[i].offset != 1, val = "";
+                        if (predecessor[i].offsetDurationUnit == "day")
+                            val += multiple ? this._durationUnitTexts.days : this._durationUnitTexts.day;
+                        else if (predecessor[i].offsetDurationUnit == "hour")
+                            val += multiple ? this._durationUnitTexts.hours : this._durationUnitTexts.hour;
+                        else
+                            val += multiple ? this._durationUnitTexts.minutes : this._durationUnitTexts.minute;
+
+                        lags = (predecessor[i].offset + " " + val);
                         var obj = { id: id, name: taskName, type: type, offset: lags };
                         data.push(obj);
                     }
@@ -2251,362 +2834,896 @@
                 formatVal, editTreeGridId,
                 selectedItem = model.selectionMode == "row" ? model.selectedItem : model.updatedRecords[proxy._rowIndexOfLastSelectedCell];
 
-                if (args.requestType == "add") {
-                    form = document.getElementById(proxy._id + "AddForm");
-                    editTreeGridId = "#treegrid" + proxy._id + "predecessorAdd";
-                    if (!ej.isNullOrUndefined(model.dataSource) && model.dataSource.length == 0 && model.predecessorMapping && $(editTreeGridId).length > 0)
-                        $(form).find("#" + proxy._id + "predecessoraddTable").parent()[0].hidden = true;
-                    newIdInstant = proxy.model.flatRecords.length;
-                    newIdInstant = proxy._getNewTaskId(newIdInstant);
-                    if (proxy.model.enableWBS) {
-                        var rowPos = model.editSettings.rowPosition.toLowerCase(),
-                            newWBSval = proxy._getNewWBSid(rowPos);
-                }
+            if (args.requestType == "add") {
+                var tab = document.getElementById(proxy._id + "AddTab"),
+                    dialog = $("#" + proxy._id + "_dialogAdd_wrapper"),
+                form = document.getElementById(proxy._id + "GeneralAddForm"),
+                editTreeGridId = "#treegrid" + proxy._id + "predecessorAdd",
+                noteRteId = "#" + proxy._id + "AddAreaNotes",
+                resourceTreeGridId = "#treegrid" + proxy._id + "resourceAdd",
+                customFieldTreeGridId = "#treegrid" + proxy._id + "customFieldAdd";
+                if (!ej.isNullOrUndefined(model.dataSource) && model.dataSource.length == 0 && model.predecessorMapping && $(editTreeGridId).length > 0) {
+                    var index = [];
+                    index[0] = proxy._dialogTab.indexOf("Predecessors");
+                    $("#" + proxy._id + "AddTab").ejTab("option", "disabledItemIndex", index);
                 }
                 else {
-                    form = document.getElementById(proxy._id + "EditForm");
-                    editTreeGridId = "#treegrid" + proxy._id + "predecessoredit";
-                    if (model.flatRecords.length <= 2 && model.parentRecords.length == 1
-                        && model.predecessorMapping && $(editTreeGridId).length > 0)
-                        $(form).find("#" + proxy._id + "predecessoreditTable").parent()[0].hidden = true;
-
+                    var index = [];
+                    index[0] = proxy._dialogTab.indexOf("Predecessors");
+                    $("#" + proxy._id + "AddTab").ejTab("option", "enabledItemIndex", index);
+                    $("#" + proxy._id + "AddTab").find("div.e-content").css("overflow", "visible");
                 }
+                newIdInstant = proxy.model.flatRecords.length;
+                newIdInstant = proxy._getNewTaskId(newIdInstant);
+                if (proxy.model.enableWBS) {
+                    var rowPos = model.editSettings.rowPosition.toLowerCase(),
+                        newWBSval = proxy._getNewWBSid(rowPos);
+                }
+            }
+            else {
+                var tab = document.getElementById(proxy._id + "EditTab"),
+                    dialog = $("#" + proxy._id + "_dialogEdit_wrapper"),
+                    form = document.getElementById(proxy._id + "GeneralEditForm"),
+                    editTreeGridId = "#treegrid" + proxy._id + "predecessorEdit",
+                    noteRteId = "#" + proxy._id + "EditAreaNotes",
+                    resourceTreeGridId = "#treegrid" + proxy._id + "resourceEdit",
+                    customFieldTreeGridId = "#treegrid" + proxy._id + "customFieldEdit";
+                if (model.flatRecords.length <= 2 && model.parentRecords.length == 1
+                    && model.predecessorMapping && $(editTreeGridId).length > 0)
+                    $("#" + proxy._id + "EditTab").ejTab("removeItem", 1);
 
-                $formElement = $(form).find("input,select");
-                length = $formElement.length;
-                for (i; i < length; i++)
-                {
-                    $element = $formElement.eq(i);
-                    params = {};
-                    inputWidth = 210;
-                    column = ej.TreeGrid.getColumnByField(proxy._columns, $element.prop("name"));
-                    if ($element.hasClass("e-numerictextbox")) {
-               
-                        width = inputWidth;
-                        value = $element.val();
-                        params.width = width;                    
-                        params.showSpinButton = true;
-                        params.cssClass = model.cssClass;
-                        //for parent editing 
-                        var tempId = $element[0].id;
-                        tempId=tempId.replace(proxy._id, '');
-                        if (!ej.isNullOrUndefined(selectedItem) && selectedItem.hasChildRecords && (tempId == "duration" || tempId == "status"))
-                        {
-                            params.readOnly = true;
-                            $element.closest("td").css("opacity", 0.5);
-                        }
-                        if (tempId == "status" || tempId == "statusAdd") {
+            }
+            $formElement = $(form).find("input,select");
+            length = $formElement.length;
+            for (i; i < length; i++) {
+                $element = $formElement.eq(i);
+                params = {};
+                inputWidth = 180;
+                column = ej.TreeGrid.getColumnByField(proxy._columns, $element.prop("name"));
+
+                if (column)
+                    value = args.data[column.field];
+                else
+                    continue;
+
+                if ($element.hasClass("e-numerictextbox")) {
+
+                    width = inputWidth;
+                    params.width = width;
+                    params.showSpinButton = true;
+                    params.cssClass = model.cssClass;
+                    //for parent editing 
+                    var tempId = $element[0].id;
+                    tempId = tempId.replace(proxy._id, '');
+                    if (!ej.isNullOrUndefined(selectedItem) && selectedItem.hasChildRecords && (tempId == "statusEdit" ||tempId == "workEdit")) {
+                        params.readOnly = true;
+                        $element.closest("td").css("opacity", 0.5);
+                    }
+                    if (tempId == "statusEdit" || tempId == "statusAdd") {
                             params.maxValue = 100;
                             params.minValue = 0;
                         }
-                        else if (tempId == "duration" || tempId == "durationAdd") {
-                            params.maxValue = 100000;
-                            params.change = $.proxy(proxy._editStartDateChange, proxy, $element);
-                            params.minValue = 0;
+                        if (tempId == "workEdit" || tempId == "workAdd") {
+                            params.change = function (args) {
+                                proxy._updatedColumn = "work";
+                                proxy._editStartDateChange($(this.element[0]));
+                            }
                         }
-                    
-                        if (value.length)
+                    if (value.toString().length)
                             params.value = parseFloat(value);
                         else
-                            params.value = 0;
+                        params.value = 0;
 
-                        if (!ej.isNullOrUndefined(column["editParams"]))
-                            $.extend(params, column["editParams"]);
-                        $element.ejNumericTextbox(params);
-                        $element.prop("name", $element.prop("name").replace(proxy._id, ""));
+                    if (!ej.isNullOrUndefined(column["editParams"]))
+                        $.extend(params, column["editParams"]);
+                    $element.ejNumericTextbox(params);
+                    $element.prop("name", $element.prop("name").replace(proxy._id, ""));
+                }
+                else if ($element.hasClass("e-datepicker")) {
+
+                    params.width = inputWidth;
+                    params.cssClass = model.cssClass;
+                    params.dateFormat = model.dateFormat;
+                    params.locale = model.locale;
+                    params.change = function (args) {
+                        this.option("value", args.value);
+                        proxy._updatedColumn = this.element[0].name;
+                        proxy._editStartDateChange(this.element, args);
+                    };
+                    var tempId = $element[0].id;
+                    tempId = tempId.replace(proxy._id, '');
+                    if (!ej.isNullOrUndefined(selectedItem) && selectedItem.hasChildRecords && selectedItem.isAutoSchedule && (tempId == "startDateEdit" || tempId == "endDateEdit") && args.requestType !== "add") {
+                        params.readOnly = true;
+                        $element.closest("td").css("opacity", 0.5);
                     }
-                    else if ($element.hasClass("e-datepicker")) {
+                    if (value.toString().length)
+                        params.value = proxy._getDateFromFormat(value.toString());
+                    else
+                        params.value = proxy._getDateFromFormat(model.scheduleStartDate);
 
-                        params.width = inputWidth;
-                        params.cssClass = model.cssClass;
-                        params.dateFormat = model.dateFormat;
-                        params.locale = model.locale;
-                        params.change = function (args) {
-                            this.option("value", args.value);
-                            proxy._editStartDateChange(this.element,args);
-                        };
-                        var tempId = $element[0].id;
-                        tempId = tempId.replace(proxy._id, '');
-                        if (!ej.isNullOrUndefined(selectedItem) && selectedItem.hasChildRecords && (tempId == "startDate" || tempId == "endDate") && args.requestType !== "add" ) {
-                            params.readOnly = true;
-                            $element.closest("td").css("opacity", 0.5);
-                        }
-                        if ($element.val().length)
-                            params.value = proxy._getDateFromFormat($element.val());
-                        else
-                            params.value = proxy._getDateFromFormat(model.scheduleStartDate);
 
-                       
-                        if (column["format"] !== undefined && column.format.length > 0) {
-                            toformat = new RegExp("\\{0(:([^\\}]+))?\\}", "gm");
-                            formatVal = toformat.exec(column.format);
-                            params.dateFormat = formatVal[2];
-                            params.value = ej.format(new Date(params.value), params.dateFormat);
-                            $element.val(params.value);
-                        }
-                        if (!ej.isNullOrUndefined(column["editParams"]))
-                            $.extend(params, column["editParams"]);
-
-                            $element.ejDatePicker(params);
+                    if (column["format"] !== undefined && column.format.length > 0) {
+                        toformat = new RegExp("\\{0(:([^\\}]+))?\\}", "gm");
+                        formatVal = toformat.exec(column.format);
+                        params.dateFormat = formatVal[2];
+                        params.value = ej.format(new Date(params.value), params.dateFormat, params.locale);
+                        $element.val(params.value);
                     }
-                    else if ($element.hasClass("e-datetimepicker")) {
+                    if (!ej.isNullOrUndefined(column["editParams"]))
+                        $.extend(params, column["editParams"]);
 
-                        params = {
-                            width: inputWidth,
-                            rtl: model.rtl,
-                            locale:model.locale,
+                    $element.ejDatePicker(params);
+                }
+                else if ($element.hasClass("e-datetimepicker")) {
+
+                    params = {
+                        width: inputWidth,
+                        rtl: model.rtl,
+                        locale: model.locale,
                             cssClass: model.css,
                             dateTimeFormat: model.dateFormat,
                         };
-                        if ($element.val().length)
-                            params.value = proxy._getDateFromFormat($element.val());
-                        else
-                            params.value = proxy._getDateFromFormat(model.scheduleStartDate);
-
-                        if (column["format"] !== undefined && column.format.length > 0) {
-                            toformat = new RegExp("\\{0(:([^\\}]+))?\\}", "gm");
-                            formatVal = toformat.exec(column.format);
-                            params.dateTimeFormat = formatVal[2];
-                            params.value = ej.format(new Date($element.val()), params.dateTimeFormat);
-                            $element.val(params.value);
+                        params.change = function (args) {
+                            proxy._updatedColumn = this.element[0].name;
+                            this.option("value", args.value);
+                            if (this._prevDateTimeVal)
+                                proxy._editStartDateChange(this.element, args);
+                        };
+                        var tempId = $element[0].id;
+                        tempId = tempId.replace(proxy._id, '');
+                        if (!ej.isNullOrUndefined(selectedItem) && selectedItem.hasChildRecords && selectedItem.isAutoSchedule && selectedItem.isAutoSchedule && (tempId == "startDate" || tempId == "endDate") && args.requestType !== "add" ) {
+                            params.readOnly = true;
+                            $element.closest("td").css("opacity", 0.5);
                         }
+                    if (value.toString().length)
+                        params.value = proxy._getDateFromFormat(value.toString());
+                        else
+                        params.value = proxy._getDateFromFormat(model.scheduleStartDate);
+
                         if (!ej.isNullOrUndefined(column["editParams"]))
                             $.extend(params, column["editParams"]);
+                        
+                    $element.ejDateTimePicker(params);
+                }
+                else if ($element.hasClass("e-dropdownlist")) {
 
-                            $element.ejDateTimePicker(params);
-                    }
-                    else if ($element.hasClass("e-dropdownlist")) {
-
-                        var dataSource = column.dropdownData;
-                        if (column.field === "resourceInfo") {
-                            $element.ejDropDownList({
-                                cssClass: model.cssClass,
-                                width: inputWidth,
-                                showCheckbox: true,
-                                dataSource: dataSource,
-                                fields: { id: model.resourceIdMapping, text: model.resourceNameMapping, value: model.resourceNameMapping },
+                    var dataSource = column.dropdownData;
+                    if (column.field === "resourceInfo") {
+                        $element.ejDropDownList({
+                            cssClass: model.cssClass,
+                            width: inputWidth,
+                            showCheckbox: true,
+                            dataSource: dataSource,
+                            fields: { id: model.resourceIdMapping, text: model.resourceNameMapping, value: model.resourceNameMapping },
                                 selectedItems: args.requestType == "add" ? proxy._getResourceInfoIndex(args.data.resourceInfo, model.resources) : proxy.getIndexofresourceInfo(dataSource, args.data)
                             });
-                        }
+                        }                       
                         else {
                             var controlArgs = {};
                             controlArgs.cssClass = model.cssClass;
                             controlArgs.width = inputWidth;
                             controlArgs.dataSource = dataSource;
+                            controlArgs.value = value;
+                            controlArgs.change = function (args) {
+                                proxy._updateEditDialogFields(this);
+                            }
                             if (!ej.isNullOrUndefined(column["editParams"]))
                                 $.extend(controlArgs, column["editParams"]);
-
+                            if ($element.val.length) {
+                                if (column.field == "taskMode") {
+                                    value = args.requestType == "beginedit" ? !args.data.isAutoSchedule : model.taskSchedulingMode == "manual" ? true : false;
+                                    $element.val(value);
+                                }
+                                else if (column.field == "taskType") {
+                                    var value = args.requestType == "beginedit" ? args.data.taskType : proxy.model.taskType;
+                                    $element.val(value);
+                                }
+                                else if (column.field == "effortDriven") {
+                                    var value = args.requestType == "beginedit" ? args.data.effortDriven : model.taskType == "fixedWork" ? true : false;
+                                    $element.val(value);
+                                }
+                            }
+                            if (args.requestType == "beginedit" && !args.data.isAutoSchedule && (column.field == "taskType" || column.field == "effortDriven"))
+                                controlArgs.enabled = false;
+                            if (args.data.taskType == "fixedWork" && column.field == "effortDriven")
+                                controlArgs.enabled = false;
+                            if (args.requestType == "add" && column.field == "effortDriven" && model.taskType == "fixedWork")
+                                controlArgs.enabled = false;
+                            if ((column.field == "taskType" || column.field == "effortDriven") && args.data.hasChildRecords)
+                                controlArgs.enabled = false;
+                            if (column.field == "taskMode" && model.taskSchedulingMode != ej.Gantt.TaskSchedulingMode.Custom)
+                                controlArgs.enabled = false;
+                            $element.val(controlArgs.value);
                             $element.ejDropDownList(controlArgs);
 
                             var obj = $element.ejDropDownList("instance");
-                            obj._setValue($element.attr("cellValue"));;
+                            obj._setValue($element.val());
 
                         }
                     }
-                    else if ($element.hasClass("e-maskedit"))
-                    {
-                        var controlArgs = {};
-                        controlArgs.locale = model.locale;
-                        controlArgs.cssClass = model.cssClass;
-                        controlArgs.width = inputWidth;
-                        if (!ej.isNullOrUndefined(column["editParams"]))
-                            $.extend(controlArgs, column["editParams"]);
+                else if ($element.hasClass("e-maskedit")) {
+                    var controlArgs = {};
+                    controlArgs.locale = model.locale;
+                    controlArgs.cssClass = model.cssClass;
+                    controlArgs.width = inputWidth;
+                    if (!ej.isNullOrUndefined(column["editParams"]))
+                        $.extend(controlArgs, column["editParams"]);
 
-                        $element.ejMaskEdit(controlArgs);
-                    }
-                    else {
-                        switch ($element.prop('tagName')) {
-                            case "INPUT":
+                    $element.ejMaskEdit(controlArgs);
+                }
+                else {
+                    switch ($element.prop('tagName')) {
+                        case "INPUT":
 
-                                if ($element.attr("type") != "checkbox") {
-                                    //For ID field id is read only
+                            if ($element.attr("type") != "checkbox") {
+                                //For ID field id is read only
 
-                                    if ($element.attr("name") === "taskId") {
-                                        if (args.requestType !== "add") {
-                                            $element.attr("readonly", "readonly");
-                                            $element.css("opacity", 0.5);
-                                        }
-                                        else if (args.requestType === "add") {
-                                            $element.val(newIdInstant);
-                                        }
+                                if ($element.attr("name") === "taskId") {
+                                    if (args.requestType !== "add") {
+                                        $element.attr("readonly", "readonly");
+                                        $element.css("opacity", 0.5);
+                                        $element.val(args.data.taskId);
                                     }
-                                    else if ($element.attr("name") === "taskName" && args.requestType === "add") {
+                                    else if (args.requestType === "add") {
+                                        if (args.data.taskId == "" || ej.isNullOrUndefined(args.data.taskId))
+                                            $element.val(newIdInstant);
+                                        else
+                                            $element.val(args.data.taskId);
+                                    }
+                                }
+                                else if ($element.attr("name") === "taskName") {
+                                    if (args.requestType === "add") {
                                         if (args.data.taskName == "" || ej.isNullOrUndefined(args.data.taskName))
                                             $element.val(proxy._newTaskTexts["newTaskName"] + " " + newIdInstant);
                                         else
                                             $element.val(args.data.taskName);
                                     }
-                                    else if ($element.attr("name") === "WBS") {
-                                        if (args.requestType !== "add")
-                                            $element.attr("readonly", "readonly").css("opacity", 0.5);
-                                        else if (args.requestType === "add") {
-                                            $element.val(newWBSval);
-                                            $element.attr("readonly", "readonly").css("opacity", 0.5);
-                                        }
-                                    }
-                                    else if ($element.attr("name") === "WBSPredecessor")
-                                        $element.attr("readonly", "readonly").css("opacity", 0.5);
-
-                                    var tempId = $element[0].id;
-                                    tempId = tempId.replace(proxy._id, '');
-
-                                    $element.css("text-align", $element.attr("name") != null && ej.TreeGrid.getColumnByField(proxy._columns, $element.prop("name")) != null ?
-                                        ej.TreeGrid.getColumnByField(proxy._columns, $element.attr("name")).textAlign : "center");
-                                    $element.outerWidth(inputWidth).height(25);
-                                } else {
-                                    var controlArgs = {};
-                                    controlArgs.cssClass = model.cssClass;
-                                    controlArgs.size = "medium";
-                                    if (!ej.isNullOrUndefined(column["editParams"]))
-                                        $.extend(params, column["editParams"]);
-                                    $element.ejCheckBox(controlArgs);
+                                    else
+                                        $element.val(args.data.taskName);
                                 }
-                                break;
+                                else if ($element.attr("name") === "duration") {
+                                    args.data && $element.val(proxy._getDurationStringValue(args.data));
+                                    var durationValues = proxy._getDurationValues(args.data)
+                                    if (args.requestType !== "add" && args.data.hasChildRecords && args.data.isAutoSchedule) {
+                                        $element.attr("readonly", "readonly");
+                                        $element.css("opacity", 0.5);
+                                    } else if ((args.requestType == "add") && args.data.duration == "") {
+                                        $element.val("0 " + proxy._durationUnitTexts[durationValues.durationUnit]);
+                                    }
+                                    else 
+                                        $element.val(args.data.duration + " " + proxy._durationUnitTexts[durationValues.durationUnit]); 
 
-                            case "SELECT":
-                                $element.width(inputWidth).height(23);
-                                break;
-                        }
-                    }
-                    if (!$element.is(":disabled") && !elementFocused && (!$element.is(":hidden") || typeof $element.data("ejDropDownList") == "object")) {
-                        if (!proxy._isEnterKeyPressed) {
-                            proxy._focusElements($element.closest('td'));
-                            elementFocused = true;
-                        }
+                                        $element.change(function () {
+                                            proxy._updatedColumn = "duration"
+                                            proxy._editStartDateChange($(this));                                            
+                                        });
+                                        $element.keyup(function (e) {
+                                            if (e.keyCode == 13)
+                                            proxy._editStartDateChange($(this));
+                                    });
+                                }
+                                else if ($element.attr("name") === "WBS") {
+                                    if (args.requestType !== "add") {
+                                        $element.attr("readonly", "readonly").css("opacity", 0.5);
+                                        $element.val(args.data.WBS)
+                                    }
+                                    else if (args.requestType === "add") {
+                                        $element.val(newWBSval);
+                                        $element.attr("readonly", "readonly").css("opacity", 0.5);
+                                    }
+                                }
+                                else if ($element.attr("name") === "WBSPredecessor")
+                                    $element.attr("readonly", "readonly").css("opacity", 0.5);
+                                if ($element.attr("name") === "taskName")
+                                    inputWidth = 380;
+                                var tempId = $element[0].id;
+                                tempId = tempId.replace(proxy._id, '');
+
+                                $element.css("text-align", $element.attr("name") != null && ej.TreeGrid.getColumnByField(proxy._columns, $element.prop("name")) != null ?
+                                    ej.TreeGrid.getColumnByField(proxy._columns, $element.attr("name")).textAlign : "center");
+                                $element.outerWidth(inputWidth).height(25);
+                            } else {
+                                var controlArgs = {};
+                                controlArgs.cssClass = model.cssClass;
+                                controlArgs.size = "medium";
+                                if (!ej.isNullOrUndefined(column["editParams"]))
+                                    $.extend(params, column["editParams"]);
+                                $element.ejCheckBox(controlArgs);
+                            }
+                            break;
+
+                        case "SELECT":
+                            $element.width(inputWidth).height(23);
+                            break;
                     }
                 }
-
+                if (!$element.is(":disabled") && !elementFocused && (!$element.is(":hidden") || typeof $element.data("ejDropDownList") == "object")) {
+                    if (!proxy._isEnterKeyPressed) {
+                        proxy._focusElements($element.closest('td'));
+                        elementFocused = true;
+                    }
+                }
+            }
             //render prdecessor table in edit dialog
             if (model.predecessorMapping && $(editTreeGridId).length) {
-                var types = [{ id: "SS", text: "Start-Start", value: "Start-Start" }, { id: "SF", text: "Start-Finish", value: "Start-Finish" }, { id: "FS", text: "Finish-Start", value: "Finish-Start" }, { id: "FF", text: "Finish-Finish", value: "Finish-Finish" }];
                 var ds = [];
-                if (args.requestType !== "add")
-                {
+                if (args.requestType !== "add") {
                     ds = proxy._predecessorEditCollection();
                 }
-                proxy._taskNameCollection();
+                proxy._taskNameCollection();                
+                var types = proxy._predecessorCollectionText;
                 $(editTreeGridId).ejTreeGrid({
-                    dataSource:ds,
+                    dataSource: ds,
                     allowSorting: false,
-                    allowAdding: true,
-                    columns: [{ headerText: proxy._columnHeaderTexts["taskId"], field: "id", editType: ej.TreeGrid.EditingType.Dropdown, dropdownData: proxy._preTableCollection[0], width: "50px"},
-                              { headerText: proxy._columnHeaderTexts["taskName"], field: "name", editType: ej.TreeGrid.EditingType.Dropdown, dropdownData: proxy._preTableCollection[1], width: "170px" },
-                              { headerText: proxy._columnHeaderTexts["type"], field: "type", editType: ej.TreeGrid.EditingType.Dropdown, dropdownData: types, width: "80px" },
-                              { headerText: proxy._columnHeaderTexts["offset"], field: "offset", editType: ej.TreeGrid.EditingType.Numeric, width: "50px" }],
-                    enableAltRow: true,
+                    columns: [{ headerText: proxy._columnHeaderTexts["taskId"], field: "id", editType: ej.TreeGrid.EditingType.Dropdown, dropdownData: proxy._preTableCollection[0], width: "89px" },
+                              { headerText: proxy._columnHeaderTexts["taskName"], field: "name", editType: ej.TreeGrid.EditingType.Dropdown, dropdownData: proxy._preTableCollection[1], width: "300px" },
+                              { headerText: proxy._columnHeaderTexts["type"], field: "type", editType: ej.TreeGrid.EditingType.Dropdown, dropdownData: types, width: "141px" },
+                              { headerText: proxy._columnHeaderTexts["offset"], field: "offset", editType: ej.TreeGrid.EditingType.String, width: "88px" }],
+                    enableAltRow: false,
                     allowColumnResize: true,
-                    isResponsive: false,
                     editSettings: {
                         allowAdding: true,
                         allowDeleting: true,
                         allowEditing: true,
                         editMode: "cellEditing",
+                        rowPosition: "bottom",
+                        beginEditAction: ej.TreeGrid.BeginEditAction.Click
                     },
                     locale: model.locale,
-                    endEdit: $.proxy(proxy._preEndEdit, proxy, editTreeGridId),
+                    endEdit: $.proxy(proxy._preEndEdit, proxy, editTreeGridId, args.requestType),
                     beginEdit: $.proxy(proxy._preBeginEdit, proxy),
-                    rowSelected: $.proxy(proxy._deleteDisableEnable, proxy),
+                    rowSelected: $.proxy(proxy._enableDisablePredecessorDelete, proxy, args.requestType),
+                    actionComplete: function (eventArgs) {
+                        if (eventArgs.requestType == "delete") {
+                            proxy._enbleDisablePredecessorDeleteButton('disable', args.requestType);
+                            proxy._disablePredecessorAddButton(editTreeGridId, args.requestType);
+                        }
+                    },
                     treeColumnIndex: 5,
-                    predecessorTable: proxy._isFromGantt
+                    predecessorTable: proxy._isFromGantt,
+                    sizeSettings: { width: "620px", height: "198px" },
+                    isResponsive: false
                 });
-                
-                if (model.selectedItem && model.selectedItem.hasChildRecords && args.requestType!=="add")
-                {
-                    proxy.enbleDisableDeletePreButton('disable');
-                    proxy.enbleDisableAddPreButton('disable');
+
+                if (model.selectedItem && model.selectedItem.hasChildRecords && args.requestType !== "add") {
+                    proxy._enbleDisablePredecessorDeleteButton('disable', args.requestType);
+                    proxy._enbleDisablePredecessorAddButton('disable', args.requestType);
                 }
                 else {
-                    proxy.enbleDisableDeletePreButton('disable');
-                    proxy.enbleDisableAddPreButton('enable');
+                    proxy._enbleDisablePredecessorDeleteButton('disable', args.requestType);
+                    proxy._enbleDisablePredecessorAddButton('enable', args.requestType);
                 }
             }
-        },
-        //updated the status of predecessor button in dialog box
-        enbleDisableDeletePreButton:function(args)
-        {
-            var proxy = this;
-            if(args==="enable")
-            {
-                $(".e-deletepre").unbind("click", $.proxy(proxy._deletepredecessor, proxy));
-                $(".e-deletepre").bind("click", $.proxy(proxy._deletepredecessor, proxy));
-                $('.e-deletepre').addClass('e-enable');
-                $('.e-deletepre').removeClass('e-disable');
+
+            //Render resource table in add and edit dialog
+            if (model.resourceInfoMapping && $(resourceTreeGridId).length) {
+                var resourceData = [],
+                    resoruce = $.extend(true, [], model.resources);
+                if (args.requestType != "add") {
+                    var resource = args.data.resourceInfo,
+                        length = resource ? resource.length : 0;
+                    for (var i = 0; i < length; i++) {
+                        resourceData.push({ "name": resource[i][model.resourceIdMapping], "unit": resource[i][model.resourceUnitMapping] });
+                    }
+                }
+                else if (args.data.resourceInfo.length != 0) {
+                    ganttRecord = new ej.Gantt.GanttRecord();
+                    ganttRecord.item = args.data;
+                    var resourceCollection = model.resources, resourceInfo = args.data.resourceInfo;
+                    ganttRecord.resourceInfo = resourceInfo && ganttRecord._setResourceInfo(resourceInfo, model.resourceIdMapping, model.resourceNameMapping, model.resourceUnitMapping, resourceCollection);
+                    var resource = ganttRecord.resourceInfo,
+                        length = resource ? resource.length : 0;
+                    for (var i = 0; i < length; i++) {
+                        resourceData.push({ "name": resource[i][model.resourceIdMapping], "unit": resource[i][model.resourceUnitMapping] });
+                    }
+                }
+                var resoruce = $.extend(true, [], model.resources);
+                $(resourceTreeGridId).ejTreeGrid({
+                    dataSource: resourceData,                    
+                    columns: [{
+                        headerText: proxy._columnHeaderTexts["resourceInfo"], field: "name", width: "309px",
+                        editType: ej.TreeGrid.EditingType.Dropdown, dropdownData: resoruce, editParams: { fields: { text: model.resourceNameMapping, value: model.resourceIdMapping } }
+                    },
+                              {
+                                  headerText: proxy._columnHeaderTexts["unit"], field: "unit", width: "309px",
+                                  editType: ej.TreeGrid.EditingType.Numeric, visible: true, headerTextAlign: "center"
+                              }
+                    ],
+                    enableAltRow: false,
+                    allowColumnResize: true,
+                    editSettings: {
+                        allowAdding: true,
+                        allowDeleting: true,
+                        allowEditing: true,
+                        editMode: "cellEditing",
+                        beginEditAction: ej.TreeGrid.BeginEditAction.Click
+                    },
+                    locale: model.locale,
+                    endEdit: $.proxy(proxy._resourceEndEdit, proxy, resourceTreeGridId, args.requestType),
+                    beginEdit: $.proxy(proxy._resourceBeginEdit, proxy, resourceTreeGridId),
+                    rowSelected: $.proxy(proxy._enableDisableResouceDelete, proxy, args.requestType),
+                    actionBegin: function (args) {
+                        if (args.requestType == "delete" || args.requestType == "sorting")
+                            this.model.columns[0].dropdownData = $.extend(true, [], proxy.model.resources);
+                    },
+                    actionComplete: function (eventArgs) {
+                        if (eventArgs.requestType == "delete") {
+                            proxy._enableDisableResourceAddButton(eventArgs, true, args.requestType);
+                            proxy.enbleDisableDeleteResourceButton('disable', args.requestType);
+                        }
+                    },
+                    treeColumnIndex: 3,
+                    resourceTable: proxy._isFromGantt,
+                    sizeSettings: { width: "620px", height: "198px" },
+                    isResponsive: false
+                });
+                if (args.requestType !== "add" && resourceData.length == model.resources.length) {
+                    proxy.enbleDisableDeleteResourceButton('enable', args.requestType);
+                    proxy.enbleDisableAddResourceButton('disable', args.requestType);
+                }
+                else {
+                    proxy.enbleDisableDeleteResourceButton('disable', args.requestType);
+                    proxy.enbleDisableAddResourceButton('enable', args.requestType);
+                }
             }
-            else {
-                $(".e-deletepre").unbind("click", $.proxy(proxy._deletepredecessor, proxy));
-                $('.e-deletepre').addClass('e-disable');
-                $('.e-deletepre').removeClass('e-enable');
+            //Render custom field tab in add and edit dialog
+            if ($(customFieldTreeGridId).length) {
+                if (args.requestType == "add") {
+                    var customColumns = proxy._addDialogCustomColumns,
+                        gridData = [],
+                        id = 0,
+                        length = customColumns.length;
+                    for (var i = 0; i < length; i++) {
+                        id++;
+                        var data = {};
+                        data.id = id;
+                        data.field = customColumns[i].field;
+                        data.headerText = customColumns[i].headerText;
+                        data.value = args.data[customColumns[i].field];
+                        data.text = args.data[customColumns[i].field];
+                        data.editType = customColumns[i].editType ? customColumns[i].editType.toLowerCase() : "stringedit";
+                        gridData.push(data);
+                    }
+                }
+                else {
+                    var customColumns = proxy._editDialogCustomColumns,
+                        gridData = [],
+                        id = 0,
+                        length = customColumns.length;
+                    for (var i = 0; i < length; i++) {
+                        id++;
+                        var data = {};
+                        data.id = id;
+                        data.field = customColumns[i].field;
+                        data.headerText = customColumns[i].headerText;
+                        data.value = args.data[customColumns[i].field];
+
+                        data.editType = customColumns[i].editType ? customColumns[i].editType.toLowerCase() : "stringedit";
+                        if (customColumns[i].editType.toLowerCase() == "dropdownedit") {
+                            data.text = ej.isNullOrUndefined(args.data[customColumns[i].field]) ? "" : proxy._getDropDownText(customColumns[i], args.data[customColumns[i].field]);
+                        }
+                        else
+                            data.text = args.data[customColumns[i].field];
+                        gridData.push(data);
+                    }
+                }
+                $(customFieldTreeGridId).ejTreeGrid({
+                    dataSource: gridData,
+                    allowSorting: false,
+                    locale: model.locale,
+                    enableAltRow: false,
+                    rowHeight:30,
+                    columns: [{ headerText: proxy._columnHeaderTexts["dialogCustomFieldName"], field: "headerText", allowEditing: false },
+                              { headerText: "Original Value", field: "value", visible: false },
+                              { headerText: "Field", field: "field", visible: false },
+                              {
+                                  headerText: proxy._columnHeaderTexts["dialogCustomFieldValue"], field: "text",
+                                  editTemplate: {
+                                      create: function () {
+                                          return "<input style='width:100%;'>";
+                                      },
+                                      read: $.proxy(proxy._customColumnRead, proxy, customFieldTreeGridId),
+                                      write: $.proxy(proxy._customColumnWrite, proxy, customColumns, customFieldTreeGridId),
+                                  }
+                              }
+                    ],
+                    allowColumnResize: true,
+                    editSettings: {
+                        allowAdding: true,
+                        allowDeleting: true,
+                        allowEditing: true,
+                        editMode: "cellEditing",
+                        beginEditAction: ej.TreeGrid.BeginEditAction.Click
+                    },
+                    sizeSettings: { width: "620px", height: "234px" },
+                    isResponsive: false
+                });
+            }
+            //Render the RTE control for notes tab.
+            if (model.notesMapping && $(noteRteId).length) {
+                var value;
+                if (args.requestType == "add")
+                    value = args.data.notes;
+                else {
+                    var htmlText = args.data.item[model.notesMapping];
+                    value = htmlText;
+                }
+                $(noteRteId).ejRTE({
+                    width: "620px", isResponsive: false, height: "281px", value: value,
+                    locale: model.locale,
+                    tools: {
+                        font: ["fontName", "fontSize", "fontColor", "backgroundColor"],
+                        style: ["bold", "italic", "underline", "strikethrough"],
+                        alignment: ["justifyLeft", "justifyCenter", "justifyRight", "justifyFull"],
+                        doAction: ["undo", "redo"],
+                        indenting: [],
+                        clear: [],
+                        links: ["createLink", "removeLink"],
+                        images: [],
+                        media: [],
+                        tables: [],
+                        lists: ["unorderedList"],
+                        clipboard: [],
+                        edit: [],
+                        formatStyle: [],
+                        view: []
+                    }
+                });
+                $(noteRteId + "_wrapper").find(".e-toolbar.e-toolbarspan").css("border-bottom", "none"); // Remove the border bottom of rich text editor toolbar.
+                $(noteRteId + "_editor").height("208");
+                $(noteRteId + "_Iframe")[0].style.height = "203px";
+                $(dialog).removeClass("e-rte");
             }
         },
-        //updated the status of predecessor button in dialog box
-        enbleDisableAddPreButton:function(args)
-        {
-            var proxy = this;
+        //updated the status of predecessor delelte button in dialog box
+        _enbleDisablePredecessorDeleteButton: function (args, dialogType) {
+            var proxy = this,
+                 predecessorDelete;
+            if (dialogType == "add")
+                predecessorDelete = $("#" + proxy._id + "AddDialog_PredecesorDelete");
+            else
+                predecessorDelete = $("#" + proxy._id + "EditDialog_PredecesorDelete");
             if (args === "enable") {
-               $(".e-addpre").unbind("click", $.proxy(proxy._addpredecessor, proxy));
-               $(".e-addpre").bind("click", $.proxy(proxy._addpredecessor, proxy));
-                $('.e-addpre').addClass('e-enable');
-                $('.e-addpre').removeClass('e-disable');
+                $(predecessorDelete).unbind("click", $.proxy(proxy._deletepredecessor, proxy)).bind("click", $.proxy(proxy._deletepredecessor, proxy));
+                $(predecessorDelete).addClass('e-enable').removeClass('e-disable');
             }
             else {
-                $(".e-addpre").unbind("click", $.proxy(proxy._addpredecessor, proxy));
-                $('.e-addpre').addClass('e-disable');
-                $('.e-addpre').removeClass('e-enable');
-            }
-        },
-        //updated the status of predecessor button in dialog box
-        _disableAddButton: function (treeGridId) {
-            var proxy = this;
-            var table = $(treeGridId +"e-table");
-            var flag = false;
-            var len = table[0].rows.length;
-            proxy.enbleDisableAddPreButton('disable');
-            for (var j = 0; j < len; j++)
-            {
-                var currentRow = table[0].rows[j];
-                if(currentRow.cells.length===4)
-                if(currentRow.cells[1].innerText==="")
-                {
-                    flag = true;
-                }
-            }
-            if (!flag) {
-                proxy.enbleDisableAddPreButton('enable');
+                $(predecessorDelete).unbind("click", $.proxy(proxy._deletepredecessor, proxy));
+                $(predecessorDelete).addClass('e-disable').removeClass('e-enable');
             }
         },
 
+        //updated the status of predecessor button in dialog box
+        _enbleDisablePredecessorAddButton: function (args, dialogType) {
+            var proxy = this,
+                predecessorAdd = "";
+            if (dialogType == "add")
+                predecessorAdd = $("#" + proxy._id + "AddDialog_PredecesorAdd");
+            else
+                predecessorAdd = $("#" + proxy._id + "EditDialog_PredecesorAdd");
+
+            if (args === "enable") {
+                $(predecessorAdd).unbind("click", $.proxy(proxy._addpredecessor, proxy)).bind("click", $.proxy(proxy._addpredecessor, proxy));
+                $(predecessorAdd).addClass('e-enable').removeClass('e-disable');
+            }
+            else {
+                $(predecessorAdd).unbind("click", $.proxy(proxy._addpredecessor, proxy));
+                $(predecessorAdd).addClass('e-disable').removeClass('e-enable');
+            }
+        },
+
+        //updated the status of predecessor button in dialog box
+        _disablePredecessorAddButton: function (treeGridId, dialogType) {
+            var proxy = this;
+            var table = $(treeGridId + "e-table");
+            var flag = false;
+            var len = table[0].rows.length;
+            proxy._enbleDisablePredecessorAddButton('disable', dialogType);
+            for (var j = 0; j < len; j++) {
+                var currentRow = table[0].rows[j];
+                if (currentRow.cells.length === 4)
+                    if (currentRow.cells[1].innerText === "") {
+                        flag = true;
+                    }
+            }
+            if (!flag) {
+                proxy._enbleDisablePredecessorAddButton('enable', dialogType);
+            }
+        },
+
+        //Dynamically update input elements fields in add/edit dialog box according with another fields change.
+        _updateEditDialogFields: function (editObj) {
+            var proxy = this,
+                reuestType = $(editObj.element).attr("dialog");
+            if (reuestType == "Add") {
+                var effortDrivenObj = $("#" + proxy._id + "effortDrivenAdd").data("ejDropDownList"),
+                  typeObj = $("#" + proxy._id + "taskTypeAdd").data("ejDropDownList");
+            }
+            else {
+                var effortDrivenObj = $("#" + proxy._id + "effortDrivenEdit").data("ejDropDownList"),
+                typeObj = $("#" + proxy._id + "taskTypeEdit").data("ejDropDownList");
+            }
+            if (!ej.isNullOrUndefined(effortDrivenObj) && editObj._name == "taskType") {
+                if (editObj.model.value == "fixedWork") {
+                    effortDrivenObj.selectItemByValue("true");
+                    effortDrivenObj.disable();
+                }
+                else
+                    effortDrivenObj.enable();
+
+                proxy._editedDialogRecord[editObj._name] = editObj.model.value;
+            }
+            if (editObj._name == "taskMode") {
+                if (editObj.model.text == "Auto") {
+                    if (!ej.isNullOrUndefined(effortDrivenObj) && !ej.isNullOrUndefined(typeObj) && typeObj.model.value != "fixedWork")
+                        effortDrivenObj.enable();
+                    if (!ej.isNullOrUndefined(typeObj))
+                        typeObj.enable();
+                    proxy._editedDialogRecord["isAutoSchedule"] = true;
+                }
+                if (editObj.model.text == "Manual") {
+                    if (!ej.isNullOrUndefined(effortDrivenObj))
+                        effortDrivenObj.disable();
+                    if (!ej.isNullOrUndefined(typeObj))
+                        typeObj.disable();
+                    proxy._editedDialogRecord["isAutoSchedule"] = false;
+                }
+            }
+
+        },
+
+        _customColumnWrite: function (customColumns, gridId, args) {
+            var proxy = this,
+                value = args.rowdata !== undefined ? args.rowdata["text"] : "",
+                gridModel = $(gridId).ejTreeGrid("instance").model,
+                column = customColumns[gridModel.selectedRowIndex],
+                editParams = {};
+            if (column.editParams)
+                editParams = $.extend(true, {}, column.editParams);
+            editParams.value = value;
+            editParams.locale = proxy.model.locale;
+            switch (args.rowdata.editType.toLowerCase()) {
+
+                case "numericedit":
+                    editParams.height = "25px";
+                    args.element.ejNumericTextbox(editParams);
+                    break;
+                case "stringedit":
+                    $(args.element).val(value).css({ "padding": "0px", "border": "0px", "height": "25px" }).addClass("e-ejinputtext");
+                    break;
+                case "datepicker":
+                    editParams.width = "100%";
+                    editParams.height = "25px";
+                    args.element.ejDatePicker(editParams);
+                    break;
+                case "datetimepicker":
+                    editParams.width = "100%";
+                    editParams.height = "25px";
+                    args.element.ejDateTimePicker(editParams);
+                    break;
+                case "maskedit":
+                    editParams.width = "100%";
+                    editParams.height = "25px";
+                    args.element.ejMaskEdit(editParams);
+                    break;
+                case "dropdownedit":
+                    editParams.width = "100%";
+                    editParams.height = "25px";
+                    editParams.dataSource = column.dropdownData;
+                    editParams.value = gridModel.currentViewData[gridModel.selectedRowIndex].value;
+                    args.element.ejDropDownList(editParams);
+                    break;
+                case "booleanedit":
+                    editParams.cssClass = model.cssClass;
+                    editParams.size = "small";
+                    editParams.checked = value;
+                    args.element.ejCheckBox(editParams);
+                    var parentElement = args.element.parent(".e-chkbox-wrap"),
+                                formElement = parentElement.parent("form");
+
+                    if (formElement.length > 0)
+                        formElement.css("margin-left", "45%");
+                    else
+                        parentElement.css("margin-left", "45%");
+                    break;
+            }
+        },
+
+        _customColumnRead: function (gridId, args) {
+            var value, text,
+                treeGrid = $(gridId).ejTreeGrid("instance"),
+                selectedRowIndex = treeGrid.model.selectedRowIndex,
+                updatedRecords = treeGrid.model.updatedRecords;
+            $(args).blur();
+            $(args).focusout();
+            if ($(args[0]).hasClass("e-numerictextbox"))
+                value = text = $(args).ejNumericTextbox("getValue");
+            else if ($(args[0]).hasClass("e-datepicker"))
+                value = text = $(args).ejDatePicker("getValue");
+            else if ($(args[0]).hasClass("e-datepicker"))
+                value = text = $(args).ejDatePicker("getValue");
+            else if ($(args[0]).hasClass("e-dattimeepicker"))
+                value = text = $(args).ejDateTimePicker("getValue");
+            else if ($(args[0]).hasClass("e-maskedit"))
+                value = text = $(args[0]).ejMaskEdit("model.value");
+            else if ($(args[0]).hasClass("e-dropdownlist")) {
+                text = $(args[0]).ejDropDownList("model.text");
+                value = $(args[0]).ejDropDownList("getSelectedValue");
+            }
+            else if ($(args[0]).hasClass("e-checkbox")) {
+                value = text = $(args[0]).ejCheckBox('isChecked');
+            }
+            else
+                value = text = $(args).val();
+            updatedRecords[selectedRowIndex].value = value;
+            updatedRecords[selectedRowIndex].text = text;
+            treeGrid.refreshRow(selectedRowIndex);
+            return text;
+        },
+
+        //updated the status of predecessor button in dialog box
+        _enableDisableResourceAddButton: function (args,enableResourceAdd,dialogType) {
+            var proxy = this,
+                dataSource = args.model.dataSource,
+                flag = false;
+            proxy.enbleDisableAddResourceButton('disable', dialogType);
+            if (enableResourceAdd) {
+                var index = $.map(dataSource, function (data, index) {
+                    if (data.name == "" || data.name == null) {
+                        return index;
+                    }
+                });
+                if (index.length > 0 && dataSource.length > 0)
+                    flag = true;
+                if (!flag) {
+                    proxy.enbleDisableAddResourceButton('enable', dialogType);
+                }
+            }
+        },
         //add empty row in predecessor grid in dialog box
         _addpredecessor: function (e) {
-            var proxy = this;
-            var args = {}, treeGridId,
-            item = { id: "", name: "", type: "", offset: "" };
-            proxy.enbleDisableAddPreButton('disable');
-            if ($(e.target).hasClass("e-edit-dialog"))
-                treeGridId="#treegrid" + proxy._id + "predecessoredit";
-            else
+            var proxy = this,
+                args = {}, treeGridId, grid,
+                item = { id: "", name: "", type: "Finish-Start", offset: "0" }, dialogType;
+            
+            if ($(e.target).hasClass("e-edit-dialog")) {
+                treeGridId = "#treegrid" + proxy._id + "predecessorEdit";
+                dialogType = "edit";
+            }
+            else {
                 treeGridId = "#treegrid" + proxy._id + "predecessorAdd";
-            $(treeGridId).ejTreeGrid("addRow", item);
+                dialogType = "add";
+            }
+            proxy._enbleDisablePredecessorAddButton('disable', dialogType);
+            grid = $(treeGridId).ejTreeGrid("instance");
+            grid.addRow(item);
+            grid.clearSelection(grid.model.selectedRowIndex);
+            proxy._enbleDisablePredecessorDeleteButton('disable', dialogType);
         },
         //delete predecessor in dialog box 
         _deletepredecessor:function(e)
         {
-            var proxy = this, treeGridId;
+            var proxy = this, treeGridId, dialogType;
 
-            if ($(e.target).hasClass("e-edit-dialog"))
-                treeGridId = "#treegrid" + proxy._id + "predecessoredit";
-            else
+            if ($(e.target).hasClass("e-edit-dialog")) {
+                treeGridId = "#treegrid" + proxy._id + "predecessorEdit";
+                dialogType = "edit";
+            }
+            else {
                 treeGridId = "#treegrid" + proxy._id + "predecessorAdd";
+                dialogType = "add";
+            }
 
             var selectedItem = $(treeGridId).ejTreeGrid("option", "selectedRowIndex");
             var args = {};
             args["requestType"] = ej.TreeGrid.Actions.Delete;
             if (selectedItem !== -1) {
                 $(treeGridId).ejTreeGrid("deleteRow");
-                proxy.enbleDisableDeletePreButton('disable');
+                proxy._enbleDisablePredecessorDeleteButton('disable',dialogType);
             }
-            proxy._disableAddButton(treeGridId);
+            proxy._disablePredecessorAddButton(treeGridId, dialogType);
         },
 
+         //updated the status of Resource button in dialog box
+        enbleDisableDeleteResourceButton:function(args,dialogType)
+        {
+            var proxy = this, predecessorDelete;
+            if (dialogType == "add")
+                predecessorDelete = $("#" + proxy._id + "AddDialog_ResourceDelete");
+            else
+                predecessorDelete = $("#" + proxy._id + "EditDialog_ResourceDelete");
+            if(args==="enable")
+            {
+                $(predecessorDelete).unbind("click", $.proxy(proxy._deleteResource, proxy)).bind("click", $.proxy(proxy._deleteResource, proxy));
+                $(predecessorDelete).addClass('e-enable').removeClass('e-disable');
+            }
+            else {
+                $(predecessorDelete).unbind("click", $.proxy(proxy._deleteResource, proxy));
+                $(predecessorDelete).addClass('e-disable').removeClass('e-enable');
+            }
+        },
+        //updated the status of Resource button in dialog box
+        enbleDisableAddResourceButton: function (args,dialogType)
+        {
+            var proxy = this, resourceAdd;
+            if (dialogType == "add")
+                resourceAdd = $("#" + proxy._id + "AddDialog_ResourceAdd");
+            else
+                resourceAdd = $("#" + proxy._id + "EditDialog_ResourceAdd");
+            if (args === "enable") {
+                $(resourceAdd).unbind("click", $.proxy(proxy._addResource, proxy)).bind("click", $.proxy(proxy._addResource, proxy));
+                $(resourceAdd).addClass('e-enable').removeClass('e-disable');
+            }
+            else {
+                $(resourceAdd).unbind("click", $.proxy(proxy._addResource, proxy));
+                $(resourceAdd).addClass('e-disable').removeClass('e-enable');
+            }
+        },
+
+        //add empty row in predecessor grid in dialog box
+        _addResource: function (e) {
+            var proxy = this,
+                args = {}, treeGridId, grid,
+                item = { name: "", unit: "100" }, dialogType;
+            if ($(e.target).hasClass("e-edit-dialog")) {
+                dialogType = "edit";
+                treeGridId = "#treegrid" + proxy._id + "resourceEdit";
+            }
+            else {
+                dialogType = "add";
+                treeGridId = "#treegrid" + proxy._id + "resourceAdd";
+            }
+            proxy.enbleDisableAddResourceButton('disable', dialogType);
+            grid = $(treeGridId).ejTreeGrid("instance");
+            grid.clearSelection(grid.model.selectedRowIndex);
+            grid.addRow(item, "bottom");                       
+            proxy.enbleDisableDeleteResourceButton('disable', dialogType);
+        },
+        //delete predecessor in dialog box 
+        _deleteResource: function (e) {
+            var proxy = this, treeGridId;
+
+            if ($(e.target).hasClass("e-edit-dialog"))
+                treeGridId = "#treegrid" + proxy._id + "resourceEdit";
+            else
+                treeGridId = "#treegrid" + proxy._id + "resourceAdd";
+
+            var selectedItem = $(treeGridId).ejTreeGrid("option", "selectedRowIndex");
+            var args = {};
+            args["requestType"] = ej.TreeGrid.Actions.Delete;
+            if (selectedItem !== -1) {
+                $(treeGridId).ejTreeGrid("deleteRow");
+            }
+        },
+            
+        _resourceEndEdit:function(gridId,dialogType, args)
+        {
+            var proxy = this,
+                columns = args.model.columns;
+            columns[0].dropdownData = $.extend(true, [], proxy.model.resources),
+            enableResourceAdd = args.model.dataSource.length < proxy.model.resources.length;
+            proxy._enableDisableResourceAddButton(args, enableResourceAdd, dialogType);
+        },
+        _resourceBeginEdit: function (gridId, args) {
+            var proxy = this,
+                idMapping = proxy.model.resourceIdMapping,
+                gridModel = args.model,
+                 columns = gridModel.columns,
+                 dropDownData = columns[0].dropdownData,
+                 dataSource = gridModel.dataSource,
+                 length = dataSource.length,
+                 value = args.data.item.name;
+            for (var i = 0; i < length; i++) {
+                if (dataSource[i].name != "" && dataSource[i].name != null && value != dataSource[i].name) {
+                    var index = $.map(dropDownData, function (data, index) {
+                        if (data[idMapping].toString() == dataSource[i].name) {
+                            return index;
+                        }
+                    });
+                    dropDownData.splice(index[0], 1);
+                }
+            }
+        },
         //returns column value by field name
         getColumnIndexByField: function (field) {
 
@@ -2653,12 +3770,12 @@
             }
         },
         //add button templates for add and edit dialog
-        renderDiaglogButton: function (form, tbody) {
+        renderDiaglogButton: function (type, tbody) {
 
             var btnId,
                 proxy = this,
                 model = proxy.model;
-            if (form[0].id === (proxy._id + "EditForm"))
+            if (type == "edit")
                 btnId = "EditDialog_";
             else
                 btnId = "AddDialog_";
@@ -2680,7 +3797,7 @@
             var cancelText = proxy._editDialogTexts["cancelButton"],
              cancelbtn = ej.buildTag('input', "",
                  {
-                     'margin-left': '20px',
+                     'margin-left': '18px',
                      'border-radius': '3px'
                  },
                  {
@@ -2699,7 +3816,6 @@
             var deleteText = proxy._editDialogTexts["deleteButton"],
                 delbtn = ej.buildTag('input', "",
                 {
-                    'margin-left': '20px',
                     'border-radius': '3px'
                 },
                 {
@@ -2711,20 +3827,20 @@
                 {
                     cssClass: model.cssClass,
                     text: deleteText,
-                    width: "70"
+                    width: "90"
                 });
 
 
 
-            var btnDiv = ej.buildTag('div', "", { 'margin-top': '20px','float':'right','margin-bottom':'15px' ,'margin-right':'15px'}, { 'class': "e-editform-btn" });
+            var btnDiv = ej.buildTag('div', "", { 'margin-top': '10px', 'float': 'right', 'margin-bottom': '3px', 'margin-right': '0px',"z-index":"10" }, { 'class': "e-editform-btn" });
+            var deleteBtnDiv = ej.buildTag('div', "", { 'margin-top': '10px', 'float': 'left', 'margin-bottom': '3px', 'margin-right': '0px', "z-index": "10" }, { 'class': "e-editform-btn" });
 
             btnDiv.append(savebtn);
-            if(form[0].id===(proxy._id+"EditForm") && model.editSettings.allowDeleting)
-                btnDiv.append(delbtn);
+            if (type == "edit" && model.editSettings.allowDeleting)
+                deleteBtnDiv.append(delbtn);
             btnDiv.append(cancelbtn);
-            form.appendTo(tbody);
             btnDiv.appendTo(tbody);
-            
+            deleteBtnDiv.appendTo(tbody);
             return tbody;
         },
         //Tool bar rendering initiated
@@ -2876,6 +3992,12 @@
                     $input = ej.buildTag("span.e-nexttimespan e-toolbaricons e-icon e-gantt-nexttimespan", "", {}, {});
                     $li.append($input);
                     break;
+                case "criticalPath":
+                    var criticalTitle = this._toolboxTooltipTexts["criticalPathTool"];
+                    $li.attr("title", criticalTitle);
+                    $input = ej.buildTag("span.e-criticaltask e-toolbaricons e-icon e-gantt-criticaltask", "", {}, {});
+                    $li.append($input);
+                    break;
                 case "search":
                     var searchTitle = this._toolboxTooltipTexts["searchTool"];
                     $input = ej.buildTag("input.e-ejinputtext", "", { 'margin': '4px', 'text-indent': '4px' }, { type: "text", placeholder: searchTitle }, { 'color': "#E8E9E9" });
@@ -2887,6 +4009,12 @@
 
                     $input.keydown($.proxy(this._keyDown, this));
 
+                    break;
+                case "excelExport":
+                    var excelExportTitle = this._toolboxTooltipTexts["excelExportTool"];
+                    $li.attr("title", excelExportTitle);
+                    $input = ej.buildTag("span.e-excelIcon e-toolbaricons e-icon e-gantt-excelexport", "", {}, {});
+                    $li.append($input);
                     break;
             }
             $li.append($a);
@@ -2916,46 +4044,46 @@
                 $outdentElement = $(toolbar).find(".e-outdent").parent()[0],                
                 disabledItems = [], enabledItems = [];
             if (model.readOnly == true) {
-                $addElement && disabledItems.push($($addElement).removeClass('e-disable')[0]);
-                $editElement && disabledItems.push($($editElement).removeClass('e-disable')[0]);
-                $deleteElement && disabledItems.push($($deleteElement).removeClass('e-disable')[0]);
-                $indentElement && disabledItems.push($($indentElement).removeClass('e-disable')[0]);
-                $outdentElement && disabledItems.push($($outdentElement).removeClass('e-disable')[0]);
+                $addElement && disabledItems.push($($addElement));
+                $editElement && disabledItems.push($($editElement));
+                $deleteElement && disabledItems.push($($deleteElement));
+                $indentElement && disabledItems.push($($indentElement));
+                $outdentElement && disabledItems.push($($outdentElement));
                 $(toolbar).ejToolbar('disableItem', disabledItems);
             }
             else {
                 if (editSettings.allowAdding)
                     $addElement && enabledItems.push($addElement);
                 else
-                    $addElement && disabledItems.push($($addElement).removeClass('e-disable')[0]);
+                    $addElement && disabledItems.push($($addElement));
 
             if (!model.selectedItem) {
 
                 if (editSettings.allowEditing) {
-                    $editElement && disabledItems.push($($editElement).removeClass('e-disable')[0]);
+                    $editElement && disabledItems.push($($editElement));
                 }
 
                 if (editSettings.allowDeleting) {
-                    $deleteElement && disabledItems.push($($deleteElement).removeClass('e-disable')[0]);
+                    $deleteElement && disabledItems.push($($deleteElement));
                     }
 
                     if ($indentElement)
-                        $indentElement && disabledItems.push($($indentElement).removeClass('e-disable')[0]);
+                        $indentElement && disabledItems.push($($indentElement));
 
                     if ($outdentElement)
-                        $outdentElement && disabledItems.push($($outdentElement).removeClass('e-disable')[0]);
+                        $outdentElement && disabledItems.push($($outdentElement));
                 }
                 else {
 
                     if (editSettings.allowEditing)
                         $editElement && enabledItems.push($editElement);
                     else
-                        $editElement && disabledItems.push($($editElement).removeClass('e-disable')[0]);
+                        $editElement && disabledItems.push($($editElement));
 
                     if (editSettings.allowDeleting)
                         $deleteElement && enabledItems.push($deleteElement);
                     else
-                        $deleteElement && disabledItems.push($($deleteElement).removeClass('e-disable')[0]);
+                        $deleteElement && disabledItems.push($($deleteElement));
 
                     proxy.updateIndentOutdentOption(model.selectedItem);
                 }
@@ -3106,16 +4234,21 @@
                 resourceInfoMapping: model.resourceInfoMapping,
                 resourceNameMapping: model.resourceNameMapping,
                 resourceIdMapping:model.resourceIdMapping,
+                resourceUnitMapping: model.resourceUnitMapping,
                 taskIdMapping: model.taskIdMapping,
                 readOnly:model.readOnly,
+                notesMapping: model.notesMapping,
                 showGridCellTooltip: model.showGridCellTooltip,
                 cellTooltipTemplate:model.cellTooltipTemplate,
                 showGridExpandCellTooltip: model.showGridExpandCellTooltip,
                 taskNameMapping: model.taskNameMapping,
+                taskSchedulingModeMapping: model.taskSchedulingModeMapping,
                 startDateMapping: model.startDateMapping,
                 endDateMapping: model.endDateMapping,
                 childMapping: model.childMapping,
                 durationMapping: model.durationMapping,
+                durationUnitMapping: model.durationUnitMapping,
+                durationUnit: model.durationUnit,
                 progressMapping: model.progressMapping,
                 predecessorMapping: model.predecessorMapping,
                 rowHeight: model.rowHeight,
@@ -3133,7 +4266,13 @@
                 confirmDeleteText: proxy._confirmDeleteText,
                 columnDialogFields: model.columnDialogFields,
                 columnDialogTexts: proxy._columnDialogTexts,
+                workUnit: proxy._workUnitTexts[model.workUnit],
+                taskTypeTexts: proxy._taskTypeTexts,
+                effortDrivenTexts: proxy._effortDrivenTexts,
                 dataManagerUpdate: { isDataManagerUpdate: proxy._isDataManagerUpdate, jsonData: proxy._jsonData },
+                durationUnitEditText: this._durationUnitEditText,
+                durationUnitTexts: proxy._durationUnitTexts,
+                enableCollapseAll: model.enableCollapseAll
             });
         },
         //Chart part is initiated
@@ -3161,7 +4300,8 @@
                     workingTimeScale: model.workingTimeScale,
                     roundOffDayworkingTime: model.roundOffDayworkingTime,
                     durationUnit: model.durationUnit,
-                    
+                    isCriticalPathEnable: this.isCriticalPathEnable,
+                    criticalPathCollection: this.criticalPathCollection,
                     perMonthWidth: proxy._perMonthWidth,//new property for year - month schedule
                     perWeekWidth: proxy._perWeekWidth,//new property for week - month schedule
                     perHourWidth: proxy._perHourWidth,
@@ -3170,6 +4310,8 @@
                     minuteInterval:proxy._minuteInterval,
                     includeWeekend: model.includeWeekend,
                     connectorlineWidth: model.connectorlineWidth,
+                    workingTimeRanges: proxy._workingTimeRanges,
+                    secondsPerDay: proxy._secondsPerDay,
                     scheduleHeaderSettings: model.scheduleHeaderSettings,
                     taskbarBackground: model.taskbarBackground,
                     progressbarBackground: model.progressbarBackground,
@@ -3208,6 +4350,7 @@
                     showResourceNames: model.showResourceNames,
                     resourceInfoMapping: model.resourceInfoMapping,
                     resourceNameMapping: model.resourceNameMapping,
+                    resourceUnitMapping: model.resourceUnitMapping,
                     enableProgressBarResizing: model.enableProgressBarResizing,
                     allowGanttChartEditing: model.allowGanttChartEditing,
                     taskbarEditingTooltipTemplateId: model.taskbarEditingTooltipTemplateId,
@@ -3232,9 +4375,32 @@
                     selectionMode: model.selectionMode,
                     taskbarTemplate: model.taskbarTemplate,
                     parentTaskbarTemplate: model.parentTaskbarTemplate,
-                    milestoneTemplate: model.milestoneTemplate
+                    milestoneTemplate: model.milestoneTemplate,
+                    durationUnitEditText: this._durationUnitEditText,
+                    taskbarClick : model.taskbarClick
                 });
         },
+        //Dynamically update dropDown datasources while changing localization of a project.
+        _updateColumnDropDownData:function(){
+            var proxy = this, model = proxy.model, columns = model.columns,
+                length = columns.length;
+            for (var i = 0; i < length; i++) {
+                if (columns[i].field == "taskMode") {
+                    columns[i].dropdownData = [{ id: 1, "text": proxy._taskModeTexts["manual"], "value": true },
+                                   { id: 2, "text": proxy._taskModeTexts["auto"], "value": false }];
+                }
+                if (columns[i].field == "taskType") {
+                    columns[i].dropdownData = [{ id: 1, "text": proxy._taskTypeTexts["fixedWork"], "value": "fixedWork" },
+                              { id: 2, "text": proxy._taskTypeTexts["fixedUnit"], "value": "fixedUnit" },
+                              { id: 3, "text": proxy._taskTypeTexts["fixedDuration"], "value": "fixedDuration" }];
+                }
+                if (columns[i].field == "effortDriven") {
+                    columns[i].dropdownData = [{ id: 1, "text": proxy._effortDrivenTexts["yes"], "value": "true" },
+                              { id: 2, "text": proxy._effortDrivenTexts["no"], "value": "false" }];
+                }
+            }
+        },
+
         //Populate columns for treegrid from mapping names
         createTreeGridColumns: function () {
 
@@ -3250,6 +4416,7 @@
                         width: 40,
                         editType: ej.Gantt.EditingType.String,
                         mappingName: mapping,
+                        allowEditing: false,
                         allowCellSelection: true 
                     };
                 }
@@ -3261,6 +4428,7 @@
                         width: 30,
                         editType: ej.Gantt.EditingType.String,
                         mappingName: mapping,
+                        allowEditing: false,
                         allowCellSelection: true
                     };
                 }
@@ -3345,14 +4513,14 @@
                     field: "duration",
                     headerText: proxy._columnHeaderTexts["duration"],
                     width: 150,
-                    editType: ej.Gantt.EditingType.Numeric,
+                    editType: ej.Gantt.EditingType.String,
                     allowCellSelection: true ,
                     mappingName:mapping
                 };
 
                 columns.push(column);
                 //proxy._emptyDataColumns.push(column.field);
-            }
+            }           
 
             mapping = model.progressMapping;// "Progress";
 
@@ -3449,6 +4617,79 @@
                     columns.push(column);
                 }
             }
+            mapping = model.notesMapping;
+
+            if (mapping.length) {
+                column = {
+                    field: "notesText",
+                    headerText: proxy._columnHeaderTexts["notes"],
+                    width: 150,
+                    editType: "stringedit",
+                    mappingName: mapping+"Text",
+                    allowEditing: true,
+                    allowCellSelection: true
+                };
+                columns.push(column);
+            }
+            mapping = model.taskSchedulingModeMapping;// "Task Mode";
+            if (mapping.length) {
+                var enableColumn = false;
+                if (model.taskSchedulingMode == ej.Gantt.TaskSchedulingMode.Custom)
+                    enableColumn = true;
+                column = {
+                    field: "taskMode",
+                    headerText: proxy._columnHeaderTexts["taskMode"],
+                    width: 100,
+                    editType: ej.Gantt.EditingType.Dropdown,
+                    allowCellSelection: enableColumn,
+                    allowEditing: enableColumn,
+                    mappingName: mapping,
+                    dropdownData: [{ id: 1, "text": proxy._taskModeTexts["manual"], "value": true },
+                                   { id: 2, "text": proxy._taskModeTexts["auto"], "value": false }],
+                    editParams: { field: { text: "text", value: "value" } }
+                }               
+                columns.push(column);
+            }
+
+            column = {
+                field: "work",
+                headerText: proxy._columnHeaderTexts["work"],
+                width: 150,
+                editType: ej.Gantt.EditingType.Numeric,
+                allowEditing: true,
+                allowCellSelection: true,
+                visible: false
+            };
+            columns.push(column);
+            column = {
+                field: "taskType",
+                headerText: proxy._columnHeaderTexts["taskType"],
+                width: 150,
+                editType: ej.Gantt.EditingType.Dropdown,
+                dropdownData: [{ id: 1, "text": proxy._taskTypeTexts["fixedWork"], "value": "fixedWork" },
+                               { id: 2, "text": proxy._taskTypeTexts["fixedUnit"], "value": "fixedUnit" },
+                               { id: 3, "text": proxy._taskTypeTexts["fixedDuration"], "value": "fixedDuration" }],
+                editParams: { field: { text: "text", value: "value" } },
+                allowEditing: true,
+                allowCellSelection: true,
+                visible: false
+            };
+            columns.push(column);
+
+            column = {
+                field: "effortDriven",
+                headerText: proxy._columnHeaderTexts["effortDriven"],
+                width: 150,
+                editType: ej.Gantt.EditingType.Dropdown,
+                dropdownData: [{ id: 1, "text": proxy._effortDrivenTexts["yes"], "value": "true" },
+                               { id: 2, "text": proxy._effortDrivenTexts["no"], "value": "false" }],
+                editParams: { field: { text: "text", value: "value" } },
+                allowEditing: true,
+                allowCellSelection: true,
+                visible: false
+            };
+            columns.push(column);
+
             return columns;
         },
         
@@ -3797,20 +5038,27 @@
         },
         //returns gantt record from data
         _createGanttRecord: function (data, level, parentItem, expanded, creatAt) {
-            var proxy = this, ganttRecord, model = proxy.model, //column = proxy._emptyDataColumns,
+            var proxy = this, ganttRecord, model = proxy.model,
                 columnRecords = proxy._columns, columnRecordsLength = columnRecords.length,
                 child = data[model.childMapping],
-                duration = data[model.durationMapping] ? (!isNaN(parseFloat(data[model.durationMapping])) ? parseFloat(data[model.durationMapping]) : 0) : 0,
+                duration = !ej.isNullOrUndefined(data[model.durationMapping]) ? data[model.durationMapping] : null,
                 status = data[model.progressMapping] ? (!isNaN(parseFloat(data[model.progressMapping])) ? parseFloat(data[model.progressMapping]) : 0) : 0,
                 startDateType = proxy._getDateFromFormat(data[model.startDateMapping]),
                 endDateType = proxy._getDateFromFormat(data[model.endDateMapping]),
                 resourceInfo = data[model.resourceInfoMapping],
                 predecessors = data[model.predecessorMapping],
+                notes = data[model.notesMapping],
                 baselineStartDateType = proxy._getDateFromFormat(data[model.baselineStartDateMapping]),
                 baselineEndDateType = proxy._getDateFromFormat(data[model.baselineEndDateMapping]),
                 WBS_Val = data["WBS"] ? data["WBS"] : null,
+                autoSchedule_val = (model.taskSchedulingMode == ej.Gantt.TaskSchedulingMode.Auto) ? true :
+                                    (model.taskSchedulingMode == ej.Gantt.TaskSchedulingMode.Manual) ? false :
+                                    (model.taskSchedulingMode == ej.Gantt.TaskSchedulingMode.Custom) ? data[model.taskSchedulingModeMapping] == true ? false : true :
+                                    model.taskSchedulingMode,
                 resourceName = [],
-                predecessorscol = [];
+                predecessorscol = [],
+                durationUnit = (model.durationUnitMapping && data[model.durationUnitMapping]) ? proxy._validateDurationUnitMapping(data[model.durationUnitMapping]) : null,
+                isMilesStone = model.milestoneMapping && data[model.milestoneMapping];
 
             var sTime = startDateType ? new Date(startDateType.getFullYear(), startDateType.getMonth(),
                 startDateType.getDate(), startDateType.getHours(), startDateType.getMinutes()).getTime() : null,
@@ -3818,116 +5066,164 @@
                 endDateType.getDate(), endDateType.getHours(), endDateType.getMinutes()).getTime() : null;
 
             ganttRecord = new ej.Gantt.GanttRecord();
-            ganttRecord.taskId = data[model.taskIdMapping],
-            ganttRecord.taskName = data[model.taskNameMapping],
-            ganttRecord.startDate = startDateType,
-            ganttRecord.endDate = endDateType,
-
-            ganttRecord.taskbarBackground = null,
-            ganttRecord.progressbarBackground = null,
-            ganttRecord.parentProgressbarBackground = null,
-            ganttRecord.parentTaskbarBackground = null,
-
-            ganttRecord.cellBackgroundColor = null,
-            ganttRecord.rowBackgroundColor = null,
-            ganttRecord.treeMappingName = [],
-
+            ganttRecord.taskId = data[model.taskIdMapping];
+            ganttRecord.taskName = data[model.taskNameMapping];
+            proxy._addItemValue(ganttRecord, data, creatAt);
+            ganttRecord.isAutoSchedule = autoSchedule_val;            
+            ganttRecord.startDate = this._checkStartDate(startDateType, ganttRecord);
+            //Update duration and endDate by miles stone mapping
+            if (!ej.isNullOrUndefined(isMilesStone) && isMilesStone) {
+                ganttRecord.duration = 0;
+                ganttRecord.durationUnit = durationUnit;
+                ganttRecord.isMilestone = true;
+                ganttRecord.endDate = new Date(ganttRecord.startDate);
+            }
+                //validate duration value
+            else if (!ej.isNullOrUndefined(duration)) {
+                var retrunVal = this._getDurationValues(duration);
+                ganttRecord.duration = retrunVal.duration;
+                ganttRecord.durationUnit = durationUnit ? durationUnit : retrunVal.durationUnit;
+                if (ganttRecord.duration == 0) {
+                    ganttRecord.isMilestone = true;
+                    ganttRecord.endDate = new Date(ganttRecord.startDate);
+                } else
+                    ganttRecord.endDate = this._getEndDate(ganttRecord.startDate, ganttRecord.duration, ganttRecord.durationUnit, ganttRecord);
+            } else if (endDateType) {
+                //If No hour information on endate default end time is set
+                if (endDateType.getHours() == 0 && this._defaultEndTime != 86400)
+                    this._setTime(this._defaultEndTime, endDateType);
+                ganttRecord.endDate = this._checkEndDate(endDateType, ganttRecord);
+                if (ganttRecord.startDate.getTime() >= ganttRecord.endDate.getTime()) {
+                    ganttRecord.endDate = new Date(ganttRecord.startDate);
+                    ganttRecord.isMilestone = true;
+                    ganttRecord.duration = 0;
+                } else
+                    ganttRecord.duration = this._getDuration(ganttRecord.startDate, ganttRecord.endDate, model.durationUnit, ganttRecord.isAutoSchedule);
+                ganttRecord.durationUnit = model.durationUnit;
+            } else if (!endDateType && ej.isNullOrUndefined(duration)) {
+                ganttRecord.isMilestone = true;
+                ganttRecord.duration = 0;
+                ganttRecord.endDate = new Date(ganttRecord.startDate);
+            }
             ganttRecord.baselineStartDate = baselineStartDateType,
             ganttRecord.baselineEndDate = baselineEndDateType,
-            ganttRecord.WBS = WBS_Val,
-            ganttRecord.duration = duration;
-            ganttRecord.dragState = true;
+            ganttRecord.WBS = WBS_Val;
+            ganttRecord.notes = notes;
+            ganttRecord["notesText"] = notes ? proxy._getPlainText(notes) : "";
 
             // updating Gantt record for custom columns while adding new row
             if (columnRecordsLength) {
                 for (var i = 0; i < columnRecordsLength; i++) {
-                    if (!ganttRecord[columnRecords[i].field])
+                    if (ganttRecord[columnRecords[i].field] == undefined)
                         ganttRecord[columnRecords[i].field] = data[columnRecords[i].mappingName];
                 }
             }
 
-            if (endDateType && ej.isNullOrUndefined(data[model.durationMapping])) {
-                ganttRecord._calculateDuration(startDateType, endDateType, model.includeWeekend, model.holidays, data[model.milestoneMapping],model);
-                duration = ganttRecord.duration;
-            }
-            ganttRecord.isMilestone = !ej.isNullOrUndefined(data[model.milestoneMapping]) ? data[model.milestoneMapping] : (duration == 0 ? true : false);
-
-            // To avoid the milestone taskbar for the same start and end date task item
-            if (sTime == eTime && !ganttRecord.isMilestone)
-                ganttRecord.duration = 1; // Also for non-milestone child item, duration is required to calculate  parent progress of the item
-            else
-                ganttRecord.duration = (ganttRecord.isMilestone && duration != 0) ? 0 : duration;
-
             ganttRecord.status = status,
-            ganttRecord.predecessor = predecessors && ganttRecord._calculatePredecessor(predecessors);
+            ganttRecord.predecessor = predecessors && ganttRecord._calculatePredecessor(predecessors, this._durationUnitEditText, model.durationUnit);
             ganttRecord.predecessorsName = predecessors;
-
-            ganttRecord.resourceInfo = resourceInfo && ganttRecord._setResourceInfo(data[(model.resourceInfoMapping)], model.resourceIdMapping, model.resourceNameMapping, model.resources);
+            var resourceCollection = proxy._isinAddnewRecord ? proxy._newRecordResourceCollection : model.resources;
+            ganttRecord.resourceInfo = resourceInfo && ganttRecord._setResourceInfo(data[(model.resourceInfoMapping)], model.resourceIdMapping, model.resourceNameMapping, model.resourceUnitMapping, resourceCollection);
             proxy._updateResourceName(ganttRecord);
             ganttRecord.parentItem = parentItem;
-            var tempData;
-            if (model.parentTaskIdMapping && creatAt)
-            {
-                tempData = ej.DataManager(proxy._retrivedData).executeLocal(ej.Query().where(model.taskIdMapping,
-                ej.FilterOperators.equal,
-                ganttRecord.taskId));
-                ganttRecord.item = tempData[0];
-            }
-            else
-            {
-                if (this.dataSource() instanceof ej.DataManager && this.dataSource().dataSource.json && this.dataSource().dataSource.offline && creatAt) {
-                var tempData = ej.DataManager(proxy._retrivedData).executeLocal(ej.Query().where(model.taskIdMapping,
-                ej.FilterOperators.equal,
-                ganttRecord.taskId));
-                if (tempData.length > 0) {
-                    ganttRecord.item = tempData[0];
-                } else {
-                    ganttRecord.item = data;
+            ganttRecord.level = level;
+
+            if (!creatAt) {
+                ganttRecord.width = ganttRecord._calculateWidth(this);
+                ganttRecord.left = ganttRecord._calculateLeft(this);
+                ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, status);
+
+                if (ganttRecord.baselineStartDate && ganttRecord.baselineEndDate) {
+                    ganttRecord.baselineLeft = ganttRecord._calculateBaselineLeft(this);
+                    ganttRecord.baselineWidth = ganttRecord._calculateBaseLineWidth(this);
                 }
+            }
+            proxy._updateItemValueInRecord(ganttRecord);
+            ganttRecord.childRecords = (child && child.length > 0) && proxy._createChildRecords(child, level + 1, ganttRecord),
+            ganttRecord.hasChildRecords = (child && child.length > 0) ? true : false,
+            ganttRecord.isMilestone = ganttRecord.hasChildRecords ? false : ganttRecord.isMilestone;
+            ganttRecord.expanded = expanded !== undefined ? expanded : child ? child.length > 0 : false;
+            if (model.enableVirtualization === false) {
+                ganttRecord.isExpanded = true;
+            }
+            if (ganttRecord.hasChildRecords) {                               
+                ganttRecord.manualStartDate = ganttRecord.startDate;
+                ganttRecord.manualEndDate = ganttRecord.endDate;                
+                ganttRecord.manualDuration = ganttRecord.duration;                
+            }            
+            ganttRecord.taskType = data.taskType ? data.taskType : model.taskType;
+            ganttRecord.effortDriven = data.effortDriven ? data.effortDriven : ganttRecord.taskType != "fixedWork" ? "false" : "true";           
+            //Calculate total works for this record.
+            ganttRecord._updateWorkWithDuration(proxy);
+            if (predecessors)
+                proxy._predecessorsCollection.push(ganttRecord);
+            return ganttRecord;
+        },
+        /*Validate duration unit value from data source*/
+        _validateDurationUnitMapping: function (value) {
+            var durationUnit = value;
+            if (this._durationUnitEditText.minute.indexOf(durationUnit) != -1)
+                durationUnit = ej.Gantt.DurationUnit.Minute;
+            else if (this._durationUnitEditText.hour.indexOf(durationUnit) != -1)
+                durationUnit = ej.Gantt.DurationUnit.Hour;
+            else if (this._durationUnitEditText.day.indexOf(durationUnit) != -1)
+                durationUnit = ej.Gantt.DurationUnit.Day;
+          
+            if (durationUnit == ej.Gantt.DurationUnit.Day || durationUnit == ej.Gantt.DurationUnit.Hour || durationUnit == ej.Gantt.DurationUnit.Minute)
+                return durationUnit;
+            else
+                return this.model.durationUnit;
+        },
+        //Start date,end date and duration are validated update this value in data source
+        _updateItemValueInRecord: function (ganttRecord) {
+            var model = this.model;
+            if (ganttRecord.item) {
+                var data = ganttRecord.item;
+                if (model.startDateMapping)
+                    data[model.startDateMapping] = ganttRecord.startDate;
+                if (model.endDateMapping)
+                    data[model.endDateMapping] = ganttRecord.endDate;
+                if (model.durationMapping)
+                    data[model.durationMapping] = ganttRecord.duration;
+                if (model.durationUnitMapping)
+                    data[model.durationUnitMapping] = ganttRecord.durationUnit;
+                if (model.taskSchedulingModeMapping)
+                    data[model.taskSchedulingModeMapping] = !ganttRecord.isAutoSchedule;
+            }
+        },
+        _addItemValue: function (ganttRecord, data, creatAt) {
+            var proxy = this, model = this.model;
+            //add item value in Gantt record
+
+            if (model.parentTaskIdMapping && creatAt) {
+                var id = data[model.taskIdMapping],
+                   index = proxy._taskIds.indexOf(id);
+                ganttRecord.item = (index > -1) ? proxy._retrivedData[index] : [];
+            }
+            else {
+                if (this.dataSource() instanceof ej.DataManager && this.dataSource().dataSource.json && this.dataSource().dataSource.offline && creatAt) {
+
+                    if (model.parentTaskIdMapping) {
+                        var id = data[model.taskIdMapping],
+                            index = proxy._taskIds.indexOf(id);
+                        ganttRecord.item = (index > -1) ? proxy._retrivedData[index] : [];
+                    } else {
+                        ganttRecord.item = data;
+                    }
                 }
                 else {
                     ganttRecord.item = data;
                 }
             }
-            ganttRecord.isSelected = false,
-            ganttRecord.level = level;
-            if(!ganttRecord.endDate || !ej.isNullOrUndefined(ganttRecord.duration))
-            {
-                ganttRecord._calculateEndDate(model.includeWeekend, this._holidaysList, model, proxy._perDayWidth);
-            }
-
-            ganttRecord.left = ganttRecord._calculateLeft(proxy._projectStartDate,
-                               proxy._perDayWidth, proxy._holidaysList, model);
-            if (model.renderBaseline) {
-                if (ganttRecord.baselineStartDate != "" && ganttRecord.baselineEndDate != "" && !ej.isNullOrUndefined(ganttRecord.baselineStartDate) && !ej.isNullOrUndefined(ganttRecord.baselineEndDate))
-                    if (ganttRecord.baselineStartDate.getTime() > ganttRecord.baselineEndDate.getTime())
-                        ganttRecord.baselineEndDate = new Date(ganttRecord.baselineStartDate);
-                ganttRecord.baselineLeft = ganttRecord._calculateBaselineLeft(proxy._projectStartDate, proxy._perDayWidth, model.includeWeekend, model.dateFormat, model.endDateMapping, proxy._holidaysList);
-            }
-
-            if (!creatAt) {
-                ganttRecord.width = ganttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
-                ganttRecord.width = ganttRecord.isMilestone == true ? proxy._milesStoneWidth : ganttRecord.width;
-                ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, status);
-
-                if (ganttRecord.baselineStartDate && ganttRecord.baselineEndDate) {
-                    ganttRecord.baselineWidth = ganttRecord._calculateBaseLineWidth(proxy._perDayWidth, model);
-                }
-            }
-
-            ganttRecord.childRecords = (child && child.length > 0) && proxy._createChildRecords(child, level + 1, ganttRecord),
-            ganttRecord.hasChildRecords = (child && child.length > 0) ? true : false,
-            ganttRecord.isMilestone = ganttRecord.hasChildRecords ? false : ganttRecord.isMilestone,
-            ganttRecord.expanded = expanded !== undefined ? expanded : child ? child.length > 0 : false;
-            if (model.enableVirtualization === false)
-            {
-                ganttRecord.isExpanded=true;
-            }
-
-            if (predecessors)
-                proxy._predecessorsCollection.push(ganttRecord);
-            return ganttRecord;
         },
+
+        //Get the plain text from html string
+        _getPlainText: function (htmlString) {
+            var div = document.createElement("DIV");
+            div.innerHTML = htmlString;
+            return div.textContent || div.innerText || "";
+        },
+
         /* udpate resourceNames attribute of record*/
         _updateResourceName: function (ganttRecord) {
             var proxy = this, resourceInfo = ganttRecord.resourceInfo,
@@ -3943,6 +5239,76 @@
                  }
                  ganttRecord.resourceNames = resourceName.join(',');
              }
+        },
+        //Update duration, work or unit of a resource according with the changes.
+        _updateResourceRelatedFields: function (ganttRecord) {
+            var proxy = this, model = proxy.model, updatedWorks,
+                calculationType = ganttRecord.taskType,
+                isAutoSchedule = ganttRecord.isAutoSchedule,
+                isEffortDriven = (ganttRecord.effortDriven === "true"); //Convert String true/false to boolean.
+
+            if (!ej.isNullOrUndefined(ganttRecord.resourceInfo)) {
+                if (ganttRecord.work > 0) {
+                    switch (calculationType) {
+                        case "fixedUnit":
+                            if (isAutoSchedule && ganttRecord.resourceInfo.length &&
+                                (proxy._updatedColumn == "work" ||
+                                (isEffortDriven && proxy._updatedColumn == "resourceInfo")))
+                                ganttRecord._updateDurationWithWork(proxy);
+
+                            else if (!isAutoSchedule && proxy._updatedColumn == "work")
+                                ganttRecord._updateUnitWithWork(proxy);
+
+                            else
+                                ganttRecord._updateWorkWithDuration(proxy);
+                            break;
+                        case "fixedWork":
+                            if (ganttRecord.resourceInfo.length == 0)
+                                return;
+                            else if (isAutoSchedule) {
+                                if (proxy._updatedColumn == "duration" || proxy._updatedColumn == "endDate")
+                                    ganttRecord._updateUnitWithWork(proxy);
+                                else
+                                    ganttRecord._updateDurationWithWork(proxy);
+                            }
+                            else {
+                                if (proxy._updatedColumn == "work")
+                                    ganttRecord._updateUnitWithWork(proxy);
+                                else
+                                    ganttRecord._updateWorkWithDuration(proxy);
+                            }
+                            break;
+                        case "fixedDuration":                                                       
+                            if (ganttRecord.resourceInfo.length && (proxy._updatedColumn == "work" ||
+                                (isAutoSchedule && isEffortDriven && proxy._updatedColumn == "resourceInfo")))
+                                ganttRecord._updateUnitWithWork(proxy);
+                            else
+                                ganttRecord._updateWorkWithDuration(proxy);
+                            break;
+                    }
+                }
+                else 
+                    ganttRecord._updateWorkWithDuration(proxy);
+            }
+        },
+
+        //Dynamically update resource treegrid datasource in resource tab of edit dialog box, according with changes in other resource related fields.
+        _updateResourceDataSource: function (editedObj) {
+            var proxy = this, resourceData = [],
+                length = editedObj.resourceInfo ? editedObj.resourceInfo.length : 0;
+            for (var i = 0; i < length; i++) {
+                resourceData.push({ "name": editedObj.resourceInfo[i][model.resourceIdMapping], "unit": editedObj.resourceInfo[i][model.resourceUnitMapping] });
+            }
+            var resourceTreeGridId = "#treegrid" + proxy._id + "resourceEdit",
+                resourceTreeGridDataSource = $(resourceTreeGridId).data("ejTreeGrid").model.dataSource;
+
+            for (var index = 0; index < resourceTreeGridDataSource.length; index++) {
+                var resource = resourceData.filter(function (data) { return data.name === parseInt(resourceTreeGridDataSource[index].name) })
+                if (resource && resource.length == 0)
+                    resourceData.push(resourceTreeGridDataSource[index]);
+            }
+
+            $(resourceTreeGridId).ejTreeGrid("option", "dataSource", resourceData);
         },
         _getHoliday: function () {
             if (this.model.holidays != null) {
@@ -3966,7 +5332,7 @@
                     holidayLength = holidayList.length;
                 if (holidayLength > 0) {
                     for (var i = 0; i < holidayLength; i++) {
-                        holidays[i] = ej.format(holidayList[i], this.model.dateFormat);
+                        holidays[i] = ej.format(holidayList[i], this.model.dateFormat, this.model.locale);
                     }
                     return holidays;
                 }
@@ -4022,6 +5388,7 @@
             var roundOffStartDate = startdate.getDay() == 0 ? (startdate.getDate()) - 7 :
                 (startdate.getDate()) - startdate.getDay();
             startdate.setDate(roundOffStartDate);
+            startdate.setHours(0, 0, 0, 0);
             do {
                 proxy._scheduleWeeks.push(new Date(startdate));
                 startdate.setDate(startdate.getDate() + 7);
@@ -4063,6 +5430,7 @@
             else {
                 startdate.setMonth(0);
                 startdate.setDate(1);
+                startdate.setHours(0, 0, 0, 0);
                 do {
                     proxy._scheduleYears.push(new Date(startdate));
                     startdate.setMonth(startdate.getMonth() + 12);
@@ -4092,7 +5460,7 @@
                 startdate = dt;
             }
             else {
-                startdate.setHours(0);                
+                startdate.setHours(0, 0, 0, 0);
             }
             do {
                 proxy._scheduleDays.push(new Date(startdate));
@@ -4238,7 +5606,7 @@
         },
 
         getFormatedDate: function(date) {
-            return ej.format(date, this.model.dateFormat);
+            return ej.format(date, this.model.dateFormat, this.model.locale);
         },
 
         _getProgressWidth: function (parentwidth, percent) {
@@ -4315,6 +5683,8 @@
             ganttChart.ejGanttChart({ expandAllCollapseAllRequest: $.proxy(proxy.expandAllCollapseAllRequest, proxy) });
             ganttChart.ejGanttChart({ taskbarEditing: $.proxy(proxy.taskbarEditing, proxy) });
             ganttChart.ejGanttChart({ taskbarEdited: $.proxy(proxy.taskbarEdited, proxy) });
+            ganttChart.ejGanttChart({ calculateEndDate: $.proxy(proxy.calculateEndDate, proxy) });
+            ganttChart.ejGanttChart({ calculateDuration: $.proxy(proxy.calculateDuration, proxy) });
             ganttChart.ejGanttChart({ clearColumnMenu: $.proxy(proxy.clearColumnMenu, proxy) });
             ganttChart.ejGanttChart({ deleteRow: $.proxy(proxy.deleteRow, proxy) });
             ganttChart.ejGanttChart({ cancelEditCell: $.proxy(proxy.cancelEditCell, proxy) });
@@ -4447,23 +5817,26 @@
             height = height - proxy._totalBorderHeight;
             width = Math.round(width);
 
-            var ganttWidth, treeGridWidth, top,left;
+            var ganttWidth, treeGridWidth, top,left,
+                toolbarHeight = $(toolbar).length ? $(toolbar).height() : 0;
             $(ejGanttSplit).css("width", width);
-            $(ejGanttSplit).css("height", (height - $(toolbar).height()));
+            $(ejGanttSplit).css("height", (height - toolbarHeight));
             $(ejGanttSplit).ejSplitter("refresh");
-            $(toolbar).css("width", width);
-            $(toolbar).children(".e-ul:first-child").css("width", width);
+            if ($(toolbar).length) {
+                $(toolbar).css("width", width);
+                $(toolbar).children(".e-ul:first-child").css("width", width);
+            }
 
             ganttWidth = $(ganttchart).width();
             treeGridWidth = $(treegrid).width();
-            $(ganttchart).height(height - $(toolbar).height());
+            $(ganttchart).height(height - toolbarHeight);
 
             top = $(ganttbody).ejScroller("option", "scrollTop");
             left = $(ganttbody).ejScroller("option", "scrollLeft");
             //set height for scroller div
             $(ganttbody).ejScroller({
                 width: ganttWidth,
-                height: (height - $(toolbar).height() - $(gantthead).height() - parseInt($(gantthead).css("border-bottom-width"))),
+                height: (height - toolbarHeight - $(gantthead).height() - parseInt($(gantthead).css("border-bottom-width"))),
             });
             $(ganttbody).ejScroller("refresh");
             maxScrollWidth = proxy._$ganttchartHelper.ejGanttChart("getMaxScrollWidth");
@@ -4473,8 +5846,8 @@
             $(ganttbody).ejScroller("option", "scrollTop", top);
             $(ganttbody).ejScroller("option", "scrollLeft", left);
 
-            $(treegridhelp).height(height - $(toolbar).height());
-            $(treegridcontent).height((height - $(toolbar).height() - $(gantthead).height() - proxy._totalBorderHeight));
+            $(treegridhelp).height(height - toolbarHeight);
+            $(treegridcontent).height((height - toolbarHeight - $(gantthead).height() - proxy._totalBorderHeight));
             left = $(treegridcontent).ejScroller("option", "scrollLeft");
             //$(treegridcontent).ejScroller("destroy";
             $(treegridcontent).width(treeGridWidth);
@@ -4505,11 +5878,29 @@
             proxy.setSplitterPosition(proxy.splitterPosition());
         },
 
+        /* Public method for scroll to the corresponding offset value */
+        setScrollTop: function (top) {
+            var proxy = this,
+                max = proxy._$treegridHelper.ejTreeGrid("getMaxScrollHeight");
+            if (proxy._isinBeginEdit)
+                proxy._$treegridHelper.ejTreeGrid("saveCell");
+
+            if ((typeof top == "number" || typeof parseInt(top) == "number")) {
+                top = parseInt(top);
+                if (top >= 0) {
+                    if (max >= top)
+                        proxy._$ganttchartHelper.ejGanttChart("onScrollHelper", top);
+                    else
+                        proxy._$ganttchartHelper.ejGanttChart("onScrollHelper", max);
+                }
+            }
+        },
         
         // handler for mouse right click
         _rightClick: function (e) {
             e.preventDefault();
             var proxy = this,
+                model = proxy.model,
                 $target = $(e.target),
                 div = $target.closest('tr'),
                 $ganttGridRows,
@@ -4551,12 +5942,18 @@
                     proxy.rowSelected(args);
                 proxy._$treegridHelper.ejTreeGrid("selectRows", recordIndexr);
                 proxy._$ganttchartHelper.ejGanttChart("selectRows", recordIndexr);
+                proxy.updateIndentOutdentOption(args.data);
             }
                 if (model.selectionMode == "cell")  {
                     proxy._rowIndexOfLastSelectedCell = recordIndexr;
                     selectCellIndex = proxy._$treegridHelper.ejTreeGrid("getCellIndex", e);
                     if (!$($target.closest('td')).hasClass("e-chartcell"))
                         proxy.selectCells([{ rowIndex: recordIndexr, cellIndex: selectCellIndex }]);
+                }
+                //To save edited data when beginEditAction as "click"
+                if (model.editSettings.beginEditAction == "click" && $("#ejTreeGrid" + proxy._id + "EditForm").length > 0) {
+                    proxy._$treegridHelper.ejTreeGrid("saveCell");
+                    proxy._isinBeginEdit = false;
                 }
             }
             else if (proxy.model.flatRecords.length === 0 && proxy.model.enableContextMenu) {
@@ -4602,6 +5999,7 @@
         //Update contextmenu item according to selected item and editSettings API values
         _updateIndentOutdentContextmenuOption: function (ganttRecord) {
             var proxy = this,
+                model = proxy.model,
                 flatRecords = this.model.flatRecords,
                 recordIndex = flatRecords.indexOf(ganttRecord);
             if (proxy.model.readOnly == true) {
@@ -4743,6 +6141,12 @@
         _enableEditingEvents: function () {
             var proxy = this,
                 model = proxy.model;
+            //To off the  event while changing the editSettings dynamically in setModel
+            proxy._off($("#" + proxy._id + "_dialogEdit"),
+                    "click keypress", "#EditDialog_" + proxy._id + "_Save ,#EditDialog_" + proxy._id + "_Cancel,#EditDialog_" + proxy._id + "_Delete", proxy._buttonClick);
+
+            proxy._off($("#" + proxy._id + "_dialogAdd"),
+               "click keypress", "#AddDialog_" + proxy._id + "_Save ,#AddDialog_" + proxy._id + "_Cancel", proxy._buttonClick);
 
             if (model.editSettings.allowEditing|| model.editSettings.editMode == "dialogTemplate" ||
                 (model.toolbarSettings.showToolbar && ((model.editSettings.allowAdding && model.toolbarSettings.toolbarItems.indexOf("add") !== -1) ||
@@ -4769,7 +6173,7 @@
 
         _buttonClick: function (e) {
 
-            if (e.keyCode !== undefined && e.keyCode != 13)
+            if (e.type !="click" && e.keyCode !== undefined && e.keyCode != 13)
                 return true;
             
             var proxy = this,   
@@ -4786,6 +6190,9 @@
                         $("#" + proxy._id + "_dialogEdit").ejDialog("close");
                     }
                 } else if (e.target.id == "EditDialog_" + proxy._id + "_Cancel") {
+                    //To revert back automatically updated resource unit while cancel the edit field changes.
+                    if (model.selectedItem.resourceInfo)
+                        model.selectedItem._updateUnitWithWork(proxy);
                     $("#" + proxy._id + "_dialogEdit").ejDialog("close");
                 }
                     //For delete option in editing dialog window
@@ -4841,6 +6248,7 @@
             var proxy = this, model = proxy.model;
             proxy._trigger("cellSelected", args);
             model.selectedCellIndexes = proxy._$treegridHelper.ejTreeGrid("instance").model.selectedCellIndexes;
+            proxy._rowIndexOfLastSelectedCell = model.selectedCellIndexes[0].rowIndex;
         },
         //trigger row selecting client side event
         rowSelecting: function (args) {
@@ -5046,6 +6454,12 @@
                 proxy._connectorlineIds = [];
                 proxy._connectorLinesCollection = [];
                 proxy._createConnectorLinesCollection();
+                if (this.isCriticalPathEnable == true) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, true, this.collectionTaskId);
+                }
+            }
+            if (args.requestType == "sorting") {
+                proxy._deSelectRowItem();
             }
 
             if (args.requestType === "delete") {
@@ -5077,7 +6491,10 @@
                     parentRecord=args.data.parentItem;
                     if(args.data.parentItem.childRecords.length>0)
                     {
+                        if (args.data.parentItem.isAutoSchedule)
                         proxy._updateParentItem(args.data);
+                        else if(!args.data.parentItem.isAutoSchedule)
+                            proxy._updateManualParentItem(args.data);
                     }else
                     {
                         parentRecord.expanded=false;
@@ -5096,11 +6513,17 @@
                     proxy._$ganttchartHelper.ejGanttChart("clearConnectorLines");
                     proxy._createConnectorLinesCollection();
                 }
+                if (this.isCriticalPathEnable == true) {
+                    this.showCriticalPath(true, true);
+                }
                 //Scroller is not correctly updated before connector line cleared.
                 proxy._$ganttchartHelper.ejGanttChart("refreshHelper", proxy.getCurrentViewData(), proxy.getUpdatedRecords(), proxy._totalCollapseRecordCount);
 
                 proxy._updateToolbarOptions(); // for uypdating toolbar items after delete operation
                 proxy.updateAltRow(proxy.getUpdatedRecords(), 0, 1);//for set e-alt-row style after deletion of element  
+                if (this.isCriticalPathEnable == true) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, true, this.collectionTaskId);
+                }
             }
 
             if (args.requestType === "selection") {
@@ -5123,27 +6546,38 @@
                 model.flatRecords = proxy._$treegridHelper.ejTreeGrid("getFlatRecords");
                 model.ids = proxy._$treegridHelper.ejTreeGrid("getUpdatedIds");
                 model.updatedRecords = proxy.getUpdatedRecords();               
-
+                var parentData = args.draggedRow.parentItem;
+                if (args.droppedPosition == "insertAsChild") {
+                    parentData.taskType = ej.Gantt.TaskType.FixedDuration;
+                    parentData.effortDriven = "false";
+                }
                 if (model.predecessorMapping) {
                     //Remove predecessor information from parent of dropped record.
-                    if (args.droppedPosition == "insertAsChild") {
-                        var parentData = args.draggedRow.parentItem;
+                    if (args.droppedPosition == "insertAsChild") {                       
                         parentData.predecessor && proxy._removePredecessor(parentData.predecessor, parentData);
                         parentData.item[model.predecessorMapping] = undefined;
                         parentData.predecessorsName = undefined;
-                        parentData.predecessor = undefined;                       
-                    }
-
+                        parentData.predecessor = undefined;                        
+                    }                    
                     proxy._isValidationEnabled = false;
                     proxy._connectorlineIds = [];
                     proxy._connectorLinesCollection = [];
                     proxy._$ganttchartHelper.ejGanttChart("clearConnectorLines");
                     proxy._createConnectorLinesCollection();
+                    proxy._isValidationEnabled = true;
                 }
-                if (args.draggedRow.parentItem)
+                if (args.draggedRow.parentItem && args.draggedRow.parentItem.isAutoSchedule)
                     proxy._updateParentItem(args.draggedRow);
+                else if (args.draggedRow.parentItem && !args.draggedRow.parentItem.isAutoSchedule)
+                    proxy._updateManualParentItem(args.draggedRow);
+                if (this.isCriticalPathEnable == true) {
+                    this.showCriticalPath(true, true);
+                }
                 if (args.draggedRow)
-                    proxy._$ganttchartHelper.ejGanttChart("refreshHelper", proxy.getCurrentViewData(), proxy.getUpdatedRecords(), proxy._totalCollapseRecordCount);                             
+                    proxy._$ganttchartHelper.ejGanttChart("refreshHelper", proxy.getCurrentViewData(), proxy.getUpdatedRecords(), proxy._totalCollapseRecordCount);
+                if (this.isCriticalPathEnable == true) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, true, this.collectionTaskId);
+                }
             }
             if (args.requestType === "save") {
                 if (args._cAddedRecord) {
@@ -5154,8 +6588,10 @@
                     proxy._renderAddedRow(args.index, args._cAddedRecord);
                    
 
-                    if (args._cAddedRecord.parentItem)
+                    if (args._cAddedRecord.parentItem && args._cAddedRecord.parentItem.isAutoSchedule)
                         proxy._updateParentItem(args._cAddedRecord);
+                    else if (args._cAddedRecord.parentItem && !args._cAddedRecord.parentItem.isAutoSchedule)
+                        proxy._updateManualParentItem(args._cAddedRecord);
 
                     ej.TreeGrid.updateAltRow(proxy, model.currentViewData[0], 0, 0);
 
@@ -5172,10 +6608,32 @@
                         proxy.refreshRowData(refreshArgs);
                         proxy.refreshRow(refreshArgs);
                     }
-                } else if (args._cModifiedData) {
-                    args._cModifiedData.left = args._cModifiedData._calculateLeft(proxy._projectStartDate, proxy._perDayWidth, proxy._holidaysList, model);
-                    args._cModifiedData.width = args._cModifiedData._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
-                    args._cModifiedData.progressWidth = args._cModifiedData._getProgressWidth(args._cModifiedData.width, args._cModifiedData.status);
+                } else if (args._cModifiedData) {                    
+
+                    if (args._cModifiedData.hasChildRecords && args._cModifiedData.isAutoSchedule) {
+                        
+                        args._cModifiedData.startDate = proxy._checkStartDate(args._cModifiedData.manualStartDate, args._cModifiedData);                        
+                        args._cModifiedData.left = args._cModifiedData._calculateManualLeft(this);
+                        args._cModifiedData.width = args._cModifiedData._calculateManualWidth(this);
+                        args._cModifiedData.progressWidth = args._cModifiedData._getProgressWidth(args._cModifiedData.width, args._cModifiedData.status);
+                        args._cModifiedData.endDate = args._cModifiedData.manualEndDate;
+                        args._cModifiedData._calculateDuration(this);                                                
+                    }
+                    else if (args._cModifiedData.hasChildRecords && !args._cModifiedData.isAutoSchedule) {
+                        args._cModifiedData.left = args._cModifiedData._calculateLeft(this);
+                        args._cModifiedData.width = args._cModifiedData._calculateWidth(this);
+                        args._cModifiedData._calculateDuration(this);
+                        args._cModifiedData.manualStartDate = args._cModifiedData.startDate;
+                        args._cModifiedData.manualEndDate = args._cModifiedData.endDate;
+                        proxy._updateManualParentItem(args._cModifiedData, null, true);
+                    }
+                    else {
+                        args._cModifiedData.startDate = proxy._checkStartDate(args._cModifiedData.startDate, args._cModifiedData);
+                        args._cModifiedData.endDate = proxy._getEndDate(args._cModifiedData.startDate, args._cModifiedData.duration,args._cModifiedData.durationUnit, args._cModifiedData);
+                        args._cModifiedData.left = args._cModifiedData._calculateLeft(this);
+                        args._cModifiedData.width = args._cModifiedData._calculateWidth(this);
+                        args._cModifiedData.progressWidth = args._cModifiedData._getProgressWidth(args._cModifiedData.width, args._cModifiedData.status);
+                    }
                     //Update WBS value while editing through EDIT DIALOG
                     if (model.enableWBS && model.enableWBSPredecessor && model.predecessorMapping) {
                         proxy._$treegridHelper.ejTreeGrid("updateWBSPredecessor", args._cModifiedData);
@@ -5183,8 +6641,10 @@
 
                     proxy.refreshGanttRecord(args._cModifiedData);
 
-                    if (args._cModifiedData.parentItem)
+                    if (args._cModifiedData.parentItem && args._cModifiedData.parentItem.isAutoSchedule)
                         proxy._updateParentItem(args._cModifiedData);
+                    else if (args._cModifiedData.parentItem && !args._cModifiedData.parentItem.isAutoSchedule)
+                        proxy._updateManualParentItem(args._cModifiedData);
 
                     if (args._cModifiedData.predecessor) {
                         if (args.previousValue) {
@@ -5228,10 +6688,16 @@
                                     proxy._$ganttchartHelper.ejGanttChart("appendConnectorLine", proxy._updatedConnectorLineCollection);
                                 }
                             }
-                            if (args._cModifiedData.parentItem)
+                            if (args._cModifiedData.parentItem && args._cModifiedData.parentItem.isAutoSchedule)
                                 proxy._updateParentItem(args._cModifiedData);
+                            else if(args._cModifiedData.parentItem && !args._cModifiedData.parentItem.isAutoSchedule)
+                                proxy._updateManualParentItem(args._cModifiedData);
                         }
                     }
+                }
+                if (this.isCriticalPathEnable == true) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, false, this.collectionTaskId);
+                    this.showCriticalPath(true);
                 }
             }
 
@@ -5243,25 +6709,43 @@
             proxy._ganttActionCompleteTrigger(args);
             // Update the scrollbar for focus the newly added record
             if (addedIndex >= 0) {
-                var ganttbody = proxy.element.find(".e-ganttviewerbodyContianer"),
-                    scroller = ganttbody.ejScroller("instance"),
-                    taskbarLeft = model.updatedRecords[addedIndex].left,
-                    width = scroller.model.width,
-                    scrollLeft = scroller.model.scrollLeft;
-                    hScrollbar = scroller._hScrollbar;
-                if (hScrollbar) {
-                    if (hScrollbar.model.maximum < scrollLeft)
-                        scrollLeft = hScrollbar.model.maximum;
-                    if (scrollLeft > taskbarLeft || (scrollLeft + width) < taskbarLeft) {
-                        var left = taskbarLeft - (width / 2);
-                        left = left < 0 ? 0 : left;
-                        ganttbody.ejScroller("scrollX", left, true);
-                    }
-                }
-                proxy._$ganttchartHelper.ejGanttChart("updateScrollBar");
+                proxy.focusOnTask(addedIndex);
             }
         },
 
+        /*Update the scrollbar to focus the selected task item by it's index*/
+        focusOnTask: function (index) {
+            var proxy = this, model = proxy.model,
+                ganttbody = proxy.element.find(".e-ganttviewerbodyContianer"),
+                scroller = ganttbody.ejScroller("instance"),
+                taskbarLeft = model.updatedRecords[index].left,
+                width = scroller.model.width,
+                scrollLeft = scroller.model.scrollLeft,
+                hScrollbar = scroller._hScrollbar;
+            if (hScrollbar) {
+                if (hScrollbar.model.maximum < scrollLeft)
+                    scrollLeft = hScrollbar.model.maximum;
+                if (scrollLeft > taskbarLeft || (scrollLeft + width) < taskbarLeft) {
+                    var left = taskbarLeft - (width / 2);
+                    left = left < 0 ? 0 : left;
+                    ganttbody.ejScroller("scrollX", left, true);
+                }
+            }
+            proxy._$ganttchartHelper.ejGanttChart("updateScrollBar");
+        },
+        calculateEndDate: function (args) {
+            var proxy = this;
+            var endDate = this._getEndDate(proxy._checkStartDate(args.startDate, args.record),
+                args.duration, args.durationUnit, args.record);
+            proxy._$ganttchartHelper.ejGanttChart("updateEditedRecordEndDate", proxy._checkEndDate(endDate, args.record));
+        },
+
+        calculateDuration: function (args) {
+            var proxy = this;
+            var duration = this._getDuration(proxy._checkStartDate(args.startDate, args.record),
+                           proxy._checkEndDate(args.endDate, args.record), args.durationUnit, args.isAutoSchedule);
+            proxy._$ganttchartHelper.ejGanttChart("updateEditedRecordDuration", duration);
+        },
         expandAllCollapseAllRequest:function(args)
         {
             var proxy = this,
@@ -5334,7 +6818,7 @@
             //on mouse up if validation is true then draw connector line
             if (args.requestType === "drawConnectorLine") {
 
-                var currentPredecessor = args.toItem._calculatePredecessor(args.predecessor);
+                var currentPredecessor = args.toItem._calculatePredecessor(args.predecessor, this._durationUnitEditText, this.model.durationUnit);
                 args.toItem.item[proxy.model.predecessorMapping] = args.predecessorString[0];
                 args.toItem.predecessorsName = args.toItem.item[proxy.model.predecessorMapping];
                 //Update WBS value while drawing the predecessor links
@@ -5360,16 +6844,28 @@
                 proxy._isMileStoneEdited = args.toItem.isMilestone;
                 proxy._updatedConnectorLineCollection = [];
                 proxy._connectorlineIds = [];
+                if (args.toItem.isAutoSchedule || proxy.model.validateManualTasksOnLinking)
+                    proxy._isValidationEnabled = true;
+                else
+                    proxy._isValidationEnabled = false;
                 proxy._validatePredecessor(args.toItem);
                 if (proxy._updatedConnectorLineCollection.length > 0) {
                     proxy._$ganttchartHelper.ejGanttChart("appendConnectorLine", proxy._updatedConnectorLineCollection);
+                }
+                //Update predecessor cell value in treegrid while drawing a new connector line to/from manual task.
+                if (!args.toItem.isAutoSchedule && !proxy.model.validateManualTasksOnLinking) {
+                    var treegridObject = proxy._$treegridHelper.ejTreeGrid("instance");
+                    ej.TreeGrid.refreshRow(treegridObject, proxy.model.currentViewData.indexOf(args.toItem));
                 }
                 /*update schedule dates on predecessor editing */
                 var checkArgs = {};
                 checkArgs.data = args.toItem;
                 proxy._updateScheduleDatesOnEditing(checkArgs);
-            }
-            
+                if (this.isCriticalPathEnable == true) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, false, this.collectionTaskId);
+                    this.showCriticalPath(true);
+                }
+        }
             proxy._ganttActionCompleteTrigger(args);
         },
 
@@ -5423,6 +6919,152 @@
             proxy._$treegridHelper.ejTreeGrid("clearSorting");
         },
 
+        "export": function (action, serverEvent, multipleExport) {
+            var proxy = this, model=proxy.model;
+            //proxy.model.isFromGantt = proxy._isFromGantt;
+            //proxy._$treegridHelper.ejTreeGrid("export", action, serverEvent, multipleExport, proxy);
+            var attr = { action: action, method: 'post', "data-ajax": "false" };
+            $('form#' + proxy._id + 'export').remove();
+            var form = ej.buildTag('form#' + proxy._id + 'export', "", null, attr);
+            var ignoreOnExport = proxy.ignoreOnExport,
+                   igonreLength = ignoreOnExport.length;
+            if (!multipleExport) {
+                var updatedRecords = model.updatedRecords,
+                       currentViewData = model.currentViewData,
+                       flatRecords = model.flatRecords,
+                       parentRecords = model.parentRecords,
+                       selectedItem = model.selectedItem,
+                       selectedItems = model.selectedItems,
+                       workUnit = model.workUnit;
+                proxy._$treegridHelper.ejTreeGrid("contextMenuOperations", "Cancel");
+                //proxy._contextMenuOperations("Cancel"); // Cancel the edit row or empty newly added row.
+                // Delete the below internal items in model for avoid the circular reference while extend the model
+                delete model.updatedRecords;
+                delete model.currentViewData;
+                delete model.flatRecords;
+                delete model.parentRecords;
+                delete model.selectedItem;
+                delete model.selectedItems;
+                delete model.workUnit;
+                var modelClone = $.extend(true, {}, model);
+                model.updatedRecords = updatedRecords;
+                model.currentViewData = currentViewData;
+                model.flatRecords = flatRecords;
+                model.parentRecords = parentRecords;
+                model.selectedItem = selectedItem;
+                model.selectedItems = selectedItems;
+                model.workUnit = workUnit;
+                var columns = modelClone.columns,
+                    columnLength = columns.length;
+                for (var i = 0; i < columnLength; i++) {
+                    if (modelClone.columns[i].editType != undefined) {
+                        switch (columns[i].editType) {
+                            case "stringedit":
+                                columns[i].editType = "string";
+                                break;
+                            case "numericedit":
+                                columns[i].editType = "numeric";
+                                break;
+                            case "dropdownedit":
+                                columns[i].editType = "dropdown";
+                                break;
+                            case "booleanedit":
+                                columns[i].editType = "boolean";
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }              
+               
+                if (this.ignoreOnExport) {
+                    for (var i = 0; i < igonreLength; i++) {
+                        delete modelClone[ignoreOnExport[i]];
+                    }
+                }
+            }
+            if (ej.raiseWebFormsServerEvents) {
+                var args = { model: modelClone, originalEventType: serverEvent };
+                var clientArgs = { model: JSON.stringify(modelClone) };
+                ej.raiseWebFormsServerEvents(serverEvent, args, clientArgs);
+            }
+            else {
+                var ganttObjectArray = {};
+                if (multipleExport) {
+                    $('body').find('.e-gantt').each(function (index, object) {
+                        var ganttObject = $(object).data('ejGantt');
+                        if (!ej.isNullOrUndefined(ganttObject)) {
+                            var gridmodel = ganttObject.model;
+                            updatedRecords = gridmodel.updatedRecords;
+                            flatRecords = gridmodel.flatRecords;
+                            currentViewData = gridmodel.currentViewData;
+                            parentRecords = gridmodel.parentRecords;
+                            selectedItem = gridmodel.selectedItem;
+                            selectedItems = gridmodel.selectedItems;
+                            workUnit = model.workUnit;
+                            // Delete the below internal items in model for avoid the circular reference while extend the model
+                            delete gridmodel.updatedRecords;
+                            delete gridmodel.flatRecords;
+                            delete gridmodel.currentViewData;
+                            delete gridmodel.parentRecords;
+                            delete gridmodel.selectedItem;
+                            delete gridmodel.selectedItems;
+                            delete gridmodel.workUnit;
+                            var modelClone = JSON.parse(JSON.stringify(gridmodel));
+                            gridmodel.updatedRecords = updatedRecords;
+                            gridmodel.flatRecords = flatRecords;
+                            gridmodel.currentViewData = currentViewData;
+                            gridmodel.parentRecords = parentRecords;
+                            gridmodel.selectedItem = selectedItem;
+                            gridmodel.selectedItems = selectedItems;
+                            gridmodel.workUnit = workUnit;
+                            columns = modelClone.columns;
+                            columnLength = columns.length;
+                            for (var i = 0; i < columnLength; i++) {
+                                if (columns[i].editType != undefined) {
+                                    switch (columns[i].editType) {
+                                        case "stringedit":
+                                            columns[i].editType = "string";
+                                            break;
+                                        case "numericedit":
+                                            columns[i].editType = "numeric";
+                                            break;
+                                        case "dropdownedit":
+                                            columns[i].editType = "dropdown";
+                                            break;
+                                        case "booleanedit":
+                                            columns[i].editType = "boolean";
+                                            break;
+                                        default:
+                                            break;
+                                    }
+                                }
+                            }
+                            if (ignoreOnExport) {
+                                for (var i = 0; i < igonreLength; i++) {
+                                    delete modelClone[ignoreOnExport[i]];
+                                }
+                                ganttObjectArray[index] = JSON.stringify(modelClone);
+                                var inputAttr = { name: 'GanttModel', type: 'hidden', value: JSON.stringify(modelClone) }
+                                var input = ej.buildTag('input', "", null, inputAttr);
+                                form.append(input);
+                            }
+                        }
+                    });
+                }
+                else {
+                    var inputAttr = { name: 'GanttModel', type: 'hidden', value: JSON.stringify(modelClone) }
+                    var input = ej.buildTag('input', "", null, inputAttr);
+                    form.append(input);
+                    form.append(this);
+                }
+                $('body').append(form);
+                form.submit();
+            }
+            return true;
+        },
+
+
         _refreshParent: function (item) {
             this.refreshGanttRecord(item);
             if (item.parentItem) {
@@ -5434,477 +7076,182 @@
             var proxy = this,
                 ganttRecord = args.data, model = proxy.model,
                 projectStartDate = new Date(proxy._projectStartDate),
-                remainDays,
-                day,
+                remainDays, remainDaysInDecimal,
+                day, perDayHourUnit,
                 headerType = model.scheduleHeaderSettings.scheduleHeaderType,
                 headerValue = ej.Gantt.ScheduleHeaderType,
                 durationUnitValue = ej.Gantt.DurationUnit,
-                startDateMinute,
                 offset = 0;
             
             proxy._isValidationEnabled = false;
             
             if (args.dragging) {
-                var editMode = "dragging";               
+                var editMode = "dragging";
                 if (args.previousData.left !== ganttRecord.left) {
-                    remainDays = ganttRecord.left % proxy._perDayWidth,
-                           day = (ganttRecord.left - remainDays) / proxy._perDayWidth,
-                           offset = 0;
-                    if (remainDays > 0 && (model.workingTimeScale != ej.Gantt.workingTimeScale.TimeScale24Hours)) {
-                        if (headerType == headerValue.Day)
-                            offset = remainDays > ((proxy._perDayWidth / 2) + (3 * proxy._perHourWidth)) ? 1 : 0;
-                        else
-                            offset = remainDays >= proxy._perDayWidth / 2 ? 1 : 0;
-                    }
-                    //Hour calculation
-                    var remainingHours = Math.round(remainDays / (proxy._perDayWidth / 24));
-                    //Minute calculation
-                    var remainingMinutes = Math.round(remainDays / (proxy._perDayWidth / (24 * 60)));
-                    projectStartDate.setDate(projectStartDate.getDate() + day + offset);
-                    if (headerType == headerValue.Day && model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                        if (model.dateFormat.toLowerCase().indexOf("hh") != -1) {
-                            if (model.durationUnit == durationUnitValue.Minute)
-                                projectStartDate.setMinutes(remainingMinutes);
-                            else if(model.durationUnit == durationUnitValue.Hour)
-                                projectStartDate.setHours(remainingHours);
-                        }                      
-                    }
-                    else if (headerType == headerValue.Hour) {
-                        projectStartDate.setMinutes(remainingMinutes);
-                        //Update the start date after editing the taskbar in "hour" duration unit. 
-                        if (model.durationUnit == durationUnitValue.Hour) {
-                            var startDateMinutes = projectStartDate.getMinutes();
-                            if (startDateMinutes > 30)
-                                projectStartDate.setMinutes(60);
-                            else
-                                projectStartDate.setMinutes(0);
+                    remainDays = ganttRecord.left % proxy._perDayWidth;
+                    day = (ganttRecord.left - remainDays) / proxy._perDayWidth;
+                    remainDaysInDecimal = remainDays / proxy._perDayWidth;
+                    /*Rounding the decimal value for week-month-year schedule mode*/
+                    if (headerType == headerValue.Week || headerType == headerValue.Month || headerType == headerValue.Year) {
+                        if (remainDaysInDecimal <= 0.25) {
+                            remainDaysInDecimal = 0;
+                            ganttRecord.left = ganttRecord.left - remainDays;
+                        }
+                        else if (remainDaysInDecimal > 0.25 && remainDaysInDecimal <= 0.75) {
+                            remainDaysInDecimal = 0.5;
+                            var newRemainDays = remainDaysInDecimal * proxy._perDayWidth;
+                            ganttRecord.left = ganttRecord.left - remainDays + newRemainDays;
+                        }
+                        else if (remainDaysInDecimal > 0.75) {
+                            day += 1;
+                            remainDaysInDecimal = 0;
+                            ganttRecord.left = ganttRecord.left - remainDays + proxy._perDayWidth;
                         }
                     }
-
-                    else if (headerType == headerValue.Week && model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours &&
-                       (model.durationUnit == durationUnitValue.Day ||model.dateFormat.indexOf("hh:") == -1))
-                        ganttRecord.left = day * proxy._perDayWidth;
-
-                    else if (model.dateFormat.indexOf("hh:") != -1 &&
-                     model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        //Update the duration only in the range between 8 hour to 16 hour.
-                        if (remainingHours >= 8 && remainingHours <=16)
-                            projectStartDate.setHours(remainingHours);
-                        else
-                            projectStartDate.setHours(8);                        
+                    if (headerType == headerValue.Day || headerType == headerValue.Hour)
+                        perDayHourUnit = 24;
+                    else
+                        perDayHourUnit = proxy._secondsPerDay / 3600;
+                    /*Calculating the day decimal values in to hours and then minutes*/
+                    if (perDayHourUnit && remainDaysInDecimal > 0) {
+                        var perHourDecimalWidth = 1 / perDayHourUnit,
+                            decimalWidthInHours = remainDaysInDecimal / perHourDecimalWidth,
+                            inMinutes = Math.round(decimalWidthInHours * 60);
                     }
-                    else if (model.dateFormat.indexOf("hh:") != -1) {
-                        if (model.durationUnit == durationUnitValue.Hour)
-                            projectStartDate.setHours(remainingHours);
-                        else if (model.durationUnit == durationUnitValue.Minute)
-                            projectStartDate.setMinutes(remainingMinutes);
-                    }
-
-                    if ((model.workingTimeScale != ej.Gantt.workingTimeScale.TimeScale24Hours)) {
-                        //Calculate the left value of gantt record after dragging the record in eight hour time scale.
-                        if (headerType == headerValue.Day && model.durationUnit == durationUnitValue.Hour) {
-                            var totalDay = offset + day;
-                            var intervalHourWidth = 8;
-                            if (remainingHours >= 8 && remainingHours <16)
-                                intervalHourWidth = remainingHours;
-                            if ((remainingHours < 8 || remainingHours > 15) && (args.previousData.left > ganttRecord.left)) {
-                                projectStartDate.setDate(projectStartDate.getDate() - 1);
-                                projectStartDate.setHours(15);
-                                ganttRecord.left = 15 * proxy._perHourWidth;
-                            }                                
-                            else if(totalDay > 0)
-                                ganttRecord.left = (totalDay * proxy._perDayWidth) + (intervalHourWidth * proxy._perHourWidth);
-                            else
-                                ganttRecord.left = ganttRecord.left;                                
-                            }
-                        else if (remainDays >= (proxy._perDayWidth / 2)) {
-                             ganttRecord.left = ganttRecord.left + proxy._perDayWidth;//- remainDays;
-                                if (model.roundOffDayworkingTime)
-                                    ganttRecord.left -= remainDays;
-                           }
-                        else {
-                             ganttRecord.left = ganttRecord.left;// - remainDays;
-                             if (model.roundOffDayworkingTime)
-                                 ganttRecord.left -= remainDays;
-                         }
-                    }
-                    
-                    if (this._stringHolidays &&
-                     this._stringHolidays.indexOf(ganttRecord._getFormatedDate(projectStartDate, model.dateFormat)) != -1) {
-                        projectStartDate.setDate(projectStartDate.getDate() + 1);
-                        ganttRecord.left += proxy._perDayWidth;
-                    }
-                    
-                    if (this.model.includeWeekend == false) {
-                        if (projectStartDate.getDay() === 0) {
-                            projectStartDate.setDate(projectStartDate.getDate() + 1);
-                            ganttRecord.left += proxy._perDayWidth;
-                        } else if (projectStartDate.getDay() === 6) {
-                            projectStartDate.setDate(projectStartDate.getDate() + 2);
-                            ganttRecord.left += (2 * proxy._perDayWidth);
-                        }
-                    }
-
-                    if (this._stringHolidays &&
-                    this._stringHolidays.indexOf(ganttRecord._getFormatedDate(projectStartDate, model.dateFormat)) != -1) {
-                        projectStartDate.setDate(projectStartDate.getDate() + 1);
-                        ganttRecord.left += proxy._perDayWidth;
-                    }
-                    //To taskbar edit when duration unit of hour minute schedule mode is "hour".
-                    if (headerType == headerValue.Hour && model.durationUnit == durationUnitValue.Hour) {
-                        var previousDataStartDate = proxy._getDateFromFormat(args.previousData.startDate),
-                            ganttStartDate = proxy._getDateFromFormat(ganttRecord.startDate),
-                            startDateHour = previousDataStartDate.getHours(),
-                            ganttDateHour = ganttStartDate.getHours(),
-                            diff = Math.abs(previousDataStartDate - ganttStartDate),
-                            hourDifference = Math.round(diff / 3600000),//Milliseconds to hour                                               
-                            startDateMinute = ganttStartDate.getMinutes(),
-                            remainingMinuteLeft = startDateMinute / proxy._minuteInterval,
-                            remainingMinuteRight = (proxy._perDayWidth / (proxy._perMinuteWidth * 24)) - remainingMinuteLeft;
-
-                        if (args.previousData.left > ganttRecord.left) {
-                            if (startDateMinute > 30)
-                                ganttRecord.left = args.previousData.left - ((hourDifference) * (proxy._perDayWidth / 24));
-                            else
-                                ganttRecord.left = ganttRecord.left - (proxy._perMinuteWidth * remainingMinuteLeft);
-                        }
-                        else if (args.previousData.left < ganttRecord.left) {
-                            if (startDateMinute < 30)
-                                ganttRecord.left = args.previousData.left + ((hourDifference) * (proxy._perDayWidth / 24));
-                            else
-                                ganttRecord.left = ganttRecord.left + (proxy._perMinuteWidth * remainingMinuteRight);
-                        }
-                    }                    
-                    ganttRecord.startDate = projectStartDate;//_calculateFormatedDate
+                    projectStartDate = ganttRecord._startDateUpdate(projectStartDate, day, inMinutes, proxy._workingTimeRanges, headerType);
+                    ganttRecord.startDate = proxy._checkStartDate(projectStartDate, ganttRecord);
                     if (model.startDateMapping)
                         ganttRecord.item[model.startDateMapping] = ganttRecord.startDate;
-                    ganttRecord._calculateEndDate(model.includeWeekend, this._holidaysList, model, proxy._perDayWidth, editMode);
-                    ganttRecord.width = ganttRecord._calculateTaskbarWidth(proxy._perDayWidth,model);
-                    ganttRecord.progressWidth = ganttRecord._getProgressWidth(ganttRecord.width, ganttRecord.status);
+                    ganttRecord._calculateEndDate(this);
+                    ganttRecord.left = ganttRecord._calculateLeft(this);
+                    ganttRecord.width = ganttRecord._calculateWidth(this);
+                    if (!ganttRecord.hasChildRecords)
+                        ganttRecord.progressWidth = ganttRecord._getProgressWidth(ganttRecord.width, ganttRecord.status);
                     proxy._isValidationEnabled = true;
                 }
 
             } else if (args.rightResizing) {
                 var editMode = "Resizing";
                 if (args.previousData.width !== ganttRecord.width) {
-                    day = ganttRecord.width / proxy._perDayWidth;
-                    var rem = ganttRecord.width % proxy._perDayWidth;                    
-                    offset = 0;
-                    if (rem > 0 && (model.workingTimeScale != "TimeScale24Hours")) {
-                        if (headerType == headerValue.Day)
-                            offset = rem > ((proxy._perDayWidth / 2) + (3 * proxy._perHourWidth)) ? 1 : 0;
+
+                    if (headerType == headerValue.Day || headerType == headerValue.Hour) {
+                        var tempStartDate = new Date(ganttRecord.startDate),
+                                                         tempNewStartDate = new Date(ganttRecord.startDate), timeDiff, taskTempWidth;
+                        tempNewStartDate.setHours(0, 0, 0, 0);
+                        timeDiff = tempStartDate.getTime() - tempNewStartDate.getTime();
+                        if (timeDiff > 0)
+                            taskTempWidth = ganttRecord.width + ((timeDiff / (1000 * 60 * 60 * 24)) * proxy._perDayWidth);
                         else
-                            offset = rem >= (proxy._perDayWidth / 2) ? 1 : 0;
+                            taskTempWidth = ganttRecord.width;
+                        remainDays = taskTempWidth % proxy._perDayWidth;
+                        day = (taskTempWidth - remainDays) / proxy._perDayWidth;
+                        perDayHourUnit = 24;
                     }
-
-                    var totalLength = ganttRecord.left + ganttRecord.width;
-                    var remainingLength = totalLength % proxy._perDayWidth;
-
-                    var remainingHours = (remainingLength / (proxy._perDayWidth / 24)),//hour calculation
-                        remainingMinutes = (remainingLength / (proxy._perDayWidth / (24*60)));
-                    var startDate = proxy._getDateFromFormat(ganttRecord.startDate);
-
-                    if (headerType == headerValue.Day) {
-                        if (model.dateFormat.toLowerCase().indexOf("hh") != -1) {
-                            var startDateHour = ganttRecord.left / proxy._perHourWidth,
-                                hours = (totalLength / (proxy._perHourWidth));
-                            hours -= startDateHour;
-                            var minutes = Math.round((hours - Math.floor(hours)) * 60);
-                            if (model.durationUnit == durationUnitValue.Hour)
-                                var endDate = ganttRecord._dateUpdate(startDate, 0,Math.round(hours));
-                            else if (model.durationUnit == durationUnitValue.Minute)
-                                var endDate = ganttRecord._dateUpdate(startDate, 0, hours, minutes);
-                            else
-                                var endDate = ganttRecord._dateUpdate(startDate, day, 0, 0);
-                        }
-                        else
-                            var endDate = ganttRecord._dateUpdate(startDate, day, 0, 0);
-                    }
-                    else if ((headerType == headerValue.Hour &&
-                            (model.durationUnit == durationUnitValue.Minute || model.durationUnit == durationUnitValue.Hour))) {
-                       var startDateMinute = (ganttRecord.left % proxy._perDayWidth) / (proxy._perMinuteWidth) * (proxy._minuteInterval),
-                           minutes = (totalLength / (proxy._perMinuteWidth)) * (proxy._minuteInterval);
-
-                        minutes -= startDateMinute;
-                        minutes = minutes % (24 * 60);                        
-                        var endDate = ganttRecord._dateUpdate(startDate, day, 0, minutes);
-                    }
-                    else if (headerType == headerValue.Week) {
-                        var startDateHour = Math.round(ganttRecord.left / (proxy._perDayWidth / 24)),
-                               remainingHourDiff = Math.round(totalLength / (proxy._perDayWidth / 24)),
-                               remainingMinuteDiff = remainingMinutes % 60;
-                            remainingHourDiff -= startDateHour;
-                        if (model.dateFormat.toLowerCase().indexOf("hh") != -1) {
-                            if (model.durationUnit == durationUnitValue.Hour)
-                                endDate = ganttRecord._dateUpdate(startDate, 0, remainingHourDiff);
-                            else if (model.durationUnit == durationUnitValue.Minute)
-                                endDate = ganttRecord._dateUpdate(startDate, 0, remainingHourDiff, remainingMinuteDiff);
-                            else
-                                endDate = ganttRecord._dateUpdate(startDate, Math.floor(day - 1 + offset), 0);
-                        }
-                        else if (model.durationUnit == durationUnitValue.Day)
-                            endDate = ganttRecord._dateUpdate(startDate, Math.floor(day - 1 + offset), 0);
-                        else
-                            endDate = ganttRecord._dateUpdate(startDate, Math.floor(day + offset), 0);
-                    }
-
                     else {
-                        if (model.durationUnit == durationUnitValue.Hour) {
-                            if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                                endDate = ganttRecord._dateUpdate(startDate, day - 1 + offset, remainingHours);
-                            if (model.dateFormat.toLowerCase().indexOf("hh") == -1)
-                                var endDate = ganttRecord._dateUpdate(startDate, Math.floor(day + offset), 0);
-                        }
-                        else if (model.durationUnit == durationUnitValue.Minute) {
-                            if (model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                                endDate = ganttRecord._dateUpdate(startDate, day + offset, 0, remainingMinutes);
-                            if (model.dateFormat.toLowerCase().indexOf("hh") == -1)
-                                endDate = ganttRecord._dateUpdate(startDate, Math.floor(day + offset), 0);
-                        }
-                        else
-                            var endDate = ganttRecord._dateUpdate(startDate, Math.floor(day - 1 + offset), 0);
+                        remainDays = ganttRecord.width % proxy._perDayWidth,
+                        day = (ganttRecord.width - remainDays) / proxy._perDayWidth;
+                        perDayHourUnit = proxy._secondsPerDay / 3600;
                     }
-
-                    if (headerType == headerValue.Day && model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours &&
-                         model.durationUnit == durationUnitValue.Hour && model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                        endDate.setHours(Math.round(remainingHours));
-                    if (model.dateFormat.indexOf("hh:") != -1 && headerType == headerValue.Day &&
-                       model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        //Update the end date by one day when end date when taskbar exceeds the 8 hour limit.
-                        if (endDate.getHours() > 16)
-                            endDate.setHours(Math.round(24 + 9));
-                        else if (endDate.getHours() < 8)
-                            endDate.setHours(Math.round(9));
-                    }
-
-                    if (model.holidays && model.holidays.length) {
-                        var holidayIndex = 0,
-                            holidayslength = model.holidays.length,
-                            holiday;
-                        for (holidayIndex = 0; holidayIndex < holidayslength; holidayIndex++) {
-                            holiday = proxy._getDateFromFormat(this._holidaysList[holidayIndex]);
-                            if (endDate.getTime() === holiday.getTime()) {
-                                endDate.setDate(endDate.getDate() - 1);
-                            }
+                    remainDaysInDecimal = remainDays / proxy._perDayWidth,
+                    startDate = proxy._getDateFromFormat(ganttRecord.startDate);
+                    /*Rounding the decimal value for week-month-year schedule mode*/
+                    if (headerType == headerValue.Week || headerType == headerValue.Month || headerType == headerValue.Year) {
+                        if (remainDaysInDecimal <= 0.25) {
+                            remainDaysInDecimal = 0;
+                            ganttRecord.width = ganttRecord.width - remainDays;
+                        }
+                        else if (remainDaysInDecimal > 0.25 && remainDaysInDecimal <= 0.75) {
+                            remainDaysInDecimal = 0.5;
+                            var newRemainDays = remainDaysInDecimal * proxy._perDayWidth;
+                            ganttRecord.width = ganttRecord.width - remainDays + newRemainDays;
+                        }
+                        else if (remainDaysInDecimal > 0.75) {
+                            day += 1;
+                            remainDaysInDecimal = 0;
+                            ganttRecord.width = ganttRecord.width - remainDays + proxy._perDayWidth;
                         }
                     }
-
-                    if (this.model.includeWeekend == false) {
-                        if (endDate.getDay() == 0) {
-                            endDate.setDate(endDate.getDate() + 1);
-                        } else if (endDate.getDay() == 6) {
-                            endDate.setDate(endDate.getDate() + 2);
-                        }
+                    /*Calculating the remaining day decimal values in to hours and then minutes*/
+                    if (perDayHourUnit && remainDaysInDecimal > 0) {
+                        var perHourDecimalWidth = 1 / perDayHourUnit,
+                            decimalWidthInHours = remainDaysInDecimal / perHourDecimalWidth,
+                            inMinutes = Math.round(decimalWidthInHours * 60);
                     }
-                    if ((headerType == headerValue.Week && model.dateFormat.toLowerCase().indexOf("hh") != -1 &&
-                        model.durationUnit == durationUnitValue.Day)) {
-                        endDate.setHours(24);
-                        endDate.setMinutes(0);
-                        endDate.setSeconds(0);
-                    }
-                    if (this._stringHolidays &&
-                   this._stringHolidays.indexOf(ganttRecord._getFormatedDate(endDate, model.dateFormat)) != -1) {
-                        endDate.setDate(endDate.getDate() + 1);
-                        if (endDate.getDay() == 6) {
-                            endDate.setDate(endDate.getDate() + 2);
-                        }
-                    }
+                    endDate = ganttRecord._endDateUpdate(startDate, day - 1, inMinutes, proxy._workingTimeRanges, headerType);
+                    ganttRecord.endDate = proxy._checkEndDate(endDate, ganttRecord);
                     
-                    ganttRecord.endDate = new Date(endDate);
                     if (model.endDateMapping)
                         ganttRecord.item[model.endDateMapping] = ganttRecord.endDate;
-                    ganttRecord._calculateDuration(startDate, endDate, model.includeWeekend, model.holidays, ganttRecord.isMilestone,model, editMode);
-                    ganttRecord.width = ganttRecord._calculateTaskbarWidth(proxy._perDayWidth,model);
-                    ganttRecord.progressWidth = ganttRecord._getProgressWidth(ganttRecord.width, ganttRecord.status);
-                    proxy._isValidationEnabled = true;
+                    ganttRecord._calculateDuration(this);
+                    ganttRecord.width = ganttRecord._calculateWidth(this);
+
+                    if (!ganttRecord.hasChildRecords)
+                        ganttRecord.progressWidth = ganttRecord._getProgressWidth(ganttRecord.width, ganttRecord.status);
+                    proxy._updatedColumn = "duration";
+                    proxy._updateResourceRelatedFields(ganttRecord);                    
                 }
 
             } else if (args.leftResizing) {
                 var editMode = "Resizing";
-                if (args.previousData.left !== ganttRecord.left) {
-                    var diffLeft = args.previousData.left - ganttRecord.left;
-                    remainHours = diffLeft / proxy._perHourWidth;
+                if (args.previousData.left !== ganttRecord.left) {                    
                     remainDays = ganttRecord.left % proxy._perDayWidth;
                     day = (ganttRecord.left - remainDays) / proxy._perDayWidth;
-                    offset = 0;
-                    if (remainDays > 0 && (model.workingTimeScale != "TimeScale24Hours")) {
-                        if (headerType == headerValue.Day)
-                            offset = remainDays > ((proxy._perDayWidth / 2) + (3 * proxy._perHourWidth)) ? 1 : 0;
-                        else
-                            offset = remainDays >= proxy._perDayWidth / 2 ? 1 : 0;
-                    }
-                    var remainingHours =(remainDays / (proxy._perDayWidth / 24));//Hour calculation
-                    var remainingMinutes = Math.round(remainDays / (proxy._perDayWidth / (24 * 60)));//Minute Calculation
-                    projectStartDate.setDate(projectStartDate.getDate() + day + offset);
+                    remainDaysInDecimal = remainDays / proxy._perDayWidth;
+                    /*Rounding the decimal value for week-month-year schedule mode*/
+                    if (headerType == headerValue.Week || headerType == headerValue.Month || headerType == headerValue.Year) {
+                        if (remainDaysInDecimal <= 0.25) {
+                            remainDaysInDecimal = 0;
+                            ganttRecord.left = ganttRecord.left - remainDays;
+                        }
 
-                    if (headerType == headerValue.Day ||
-                        headerType == headerValue.Week){
-                        if (model.dateFormat.toLowerCase().indexOf("hh") != -1) {
-                            if (model.durationUnit == durationUnitValue.Hour)
-                                projectStartDate.setHours(Math.round(remainingHours));
-                            else if (model.durationUnit == durationUnitValue.Minute) {
-                                var minutes = Math.round((remainingHours - Math.floor(remainingHours)) * 60);
-                                projectStartDate.setHours(remainingHours);
-                                projectStartDate.setMinutes(minutes);
-                            }
-                            if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours &&
-                                (model.durationUnit == durationUnitValue.Hour || model.durationUnit == durationUnitValue.Day)) {
-                                if (remainingHours >= 8 && remainingHours <= 15)
-                                    projectStartDate.setHours(remainingHours);
-                                else {
-                                    //Reduce one day when start date moves below 8 hour.
-                                    projectStartDate.setDate(projectStartDate.getDate() - 1);
-                                    projectStartDate.setHours(15);
-                                }
-                            }
+                        else if (remainDaysInDecimal > 0.25 && remainDaysInDecimal <= 0.75) {
+                            remainDaysInDecimal = 0.5;
+                            var newRemainDays = remainDaysInDecimal * proxy._perDayWidth;
+                            ganttRecord.left = ganttRecord.left - remainDays + newRemainDays;
                         }
-                    }
-                    else if (headerType == headerValue.Hour) {
-                        projectStartDate.setMinutes(remainingMinutes);
-                        //To update the start date after editing the taskbar in "hour" duration unit. 
-                        if (model.durationUnit == durationUnitValue.Hour) {
-                            var startDateMinutes = projectStartDate.getMinutes();
-                            if (startDateMinutes > 30)
-                                projectStartDate.setMinutes(60);
-                            else
-                                projectStartDate.setMinutes(0);
-                        }
-                    }
-                    else if (model.dateFormat.indexOf("hh:") != -1 &&
-                       model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        var remainingHours = Math.round(remainDays / (proxy._perDayWidth / 9));
-                        projectStartDate.setHours(8);
-                    }
-                    else {
-                        if (model.durationUnit == durationUnitValue.Hour && model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                            projectStartDate.setHours(remainingHours);
-                        else if (model.durationUnit == durationUnitValue.Minute && model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                            projectStartDate.setMinutes(remainingMinutes);
-                    }
-                    if (this._stringHolidays &&
-                    this._stringHolidays.indexOf(ganttRecord._getFormatedDate(projectStartDate, model.dateFormat)) != -1) {
-                        projectStartDate.setDate(projectStartDate.getDate() + 1);
-                        ganttRecord.left += proxy._perDayWidth;
-                    }
-                    
-                    if (this.model.includeWeekend == false) {
-                        if (projectStartDate.getDay() === 0) {
-                            projectStartDate.setDate(projectStartDate.getDate() + 1);
-                            ganttRecord.left += proxy._perDayWidth;
+                        else if (remainDaysInDecimal > 0.75) {
                             day += 1;
-                        } else if (projectStartDate.getDay() === 6) {
-                            projectStartDate.setDate(projectStartDate.getDate() + 2);
-                            ganttRecord.left += (2 * proxy._perDayWidth);
-                            day += 2;
+                            remainDaysInDecimal = 0;
+                            ganttRecord.left = ganttRecord.left - remainDays + proxy._perDayWidth;
                         }
                     }
-                    
-                    if (this._stringHolidays &&
-                    this._stringHolidays.indexOf(ganttRecord._getFormatedDate(projectStartDate, model.dateFormat)) != -1) {
-                        projectStartDate.setDate(projectStartDate.getDate() + 1);
-                        ganttRecord.left += proxy._perDayWidth;
+                    if (headerType == headerValue.Day || headerType == headerValue.Hour)
+                        perDayHourUnit = 24;
+                    else
+                        perDayHourUnit = proxy._secondsPerDay / 3600;
+                    /*Calculating the day decimal values in to hours and then minutes*/
+                    if (perDayHourUnit && remainDaysInDecimal > 0) {
+                        var perHourDecimalWidth = 1 / perDayHourUnit,
+                            decimalWidthInHours = remainDaysInDecimal / perHourDecimalWidth,
+                            inMinutes = Math.round(decimalWidthInHours * 60);
                     }
-
-                    
-                    if (model.workingTimeScale != ej.Gantt.workingTimeScale.TimeScale24Hours &&
-                        headerType == headerValue.Day && model.durationUnit != durationUnitValue.Hour) {
-
-                        if (remainDays >= (proxy._perDayWidth / 2)) {
-                            ganttRecord.left = ganttRecord.left + proxy._perDayWidth;// - remainDays;
-                            if (model.roundOffDayworkingTime)
-                                ganttRecord.left -= remainDays;
-                        } else {
-                            ganttRecord.left = ganttRecord.left;//- (remainingHours * 20);
-                            if (model.roundOffDayworkingTime)
-                                ganttRecord.left -= remainDays;
-                        }
-                    }
-                    else if (headerType == headerValue.Week && model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                        if (model.durationUnit == durationUnitValue.Day || model.dateFormat.toLowerCase().indexOf("hh") == -1)
-                            ganttRecord.left = day * (proxy._perDayWidth);                       
-                    }
-
-                    else if (headerType != headerValue.Day &&
-                        model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                        if (remainDays >= (proxy._perDayWidth / 2)) {
-                            ganttRecord.left = ganttRecord.left + proxy._perDayWidth;// - remainDays;
-                            if (model.roundOffDayworkingTime)
-                                ganttRecord.left -= remainDays;
-                        } else {
-                            ganttRecord.left = ganttRecord.left;//- (remainingHours * 20);
-                            if (model.roundOffDayworkingTime)
-                                ganttRecord.left -= remainDays;
-                        }
-                    }
-                      
-
-
-                    else if (headerType == headerValue.Day
-                        && (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours ||
-                        model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours)) {
-                        if (model.durationUnit == durationUnitValue.Hour)
-                            var remainingHourDiff = ganttRecord.left % proxy._perHourWidth;
-                        else if (model.durationUnit == durationUnitValue.Minute)
-                            var remainingHourDiff = ganttRecord.left % proxy._perMinuteWidth;
-                        var totalDay = day + offset;
-                        if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours && (remainingHours < 8 || remainingHours > 15)) {                            
-                            ganttRecord.left = ((totalDay-1) * proxy._perDayWidth) + (15 * proxy._perHourWidth);
-                        }
-                        if (remainingHourDiff >= (proxy._perHourWidth / 2)) {
-                            ganttRecord.left = ganttRecord.left + proxy._perHourWidth;// - remainDays;
-
-                            ganttRecord.left -= remainingHourDiff;
-                        } else {
-                            ganttRecord.left -= remainingHourDiff;
-                        }
-                    }
-                    //To taskbar edit when duration unit of hour minute schedule mode is "hour".
-                    if (headerType == headerValue.Hour && model.durationUnit == durationUnitValue.Hour) {
-                        var previousDataStartDate = proxy._getDateFromFormat(args.previousData.startDate),
-                            ganttStartDate = proxy._getDateFromFormat(ganttRecord.startDate),
-                            startDateHour = previousDataStartDate.getHours(),
-                            ganttDateHour = ganttStartDate.getHours(),
-                            diff = Math.abs(previousDataStartDate - ganttStartDate),
-                            hourDifference = Math.round(diff / 3600000),//Milliseconds to hour.
-                            startDateMinute = ganttStartDate.getMinutes(),
-                            remainingMinuteLeft = startDateMinute / proxy._minuteInterval,
-                            remainingMinuteRight = (proxy._perDayWidth / (proxy._perMinuteWidth * 24)) - remainingMinuteLeft;
-
-                        if (args.previousData.left > ganttRecord.left) {
-                            if (startDateMinute > 30)
-                                ganttRecord.left = args.previousData.left - ((hourDifference) * (proxy._perDayWidth / 24));
-                            else
-                                ganttRecord.left = ganttRecord.left - (proxy._perMinuteWidth * remainingMinuteLeft);
-                        }
-                        else if (args.previousData.left < ganttRecord.left) {   
-                            if (startDateMinute < 30)
-                                ganttRecord.left = args.previousData.left + ((hourDifference) * (proxy._perDayWidth / 24));
-                            else
-                                ganttRecord.left = ganttRecord.left + (proxy._perMinuteWidth * remainingMinuteRight);
-                        }
-                    }
-                    ganttRecord.startDate = new Date(projectStartDate);
+                    projectStartDate = ganttRecord._startDateUpdate(projectStartDate, day, inMinutes, proxy._workingTimeRanges, headerType);
+                    ganttRecord.startDate = proxy._checkStartDate(projectStartDate, ganttRecord);
                     if (model.startDateMapping)
                         ganttRecord.item[model.startDateMapping] = ganttRecord.startDate;
-                    if (model.includeWeekend == false && (headerType == headerValue.Hour || headerType == headerValue.Day))
-                        ganttRecord._calculateEndDate(model.includeWeekend, model.holidays, model, model.perDayWidth, editMode);
-                    ganttRecord._calculateDuration(projectStartDate, proxy._getDateFromFormat(ganttRecord.endDate), model.includeWeekend, model.holidays, ganttRecord.isMilestone,model,editMode);
-                    ganttRecord.width = ganttRecord._calculateTaskbarWidth(proxy._perDayWidth, model);
-                    ganttRecord.progressWidth = ganttRecord._getProgressWidth(ganttRecord.width, ganttRecord.status);
-                    proxy._isValidationEnabled = true;
+                    ganttRecord.endDate = proxy._checkEndDate(ganttRecord.endDate, ganttRecord);
+                    if (ganttRecord.isAutoSchedule && model.includeWeekend == false && (headerType == headerValue.Hour || headerType == headerValue.Day))
+                        ganttRecord._calculateEndDate(this);
+                    ganttRecord._calculateDuration(this);
+                    ganttRecord.left = ganttRecord._calculateLeft(this);
+                    ganttRecord.width = ganttRecord._calculateWidth(this);
+                    if (!ganttRecord.hasChildRecords)
+                        ganttRecord.progressWidth = ganttRecord._getProgressWidth(ganttRecord.width, ganttRecord.status);                    
+                    proxy._updatedColumn = "duration";
+                    proxy._updateResourceRelatedFields(ganttRecord);
                 }
-            } else if (args.progressResizing) {
+            } 
+            if (args.progressResizing) {
                 if (args.previousData.status != args.data.status) {
                     ganttRecord.status = ganttRecord._getProgressPercent(ganttRecord.width, ganttRecord.progressWidth);
                     if (ganttRecord.parentItem) {
                         ganttRecord._updateParentProgress(ganttRecord.parentItem, model.progressMapping);
                     }
                     proxy._refreshParent(ganttRecord);
-                }
-                //proxy.refreshGanttRecord(ganttRecord);
-                //proxy.refreshGanttRecord(ganttRecord.parentItem);
+                }                
             }
-            if (proxy._isValidationEnabled) {
+            else {
+                proxy._isValidationEnabled = true;
                 proxy._updateEditedGanttRecord(ganttRecord);
                 if (ganttRecord.predecessor) {
                     proxy._isMileStoneEdited = ganttRecord.isMilestone;
@@ -5921,13 +7268,25 @@
                     }
                 }
                 proxy._editedTaskBarItem = null;
-                if (ganttRecord.parentItem)
+
+                if (!ganttRecord.isAutoSchedule) {
+                    if (ganttRecord.hasChildRecords && !args.isChildren && !args.rightResizing) {
+                        proxy._validateAutoChildRecords(args);
+                    }
+                }
+                if (ganttRecord.parentItem && ganttRecord.parentItem.isAutoSchedule)
                     proxy._updateParentItem(ganttRecord, editMode);
-                proxy.refreshGanttRecord(ganttRecord);
+                else if (ganttRecord.parentItem && !ganttRecord.parentItem.isAutoSchedule)
+                    proxy._updateManualParentItem(ganttRecord, editMode);                
             }
+            proxy.refreshGanttRecord(ganttRecord);
             proxy._trigger("taskbarEdited", args);
             if (!args.cancel && (args.leftResizing || args.rightResizing || args.dragging) && proxy._isValidationEnabled) {
                 proxy._updateScheduleDatesOnEditing(args);
+            }
+            if (this.isCriticalPathEnable == true) {
+                proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, false, this.collectionTaskId);
+                this.showCriticalPath(true);
             }
         },
 
@@ -6019,6 +7378,27 @@
 
             }
         },
+
+        _validateAutoChildRecords: function (args) {
+            var proxy = this,
+                item = args.data,
+                prevItem = args.previousData,
+                childItem = item.childRecords,
+                arg = {},
+                diffLeft = item.left - prevItem.left;
+            for (var i = 0; i < childItem.length; i++) {
+
+                if (childItem[i].isAutoSchedule && !childItem[i].hasChildRecords) {
+                    arg.previousData = $.extend({}, childItem[i]);
+                    childItem[i].left += diffLeft;
+                    arg.data = childItem[i];
+                    arg.dragging = true;
+                    args.isChildren = true;
+                    proxy.taskbarEdited(arg);
+                }
+            }
+        },
+
         actionBegin: function (args) {
 
             var proxy = this;
@@ -6086,7 +7466,6 @@
         _endEdit: function (args) {
             var proxy = this,model=this.model;
             var toolbar = $("#" + proxy._id + "_toolbarItems");
-            proxy._isinBeginEdit = false;
 
             if (proxy._trigger("endEdit", args)) {
                 var predecessorString = "";
@@ -6099,21 +7478,50 @@
                     args.data.item[args.columnObject.mappingName] = args.previousValue;
                     if (args.columnName === "resourceInfo") {
                         proxy._updateResourceName(args.data);
+                        proxy._updateResourceRelatedFields(args.data);
                     }
                 }
             }
             else {
-
-                if (args.isModified) {
-                    proxy.model.currentViewData = proxy._$treegridHelper.ejTreeGrid("getCurrentViewData");
-                    proxy._isValidationEnabled = true;
-                    proxy._updateEditedGanttRecords(args);
-                }
+                proxy._updatedColumn = args.columnName;
+                //Effort driven is always true for fixedWork type of calculation.
+                if (args.columnName == "taskType" && args.value == "fixedWork")
+                    args.data.effortDriven = "true";
+                if (args.columnName === "duration" || args.columnName == "work")
+                    proxy._updateResourceRelatedFields(args.data);
 
                 if (args.columnName === "resourceInfo") {
                     proxy._updateResourceName(args.data);
+                    proxy._updateResourceRelatedFields(args.data);
+                    //update parent item while child works got updated, if duration is updated the
+                    //corresponding parent will update automatically.
+                    if (proxy._isDurationUpdated == false) {
+                        var data = args.data,
+                            isParent = args.data.hasChildRecords ? true : false;
+                        if (isParent && data.isAutoSchedule)
+                            proxy._updateParentItem(data, null, true);
+                        else if (isParent && !data.isAutoSchedule)
+                            proxy._updateManualParentItem(data, null, true);
+
+                        if (data.parentItem && data.parentItem.isAutoSchedule)
+                            proxy._updateParentItem(data, null, false);
+                        else if(data.parentItem && !data.parentItem.isAutoSchedule)
+                            proxy._updateManualParentItem(data, null, false);
+                    }
+                }
+
+                if (args.isModified || proxy._isDurationUpdated) {
+                    proxy.model.currentViewData = proxy._$treegridHelper.ejTreeGrid("getCurrentViewData");
+                    if (args.data.isAutoSchedule || model.validateManualTasksOnLinking)
+                        proxy._isValidationEnabled = true;
+                    else
+                        proxy._isValidationEnabled = false;
+                    proxy._updateEditedGanttRecords(args);
                 }
             }
+
+            proxy._isDurationUpdated = false;
+            proxy._isinBeginEdit = false;
             proxy.refreshGanttRecord(args.data);
             
             delete args.isModified;
@@ -6134,8 +7542,12 @@
             if (!args.cancel && (args.columnName === "startDate" || args.columnName === "endDate" || args.columnName === "duration")) {
                 proxy._updateScheduleDatesOnEditing(args);
             }
-
-
+            if (!args.cancel && (args.columnName === "taskMode" || args.columnName === "startDate" || args.columnName === "endDate" || args.columnName === "duration" || args.columnName === "status" || args.columnName === "predecessor")) {
+                if (this.isCriticalPathEnable == true) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, false, this.collectionTaskId);
+                    this.showCriticalPath(true);
+                }
+            }
             // proxy._trigger("endEdit", args);
         },
 
@@ -6153,6 +7565,10 @@
                 tempStartDate = model.scheduleStartDate,
                 updatedDates,
                 tempEndDate = model.scheduleEndDate;
+            if(args.data.hasChildRecords && !args.data.isAutoSchedule){
+                startDate = proxy._getDateFromFormat(args.data.manualStartDate),
+                endDate = proxy._getDateFromFormat(args.data.manualEndDate)
+            }            
                 proxy._calculateDatesForScheduleCheck(startDate);
             if (!model.predecessorMapping) {
                 if (!(startDate.getTime() >= scheduleStartDate.getTime()) || !(startDate.getTime() <= scheduleEndDate.getTime())) {
@@ -6173,15 +7589,15 @@
                 }
                 if (maxEndDate) {
                     isDateChanged = true;
-                    tempEndDate = args.data._getFormatedDate(maxEndDate, model.dateFormat);
+                    tempEndDate = args.data._getFormatedDate(maxEndDate, model.dateFormat, model.locale);
                 }
                 if (minStartDate) {
                     isDateChanged = true;
-                    tempStartDate = args.data._getFormatedDate(minStartDate, model.dateFormat);
+                    tempStartDate = args.data._getFormatedDate(minStartDate, model.dateFormat, model.locale);
                 }
                 if (isDateChanged) {
                     updatedDates = proxy._updateScheduleDatesByTaskLables(proxy._getDateFromFormat(tempStartDate), proxy._getDateFromFormat(tempEndDate));
-                    proxy.updateScheduleDates(args.data._getFormatedDate(updatedDates.minStartDate, model.dateFormat), args.data._getFormatedDate(updatedDates.maxEndDate, model.dateFormat));
+                    proxy.updateScheduleDates(args.data._getFormatedDate(updatedDates.minStartDate, model.dateFormat, model.locale), args.data._getFormatedDate(updatedDates.maxEndDate, model.dateFormat, model.locale));
                 }
             }
             else {
@@ -6190,12 +7606,12 @@
                 proxy._calculateScheduleDates(editArgs);
                 proxy._calculateDatesForScheduleCheck(editArgs.minStartDate);
                 if (editArgs.minStartDate.getTime() < scheduleStartDate) {
-                    tempStartDate = args.data._getFormatedDate(editArgs.minStartDate, model.dateFormat);
+                    tempStartDate = args.data._getFormatedDate(editArgs.minStartDate, model.dateFormat, model.locale);
                     isDateChanged = true;
                 }
                 if(editArgs.maxEndDate.getTime() > scheduleEndDate)
                 {
-                    tempEndDate = args.data._getFormatedDate(editArgs.maxEndDate, model.dateFormat);
+                    tempEndDate = args.data._getFormatedDate(editArgs.maxEndDate, model.dateFormat, model.locale);
                     isDateChanged = true;
                 }
                 if (isDateChanged)
@@ -6258,12 +7674,8 @@
                     endDate.setDate(endDate.getDate() + 365);
             }
             if (scheduleHeaderType == scheduleHeaderValue.Month) {
-                
                 if (args === "prevTimeSpan")
-                    if (model.scheduleHeaderSettings.timescaleStartDateMode == "week")
-                        startDate.setMonth(startDate.getMonth() - 1);
-                    else
-                        startDate.setDate(startDate.getDate());
+                    startDate.setMonth(startDate.getMonth() - 1);
                 else
                     endDate.setDate(endDate.getDate() + 30);
             }
@@ -6280,13 +7692,19 @@
                     endDate.setHours(endDate.getHours() + 1);
             }                                    
             if (args === "prevTimeSpan") {
-                proxy.updateScheduleDates(proxy._getFormatedDate(startDate, model.dateFormat), proxy._getFormatedDate(endDate, model.dateFormat));
+                proxy.updateScheduleDates(proxy._getFormatedDate(startDate, model.dateFormat, model.locale), proxy._getFormatedDate(endDate, model.dateFormat, model.locale));
                 chartObject._$bodyContainer.ejScroller("scrollX", 0, true);
+                if (proxy.isCriticalPathEnable == true && model.predecessorMapping) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", proxy.criticalPathCollection, proxy.detailPredecessorCollection, true, proxy.collectionTaskId);
+                }
             }
             else if (args === "nextTimeSpan") {
-                proxy.updateScheduleDates(proxy._getFormatedDate(startDate, model.dateFormat), proxy._getFormatedDate(endDate, model.dateFormat));
+                proxy.updateScheduleDates(proxy._getFormatedDate(startDate, model.dateFormat, model.locale), proxy._getFormatedDate(endDate, model.dateFormat, model.locale));
                 maxScrollWidth = chartObject.getMaxScrollWidth();
                 chartObject._$bodyContainer.ejScroller("scrollX", maxScrollWidth, true);
+                if (proxy.isCriticalPathEnable == true && model.predecessorMapping) {
+                    proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", proxy.criticalPathCollection, proxy.detailPredecessorCollection, true, proxy.collectionTaskId);
+                }
             }
         },
         _rowDataBound: function (args) {
@@ -6324,6 +7742,9 @@
                 return false;
             $(toolbarObj).ejToolbar('deselectItem', sender.currentTarget);
             switch (sender.currentTarget.id) {
+                case ganttId + "_excelExport":
+                    ganttInstance._toolbarOperation(ganttId + "_excelExport");
+                    break;
 
                 case ganttId + "_add":
                     ganttInstance._toolbarOperation(ganttId + "_add");
@@ -6360,7 +7781,16 @@
                 case ganttId + "_expandAll":
                     ganttInstance._toolbarOperation(ganttId + "_expandAll");
                     break;
-                 
+
+                case ganttId + "_criticalPath":
+                    if (!ganttInstance._enableDisableCriticalIcon) {
+                        ganttInstance._toolbarOperation(ganttId + "_criticalEnable");
+                    }
+                    else if (ganttInstance._enableDisableCriticalIcon) {
+                        ganttInstance._toolbarOperation(ganttId + "_criticalDisable");
+                    }
+                    break;
+
                 case ganttId + "_collapseAll":
                     ganttInstance._toolbarOperation(ganttId + "_collapseAll");
                     break;
@@ -6384,8 +7814,13 @@
         },
 
         _toolbarOperation: function (operation, searchEle) {
-            var $ganttEle = this.element, ganttObject = $ganttEle.ejGantt("instance"), ganttId = $ganttEle.attr('id'), proxy = this,
+            var $ganttEle = this.element,
+                ganttObject = $ganttEle.ejGantt("instance"),
+                //gridObject = $gridEle.ejTreeGrid("instance"),
+                ganttId = $ganttEle.attr('id'),
+                proxy = this,
                 rowindex = proxy.selectedRowIndex();
+            ganttObject._exportTo = ganttObject["export"];
             var toolbar = $("#" + proxy._id + "_toolbarItems");
             switch (operation) {
 
@@ -6398,6 +7833,7 @@
                     break;
 
                 case ganttId + "_delete":
+                    proxy.cancelEditCell();
                     proxy._$treegridHelper.ejTreeGrid("deleteRow");
                     proxy._isRefreshAddedRecord = false;
 
@@ -6422,7 +7858,17 @@
 
                 case ganttId + "_cancel":
                     proxy._$treegridHelper.ejTreeGrid("cancelEditCell");                                                            
-                    proxy._$treegrid.focus();
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
+                    break;
+
+                case ganttId + "_criticalEnable":
+                    proxy.showCriticalPath(true);
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
+                    break;
+
+                case ganttId + "_criticalDisable":
+                    proxy.showCriticalPath(false);
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     break;
 
                 case ganttId + "_search":
@@ -6438,32 +7884,38 @@
 
                 case ganttId + "_indent":
                     proxy._sendIndentRequest();
-                    proxy._$treegrid.focus();
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     proxy._isRefreshAddedRecord = false;
                     break;
 
                 case ganttId + "_outdent":
                     proxy._sendOutdentRequest();
-                    proxy._$treegrid.focus();
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     proxy._isRefreshAddedRecord = false;
                     break;
 
                 case ganttId + "_expandAll":
                     proxy._expandAll();
                     proxy.updateSelectedItemIndex();
-                    proxy._$treegrid.focus();
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     break;
 
                 case ganttId + "_collapseAll":
                     proxy._collapseAll();
                     proxy.updateSelectedItemIndex();
-                    proxy._$treegrid.focus();
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     break;
                 case ganttId + "_prevTimeSpan":
                     proxy._updateScheduleDatesByToolBar("prevTimeSpan");
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     break;
                 case ganttId + "_nextTimeSpan":
                     proxy._updateScheduleDatesByToolBar("nextTimeSpan");
+                    proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
+                    break;
+
+                case ganttId + "_excelExport":
+                    proxy._exportTo(ganttObject.model.exportToExcelAction, 'excelExporting', ganttObject.model.allowMultipleExporting);
                     break;
 
             }
@@ -6474,14 +7926,8 @@
         /* update selected ietm index when selected item row position changed */
         updateSelectedItemIndex: function () {
             var proxy = this, model = this.model, updatedRecords = model.updatedRecords,
-                index, expandRecord;
-            if (model.enableVirtualization)
-                expandRecord = updatedRecords;
-            else
-                expandRecord = proxy._$treegridHelper.ejTreeGrid("getExpandedRecords", updatedRecords);
-            
-            if(!ej.isNullOrUndefined(this.selectedItem()) &&
-                this.selectedRowIndex() != expandRecord.indexOf(this.selectedItem()))
+                index;
+            if(model.allowSelection && !ej.isNullOrUndefined(this.selectedItem()))
             {
                 if (proxy.getExpandStatus(this.selectedItem())) {
                     index = updatedRecords.indexOf(this.selectedItem());
@@ -6491,6 +7937,8 @@
                 {
                     proxy.selectRows(-1);
                 }
+            } else if (!model.allowSelection && !ej.isNullOrUndefined(this.selectedItem())) {
+                proxy.selectRows(-1);
             }
         },
 
@@ -6509,7 +7957,7 @@
         },
 
         //select rows index of this item
-        selectRows:function(index)
+        selectRows: function (index)
         {
             var proxy = this, model = this.model;
 
@@ -6521,9 +7969,12 @@
                 args.recordIndex = index;
                 args.data = model.updatedRecords[args.recordIndex];
                 args.target = "ejTreeGrid";
-                proxy.rowSelected(args);
-                proxy._$treegridHelper.ejTreeGrid("selectRows", args.recordIndex);
-                proxy._$ganttchartHelper.ejGanttChart("selectRows", args.recordIndex);
+                if (proxy.rowSelecting(args)) {
+                    proxy.rowSelected(args);
+                    proxy._$treegridHelper.ejTreeGrid("selectRows", args.recordIndex);
+                    proxy._$ganttchartHelper.ejGanttChart("selectRows", args.recordIndex);
+                }
+                proxy.updateIndentOutdentOption(args.data);
             }
             else if (index === -1) {
                 proxy._deSelectRowItem();
@@ -6543,8 +7994,12 @@
                         break;
                     case "allowSorting":
                         proxy._sortingRequest(options[option]);
-                        if (model.showColumnChooser && showColumnOptions)
+                        if (model.showColumnChooser && model.showColumnOptions)
                             proxy._$treegridHelper.ejTreeGrid("columnAddDialogTemplate");
+                        break;
+                    case "allowMultiSorting":
+                        model.allowMultiSorting = options[option];
+                        proxy._$treegridHelper.ejTreeGrid("model.allowMultiSorting", model.allowMultiSorting);
                         break;
                     case "destroy":
                         proxy.destroy();
@@ -6563,6 +8018,9 @@
                         break;
                     case "enableTaskbarDragTooltip":
                         proxy._showEditingTooltip(options[option]);
+                        break;                  
+                    case "validateManualTasksOnLinking":
+                        model.validateManualTasksOnLinking = options[option];
                         break;
                     case "enableAltRow":
                         proxy._updateAltRow(options[option]);
@@ -6572,7 +8030,8 @@
                         model.parentRecords = [];
                         proxy._clearContextMenu();
                         model.locale = options[option];
-                        proxy.element.ejGantt("destroy").ejGantt(model);
+                        model.isRerender = true;
+                        proxy.element.ejGantt("destroy").ejGantt(model);                        
                         break;
                     case "allowSelection":
                         model.allowSelection = options[option];
@@ -6590,6 +8049,8 @@
                     case "editSettings":
                         $.extend(model.editSettings, options[option]);
                         proxy._updateEditSettings(options[option]);
+                        proxy._initiateDialogTemplates();
+                        proxy._enableEditingEvents();
                         break;
                     case "taskbarBackground":
                         proxy._updateTaskbarBackground(options[option]);
@@ -6649,6 +8110,9 @@
                         proxy._deSelectRowItem();
                         proxy._updateToolbarOptions();
                         this._refreshDataSource(options[option]);
+                        if (proxy._enableDisableCriticalIcon) {
+                            proxy.showCriticalPath(true);
+                        }
                         break;
                     case "readOnly":
                         proxy._updateReadOnly(options[option]);
@@ -6664,9 +8128,15 @@
                         break;
                     case "connectorLineBackground":
                         proxy._updateConnectorLineBackground(options[option]);
+                        if (proxy._enableDisableCriticalIcon) {
+                            proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, true, this.collectionTaskId);
+                        }
                         break;
                     case "connectorlineWidth":
                         proxy._updateConnectorlineWidth(options[option]);
+                        if (proxy._enableDisableCriticalIcon) {
+                            proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, true, this.collectionTaskId);
+                        }
                         break;
                     case "weekendBackground":
                         proxy._updateWeekendBackground(options[option]);
@@ -6728,12 +8198,11 @@
                             proxy._$ganttchartHelper.ejGanttChart("selectRows", -1);
                             model.selectedItem = null;
                             model.selectionMode = options[option];
-                            proxy._$treegridHelper.ejTreeGrid("instance").model.selectionMode = options[option];
+                            proxy._$treegridHelper.ejTreeGrid("option", "selectionMode", options[option]);
                             proxy._$ganttchartHelper.ejGanttChart("option", "selectionMode", options[option]);
                             if (options[option] == "row")
-                                proxy._$treegridHelper.ejTreeGrid("instance").model.selectionType = "single";
-                            if (model.showColumnChooser && showColumnOptions)
-                                proxy._$treegridHelper.ejTreeGrid("columnAddDialogTemplate");
+                                proxy._$treegridHelper.ejTreeGrid("instance").model.selectionSettings.selectionType = "single";
+                            proxy._updateToolbarOptions();
                         }
                         break;
                     case "selectionType":
@@ -6741,11 +8210,11 @@
                             proxy.clearSelection();
                             if (model.selectionMode == "cell") {
                                 model.selectionType = options[option];
-                                proxy._$treegridHelper.ejTreeGrid("instance").model.selectionType = options[option];
+                                proxy._$treegridHelper.ejTreeGrid("instance").model.selectionSettings.selectionType = options[option];
                             }
                             else {
                                 model.selectionType = "single"
-                                proxy._$treegridHelper.ejTreeGrid("instance").model.selectionType = "single";
+                                proxy._$treegridHelper.ejTreeGrid("instance").model.selectionSettings.selectionType = "single";
                             }
                         }
                         break;
@@ -6806,18 +8275,143 @@
                         this._calculateDimensions();
                         this.windowResize();
                         break;
+                    case "dayWorkingTime":
+                        model.dayWorkingTime = options[option].slice();
+                        model.flatRecords = [];
+                        model.parentRecords = [];
+                        model.updatedRecords = [];
+                        model.ids = [];
+                        model.scheduleStartDate = model.scheduleStartDate;
+                        model.scheduleEndDate = model.scheduleEndDate;
+                        proxy._storedIndex = -1;
+                        proxy.selectedRowIndex(-1);
+                        proxy._predecessorsCollection = [];
+                        proxy.element.ejGantt("destroy").ejGantt(model);
+                        break;
+                    case "workUnit":
+                        model.workUnit = options[option];
+                        this._updateWorkUnit();
+                        break;
+                    case "resources":                        
+                        proxy._updateResourcesData(options[option]);
+                        break;
                 }
             }
         },
 
-        _refreshDataSource: function (dataSource) {
-            var proxy = this, model = this.model, args = {};
-            this.resetModelCollections();
-            this.dataSource(dataSource);
-            this._isFromSetModel = true;
-            proxy.secondaryDatasource = [];
-            proxy._retrivedData = this.dataSource();
-            this._checkDataBinding();
+        _updateResourcesData: function (updatedResources) {
+            var proxy = this, model = proxy.model, ganttObj, columnIndex = -1,
+                columns = proxy.getColumns();
+            model.resources = $.extend(true, [], updatedResources);
+
+            $.each(columns, function (index, column) {
+                if (column.mappingName == model.resourceInfoMapping) {
+                    columnIndex = index;
+                    return;
+                }
+            });
+            if (columnIndex > -1) columns[columnIndex]["dropdownData"] = model.resources;
+            flatRecords = model.flatRecords.slice();
+            flatRecords.reverse();
+            ganttObj = ej.Gantt.GanttRecord.prototype;
+            $.each(flatRecords, function (index, record) {
+                if (record.resourceInfo && record.resourceInfo.length > 0) {                    
+                    record.resourceInfo = ganttObj._setResourceInfo(record.item[model.resourceInfoMapping], model.resourceIdMapping, model.resourceNameMapping, model.resourceUnitMapping, model.resources);
+                    proxy._updateResourceName(record);
+                    proxy._updateResourceRelatedFields(record);
+                    if (record.hasChildRecords) {
+                        if (record.isAutoSchedule)
+                            proxy._updateParentItem(record, null, true);
+                        else if (!record.isAutoSchedule)
+                            proxy._updateManualParentItem(record, null, true);
+                    }
+                    else
+                        proxy.refreshGanttRecord(record);                   
+                }                
+            });            
+        },       
+
+        //Change work unit for whole project using set model.
+        _updateWorkUnit: function () {
+            var proxy = this, model = proxy.model,
+                flatRecords = model.flatRecords,              
+                currentViewData = proxy.getCurrentViewData(),
+                treegridObject = proxy._$treegridHelper.ejTreeGrid("instance");
+            treegridObject.model.workUnit = model.workUnit;
+            for (var index = 0; index < flatRecords.length; index++) {
+                var record = flatRecords[index],
+                    currentRecordIndex = currentViewData.indexOf(record);
+                record._updateWorkWithDuration(proxy);
+                if (record.parentItem)
+                    proxy._updateParentItem(record);
+                if (currentRecordIndex != -1)
+                    ej.TreeGrid.refreshRow(treegridObject, currentRecordIndex);
+            }
+        },
+        /*Data binding method for dynamic update of dataSource*/
+        _dataBindingForSetModel: function () {
+            var proxy = this, model = proxy.model;
+            if (this.dataSource() == null) {
+                this.dataSource([]);
+            }
+            if (this.dataSource() instanceof ej.DataManager) {
+                var query = this._columnToSelect();
+                var queryPromise = this.dataSource().executeQuery(query);
+                queryPromise.done(ej.proxy(function (e) {
+                    if (proxy.dataSource().dataSource.offline) {
+                        proxy._retrivedData = proxy.dataSource().dataSource.json;
+                    } else {
+                        proxy._retrivedData = e.result;
+                    }
+                    
+                    if ((model.taskIdMapping.length > 0) && (model.parentTaskIdMapping.length > 0)) {
+                        var dataArray = proxy.dataSource();
+                        //cloning the datasource                   
+                        var data = [];
+                        for (var i in dataArray) {
+                            var tempData = dataArray[i];
+                            data.push($.extend(true, {}, tempData));
+                            if (tempData[model.taskIdMapping]) proxy._taskIds.push(tempData[model.taskIdMapping]);
+                        }
+
+                        if (!model.childMapping) model.childMapping = "Children";
+                        proxy._reconstructDatasource(data);                     
+                    }
+                    else {
+                        proxy.secondaryDatasource = proxy._retrivedData;
+                    }
+                    proxy._createGanttRecords(proxy.secondaryDatasource);
+                    proxy._refreshGanttWithNewRecords();
+                }));
+            }
+            else if (this.dataSource().length > 0) {
+                if ((model.taskIdMapping.length > 0) && (model.parentTaskIdMapping.length > 0)) {
+                    var dataArray = proxy.dataSource();
+                    //cloning the datasource                   
+                    var data = [];
+                    for (var i in dataArray) {
+                        var tempData = dataArray[i];
+                        data.push($.extend(true, {}, tempData));
+                        if (tempData[model.taskIdMapping]) proxy._taskIds.push(tempData[model.taskIdMapping]);
+                    }
+
+                    if (!model.childMapping) model.childMapping = "Children";
+                    proxy._reconstructDatasource(data);
+                    proxy._createGanttRecords(proxy.secondaryDatasource);
+                }
+                else {
+                    proxy._createGanttRecords(this.dataSource());
+                }
+                this._refreshGanttWithNewRecords();
+            } else {
+                this._refreshGanttWithNewRecords();
+            }
+        },
+        /*Refresh all Gantt rows on new data source update*/
+        _refreshGanttWithNewRecords: function () {
+            var proxy = this,
+                model = this.model,
+                args = {};
             this._updatePredecessors();
             this._$treegridHelper.ejTreeGrid("setUpdatedRecords", model.flatRecords, model.updatedRecords, model.ids, model.parentRecords, this.dataSource());
             this._$treegridHelper.ejTreeGrid("processBindings");
@@ -6831,6 +8425,16 @@
             args.requestType = ej.TreeGrid.Actions.Refresh;
             proxy._$treegridHelper.ejTreeGrid("sendDataRenderingRequest", args);
             this._isFromSetModel = false;
+        },
+        /*Method to update the data source dynamically*/
+        _refreshDataSource: function (dataSource) {
+            var proxy = this;
+            this.resetModelCollections();
+            this.dataSource(dataSource);
+            this._isFromSetModel = true;
+            proxy.secondaryDatasource = [];
+            proxy._retrivedData = this.dataSource();
+            this._dataBindingForSetModel();
         },
 
         resetModelCollections: function () {
@@ -7094,7 +8698,7 @@
 
         _updateAltRow: function (bool) {
             var proxy = this;
-            proxy._$treegridHelper.ejTreeGrid("updateAltRow", bool);
+            proxy._$treegridHelper.ejTreeGrid("option", "enableAltRow", bool);
         },
 
         //Insert templated row in DOM for newly added record
@@ -7113,6 +8717,7 @@
                 proxy._$treegridHelper.ejTreeGrid("renderNewAddedRow", index, data);
                 proxy._$ganttchartHelper.ejGanttChart("renderNewAddedRow", index, data);
             }
+            proxy._$treegridHelper.ejTreeGrid("updateHeight");
             proxy._gridRows = proxy.getRows();
             proxy._ganttChartRows = proxy.getGanttChartRows();
         },
@@ -7546,17 +9151,17 @@
             proxy._$treegridHelper.ejTreeGrid("deleteRow");
         },
 
-
-        
-
         expandAllItems: function () {
             this.cancelEditCell();
             this._expandAll();
+            this.updateSelectedItemIndex();
+            this._$treegrid.focus();
         },
 
-        
         collapseAllItems:function() {
             this._collapseAll();
+            this.updateSelectedItemIndex();
+            this._$treegrid.focus();
         },
         
           
@@ -7692,6 +9297,700 @@
                 if (treegridContent.ejScroller("isHScroll"))
                     treegridContent.ejScroller("scrollLeft", 0);
                 proxy.setSplitterPosition(columnWidth.toString());
+            }
+        },
+
+        // calculation to find critical path.
+
+        showCriticalPath: function (isShown, isRefreshed) {
+
+            var proxy = this, modelRecordIds = this.model.ids, flatRecords = this.model.flatRecords;
+
+            // execute if we enable critical path.
+            if (isShown == true) {
+                this.isCriticalPathEnable = true;
+
+                // execute if the flat records contains task.
+                if (flatRecords.length != 0) {
+
+                    var totalPredecessorsCollection = [], individualPredecessorLength, taskid, todate, fromdateID, collection = [], collectionTaskId = [], criticalPathIds = [],
+                        checkBeyondEnddate = [], totalPredecessorsCollectionId = [], taskBeyondEnddate = [], updatedRecords = this.model.flatRecords,
+                        parentRecords = this.model.parentRecords, predecessorTaskBeyondEnddate = [], just1 = 0, dateDifference = 0,
+                         mediater2 = 0, fromDataObject = [], checkEndDate, checkEndDateTaskid;
+
+
+                    checkEndDate = this.model.parentRecords[0].endDate;
+
+                    if (this.model.parentRecords[0].manualEndDate > this.model.parentRecords[0].endDate && !this.model.parentRecords[0].isAutoSchedule)
+                        checkEndDate = this.model.parentRecords[0].manualEndDate;
+
+                    checkEndDateTaskid = this.model.parentRecords[0].taskId;
+
+                    // Find the total project endDate
+                    for (var js = 1; js < parentRecords.length; js++) {
+                        if (parentRecords[js].endDate >= checkEndDate) {
+                            checkEndDate = parentRecords[js].endDate;
+                            checkEndDateTaskid = parentRecords[js].taskId;
+                        }
+                        if (!parentRecords[js].isAutoSchedule) {
+                            if (parentRecords[js].manualEndDate >= checkEndDate) {
+                                checkEndDate = parentRecords[js].manualEndDate;
+                                checkEndDateTaskid = parentRecords[js].taskId;
+                            }
+                        }
+                    }
+
+                    // find the taskes that ends on total project end date that stored in checkBeyondEnddate
+                    // find the taskes with predecessor that stored in totalPredecessorsCollectionId.
+                    for (var kk = 0; kk < updatedRecords.length; kk++) {
+                        updatedRecords[kk].isCritical = false;
+                        dateDifference = proxy._getDuration(updatedRecords[kk].endDate, checkEndDate, updatedRecords[kk].durationUnit, updatedRecords[kk].isAutoSchedule);
+                        updatedRecords[kk].slack = dateDifference + " " + updatedRecords[kk].durationUnit;
+                        if (updatedRecords[kk].endDate >= checkEndDate) {
+                            checkBeyondEnddate.push(updatedRecords[kk].taskId);
+                        }
+                        if (updatedRecords[kk].predecessor) {
+                            if (updatedRecords[kk].predecessor.length != 0) {
+                                totalPredecessorsCollection.push(updatedRecords[kk]);
+                                totalPredecessorsCollectionId.push(updatedRecords[kk].taskId);
+                            }
+                        }
+                    }
+
+                    // seperate the predecessor connected taskes from the individual taskes that ends on total project end date 
+                    for (var ss = 0; ss < checkBeyondEnddate.length; ss++) {
+                        if (totalPredecessorsCollectionId.indexOf(checkBeyondEnddate[ss]) == -1) {
+                            mediater2 = modelRecordIds.indexOf(checkBeyondEnddate[ss].toString());
+                            if (flatRecords[mediater2].status < 100)
+                                flatRecords[mediater2].isCritical = true;
+                            flatRecords[mediater2].slack = 0 + flatRecords[mediater2].durationUnit;
+                            taskBeyondEnddate.push(checkBeyondEnddate[ss]);
+                        }
+                        else
+                            predecessorTaskBeyondEnddate.push(checkBeyondEnddate[ss])
+                    }
+                    var predecessorLength = totalPredecessorsCollection.length, endTask = [];
+
+                    // find the detail collection of predecessor for each taskes that stored in collection.
+                    for (var x = 0; x < predecessorLength; x++) {
+                        var to = -1, from = -1, toPredecessor = -1, fromPredecessor = -1;
+                        individualPredecessorLength = totalPredecessorsCollection[x].predecessor.length,
+                         taskid = parseInt(totalPredecessorsCollection[x].taskId), currentIndex = x;
+
+                        for (var y = 0; y < individualPredecessorLength; y++) {
+                            if (totalPredecessorsCollection[x].predecessor[y].from == taskid) {
+                                if (to == -1) {
+                                    if (!totalPredecessorsCollection[x].predecessor[y].offset) {
+                                        to = totalPredecessorsCollection[x].predecessor[y].to;
+                                        toPredecessor = totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    } else {
+                                        to = totalPredecessorsCollection[x].predecessor[y].to + ":" + totalPredecessorsCollection[x].predecessor[y].offset + totalPredecessorsCollection[x].predecessor[y].offsetDurationUnit;
+                                        toPredecessor = totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    }
+                                } else {
+                                    if (!totalPredecessorsCollection[x].predecessor[y].offset) {
+
+                                        to = to + "," + totalPredecessorsCollection[x].predecessor[y].to;
+                                        toPredecessor = toPredecessor + "," + totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    } else {
+                                        to = to + "," + totalPredecessorsCollection[x].predecessor[y].to + ":" + totalPredecessorsCollection[x].predecessor[y].offset + totalPredecessorsCollection[x].predecessor[y].offsetDurationUnit;
+                                        toPredecessor = toPredecessor + "," + totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    }
+                                }
+                            }
+                            if (totalPredecessorsCollection[x].predecessor[y].to == taskid) {
+                                if (from == -1) {
+                                    if (!totalPredecessorsCollection[x].predecessor[y].offset) {
+
+                                        from = totalPredecessorsCollection[x].predecessor[y].from;
+                                        fromPredecessor = totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    } else {
+                                        from = totalPredecessorsCollection[x].predecessor[y].from + ":" + totalPredecessorsCollection[x].predecessor[y].offset + totalPredecessorsCollection[x].predecessor[y].offsetDurationUnit;
+                                        fromPredecessor = totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    }
+                                } else {
+                                    if (!totalPredecessorsCollection[x].predecessor[y].offset) {
+                                        from = from + "," + totalPredecessorsCollection[x].predecessor[y].from;
+                                        fromPredecessor = fromPredecessor + "," + totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    } else {
+
+                                        from = from + "," + totalPredecessorsCollection[x].predecessor[y].from + ":" + totalPredecessorsCollection[x].predecessor[y].offset + totalPredecessorsCollection[x].predecessor[y].offsetDurationUnit;
+                                        fromPredecessor = fromPredecessor + "," + totalPredecessorsCollection[x].predecessor[y].predecessorsType;
+                                    }
+                                }
+                            }
+                        }
+                        if (from == -1) {
+                            from = null;
+                            fromPredecessor = null;
+                        }
+                        if (to == -1) {
+                            to = null;
+                            toPredecessor = null;
+                        }
+                        collection.push({ from: from, fromPredecessor: fromPredecessor, taskid: taskid, to: to, toPredecessor: toPredecessor, currentIndex: currentIndex, slack: null, ff: 0, fs: 0, enddate: null, fsslack: 0 });
+                        collectionTaskId.push(parseInt(taskid));
+                    }
+                    var collectionLength = collection.length, indexenddate = 0, num;
+
+                    // find the predecessors connected taskes that does not contains any successor.
+                    for (var z = 0; z < collectionLength; z++) {
+                        if (!collection[z].to) {
+                            num = collection[z].taskid;
+                            indexenddate = modelRecordIds.indexOf(num.toString());
+                            dateDifference = proxy._getDuration(flatRecords[indexenddate].endDate, checkEndDate, "minute",flatRecords[indexenddate].isAutoSchedule);
+                            collection[z].slack = dateDifference;
+                            collection[z].fs = -1;
+                            collection[z].enddate = flatRecords[indexenddate].endDate;
+                            endTask.push({ fromdata: collection[z].from, todateID: collection[z].taskid, fromDataPredecessor: collection[z].fromPredecessor });
+
+                        }
+                    }
+                    for (var k = 0; k < endTask.length; k++) {
+                        fromDataObject.push(endTask[k]);
+                        proxy._slackCalculation(fromDataObject, collection, collectionTaskId, checkEndDate, flatRecords, modelRecordIds);
+                    }
+                    criticalPathIds = proxy._finalCriticalPath(collection, taskBeyondEnddate, flatRecords, modelRecordIds);
+                    this.criticalPathCollection = criticalPathIds;
+                    this.detailPredecessorCollection = collection;
+                    this.collectionTaskId = collectionTaskId;
+                    if (!isRefreshed) {
+                        this._$ganttchartHelper.ejGanttChart("criticalDataMapping", criticalPathIds, isShown, collection, collectionTaskId);
+                        this._$ganttchartHelper.ejGanttChart("criticalPathColor", criticalPathIds, isShown, collection, collectionTaskId);
+                        proxy._$treegridHelper.ejTreeGrid("refresh");
+                    } else if (isRefreshed) {
+                        this._$ganttchartHelper.ejGanttChart("criticalDataMapping", criticalPathIds, isShown, collection, collectionTaskId);
+                      //proxy._$treegridHelper.ejTreeGrid("refresh");
+                    }
+                    proxy._enableDisableCriticalIcon = true;
+                }
+                else {
+                    var criticalPathIds = [], collection = [], collectionTaskId = [];
+                    if (!isRefreshed) {
+                        this._$ganttchartHelper.ejGanttChart("criticalDataMapping", criticalPathIds, isShown, collection, collectionTaskId);
+                        this._$ganttchartHelper.ejGanttChart("criticalPathColor", criticalPathIds, isShown, collection, collectionTaskId);
+                        this._$treegridHelper.ejTreeGrid("refresh");
+                    } else if (isRefreshed) {
+                        this._$ganttchartHelper.ejGanttChart("criticalDataMapping", criticalPathIds, isShown, collection, collectionTaskId);
+                      //proxy._$treegridHelper.ejTreeGrid("refresh");
+                    }
+                    proxy._enableDisableCriticalIcon = true;
+                }
+            }
+
+            // execute if we disable critical path
+            if (isShown == false) {
+                var criticalPathIds = [], collection = [], collectionTaskId = [], distructIndex = 0;
+                this.isCriticalPathEnable = false;
+                for (var zs = 0; zs < proxy.criticalPathCollection.length ; zs++) {
+                    distructIndex = modelRecordIds.indexOf(proxy.criticalPathCollection[zs].toString());
+                    flatRecords[distructIndex].isCritical = false;
+                }
+                if (!isRefreshed) {
+                    this._$ganttchartHelper.ejGanttChart("criticalDataMapping", criticalPathIds, isShown, collection, collectionTaskId);
+                    this._$ganttchartHelper.ejGanttChart("criticalPathColor", criticalPathIds, isShown, collection, collectionTaskId);
+                    this._$treegridHelper.ejTreeGrid("refresh");
+                } else if (isRefreshed) {
+                    this._$ganttchartHelper.ejGanttChart("criticalDataMapping", criticalPathIds, isShown, collection, collectionTaskId);
+                  //proxy._$treegridHelper.ejTreeGrid("refresh");
+                }
+                proxy._enableDisableCriticalIcon = false;
+            }
+        },
+
+        // calculation to find critical task ids with the help of slack values.
+        _finalCriticalPath: function (collection, taskBeyondEnddate, flatRecords, modelRecordIds) {
+            var proxy = this;
+            var criticalPathIds = [], index;
+            for (var x = 0; x < collection.length; x++) {
+                index = modelRecordIds.indexOf(collection[x].taskid.toString());
+                if (flatRecords[index].durationUnit == "day") {
+                    flatRecords[index].slack = collection[x].slack / 60 / (proxy._secondsPerDay / 3600)
+                    if (flatRecords[index].slack % 1 != 0)
+                        flatRecords[index].slack = flatRecords[index].slack.toFixed(2) + " day";
+                    else
+                        flatRecords[index].slack = flatRecords[index].slack + " day";
+                }
+                else if (flatRecords[index].durationUnit == "hour") {
+                    flatRecords[index].slack = collection[x].slack / 60;
+                    if (flatRecords[index].slack % 1 != 0)
+                        flatRecords[index].slack = flatRecords[index].slack.toFixed(2) + " hour";
+                    else
+                        flatRecords[index].slack = flatRecords[index].slack + " hour";
+                }
+                else {
+                    flatRecords[index].slack = collection[x].slack + " minutes";
+                }
+                if ((collection[x].slack <= 0)) {
+
+                    if (flatRecords[index].status < 100) {
+                        flatRecords[index].isCritical = true;
+                        criticalPathIds.push(collection[x].taskid);
+                    }
+                }
+            }
+            criticalPathIds = criticalPathIds.concat(taskBeyondEnddate);
+            return criticalPathIds;
+        },
+
+        // calculation to find slack values.
+        _slackCalculation: function (fromDataObject, collection, collectionTaskId, checkEndDate, flatRecords, modelRecordIds) {
+            var proxy = this, fromDateArray = fromDataObject[0].fromdata.split(","), fromDataPredecessor = fromDataObject[0].fromDataPredecessor.split(","),
+                fromDateArray1 = [], fromTaskIdIndex, totaskId, arraylength = fromDateArray.length, prevTaskEnddate, ffslack, mediater, holidayCount, diffInMilliSec, dateDifference, offsetInMillSec;
+            for (xx = 0; xx < arraylength; xx++) {
+                fromDateArray1 = fromDateArray[xx].split(":");
+                fromTaskIdIndex = collectionTaskId.indexOf(parseInt(fromDateArray1[0]));
+                totaskId = collectionTaskId.indexOf(parseInt(fromDataObject[0].todateID));
+
+                // calculate slack value for the task contains predecessor connection in "finish to start".
+                if (fromDataPredecessor[xx] == "FS") {
+                    indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                    indexenddate = modelRecordIds.indexOf(fromDataObject[0].todateID.toString());
+                    if (flatRecords[indexfromtaskid].endDate > flatRecords[indexenddate].startDate)
+                        dateDifference = -(proxy._getDuration(flatRecords[indexenddate].startDate, flatRecords[indexfromtaskid].endDate, "minute",flatRecords[indexfromtaskid].isAutoSchedule));
+                    else
+                        dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, flatRecords[indexenddate].startDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+
+                    // execute if the slack value is not set initially.
+                    if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack)) {
+
+                        // execute if the offset value is not given.
+                        if (fromDateArray1.length <= 1) {
+                            if (collection[totaskId].slack + dateDifference < 0) {
+                                collection[fromTaskIdIndex].slack = 0;
+                            }
+                            else {
+                                collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                            }
+                        }
+                            // execute if the offset value is given.
+                        else if (fromDateArray1.length > 1) {
+                            if (fromDateArray1[1].indexOf("hour") != -1)
+                                offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                            else if (fromDateArray1[1].indexOf("day") != -1)
+                                offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                            else
+                                offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                            collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                            collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                            if (collection[fromTaskIdIndex].slack < 0)
+                                collection[fromTaskIdIndex].slack = 0;
+                        }
+                        collection[fromTaskIdIndex].fs = 1;
+                        collection[fromTaskIdIndex].fsslack = collection[fromTaskIdIndex].slack;
+                        collection[fromTaskIdIndex].enddate = flatRecords[indexfromtaskid].startDate;;
+                    }
+
+                        // execute if the current calculated slack value is less than the previous slack value.
+                    else if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+
+                        // execute if the offset value is not given.
+                        if (fromDateArray1.length <= 1) {
+                            if (collection[totaskId].slack + dateDifference < 0) {
+                                collection[fromTaskIdIndex].slack = 0;
+                            }
+                            else {
+                                collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                            }
+                        }
+
+                            // execute if the offset value is given.
+                        else if (fromDateArray1.length > 1) {
+
+                            if (fromDateArray1[1].indexOf("hour") != -1)
+                                offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                            else if (fromDateArray1[1].indexOf("day") != -1)
+                                offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                            else
+                                offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                            collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                            collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                            if (collection[fromTaskIdIndex].slack < 0)
+                                collection[fromTaskIdIndex].slack = 0;
+                        }
+                        collection[fromTaskIdIndex].fs = 1;
+                        collection[fromTaskIdIndex].fsslack = collection[fromTaskIdIndex].slack;
+                        collection[fromTaskIdIndex].enddate = flatRecords[indexfromtaskid].startDate;;
+                    }
+                    if (flatRecords[indexfromtaskid].endDate >= checkEndDate && flatRecords[indexfromtaskid].endDate <= checkEndDate) {
+                        collection[fromTaskIdIndex].slack = 0;
+                    }
+                }
+
+                //  calculate slack value for the task contains predecessor connection in "start to start".
+                if (fromDataPredecessor[xx] == "SS") {
+                    indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+
+                    // It execute if the task is in auto mode.
+                    if (flatRecords[indexfromtaskid].isAutoSchedule) {
+                        indexenddate = modelRecordIds.indexOf(fromDataObject[0].todateID.toString());
+                        if (flatRecords[indexfromtaskid].startDate > flatRecords[indexenddate].startDate)
+                            dateDifference = -(proxy._getDuration(flatRecords[indexenddate].startDate, flatRecords[indexfromtaskid].startDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule));
+                        else
+                            dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].startDate, flatRecords[indexenddate].startDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+
+                        // It execute while the slack value is not set to the corresponding task. 
+                        if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack)) {
+                            if (fromDateArray1.length <= 1) {
+                                if (collection[totaskId].slack + dateDifference < 0) {
+                                    collection[fromTaskIdIndex].slack = 0;
+                                }
+                                else {
+                                    collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                }
+                            } else if (fromDateArray1.length > 1) {
+                                if (fromDateArray1[1].indexOf("hour") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                else if (fromDateArray1[1].indexOf("day") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                else
+                                    offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                if (collection[fromTaskIdIndex].slack < 0)
+                                    collection[fromTaskIdIndex].slack = 0;
+                            }
+                            collection[fromTaskIdIndex].fs = 1;
+                            collection[fromTaskIdIndex].fsslack = collection[fromTaskIdIndex].slack;
+                            collection[fromTaskIdIndex].enddate = flatRecords[indexfromtaskid].startDate;;
+                        }
+                            //It execute while already the slack value is set and it is higher than the datedifference. 
+                        else if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+                            if (fromDateArray1.length <= 1) {
+                                if (collection[totaskId].slack + dateDifference < 0) {
+                                    collection[fromTaskIdIndex].slack = 0;
+                                }
+                                else {
+                                    collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                }
+                            } else if (fromDateArray1.length > 1) {
+
+                                if (fromDateArray1[1].indexOf("hour") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                else if (fromDateArray1[1].indexOf("day") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                else
+                                    offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                if (collection[fromTaskIdIndex].slack < 0)
+                                    collection[fromTaskIdIndex].slack = 0;
+                            }
+                            collection[fromTaskIdIndex].fs = 1;
+                            collection[fromTaskIdIndex].fsslack = collection[fromTaskIdIndex].slack;
+                            collection[fromTaskIdIndex].enddate = flatRecords[indexfromtaskid].startDate;;
+                        }
+                    }
+                        // It execute if the task is in not an auto mode task.
+                    else if (!flatRecords[indexfromtaskid].isAutoSchedule) {
+                        enddate = 0;
+                        dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, checkEndDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                        if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack)) {
+                            collection[fromTaskIdIndex].slack = dateDifference;
+                        }
+                        else if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+                            collection[fromTaskIdIndex].slack = dateDifference;
+                        }
+                    }
+                    if (flatRecords[indexfromtaskid].endDate >= checkEndDate && flatRecords[indexfromtaskid].endDate <= checkEndDate) {
+                        collection[fromTaskIdIndex].slack = 0;
+                    }
+                }
+
+                //  calculate slack value for the task contains predecessor connection in "finish to finish".
+                if (fromDataPredecessor[xx] == "FF") {
+
+                    // execute if the previous task is from finish to start or finish to finish state.
+                    if (collection[totaskId].fs == 1 || collection[totaskId].ff == 1 || collection[totaskId].fs == -1) {
+                        indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                        indexenddate = modelRecordIds.indexOf(fromDataObject[0].todateID.toString());
+
+                        if (collection[totaskId].fs == 1) {
+                            prevTaskEnddate = flatRecords[indexenddate].endDate;
+                            ffslack = collection[totaskId].slack;
+                        }
+                        else if (collection[totaskId].ff == 1) {
+                            prevTaskEnddate = flatRecords[indexenddate].endDate;
+                            ffslack = collection[totaskId].slack;
+                        }
+                        if (collection[totaskId].fs == -1) {
+                            prevTaskEnddate = collection[totaskId].enddate;
+                            ffslack = collection[totaskId].slack;
+                        }
+                        if (prevTaskEnddate > flatRecords[indexfromtaskid].endDate)
+                            dateDifference = -(proxy._getDuration(flatRecords[indexfromtaskid].endDate, prevTaskEnddate, "minute", flatRecords[indexfromtaskid].isAutoSchedule));
+                        else
+                            dateDifference = proxy._getDuration(prevTaskEnddate, flatRecords[indexfromtaskid].endDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+
+                        // set the slack value if the slack value is not set initially.
+                        if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack)) {
+
+                            // execute if the offset value is not given.
+                            if (fromDateArray1.length <= 1) {
+                                if (ffslack - dateDifference < 0) {
+                                    collection[fromTaskIdIndex].slack = 0;
+                                }
+                                else {
+                                    collection[fromTaskIdIndex].slack = ffslack - dateDifference;
+                                }
+                            }
+                                // execute if the offset value is given.
+                            else if (fromDateArray1.length > 1) {
+
+                                if (fromDateArray1[1].indexOf("hour") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                else if (fromDateArray1[1].indexOf("day") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                else
+                                    offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                collection[fromTaskIdIndex].slack = collection[totaskId].slack - dateDifference;
+                                collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                if (collection[fromTaskIdIndex].slack < 0)
+                                    collection[fromTaskIdIndex].slack = 0;
+                            }
+                            collection[fromTaskIdIndex].ff = 1;
+                            collection[fromTaskIdIndex].enddate = prevTaskEnddate;
+                            collection[fromTaskIdIndex].fsslack = ffslack;
+                        }
+                            // overright the slack value if the current calculated slack value is less than the previous slack value.
+                        else if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+
+                            // execute if the offset value is not given.
+                            if (fromDateArray1.length <= 1) {
+                                if (ffslack - dateDifference < 0) {
+                                    collection[fromTaskIdIndex].slack = 0;
+                                }
+                                else {
+                                    collection[fromTaskIdIndex].slack = ffslack - dateDifference;
+                                }
+                            }
+                                // execute if the offset value is given.
+                            else if (fromDateArray1.length > 1) {
+
+                                if (fromDateArray1[1].indexOf("hour") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                else if (fromDateArray1[1].indexOf("day") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                else
+                                    offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                collection[fromTaskIdIndex].slack = collection[totaskId].slack - dateDifference;
+                                collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                if (collection[fromTaskIdIndex].slack < 0)
+                                    collection[fromTaskIdIndex].slack = 0;
+                            }
+                            collection[fromTaskIdIndex].ff = 1;
+                            collection[fromTaskIdIndex].enddate = prevTaskEnddate;
+                            collection[fromTaskIdIndex].fsslack = ffslack;
+                        }
+                    }
+                        // execute if the previous task is from start to start or start to finish state.
+                    else {
+                        indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                        dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, checkEndDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+
+                        // execute if the slack value is not set initially.
+                        if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack)) {
+                            // execute if the offset value is not given.
+                            if (fromDateArray1.length <= 1) {
+                                if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack))
+                                    collection[fromTaskIdIndex].slack = dateDifference;
+                                else if (collection[fromTaskIdIndex].slack > dateDifference)
+                                    collection[fromTaskIdIndex].slack = dateDifference;
+
+                            }
+                                // execute if the offset value is given.
+                            else if (fromDateArray1.length > 1) {
+                                if (fromDateArray1[1].indexOf("hour") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                else if (fromDateArray1[1].indexOf("day") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                else
+                                    offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                collection[fromTaskIdIndex].slack = dateDifference;
+                                collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                if (collection[fromTaskIdIndex].slack < 0)
+                                    collection[fromTaskIdIndex].slack = 0;
+                            }
+                        }
+                            // execute if the current calculated slack value is less than the previous slack value.
+                        else if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+                            // execute if the offset value is not given.
+                            if (fromDateArray1.length <= 1) {
+                                if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack))
+                                    collection[fromTaskIdIndex].slack = dateDifference;
+                                else if (collection[fromTaskIdIndex].slack > dateDifference)
+                                    collection[fromTaskIdIndex].slack = dateDifference;
+                            }
+                                // execute if the offset value is not given.
+                            else if (fromDateArray1.length > 1) {
+                                if (fromDateArray1[1].indexOf("hour") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                else if (fromDateArray1[1].indexOf("day") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                else
+                                    offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                collection[fromTaskIdIndex].slack = dateDifference;
+                                collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                if (collection[fromTaskIdIndex].slack < 0)
+                                    collection[fromTaskIdIndex].slack = 0;
+                            }
+                        }
+                        collection[fromTaskIdIndex].ff = 1;
+                    }
+                    if (flatRecords[indexfromtaskid].endDate >= checkEndDate && flatRecords[indexfromtaskid].endDate <= checkEndDate) {
+                        collection[fromTaskIdIndex].slack = 0;
+                    }
+                }
+
+                //  calculate slack value for the task contains predecessor connection in "start to finish".
+                if (fromDataPredecessor[xx] == "SF") {
+                    indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+
+                    //It execute if the task is an auto mode task.
+                    if (flatRecords[indexfromtaskid].isAutoSchedule) {
+                        //execute if the slack value is not set initially.
+                        if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack)) {
+                            // execute if the offset value is not given.
+                            if (fromDateArray1.length <= 1) {
+                                // execute if the previous task does no has sucessor. 
+                                if (ej.isNullOrUndefined(collection[totaskId].to)) {
+                                    indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                                    dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, checkEndDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                                    collection[fromTaskIdIndex].slack = dateDifference;
+                                }
+                                    // execute if the previous task has sucessor.
+                                else if (!ej.isNullOrUndefined(collection[totaskId].to)) {
+                                    indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                                    indexenddate = modelRecordIds.indexOf(fromDataObject[0].todateID.toString());
+                                    if (flatRecords[indexenddate].endDate > flatRecords[indexfromtaskid].startDate)
+                                        dateDifference = -(proxy._getDuration(flatRecords[indexfromtaskid].startDate, flatRecords[indexenddate].endDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule));
+                                    else
+                                        dateDifference = proxy._getDuration(flatRecords[indexenddate].endDate, flatRecords[indexfromtaskid].startDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                                    if (collection[totaskId].slack + dateDifference < 0) {
+                                        collection[fromTaskIdIndex].slack = 0;
+                                    }
+                                    else {
+                                        collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                    }
+                                }
+                            }
+                                // execute if the offset value is given.
+                            else if (fromDateArray1.length > 1) {
+                                indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                                indexenddate = modelRecordIds.indexOf(fromDataObject[0].todateID.toString());
+                                if (flatRecords[indexenddate].endDate > flatRecords[indexfromtaskid].endDate) {
+                                    if (flatRecords[indexfromtaskid].startDate > flatRecords[indexenddate].endDate)
+                                        dateDifference = -(proxy._getDuration(flatRecords[indexenddate].endDate, flatRecords[indexfromtaskid].startDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule));
+                                    else
+                                        dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].startDate, flatRecords[indexenddate].endDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                                } else {
+                                    dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, checkEndDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                                }
+                                if (fromDateArray1[1].indexOf("hour") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                else if (fromDateArray1[1].indexOf("day") != -1)
+                                    offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                else
+                                    offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                if (collection[fromTaskIdIndex].slack < 0)
+                                    collection[fromTaskIdIndex].slack = 0;
+                            }
+                            collection[fromTaskIdIndex].fs = 1;
+                            collection[fromTaskIdIndex].fsslack = collection[fromTaskIdIndex].slack;
+                            collection[fromTaskIdIndex].enddate = flatRecords[indexfromtaskid].startDate;
+                        }
+                        else {
+
+                            if (fromDateArray1.length <= 1) {
+                                if (ej.isNullOrUndefined(collection[totaskId].to)) {
+                                    indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                                    dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, checkEndDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                                } else if (!ej.isNullOrUndefined(collection[totaskId].to)) {
+                                    indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                                    indexenddate = modelRecordIds.indexOf(fromDataObject[0].todateID.toString());
+                                    if (flatRecords[indexenddate].endDate > flatRecords[indexfromtaskid].startDate)
+                                        dateDifference = -(proxy._getDuration(flatRecords[indexfromtaskid].startDate, flatRecords[indexenddate].endDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule));
+                                    else
+                                        dateDifference = proxy._getDuration(flatRecords[indexenddate].endDate, flatRecords[indexfromtaskid].startDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+
+                                }
+                                // execute if the current calculated slack value is less than the previous slack value.
+                                if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+                                    if (ej.isNullOrUndefined(collection[totaskId].to)) {
+                                        collection[fromTaskIdIndex].slack = dateDifference;
+                                    } else if (!ej.isNullOrUndefined(collection[totaskId].to)) {
+                                        if (collection[totaskId].slack + dateDifference < 0) {
+                                            collection[fromTaskIdIndex].slack = 0;
+                                        }
+                                        else {
+                                            collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                        }
+                                    }
+                                }
+                            } else if (fromDateArray1.length > 1) {
+                                indexfromtaskid = modelRecordIds.indexOf(fromDateArray1[0].toString());
+                                indexenddate = modelRecordIds.indexOf(fromDataObject[0].todateID.toString());
+
+                                if (flatRecords[indexenddate].endDate > flatRecords[indexfromtaskid].endDate) {
+                                    if (flatRecords[indexfromtaskid].startDate > flatRecords[indexenddate].endDate)
+                                        dateDifference = -(proxy._getDuration(flatRecords[indexenddate].endDate, flatRecords[indexfromtaskid].startDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule));
+                                    else
+                                        dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].startDate, flatRecords[indexenddate].endDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                                } else {
+                                    dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, checkEndDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                                }
+                                // execute if the current calculated slack value is less than the previous slack value.
+                                if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+                                    if (fromDateArray1[1].indexOf("hour") != -1)
+                                        offsetInMillSec = parseInt(fromDateArray1[1]) * 60;
+                                    else if (fromDateArray1[1].indexOf("day") != -1)
+                                        offsetInMillSec = parseInt(fromDateArray1[1]) * (proxy._secondsPerDay / 3600) * 60;
+                                    else
+                                        offsetInMillSec = parseInt(fromDateArray1[1]);
+
+                                    collection[fromTaskIdIndex].slack = collection[totaskId].slack + dateDifference;
+                                    collection[fromTaskIdIndex].slack = collection[fromTaskIdIndex].slack - (offsetInMillSec);
+                                    if (collection[fromTaskIdIndex].slack < 0)
+                                        collection[fromTaskIdIndex].slack = 0;
+                                }
+                            }
+                            collection[fromTaskIdIndex].fs = 1;
+                            collection[fromTaskIdIndex].fsslack = collection[fromTaskIdIndex].slack;
+                            collection[fromTaskIdIndex].enddate = flatRecords[indexfromtaskid].startDate;
+                        }
+                    }
+                        //It execute if the task is an auto mode task.
+                    else if (!flatRecords[indexfromtaskid].isAutoSchedule) {
+                        dateDifference = proxy._getDuration(flatRecords[indexfromtaskid].endDate, checkEndDate, "minute", flatRecords[indexfromtaskid].isAutoSchedule);
+                        if (ej.isNullOrUndefined(collection[fromTaskIdIndex].slack)) {
+                            collection[fromTaskIdIndex].slack = dateDifference;
+                        }
+                        else if (collection[fromTaskIdIndex].slack > dateDifference && collection[fromTaskIdIndex].slack != 0) {
+                            collection[fromTaskIdIndex].slack = dateDifference;
+                        }
+                    }
+                    if (flatRecords[indexfromtaskid].endDate >= checkEndDate && flatRecords[indexfromtaskid].endDate <= checkEndDate) {
+                        collection[fromTaskIdIndex].slack = 0;
+                    }
+                }
+                if (collection[fromTaskIdIndex].from)
+                    fromDataObject.push({ fromdata: collection[fromTaskIdIndex].from, todateID: collection[fromTaskIdIndex].taskid, fromDataPredecessor: collection[fromTaskIdIndex].fromPredecessor });
+            }
+            if (fromDataObject) {
+                fromDataObject.splice(0, 1);
+                if (fromDataObject.length > 0)
+                    proxy._slackCalculation(fromDataObject, collection, collectionTaskId, checkEndDate, flatRecords, modelRecordIds);
             }
         },
 
@@ -7859,24 +10158,17 @@
             proxy._isinAddnewRecord = true;
             
             for (columnCount; columnCount < length; columnCount++)
-                cloneData[columns[columnCount].mappingName] = "";
+                columns[columnCount].mappingName && (cloneData[columns[columnCount].mappingName] = "");
 
             args.data = cloneData;
-            args.requestType = "openAddDialog";
-            if(!proxy._trigger("actionBegin", args)){
-                args.requestType = "add";            
-                for (var columnCount = 0; columnCount < length; columnCount++)
-                    fieldData[columns[columnCount].field] = args.data[columns[columnCount].mappingName];
-                args.data = fieldData;
-                //  proxy._$treegridHelper.ejTreeGrid("clearSelection");
-                proxy.renderedEditDialog(args);
-            }
+            args.requestType = "add";
+            proxy.renderedEditDialog(args);
         },
 
         _sendEditRequest: function ($tr) {
             var proxy = this,
                 model = proxy.model,
-                args,
+                args={},
                 data;
             
             if (ej.isNullOrUndefined($tr)) {
@@ -7888,12 +10180,10 @@
             }
             data = proxy.getUpdatedRecords()[proxy._currentTrIndex];
 
-            args = { rowElement: proxy._$currentTr, data: data, requestType: "openEditDialog" };
-            if (!proxy._trigger("beginEdit", args)) {
-                args.requestType = "beginedit";
-                if (args.data)
-                    proxy.renderedEditDialog(args);
-            }
+            args.data = data;
+            args.requestType = "beginedit";
+            if (args.data)
+                proxy.renderedEditDialog(args);
         },
         _updateAddData: function (obj, rowPosition)
         {
@@ -7927,12 +10217,20 @@
                 if (!obj[model.durationMapping]) {
                     var startDate = proxy._getDateFromFormat(model.scheduleStartDate);
                     startDate.setDate(startDate.getDate() + 4);
-                    obj[model.endDateMapping] = ej.format(startDate, this.model.dateFormat);
+                    obj[model.endDateMapping] = ej.format(startDate, this.model.dateFormat, this.model.locale);
                 }
             }
             if (model.enableWBS && !obj["WBS"]) {
                 obj["WBS"] = proxy._getNewWBSid(rowPosition);
             }
+             if(model.enableWBS && !obj["WBS"])
+            {
+                obj["WBS"] = proxy._getNewWBSid(rowPosition);
+             }
+             if (!ej.isNullOrUndefined(model.selectedItem)) {
+                 obj["taskType"] = model.selectedItem.taskType;
+                 obj["effortDriven"] = model.selectedItem.effortDriven;
+             }
         },
         _sendSaveRequest: function (saveType) {
             var obj = {},
@@ -7948,19 +10246,27 @@
                 startdate,
                 enddate,
                 column,
-                value, dialogId, treeGridId,
-                args = {};
+                value, dialogId, treeGridId, resourceGridId, customGridId, noteRteId,
+                args = {},
+                generalColumns, generalColumnsLength, customColumns, customColumnsLength;
             this._duplicate = false;
             this._wrongenddate = false;
             if (saveType === "Add")
             {
-                formelement = doc.getElementById(proxy._id + "AddForm");
+                formelement = doc.querySelectorAll("#" + proxy._id + "GeneralAddForm", "#" + proxy._id + "PredecessorAddForm", "#" + proxy._id + "ReosurceAddForm", "#" + proxy._id + "CustomFieldsAddForm");
                 length = formelement && formelement.length;
                 dialogId = "Add";
                 treeGridId = "#treegrid" + proxy._id + "predecessorAdd";
+                resourceGridId = "#treegrid" + proxy._id + "resourceAdd";
+                customGridId = "#treegrid" + proxy._id + "customFieldAdd";
+                noteRteId = "#" + proxy._id + "AddAreaNotes";
                 $element = $("#" + proxy._id + "taskId" + dialogId);             
                 column = ej.TreeGrid.getColumnByField(proxy._columns, "taskId");
                 proxy._cellEditColumn = column;
+                generalColumns = proxy._addDialogGeneralColumns;
+                generalColumnsLength = generalColumns.length;
+                customColumns = proxy._addDialogCustomColumns;
+                customColumnsLength = customColumns.length;
                 if (column && $element.length>0)
                     value = proxy.getCurrentEditCellData($element, column.dropdownData);
 
@@ -7975,10 +10281,17 @@
             }
             else
             {
-                formelement = doc.getElementById(proxy._id + "EditForm");
+                formelement = doc.getElementById(proxy._id + "GeneralEditForm");
                 length = formelement && formelement.length;
-                treeGridId = "#treegrid" + proxy._id + "predecessoredit";
-                dialogId = "";
+                treeGridId = "#treegrid" + proxy._id + "predecessorEdit";
+                resourceGridId = "#treegrid" + proxy._id + "resourceEdit";
+                customGridId = "#treegrid" + proxy._id + "customFieldEdit";
+                noteRteId = "#" + proxy._id + "EditAreaNotes";
+                dialogId = "Edit";
+                generalColumns = proxy._editDialogGeneralColumns;
+                generalColumnsLength = generalColumns.length;
+                customColumns = proxy._editDialogCustomColumns;
+                customColumnsLength = customColumns.length;
 
                 if (!this.editFormValidate())
                     return true;
@@ -7988,17 +10301,48 @@
             if (!this._duplicate) {
 
 
-                for (var count = 0; count < proxy._columns.length; count++) {
-                    $element = $(formelement).find("#" + proxy._id + proxy._columns[count].field + dialogId);
+                for (var count = 0; count < generalColumnsLength; count++) {
+                    $element = $(formelement).find("#" + proxy._id + generalColumns[count].field + dialogId);
                     if ($element.length > 0) {
-                        proxy._cellEditColumn = proxy._columns[count];
-                        value = proxy.getCurrentEditCellData($element, proxy._columns[count].dropdownData); // formelement[index].value;
-                        if (proxy._isinAddnewRecord === false && proxy._columns[count].mappingName === proxy.model.predecessorMapping) {
+                        proxy._cellEditColumn = generalColumns[count];
+                        if (proxy._cellEditColumn.field == "duration" || proxy._cellEditColumn.field == "startDate" || proxy._cellEditColumn.field == "endDate") {
+                            obj[generalColumns[count].mappingName] = this._editedDialogRecord[proxy._cellEditColumn.field];
+                            if (proxy._cellEditColumn.field == "duration" && model.durationUnitMapping) {
+                                obj[model.durationUnitMapping] = this._editedDialogRecord.durationUnit;
+                            }
+                            continue;
+                        }
+                        value = proxy.getCurrentEditCellData($element, generalColumns[count].dropdownData); // formelement[index].value;
+                        if (proxy._isinAddnewRecord === false && generalColumns[count].mappingName === proxy.model.predecessorMapping) {
                             args.previousValue = proxy._updatePredecessorValue(obj, value);
                         }
-                        obj[proxy._columns[count].mappingName] = value;
+                        /*Validate progress value is null or undefined*/
+                        if (generalColumns[count].mappingName === proxy.model.progressMapping && ej.isNullOrUndefined(value))
+                            value = 0;
+                        if (proxy._cellEditColumn.field == "work" || proxy._cellEditColumn.field == "taskType" || proxy._cellEditColumn.field == "effortDriven")
+                            obj[generalColumns[count].field] = value;
+                        else
+                        obj[generalColumns[count].mappingName] = value;
                     }
                 }
+
+                // Get the custom column values from custom column table.
+                if ($(customGridId).length) {
+                    var data = $(customGridId).ejTreeGrid("model.updatedRecords");
+                    for (var count = 0; count < customColumnsLength; count++) {
+                        if (customColumns[count].editType == "dropdownedit")
+                            obj[customColumns[count].mappingName] = data[count].value;
+                        else
+                            obj[customColumns[count].mappingName] = data[count].text;
+                    }
+                }
+                // Adding notes value to newly added task.
+                var noteRte = $(noteRteId);
+                if (noteRte.length) {
+                    obj[model.notesMapping] = noteRte.ejRTE("getHtml");
+                    obj[model.notesMapping + "Text"] = noteRte.ejRTE("getText");;
+                }
+
                 date1 = proxy._getDateFromFormat(obj[model.startDateMapping]);
                 date2 = proxy._getDateFromFormat(obj[model.endDateMapping]);
                 var diffdays=0;
@@ -8010,11 +10354,87 @@
                     this._wrongenddate = false;
                 if (!this._wrongenddate) {
                     // when adding new task resource value changes.
-                if (obj[model.resourceInfoMapping] && editedRowWrap.hasClass("e-addedrow"))
-                {
+                    var resourceGrid = $(resourceGridId), resourceFlag = true;
+                    if (resourceGrid.length > 0) {
                         var resource = [];
-                        $.each(obj[model.resourceInfoMapping], function (indx, value) { resource.push(value[model.resourceIdMapping]); })
-                        obj[model.resourceInfoMapping] = resource;
+                        var data = $(resourceGridId).ejTreeGrid("option", "dataSource"),
+                            selectedRowIndex = $(resourceGridId).ejTreeGrid("option", "selectedRowIndex");
+                        $.each(data, function (indx, value) {
+                            if (value.name != null && value.name != "") {
+                                var index = $.map(model.resources, function (resource, index) {
+                                    if (resource[model.resourceIdMapping].toString() == value.name) {
+                                        return index;
+                                    }
+                                });
+                                
+                                var newResource = model.resources[index[0]];
+                                if (saveType === "Add") {
+                                    resource.push(newResource[model.resourceIdMapping]);
+                                    newResource[model.resourceUnitMapping] = value.unit;
+                                    proxy._newRecordResourceCollection.push(newResource);
+                                }
+                                    //update duration, work, resource units of a task, while add/remove/changes in existing resource unit.
+                                else {
+                                    var ganttModel = proxy.model,
+                                        ganttRecord = ganttModel.selectedItem,
+                                        resourceInfo = ganttRecord.resourceInfo,
+                                        resourceIdMapping = ganttModel.resourceIdMapping;
+
+                                    if (ej.isNullOrUndefined(resourceInfo) || resourceInfo.length != data.length)
+                                        proxy._isResourceAddedOrRemoved = true;
+
+                                    if (resourceInfo) {
+                                        for (var index = 0; index < resourceInfo.length; index++) {
+                                            if (resourceInfo[index][resourceIdMapping] === newResource[resourceIdMapping]) {
+                                                var resourceIndex = index;
+                                                break;
+                                            }
+                                            else
+                                                var resourceIndex = -1;
+                                        }
+                                    } else {
+                                        resourceInfo = [];
+                                    }
+                                    if ((ej.isNullOrUndefined(resourceIndex) || resourceIndex == -1) &&  resourceInfo.length != data.length) {
+                                        var ganttRecordResource = $.extend({}, newResource);
+                                        ganttModel.selectedItem._updateResourceUnit(newResource, ganttRecordResource, model.resourceUnitMapping);
+                                        //Unit for newly selected resource should be 100, even there is a defined unit for the selected resource.
+                                        ganttRecordResource[model.resourceUnitMapping] = 100;
+                                        resourceInfo.push(ganttRecordResource);                                        
+                                    }
+                                    if (resourceInfo[indx][model.resourceUnitMapping] != data[indx].unit)
+                                        proxy._isExistingUnitIsUpdated = true;
+
+                                    resourceInfo[indx][model.resourceIdMapping] = parseInt(data[indx].name);
+                                    resourceInfo[indx][model.resourceNameMapping] = model.resources[parseInt(data[indx].name)-1][model.resourceNameMapping];
+                                    resourceInfo[indx][model.resourceUnitMapping] = data[indx].unit;
+                                    resource.push(resourceInfo[indx]);
+
+                                    //update duration as per changes in existing resources unit before adding new resources.
+                                    if (proxy._isExistingUnitIsUpdated) {
+                                        if (!ganttRecord.isAutoSchedule || ganttRecord.taskType == "fixedDuration")
+                                            ganttRecord._updateWorkWithDuration(proxy);
+                                        else
+                                            ganttRecord._updateDurationWithWork(proxy);
+                                        obj.Duration = ganttRecord.duration;
+                                        obj.work = ganttRecord.work;
+                                        proxy._editedDialogRecord.duration = ganttRecord.duration;
+                                        proxy._editedDialogRecord.work = ganttRecord.work;
+                                        proxy._isExistingUnitIsUpdated = false;
+                                    }
+                                }
+                            }
+                            else {
+                                resourceFlag = false;
+                                return false;
+                            }
+                        });
+                        if (resourceFlag)
+                            obj[model.resourceInfoMapping] = resource;
+                        else {
+                            alert(proxy._alertTexts["dialogResourceAlert"]);
+                            return true;
+                        }
                 }
 
                 if (!obj[model.taskIdMapping] && saveType === "Edit")
@@ -8052,21 +10472,21 @@
 
                     pre = $(treeGridId).ejTreeGrid("option", "dataSource");
                     $.each(pre, function (idx, value) {
-                        if (!(value.id.length > 0 && value.name.length && value.type.length))
+                        if (ej.isNullOrUndefined(value.id) || ej.isNullOrUndefined(value.name) || ej.isNullOrUndefined(value.type) || !(value.id.length > 0 && value.name.length && value.type.length))
                         {
                             taskNameFlag = false;
                         }
                     });
                     if (taskNameFlag) {
-                        var predecessorColl = [], predecessorString = [];//from,to,offset,predecessorType,isdrawn
-                        var types = [{ id: "SS", text: "Start-Start", value: "Start-Start" }, { id: "SF", text: "Start-Finish", value: "Start-Finish" }, { id: "FS", text: "Finish-Start", value: "Finish-Start" }, { id: "FF", text: "Finish-Finish", value: "Finish-Finish" }];
+                        var predecessorColl = [], predecessorString = [];//from,to,offset,predecessorType,isdrawn                        
+                        types = proxy._predecessorCollectionText;
                         var tempType;
                         for (var i = 0; i < pre.length; i++) {
                             var predecessor = {};
                             predecessor["from"] = obj.taskID;
                             predecessor["to"] = pre[i].id;
                             predecessor["isdrawn"] = false;
-                            predecessor["offset"] = isNaN(parseInt(pre[i].offset)) ? 0 : parseInt(pre[i].offset);
+                            predecessor["offset"] = pre[i].offset;
                             for (var j = 0; j < types.length; j++) {
                                 if (pre[i].type == types[j].text) {
                                     predecessor["predecessorType"] = types[j].id;
@@ -8075,7 +10495,7 @@
                                 }
                             }
                             var tem = pre[i].id + tempType//+data[i].lags.toString();
-                            pre[i].offset = isNaN(parseInt(pre[i].offset)) ? 0 : parseInt(pre[i].offset);
+                            pre[i].offset = pre[i].offset;
                             if (pre[i].offset !== 0) {
                                 if (pre[i].offset < 0)
                                     tem += pre[i].offset.toString();
@@ -8110,28 +10530,35 @@
                 args.recordIndex = (this.selectedRowIndex() !== -1) ? this.selectedRowIndex() : -1;
                 if (proxy._trigger("actionBegin", args))
                     return true;
-                if (editedRowWrap.hasClass("e-editedrow")) {
+                if (saveType === "Edit") {
                     args._cModifiedData = proxy._updateRecord(obj);
                     if (proxy._editedDialogRecord) {
-                        if (!args._cModifiedData.startDate) {
-                            args._cModifiedData.startDate = new Date(proxy._editedDialogRecord.startDate);
-                        }
-                        if (!args._cModifiedData.endDate) {
-                            args._cModifiedData.endDate = new Date(proxy._editedDialogRecord.endDate);
-                        }
-                        if (!args._cModifiedData.duration) {
-                            args._cModifiedData.duration = proxy._editedDialogRecord.duration;
-                        }
+                        args._cModifiedData.startDate = new Date(proxy._editedDialogRecord.startDate);
+                        args._cModifiedData.endDate = new Date(proxy._editedDialogRecord.endDate);
+                        args._cModifiedData.duration = proxy._editedDialogRecord.duration;                        
+                        args._cModifiedData.durationUnit = proxy._editedDialogRecord.durationUnit;
+                        if (proxy._isResourceAddedOrRemoved)
+                            proxy._updateResourceRelatedFields(args._cModifiedData);
+                        model.durationUnitMapping && (args._cModifiedData.item[model.durationUnitMapping] = proxy._editedDialogRecord.durationUnit);
                         proxy._editedDialogRecord = null;
                     }
-                    if (args.data[model.endDateMapping] && !args.data[model.durationMapping]) {
-                        args._cModifiedData._calculateDuration(proxy._getDateFromFormat(args._cModifiedData.startDate), proxy._getDateFromFormat(args._cModifiedData.endDate), model.includeWeekend, model.holidays, args._cModifiedData.isMilestone, model);
+                    if (args.data[model.endDateMapping] && (ej.isNullOrUndefined(args.data[model.durationMapping]) || args.data[model.durationMapping] === "") && proxy._isDurationUpdated == false) {
+                        args._cModifiedData.startDate = proxy._checkStartDate(args._cModifiedData.startDate, args._cModifiedData);
+                        args._cModifiedData.endDate = proxy._checkEndDate(args._cModifiedData.endDate, args._cModifiedData);
+                        args._cModifiedData._calculateDuration(this);
                     }
-                    args.modifiedRecord = args._cModifiedData;
+                    /*Milestone status update if start date,end date , duration fields not given in edit dialog fields*/
+                    if (args._cModifiedData.duration == 0 && args._cModifiedData.startDate.getTime() == args._cModifiedData.endDate.getTime())
+                        args._cModifiedData.isMilestone = true;
+                    else
+                        args._cModifiedData.isMilestone = false;
+
+                    args.modifiedRecord = args._cModifiedData;                    
                     proxy.actionComplete(args);
                 }
-                else if (editedRowWrap.hasClass("e-addedrow")) {
-                    if (!proxy.addRecord(obj, ej.Gantt.AddRowPosition.BelowSelectedRow)) {
+                else if (saveType === "Add") {
+                    var rowPosition = proxy._addPosition != null ? proxy._addPosition : model.editSettings.rowPosition;
+                    if (!proxy.addRecord(obj, rowPosition)) {
                         alert(proxy._alertTexts["predecessorEditingValidationAlert"]);
                         return true;
                     }
@@ -8140,6 +10567,7 @@
                 proxy._cAddedRecord = null;
                 proxy._primaryKeyValues = [];
                 proxy._isinAddnewRecord = false;
+                proxy._isResourceAddedOrRemoved = false;
                 return false;
                 }
                 else {
@@ -8319,7 +10747,7 @@
             prevPredecessors = selectedItem["predecessor"];
 
             if (value.length > 0) {
-                modifiedPredecessors = selectedItem._calculatePredecessor(value);
+                modifiedPredecessors = selectedItem._calculatePredecessor(value, this._durationUnitEditText, this.model.durationUnit);
             }
             if (modifiedPredecessors)
                 length = modifiedPredecessors.length;
@@ -8350,7 +10778,7 @@
 
         getCurrentEditCellData: function ($element, dropdownData) {
             var proxy = this, model = proxy.model, date;
-            if ($("#" + proxy._id + "EditForm").length || $("#" + proxy._id + "AddForm").length) {
+            if ($("#" + proxy._id + "EditForm").length || $("#" + proxy._id + "GeneralAddForm").length || $("#" + proxy._id + "GeneralEditForm").length) {
                 var cellValue="";// $element = $("#" + proxy._id + proxy._columnFieldName), 
                 switch (proxy._cellEditColumn.editType) {
                     case ej.TreeGrid.EditingType.String:
@@ -8362,7 +10790,11 @@
                     case ej.TreeGrid.EditingType.Dropdown:
                         if ($element.attr("id").indexOf("resourceInfo") > 0) {
                             cellValue = proxy._getSelectedItem($element.ejDropDownList("model.selectedItems"), dropdownData);
-                        } else
+                        }
+                        else if ($element.attr("id").indexOf("taskMode") > 0) {
+                            cellValue = $element.ejDropDownList("model.value") == "true" ? true : false;
+                        }
+                        else
                             cellValue = $element.ejDropDownList("model.value");
                         break;
                     case ej.TreeGrid.EditingType.Boolean:
@@ -8412,6 +10844,42 @@
 
             return selectedItems;
         },
+
+        _getDropDownText: function (column,indexArray) {
+            var count = 0,
+                length, editParams, value, text,
+                dropDownData = column.dropdownData;
+            indexArray = indexArray.split(","),
+            selectedDropDownText = [];
+            length = indexArray.length;
+            editParams = column.editParams;
+            if (editParams && editParams.fields) {
+                text = editParams.fields.text ? editParams.fields.text : "text";
+                value = editParams.fields.value ? editParams.fields.value : "value";
+            }
+            else {
+                value = "value";
+                text = "text";
+            }
+            for (var i = 0; i < length; i++) {
+                $.each(dropDownData, function (index, data) {
+                    if (!ej.isNullOrUndefined(data[value])) {
+                        if (indexArray[i] === data[value].toString()) {
+                            selectedDropDownText.push(data[text]);
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (indexArray[i] === data[text].toString()) {
+                            selectedDropDownText.push(data[text].toString());
+                            return false;
+                        }
+                    }
+                });
+            }
+            return selectedDropDownText.join(",");
+        },
         _updateRecord: function (data) {
             var proxy = this, model = this.model,
                 columns=proxy._columns,
@@ -8439,26 +10907,35 @@
                 if (columns[index].field.toString() === "predecessor")
                     continue;
                 //for predecessor from edit dialog window 
-                if ((columns[index].field == "startDate")||(columns[index].field == "endDate")) {
+                if ((columns[index].field == "startDate")) {
                     if(ganttRecord[columns[index].field].getTime() != data[columns[index].mappingName].getTime())
+                        proxy._isUpdateOffset = true;
+                }
+                if (columns[index].field == "endDate"){
+                    if (ganttRecord[columns[index].field].getTime() != data[columns[index].mappingName].getTime())
                         proxy._isUpdateOffset = true;
                 }
                 if (columns[index].field == "duration") {
                     if (ganttRecord[columns[index].field] != data[columns[index].mappingName])
                         proxy._isUpdateOffset = true;
                 }
-                ganttRecord[columns[index].field] = data[columns[index].mappingName];
-                ganttRecord.item[columns[index].mappingName] = data[columns[index].mappingName];//field
-
-                if (columns[index].field.toString() === "resourceInfo") {
+                if (columns[index].field == "taskMode") {
+                    ganttRecord["isAutoSchedule"] = !data[model.taskSchedulingModeMapping];                    
+                }
+                if (columns[index].mappingName != model.baselineStartDateMapping && columns[index].mappingName != model.baselineEndDateMapping && 
+                    columns[index].field != "work" && columns[index].field != "taskType") {
+                    ganttRecord[columns[index].field] = data[columns[index].mappingName];
+                    ganttRecord.item[columns[index].mappingName] = data[columns[index].mappingName];//field
+                }
+                if (columns[index].field == "work" || columns[index].field == "taskType" || columns[index].field == "effortDriven")
+                    ganttRecord[columns[index].field] = data[columns[index].field];
+                if (columns[index].field.toString() === "resourceInfo")
                     proxy._updateResourceName(ganttRecord);
+                if (columns[index].field.toString() === "notesText") {
+                    ganttRecord["notes"] = data[model.notesMapping];
+                    ganttRecord.item[model.notesMapping] = data[model.notesMapping];
                 }
             }
-            if (ganttRecord.duration == 0 && ganttRecord.startDate.getTime() == ganttRecord.endDate.getTime())
-                ganttRecord.isMilestone = true;
-            else
-                ganttRecord.isMilestone = false;
-
             return ganttRecord;
             
         },
@@ -8523,6 +11000,8 @@
                             previousGanttRecord.childRecords = [];
                             previousGanttRecord.childRecords.push(data);
                             previousGanttRecord.expanded = true;
+                            previousGanttRecord.taskType = ej.Gantt.TaskType.FixedDuration;
+                            previousGanttRecord.effortDriven = "false";                            
                             data.parentItem = previousGanttRecord;
                             previousGanttRecord.item[model.childMapping] = [];
                             if (!model.parentTaskIdMapping)
@@ -8576,9 +11055,12 @@
                         }
                     }
                     //Update parentitem
-                    if (data.parentItem) {
+                    if (data.parentItem && data.parentItem.isAutoSchedule) {
                         proxy._updateParentItem(data);
                     }
+                    else if (data.parentItem && !data.parentItem.isAutoSchedule)
+                        proxy._updateManualParentItem(data)
+                    
                     //Remove child predecessor from Parent item
                     if (data.parentItem && data.parentItem.predecessor && model.predecessorMapping) {
                         proxy._updatePredecessorOnIndentOutdent(data.parentItem);
@@ -8632,7 +11114,7 @@
                     proxy._$treegridHelper.ejTreeGrid("selectRows", args.recordIndex);
                     this.selectedItem(args.data);
                     this.selectedRowIndex(args.recordIndex);
-                    if (model.allowSelection)
+                    if (model.allowSelection && model.selectionMode != "cell")
                         proxy.updateIndentOutdentOption(data);
                     if (model.enableWBS) {
                         var parentVal = data.parentItem.WBS,
@@ -8647,6 +11129,10 @@
                     eveargs.requestType = "indent";
                     this._trigger("actionComplete", eveargs);
                 }
+            }
+            if (this.isCriticalPathEnable == true) {
+                proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, false, this.collectionTaskId);
+                this.showCriticalPath(true);
             }
         },
         
@@ -8853,7 +11339,10 @@
                         }
                         else
                         {
-                            proxy._updateParentItem(data.parentItem.childRecords[0]);
+                            if (data.parentItem && data.parentItem.isAutoSchedule)
+                                proxy._updateParentItem(data.parentItem.childRecords[0]);
+                            else if (data.parentItem && !data.parentItem.isAutoSchedule)
+                                proxy._updateManualParentItem(data.parentItem.childRecords[0])                            
                         }
 
                         //add to next parent item
@@ -8932,12 +11421,17 @@
                             if (data.parentItem.isMilestone) {
                                 data.parentItem.isMilestone = false;
                             }
-                            data.parentItem.hasChildRecords && proxy._updateParentItem(data.parentItem.childRecords[0]);
+                            if (data.parentItem && data.parentItem.isAutoSchedule)
+                                proxy._updateParentItem(data);
+                            else if (data.parentItem && !data.parentItem.isAutoSchedule)
+                                proxy._updateManualParentItem(data);
                         }
 
                         if (data.hasChildRecords) {
-                            proxy._updateParentItem(data.childRecords[0]);
-                            data._updateParentProgress(data, model.progressMapping);
+                            if (data.isAutoSchedule)
+                                proxy._updateParentItem(data, null, true);
+                            else
+                                proxy._updateManualParentItem(data, null, true);
                         }
 
                         //update parent recordsCollections
@@ -8994,7 +11488,7 @@
                         proxy._$treegridHelper.ejTreeGrid("selectRows", args.recordIndex);
                         this.selectedItem(args.data);
                         this.selectedRowIndex(args.recordIndex);
-                        if (model.allowSelection)
+                        if (model.allowSelection && model.selectionMode != "cell")
                             proxy.updateIndentOutdentOption(data);
                         if (model.enableWBS) {                           
                             //Updating WBS for the old siblings
@@ -9012,6 +11506,10 @@
                         this._trigger("actionComplete", eveargs);
                     }
                 }
+            }
+            if (this.isCriticalPathEnable == true) {
+                this.showCriticalPath(true, true);
+                proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", this.criticalPathCollection, this.detailPredecessorCollection, true, this.collectionTaskId);
             }
         },
         
@@ -9188,6 +11686,8 @@
             var proxy = this,
                 model = proxy.model,
             data = $.extend(true, {}, proxy._contextMenuSelectedItem.item), rowPosition;
+            if (!model.durationUnitMapping)
+                data.duration = this._getDurationStringValue(proxy._contextMenuSelectedItem);
             delete data[model.childMapping];
             delete data[model.predecessorMapping];
             delete data["WBSPredecessor"];
@@ -9268,8 +11768,10 @@
                     }
                 });
             if (targetRecords.length) {
-                for (t = 0; t < targetRecords.length; t++)
+                for (t = 0; t < targetRecords.length; t++) {
                     proxy._$treegridHelper.ejTreeGrid("updateWBSPredecessor", targetRecords[t]);
+                    proxy.refreshGanttRecord(targetRecords[t]);
+                }
             }
         },
 
@@ -9371,7 +11873,7 @@
                 'position': 'absolute',
                 'border-width': '1px',
                 'border-style': 'solid',
-                'z-index': '10033',
+                'z-index': proxy._$treegridHelper.ejTreeGrid("getmaxZindex") + 1,
             }, { "id": proxy._id + "_ContextMenu" });
 
             //Get zero th level menu items
@@ -9412,12 +11914,12 @@
                 }
             }
 
-            if ($(window).height() < posy + contextMenuHeight)
+            else if (($(window).height() + $(window).scrollTop()) < posy + contextMenuHeight)
                 posy = posy - contextMenuHeight;
 
             contextMenu.css({ 'left': posx + 'px', 'top': posy + 'px', });
             contextMenuItems.css({ 'width': contextMenuWidth + 2 });
-            proxy._$treegridHelper.focus();
+            proxy._$treegridHelper.ejTreeGrid('setFocusOnTreeGridElement');
             $(contextMenu).css({ 'height': 'auto' });
             proxy._on(contextMenu, "contextmenu", function (argsE) {
                 argsE.preventDefault();
@@ -9468,7 +11970,7 @@
                     'position': 'absolute',
                     'border-width': '1px',
                     'border-style': 'solid',
-                    'z-index': '10034',
+                    'z-index': proxy._$treegridHelper.ejTreeGrid("getmaxZindex") + 1,
                 }, { "id": this._id + "_SubContextMenu" + menuId });
 
                 subContextMenuUList = ej.buildTag("ul", $.render[proxy._id + "contextMenuTemplate"](subMenuItems), {
@@ -9573,35 +12075,35 @@
                     case "Indent": eventArgs.requestType = "contextMenuIndent";
                         proxy.contextMenuAction(eventArgs);
                         proxy._clearContextMenu();
-                        proxy._$treegrid.focus();
+                        proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                         break;
                     case "Outdent": eventArgs.requestType = "contextMenuOutdent";
                         proxy.contextMenuAction(eventArgs);
                         proxy._clearContextMenu();
-                        proxy._$treegrid.focus();
+                        proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                         break;
                     case "Delete": eventArgs.requestType = "contextMenuDelete";
                         proxy.contextMenuAction(eventArgs);
                         proxy._clearContextMenu();
-                        proxy._$treegrid.focus();
+                        proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                         break;
                     case "Above": eventArgs.requestType = "save";
                         eventArgs.position = "Above";
                         proxy.subContextMenuAction(eventArgs);
                         proxy._clearContextMenu();
-                        proxy._$treegrid.focus();
+                        proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                         break;
                     case "Below": eventArgs.requestType = "save";
                         eventArgs.position = "Below";
                         proxy.subContextMenuAction(eventArgs);
                         proxy._clearContextMenu();
-                        proxy._$treegrid.focus();
+                        proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                         break;
                     case "Open":
                         eventArgs.requestType = "contextMenuAdd";
                         proxy.contextMenuAction(eventArgs);
                         proxy._clearContextMenu();
-                        proxy._$treegrid.focus();
+                        proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                         break;
                     case "Add":
                         proxy._setInitialData();
@@ -9694,53 +12196,119 @@
             }
         },
         renderedEditDialog: function (args) {
-            var proxy = this;
+            var proxy = this,
+                model = this.model,
+                columns = model.columns,
+                length = columns.length,
+                fieldData = {};
             switch (args.requestType) {
                 case ej.TreeGrid.Actions.Add:
-                    var temp = document.createElement('div');
+                    var temp = document.createElement('div'),
+                        dialog = $("#" + proxy._id + "_dialogAdd");
                     $(temp).addClass("e-addedrow");
                     temp.innerHTML = $.render[proxy._id + "_JSONDialogAddingTemplate"](args.data);
-                    $("#" + proxy._id + "_dialogAdd").html($(temp));
+                    $(dialog).html($(temp));
                     var evntArgs = {};
-                    evntArgs.cssClass = this.model.cssClass,
-                    evntArgs.enableModal = true,
-                    evntArgs.width = "auto",
-                    evntArgs.enableResize = false,
-                    evntArgs.contentSelector = "#" + proxy._id,
-                    evntArgs.rtl = proxy.model.rtl,
-                    evntArgs.allowKeyboardNavigation = false,
+                    evntArgs.cssClass = model.cssClass;
+                    evntArgs.enableModal = true;
+                    evntArgs.width = "650px";
+                    evntArgs.height = "418px";
+                    evntArgs.enableResize = false;
+                    evntArgs.contentSelector = "#" + proxy._id;
+                    evntArgs.rtl = model.rtl;
+                    evntArgs.showOnInit = false;
+                    evntArgs.allowKeyboardNavigation = false;
                     evntArgs.beforeClose = function (args) {
-                        if (proxy._closeAddEditDialog(args,"Add"))
+                        if (proxy._closeAddEditDialog(args, "Add"))
                             args.cancel = true; // Cancel the add dialog box close.
+                        else
+                            proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     },
                     title = proxy._editDialogTexts["addFormTitle"];
                     evntArgs.title = title;
-                    $("#" + proxy._id + "_dialogAdd").ejDialog(evntArgs);
-                    $("#" + proxy._id + "_dialogAdd").ejDialog("open");
-                    proxy._editedDialogRecord = null;
+                    proxy._editedDialogRecord = {};
+                    var tab = $("#" + proxy._id + "AddTab");
+                    $(tab).ejTab({
+                        headerSize: "25px",
+                        height: "315px",
+                        heightAdjustMode: ej.Tab.HeightAdjustMode.None,
+                        locale: model.locale,
+                        itemActive: function (args) {
+                            var activeHeader = $(args.activeHeader).find("a").attr("href");
+                            if (activeHeader == "#" + proxy._id + "AddNotes") {
+                                $("#" + proxy._id + "AddAreaNotes_Iframe").height("202");
+                            }
+                            else if (activeHeader == "#" + proxy._id + "AddCustomFields") {
+                                var treeGrid = $("#treegrid" + proxy._id + "customFieldAdd").ejTreeGrid("instance");
+                                treeGrid.getScrollElement().ejScroller("refresh");
+                                treeGrid._updateScrollCss();
+                            }
+                        }
+                    });
+                    $(tab).find("div.e-content").css("overflow", "visible");
+                    $(tab).find("div.e-hidebottom.e-addborderbottom.e-content").css("height", "286px");
+                    $(dialog).ejDialog(evntArgs);
+                    var dialogArgs = {};
+                    dialogArgs.data = args.data;
+                    dialogArgs.rowPosition = model.editSettings.rowPosition;
+                    dialogArgs.requestType = "beforeOpenAddDialog";
+                    dialogArgs.element = $("#" + proxy._id + "_dialogAdd");
+                    if (!proxy._trigger("actionBegin", dialogArgs)) {
+                        for (var columnCount = 0; columnCount < length; columnCount++)
+                            fieldData[columns[columnCount].field] = dialogArgs.data[columns[columnCount].mappingName];
+                        args.data = fieldData;
+                        proxy._refreshEditForm(args);
+                        dialogArgs.data = args.data;
+                        dialogArgs.requestType = "OpenAddDialog";
+                        dialogArgs.element = $("#" + proxy._id + "_dialogAdd");
+                        if (!proxy._trigger("actionBegin", dialogArgs)) {
+                            var dialogWrapper = $("#" + proxy._id + "_dialogAdd_wrapper");
+                            $(dialog).find(".e-addedrow").css("overflow", "visible");
+                            dialogWrapper.addClass("e-ganttdialog");
+                            $(dialog).ejDialog("refresh");
+                            dialogWrapper.find(".e-dialog-scroller").css("height", "373px");
+                            $(dialog).ejDialog("open");
+                        }
+                    }
+                    proxy._addPosition = dialogArgs.rowPosition;
+                    var tempDate = this._getDateFromFormat(model.scheduleStartDate);
+                    if (this._getSecondsInDecimal(tempDate) != this._defaultStartTime) {
+                        this._setTime(this._defaultStartTime, tempDate);
+                    }
+                    this._editedDialogRecord.isUpdatedFromDialog = false;
+                    proxy._editedDialogRecord.startDate = args.data.startDate !="" ?args.data.startDate : this._checkStartDate(new Date(tempDate));
+                    proxy._editedDialogRecord.endDate = args.data.endDate !=""? args.data.endDate: new Date(proxy._editedDialogRecord.startDate);
+                    proxy._editedDialogRecord.duration = args.data.duration != "" ? args.data.duration : 0;
+                    proxy._editedDialogRecord.durationUnit = model.durationUnit;
+
                     break;
                 case ej.TreeGrid.Actions.BeginEdit:
-                    temp = document.createElement('div');
+                    var temp = document.createElement('div'),
+                        dialog = $("#" + proxy._id + "_dialogEdit");
                     $(temp).addClass("e-editedrow");
                     temp.innerHTML = $.render[proxy._id + "_JSONDialogEditingTemplate"](args.data);
-                    $("#" + proxy._id + "_dialogEdit").html($(temp));
+                    $(dialog).html($(temp));
                     var evntArgs = {};
                     evntArgs.cssClass = proxy.model.cssClass;
                     evntArgs.rtl = model.rtl;
-                    evntArgs.width = "530px";
+                    evntArgs.width = "650px";
+                    evntArgs.height = "418px";
                     evntArgs.enableResize = false;
                     evntArgs.contentSelector = "#" + proxy._id;
                     evntArgs.enableModal = true;
+                    evntArgs.showOnInit = false;
                     evntArgs.allowKeyboardNavigation = false;
                     evntArgs.beforeClose = function (args) {
                         if (proxy._closeAddEditDialog(args, "Edit"))
                             args.cancel = true; // Cancel the add dialog box close.
+                        else
+                            proxy._$treegrid.ejTreeGrid('setFocusOnTreeGridElement');
                     };
                     if (model.selectionMode == "row")
                         var selectedItem = proxy.selectedItem()
                     else
                         var selectedItem = proxy.model.updatedRecords[proxy._rowIndexOfLastSelectedCell];
-                    var title = proxy._editDialogTexts["editFormTitle"] + " " + selectedItem["taskName"];
+                    var title = proxy._editDialogTexts["editFormTitle"];
                     evntArgs.open = function () {
                         var dialog = this, id = this._id;
                         var titleElement = $("#" + id + "_title").children(".e-title");
@@ -9749,25 +12317,50 @@
                         titleElement.attr("title", title);
                     };
                     evntArgs.title = title;
-                    $("#" + proxy._id + "_dialogEdit").ejDialog(evntArgs);
-                    $("#" + proxy._id + "_dialogEdit").ejDialog("open");
-                    proxy._editedDialogRecord = jQuery.extend({}, selectedItem);
+                    var tab = $("#" + proxy._id + "EditTab");
+                    $(tab).ejTab({
+                        headerSize: "25px",
+                        height: "315px",
+                        heightAdjustMode: ej.Tab.HeightAdjustMode.None,
+                        locale: model.locale,
+                        itemActive: function (args) {
+                            var activeHeader = $(args.activeHeader).find("a").attr("href");
+                            if (activeHeader == "#" + proxy._id + "EditNotes") {
+                                $("#" + proxy._id + "EditAreaNotes_Iframe").height("202");
+                            }
+                            else if (activeHeader == "#" + proxy._id + "EditCustomFields") {
+                                var treeGrid = $("#treegrid" + proxy._id + "customFieldEdit").ejTreeGrid("instance");
+                                treeGrid.getScrollElement().ejScroller("refresh");
+                                treeGrid._updateScrollCss();
+                            }
+                        }
+                    });
+                    $(tab).find("div.e-content").css("overflow", "visible");
+                    $(tab).find("div.e-hidebottom.e-addborderbottom.e-content").css("height", "286px");
+                    $(dialog).ejDialog(evntArgs);
+                    var dialogArgs = {};
+                    dialogArgs.data = args.data;
+                    dialogArgs.requestType = "beforeOpenEditDialog";
+                    dialogArgs.element = $("#" + proxy._id + "_dialogEdit");
+                    if (!proxy._trigger("actionBegin", dialogArgs)) {
+                        proxy._editedDialogRecord = jQuery.extend({}, selectedItem);
+                        this._editedDialogRecord.isUpdatedFromDialog = false;
+                        proxy._refreshEditForm(args);
+                        dialogArgs.data = args.data;
+                        dialogArgs.requestType = "openEditDialog";
+                        dialogArgs.element = $("#" + proxy._id + "_dialogEdit");
+                        if (!proxy._trigger("actionBegin", dialogArgs)) {
+                            var dialogWrapper = $("#" + proxy._id + "_dialogEdit_wrapper");
+                            $(dialog).find(".e-editedrow").css("overflow", "visible");
+                            dialogWrapper.addClass("e-ganttdialog");
+                            $(dialog).ejDialog("refresh");
+                            dialogWrapper.find(".e-dialog-scroller").css("height", "373px");
+                            $(dialog).ejDialog("open");
+                        }
+                    }
+                    this._editedDialogRecord.isUpdatedFromDialog = false;
                     break;                    
             }
-            proxy._refreshEditForm(args);
-            var dialogArgs = {};
-            dialogArgs.data = args.data;
-            if (args.requestType == "add") {
-                dialogArgs.requestType = "openAddDialog";
-                dialogArgs.element = $("#" + proxy._id + "_dialogAdd");
-            }
-            else
-            {
-                dialogArgs.requestType = "openEditDialog";
-                dialogArgs.element = $("#" + proxy._id + "_dialogEdit");
-            }
-            proxy._trigger("actionBegin", dialogArgs);
-            //proxy.setValidation();
         },
 
         _closeAddEditDialog: function (args, type) {
@@ -9785,13 +12378,13 @@
         },
         editFormValidate: function () {
             if ($.isFunction($.validator))
-                return $("#" + this._id + "EditForm").validate().form();
+                return $("#" + this._id + "GeneralEditForm").validate().form();
             return true;
         },
 
         addFormValidate: function () {
             if ($.isFunction($.validator))
-                return $("#" + this._id + "AddForm").validate().form();
+                return $("#" + this._id + "GeneralAddForm").validate().form();
             return true;
         },
         getCurrentData: function () {
@@ -9828,7 +12421,7 @@
         _getToolBarHeight: function () {
             var toolbarH = 0;
             if (this.model.toolbarSettings.showToolbar) {
-                toolbarH = $(".e-gantttoolbar").height();
+                toolbarH = this.element.find(".e-gantttoolbar").height();
             }
             return toolbarH;
         },
@@ -10090,7 +12683,7 @@
         },
 
         /* get date after weekend and holidays */
-        _getDateAfterWeekendHolidays: function (date)
+        _getDateAfterWeekendHolidays: function (date, isAutoSchedule)
         {
             var proxy = this, model = this.model,
                 holidays = this._getStringHolidays(),
@@ -10098,16 +12691,16 @@
                 isDateUpdated = false,
                 formatedDate;
             tempDate.setHours(0,0,0,0);
-            formatedDate = this._getFormatedDate(tempDate, model.dateFormat);
+            formatedDate = this._getFormatedDate(tempDate, model.dateFormat, model.locale);
             
             /* Holiday checking */
-            if (holidays.indexOf(formatedDate) != -1) {
+            if (isAutoSchedule && holidays.indexOf(formatedDate) != -1) {
                 date.setDate(date.getDate() + 1);
                 isDateUpdated = true;
             }
 
             /* Weekend updates */
-            if (model.includeWeekend === false) {
+            if (isAutoSchedule && model.includeWeekend === false) {
                 if (date.getDay() == 0) {
                     date.setDate(date.getDate() + 1);
                     isDateUpdated = true;
@@ -10120,29 +12713,29 @@
 
             /* if Date modified check for another turn */
             if (isDateUpdated)
-                return this._getDateAfterWeekendHolidays(date)
+                return this._getDateAfterWeekendHolidays(date, isAutoSchedule)
             else
                 return date;
         },
 
         /*get date before holidays and weekends */
-        _getDateBeforeWeekendHolidays: function (date) {
+        _getDateBeforeWeekendHolidays: function (date, isAutoSchedule) {
             var proxy = this, model = this.model,
                 holidays = this._getStringHolidays(),
                 tempDate = new Date(date),
                 isDateUpdated = false,
                 formatedDate;
             tempDate.setHours(0, 0, 0, 0);
-            formatedDate = this._getFormatedDate(tempDate, model.dateFormat);
+            formatedDate = this._getFormatedDate(tempDate, model.dateFormat, model.locale);
 
             /* Holiday checking */
-            if (holidays.indexOf(formatedDate) != -1) {
+            if (isAutoSchedule && holidays.indexOf(formatedDate) != -1) {
                 date.setDate(date.getDate() - 1);
                 isDateUpdated = true;
             }
 
             /* Weekend updates */
-            if (model.includeWeekend === false) {
+            if (isAutoSchedule && model.includeWeekend === false) {
                 if (date.getDay() == 0) {
                     date.setDate(date.getDate() - 2);
                     isDateUpdated = true;
@@ -10155,44 +12748,24 @@
 
             /* if Date modified check for another turn */
             if (isDateUpdated)
-                return this._getDateBeforeWeekendHolidays(date)
+                return this._getDateBeforeWeekendHolidays(date, isAutoSchedule)
             else
                 return date;
         },
         /* update date as per offset value */
-        _updateDateByOffset: function (date, offsetValue)
+        _updateDateByOffset: function (date, predecessor, isMilestone, record)
         {
-            var proxy = this,
-                offsetUpdate,
-                holidaysCollections = proxy._stringHolidays,
-                includeWeekend = this.model.includeWeekend;
-                
-            /*update offset value for date update */
-            if (offsetValue < 0) {
-                offsetValue *= -1;
-                offsetUpdate = -1;
+            var resultDate,
+                offsetValue = predecessor.offset,
+                durationUnit = predecessor.offsetDurationUnit;
+                if (offsetValue < 0) {
+                    resultDate = this._getStartDate(this._checkEndDate(date, record), (offsetValue * -1), durationUnit, record);
             } else {
-                offsetUpdate = 1;
+                    resultDate = this._getEndDate(date, offsetValue, durationUnit, record);
+                if (!isMilestone)
+                    resultDate = this._checkStartDate(resultDate, record);
             }
-
-            if (offsetValue) {
-                for (var i = 0; i < offsetValue; i++) {
-                    if (offsetUpdate < 0) {
-                        date = this._getDateBeforeWeekendHolidays(date);
-                    }
-                    if (offsetUpdate > 0) {
-                        date = this._getDateAfterWeekendHolidays(date);
-                    }
-                    date.setDate(date.getDate() + offsetUpdate);
-                }
-            }
-
-            if (offsetUpdate < 0)
-                date = this._getDateBeforeWeekendHolidays(date);
-            else
-                date = this._getDateAfterWeekendHolidays(date);
-
-            return date;
+            return resultDate;
         },
 
         /* update StartDate by using duration and enddate with weekends and holidays*/
@@ -10203,6 +12776,7 @@
                 headerType = model.scheduleHeaderSettings.scheduleHeaderType,
                 headerValue = ej.Gantt.ScheduleHeaderType,
                 duartionUnit = model.durationUnit,
+                isAutoSchedule = ganttRecord.isAutoSchedule,
                 duration = duartionUnit == ej.Gantt.DurationUnit.Day ? ganttRecord.duration - 1 : ganttRecord.duration;
 
             if (ganttRecord.isMilestone)
@@ -10217,171 +12791,83 @@
                         tempEndDate.setDate(tempEndDate.getDate() - 1);
                     else if (duartionUnit == ej.Gantt.DurationUnit.Minute)
                         tempEndDate.setMinutes(tempEndDate.getMinutes() - 1);
-                    tempEndDate = this._getDateBeforeWeekendHolidays(tempEndDate);
+                    tempEndDate = this._getDateBeforeWeekendHolidays(tempEndDate, isAutoSchedule);
                 }
                 ganttRecord.startDate = new Date(tempEndDate);
             }
         },
         //Validate the child Gantt Record
         _validateChildGanttRecord: function (parentGanttRecord, childGanttRecord, predecessor, predecessorValidation,offsetChanged) {
-                var proxy = this,
-                model = proxy.model,
-                childStartDate,
-                parentStartDate,
-                childEndDate,
-                parentEndDate,
-                offset, holiday,
-                includeWeekend = model.includeWeekend,
-                predecessorOffset = 0,
-                headerType = model.scheduleHeaderSettings.scheduleHeaderType,
-                predecessorOffset = predecessor.offset ? parseInt(predecessor.offset) : 0,
-                holidaysCollections = proxy._stringHolidays,
-                durationUnit = model.durationUnit,
-                predecessorType;
+            var proxy = this,
+            model = proxy.model,
+            predecessorType;
 
-                if (proxy._editedTaskBarItem === childGanttRecord)
-                {
-                    return;
-                }
+            if (proxy._editedTaskBarItem === childGanttRecord) {
+                return;
+            }
             switch (predecessor.predecessorsType) {
 
                 case 'SS':
+                    var currentTaskId = childGanttRecord['taskId'].toString(),
+                        predecessorsCollection = childGanttRecord['predecessor'],
+                        childPredecessor = predecessorsCollection.filter(function (data) { return data.to === currentTaskId }),
+                        minStartDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
 
-                    parentStartDate = new Date(parentGanttRecord.startDate);
-                    childStartDate = new Date(childGanttRecord.startDate);
-                    
-                        /*update start date by predecessor */
-                        parentStartDate = proxy._updateDateByOffset(parentStartDate, predecessorOffset);
-                        childGanttRecord.startDate = new Date(parentStartDate);
-                        var currentTaskId = childGanttRecord['taskId'].toString(),
-                            predecessorsCollection = childGanttRecord['predecessor'],
-                            childPredecessor = predecessorsCollection.filter(function (data) { return data.to === currentTaskId });
-                        if (childPredecessor.length > 1) {
-                            var minStartDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
-                            if (model.includeWeekend === false) {
-                                proxy._setBeforeWeekend(minStartDate);
-                            }
-                            childGanttRecord.startDate = new Date(minStartDate);
-                        }
-
-                        childGanttRecord.left = childGanttRecord._calculateLeft(proxy._projectStartDate,
-                                proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.width = childGanttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
-                    
+                    childGanttRecord.startDate = new Date(minStartDate);
+                    childGanttRecord._calculateEndDate(this);
+                    childGanttRecord.left = childGanttRecord._calculateLeft(this);
+                    childGanttRecord.width = childGanttRecord._calculateWidth(this);
+                    childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
                     break;
 
                 case 'SF':
+                    var currentTaskId = childGanttRecord['taskId'].toString(),
+                        predecessorsCollection = childGanttRecord['predecessor'],
+                        childPredecessor = predecessorsCollection.filter(function (data) { return data.to === currentTaskId }),
+                        minStartDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
 
-                    parentStartDate = new Date(parentGanttRecord.startDate);
-                    childEndDate = new Date(childGanttRecord.endDate);                    
-                    if (durationUnit == ej.Gantt.DurationUnit.Day)
-                        parentStartDate.setDate(parentStartDate.getDate() - 1);
-                    
-                        parentStartDate = this._getDateBeforeWeekendHolidays(parentStartDate);
-
-                        /*update start date by predecessor */
-                        parentStartDate = proxy._updateDateByOffset(parentStartDate, predecessorOffset);
-                        childGanttRecord.endDate = new Date(parentStartDate);
-                        /* udpate record startDate by endDate and duration*/
-                        this._setStartDateByDurationEndDate(childGanttRecord);
-
-                        var currentTaskId = childGanttRecord['taskId'].toString(),
-                            predecessorsCollection = childGanttRecord['predecessor'],
-                            childPredecessor = predecessorsCollection.filter(function (data) { return data.to === currentTaskId });
-
-                        if (childPredecessor.length > 0) {
-                            var minStartDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
-                            if (durationUnit == ej.Gantt.DurationUnit.Day)
-                                minStartDate.setDate(minStartDate.getDate() - 1);
-
-                            minStartDate = this._getDateBeforeWeekendHolidays(minStartDate);
-
-                            childGanttRecord.endDate = new Date(minStartDate);
-                            /*update start date by duration and end date */
-                            this._setStartDateByDurationEndDate(childGanttRecord);
-                        }
-                        childGanttRecord.left = childGanttRecord._calculateLeft(proxy._projectStartDate, proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.width = childGanttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
-                   
+                    childGanttRecord.startDate = new Date(minStartDate);
+                    childGanttRecord._calculateEndDate(this);
+                    childGanttRecord.left = childGanttRecord._calculateLeft(this);
+                    childGanttRecord.width = childGanttRecord._calculateWidth(this);
+                    childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
                     break;
 
                 case 'FS':
-                    parentEndDate = new Date(parentGanttRecord.endDate);
-                    childStartDate = new Date(childGanttRecord.startDate);
-                    if (!childGanttRecord.isMilestone) {
-                        if (durationUnit == ej.Gantt.DurationUnit.Day)
-                            parentEndDate.setDate(parentEndDate.getDate() + 1);
-                    }
-                                
-                        /* update date by predecessor offset */
-                        parentEndDate = this._getDateAfterWeekendHolidays(parentEndDate);
-                        parentEndDate = proxy._updateDateByOffset(parentEndDate, predecessorOffset);
 
-                        childGanttRecord.startDate = new Date(parentEndDate);
+                    var predecessorsCollection = childGanttRecord['predecessor'],
+                        currentTaskId = childGanttRecord['taskId'].toString(),
+                        childPredecessor = predecessorsCollection && predecessorsCollection.filter(function (data) { return data.to === currentTaskId }),
+                        maxStartDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
 
-                        if (proxy._editedTaskBarItem !== childGanttRecord) {
-                            var predecessorsCollection = childGanttRecord['predecessor'],
-                                    currentTaskId = childGanttRecord['taskId'].toString(),
-                                    childPredecessor = predecessorsCollection && predecessorsCollection.filter(function (data) { return data.to === currentTaskId });
+                    childGanttRecord.startDate = new Date(maxStartDate);
+                    childGanttRecord._calculateEndDate(this);
+                    childGanttRecord.left = childGanttRecord._calculateLeft(this);
+                    childGanttRecord.width = childGanttRecord._calculateWidth(this);
+                    childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
 
-                            if (childPredecessor && childPredecessor.length > 1) {
-                                var maxEndDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
-                                if (!childGanttRecord.isMilestone) {
-                                    if (durationUnit == ej.Gantt.DurationUnit.Day)
-                                        maxEndDate.setDate(maxEndDate.getDate() + 1);
-                                }
-                                maxEndDate = this._getDateAfterWeekendHolidays(maxEndDate);
-                                childGanttRecord.startDate = new Date(maxEndDate);
-                            }
-                        }
-                        childGanttRecord.left = childGanttRecord._calculateLeft(proxy._projectStartDate, proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.width = childGanttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
-                   
                     break;
 
                 case 'FF':
-                    parentEndDate = new Date(parentGanttRecord.endDate);
-                    childEndDate = new Date(childGanttRecord.endDate);
-                   
-                        /* update date by predecessor offset */
-                        parentEndDate = this._updateDateByOffset(parentEndDate, predecessorOffset);
-
-                        childGanttRecord.endDate = new Date(parentEndDate);
-
-                        /* udpate record startDate by endDate and duration*/
-                        this._setStartDateByDurationEndDate(childGanttRecord);
-
-
-                        var currentTaskId = childGanttRecord['taskId'].toString(),
-                                    predecessorsCollection = childGanttRecord['predecessor'],
-                                  childPredecessor = predecessorsCollection && predecessorsCollection.filter(function (data) { return data.to === currentTaskId });
-
-                        if (childPredecessor && childPredecessor.length > 1) {
-
-                            var maxEndDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
-                            maxEndDate = this._getDateAfterWeekendHolidays(maxEndDate);
-                            childGanttRecord.endDate = new Date(maxEndDate);
-                            /*update start date by duration and end date */
-                            this._setStartDateByDurationEndDate(childGanttRecord);
-                        }
-
-                        childGanttRecord.left = childGanttRecord._calculateLeft(proxy._projectStartDate, proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.width = childGanttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
-                        childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
-                    
+                    var currentTaskId = childGanttRecord['taskId'].toString(),
+                        predecessorsCollection = childGanttRecord['predecessor'],
+                        childPredecessor = predecessorsCollection && predecessorsCollection.filter(function (data) { return data.to === currentTaskId });
+                    childGanttRecord.startDate = proxy._getPredecessorDate(childGanttRecord, childPredecessor, predecessor.predecessorsType);
+                    childGanttRecord._calculateEndDate(this);
+                    childGanttRecord.left = childGanttRecord._calculateLeft(this);
+                    childGanttRecord.width = childGanttRecord._calculateWidth(this);
+                    childGanttRecord.progressWidth = childGanttRecord._calculateProgressWidth(childGanttRecord.width, childGanttRecord.status);
                     break;
             }
+            this._updateItemValueInRecord(childGanttRecord);            
 
-            if (childGanttRecord.parentItem)
+            if (childGanttRecord.parentItem && childGanttRecord.parentItem.isAutoSchedule)
                 proxy._updateParentItem(childGanttRecord);
-
+            else if (childGanttRecord.parentItem && !childGanttRecord.parentItem.isAutoSchedule)
+                proxy._updateManualParentItem(childGanttRecord)
             if (proxy._isTreeGridRendered || proxy._isGanttChartRendered) {
                 proxy.refreshGanttRecord(childGanttRecord);
             }
-
         },
 
         //calulate the offset based on parent task and child task date
@@ -10400,65 +12886,81 @@
             }
             return dayDifference;
         },
+
+        /*Get validated start of task on all predecessor type*/
+        _getValidatedStartDate: function (ganttRecord, parentGanttRecord, predecessor) {
+            var type = predecessor.predecessorsType,
+                offset = predecessor.offset,
+                tempDate, returnStartDate;
+            switch (type) {
+                case "FS":
+                    tempDate = new Date(parentGanttRecord.endDate);
+                    if (!ganttRecord.isMilestone || offset != 0)
+                        tempDate = this._checkStartDate(tempDate, ganttRecord);
+                    if (offset != 0)
+                        tempDate = this._updateDateByOffset(tempDate, predecessor, ganttRecord.isMilestone, ganttRecord);
+                    if (!ganttRecord.isMilestone)
+                        returnStartDate = this._checkStartDate(tempDate, ganttRecord);
+                    else
+                        returnStartDate = new Date(tempDate);
+                    break;
+                case "FF":
+                    tempDate = new Date(parentGanttRecord.endDate);
+                    if (offset != 0)
+                        tempDate = this._updateDateByOffset(tempDate, predecessor, ganttRecord.isMilestone);                    
+                    tempDate = this._updateDateByOffset(tempDate, predecessor, ganttRecord.isMilestone, ganttRecord);
+                    tempDate = this._checkEndDate(tempDate, ganttRecord);
+                    returnStartDate = this._getStartDate(tempDate, ganttRecord.duration, ganttRecord.durationUnit, ganttRecord);
+                    break;
+                case "SF":
+                    tempDate = new Date(parentGanttRecord.startDate);
+                    if (offset != 0)
+                        tempDate = this._updateDateByOffset(tempDate, predecessor, ganttRecord.isMilestone, ganttRecord);
+                    if (!ganttRecord.isMilestone)
+                        tempDate = this._checkEndDate(tempDate, ganttRecord);
+                    returnStartDate = this._getStartDate(tempDate, ganttRecord.duration, ganttRecord.durationUnit, ganttRecord);
+                    break;
+                case "SS":
+                    tempDate = new Date(parentGanttRecord.startDate);
+                    if (offset != 0)
+                        tempDate = this._updateDateByOffset(tempDate, predecessor, ganttRecord.isMilestone, ganttRecord);
+                    if (!ganttRecord.isMilestone)
+                        returnStartDate = this._checkStartDate(tempDate, ganttRecord);
+                    else
+                        returnStartDate = tempDate;
+                    break;
+            }
+            return returnStartDate;
+        },
         //Get maximum or minimum date as per predecessor type
-        _getPredecessorDate: function (ganttRecord, predecessorsCollection, predecessorType) {
-            var minStartDate = null, proxy = this, model = proxy.model,
-                    maxEndDate = null,
-                    length,
-                    i,
-                    predecessorOffset,
-                    flatRecords = model.flatRecords,
-                    ids = model.ids,
-                    tempStartDate, tempEndDate,
-                    validatedpredecessor = predecessorsCollection.filter(function (data) {
-                        if (data.to === ganttRecord.taskId.toString() && data.predecessorsType === predecessorType)
-                            return true;
-                    });
+        _getPredecessorDate: function (ganttRecord, predecessorsCollection) {
+            var minStartDate = null, model = this.model,
+                maxStartDate = null,
+                length, i,
+                flatRecords = model.flatRecords,
+                ids = model.ids,
+                tempStartDate,
+                parentGanttRecord,
+                childGanttRecord,
+                validatedpredecessor = predecessorsCollection.filter(function (data) {
+                    if (data.to === ganttRecord.taskId.toString())
+                        return true;
+                });
 
             if (validatedpredecessor) {
-
                 length = validatedpredecessor.length;
-
-                    for (i = 0; i < length; i++) {
-
-                        predecessor = validatedpredecessor[i];
-
-                        parentGanttRecord = flatRecords[ids.indexOf(predecessor.from)];
-                        childGanttRecord = flatRecords[ids.indexOf(predecessor.to)];
-                        predecessorOffset = predecessor.offset ? parseInt(predecessor.offset) : 0;
-
-                        tempStartDate = proxy._getDateFromFormat(parentGanttRecord.startDate);
-                        tempEndDate = proxy._getDateFromFormat(parentGanttRecord.endDate);
-
-                        if (predecessorOffset) {
-                            tempStartDate = this._updateDateByOffset(tempStartDate, predecessorOffset);// minStartDate.setDate(minStartDate.getDate() + parseInt(predecessor.offset));
-                            tempEndDate = this._updateDateByOffset(tempEndDate, predecessorOffset);
-                        }
-
-                        if (minStartDate === null) {
-                            minStartDate = tempStartDate;
-                        }
-
-                        if (maxEndDate === null) {
-                            maxEndDate = tempEndDate;
-                        }
-
-                        if (tempStartDate.getTime() < minStartDate.getTime()) {
-                            minStartDate = tempStartDate;
-                       }
-
-                        if (tempEndDate.getTime() > maxEndDate.getTime()) {
-                            maxEndDate = tempEndDate;
-                        }
+                for (i = 0; i < length; i++) {
+                    predecessor = validatedpredecessor[i];
+                    parentGanttRecord = flatRecords[ids.indexOf(predecessor.from)];
+                    childGanttRecord = flatRecords[ids.indexOf(predecessor.to)];
+                    tempStartDate = this._getValidatedStartDate(childGanttRecord, parentGanttRecord, predecessor);
+                    if (maxStartDate == null)
+                        maxStartDate = new Date(tempStartDate);
+                    else if (tempStartDate.getTime() > maxStartDate.getTime())
+                        maxStartDate = new Date(tempStartDate);
                 }
             }
-            if (predecessorType == "FS" || predecessorType == "FF") {
-                return maxEndDate;
-            }
-            else if (predecessorType == "SF" || predecessorType == "SS") {
-                return minStartDate;
-            }
-
+            return maxStartDate;
         },
 
         _setBeforeWeekend: function(date) {
@@ -10479,58 +12981,56 @@
             var proxy = this, model = proxy.model,
                 ganttRecord = args.data,
                 startDate = new Date(ganttRecord.startDate),
+                isAutoSchedule = ganttRecord.isAutoSchedule,
                 isPredecessorsModified = false;
 
             if (args.columnName === "startDate") {
-               
-                if (this._stringHolidays &&
-                      this._stringHolidays.indexOf(ganttRecord._getFormatedDate(startDate, model.dateFormat)) != -1) {
-                    startDate.setDate(startDate.getDate() + 1);
-                }
-                
-                if (proxy.model.includeWeekend === false) {
-                    this._setAfterWeekend(startDate);
-                    if (this._stringHolidays &&
-                      this._stringHolidays.indexOf(ganttRecord._getFormatedDate(startDate, model.dateFormat)) != -1) {
-                        startDate.setDate(startDate.getDate() + 1);
-                    }
-                }
+                var previousData = $.extend({}, args.data)
+                startDate = proxy._checkStartDate(startDate, ganttRecord);
                 ganttRecord.startDate = new Date(startDate);
-                ganttRecord.left = ganttRecord._calculateGanttRecordLeft(startDate, proxy._projectStartDate, proxy._perDayWidth);
-                ganttRecord.width = ganttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);// model.holidays
-                ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);
-                if (ganttRecord.parentItem)
+                if (model.startDateMapping)
+                    ganttRecord.item[model.startDateMapping] = ganttRecord.startDate;
+                ganttRecord._calculateEndDate(this);
+                ganttRecord.left = ganttRecord._calculateLeft(this);
+                ganttRecord.width = ganttRecord._calculateWidth(this);// model.holidays
+                if (!ganttRecord.hasChildRecords)
+                    ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);
+                else {
+                    var arg = {};
+                    arg.previousData = previousData;
+                    arg.data = ganttRecord;
+                    proxy._validateAutoChildRecords(arg);
+                }
+                if (ganttRecord.parentItem && ganttRecord.parentItem.isAutoSchedule)
                     proxy._updateParentItem(ganttRecord);
+                else if (ganttRecord.parentItem && !ganttRecord.parentItem.isAutoSchedule)
+                    proxy._updateManualParentItem(ganttRecord);
             }
 
             else if (args.columnName === "endDate") {
                 //validate start date
                 var endDate = new Date(ganttRecord.endDate);
+                if (endDate.getHours() == 0 && this._defaultEndTime != 86400)
+                    this._setTime(this._defaultEndTime, endDate);
+                endDate = this._checkEndDate(endDate, ganttRecord);
+                ganttRecord.endDate = new Date(endDate);
+                if (model.endDateMapping)
+                    ganttRecord.item[model.endDateMapping] = ganttRecord.endDate;
+                if (ganttRecord.isMilestone) {
+                    ganttRecord.startDate = this._checkStartDate(ganttRecord.startDate, ganttRecord);
+                    model.startDateMapping && (ganttRecord.item[model.startDateMapping] = ganttRecord.startDate);
+                }
+
                 if (startDate.getTime() <= endDate.getTime()) {
+                    ganttRecord._calculateDuration(this);
+                    ganttRecord.width = ganttRecord._calculateWidth(this);                    
+                    if (!ganttRecord.hasChildRecords)
+                        ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);
 
-                    if (this._stringHolidays &&
-                          this._stringHolidays.indexOf(ganttRecord._getFormatedDate(endDate, model.dateFormat)) != -1) {
-                        endDate.setDate(endDate.getDate() + 1);
-                        if (endDate.getDay() == 6) {
-                            endDate.setDate(endDate.getDate() + 2);
-                        }
-                    }
-
-                    if (model.includeWeekend === false) {
-                        if (endDate.getDay() == 0) {
-                            endDate.setDate(endDate.getDate() - 2);
-                        } else if (endDate.getDay() == 6) {
-                            endDate.setDate(endDate.getDate() - 1);
-                        }
-                    }
-                    if (startDate.getTime() == endDate.getTime() && model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                        ganttRecord.isMilestone = true;
-                    ganttRecord.endDate = new Date(endDate);
-                    ganttRecord._calculateDuration(startDate, endDate, model.includeWeekend, model.holidays, ganttRecord.isMilestone, model);
-                    ganttRecord.width = ganttRecord._calculateTaskbarWidth(proxy._perDayWidth, model);
-                    ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);
-                    if (ganttRecord.parentItem)
+                    if (ganttRecord.parentItem && ganttRecord.parentItem.isAutoSchedule)
                         proxy._updateParentItem(ganttRecord);
+                    else if (ganttRecord.parentItem && !ganttRecord.parentItem.isAutoSchedule)
+                        proxy._updateManualParentItem(ganttRecord);
                 }
                 else
                 {
@@ -10542,26 +13042,30 @@
                 else
                     ganttRecord.isMilestone = false;
                 
+                proxy._updateResourceRelatedFields(ganttRecord);
             }
             
-            else if (args.columnName == "duration") {
-                var currentDuration = ganttRecord.duration,
-                    offset = currentDuration - args.previousValue,
-                modifiedEndDate = proxy._calculateUpdatedDate(proxy._getDateFromFormat(ganttRecord.endDate), offset);
+            else if (args.columnName == "duration" || proxy._isDurationUpdated) {
+                var currentDuration = ganttRecord.duration;
+                if (currentDuration != 0 && ganttRecord.isMilestone) {
+                    ganttRecord.startDate = this._checkStartDate(ganttRecord.startDate, ganttRecord);
+                    model.startDateMapping && (ganttRecord.item[model.startDateMapping] = ganttRecord.startDate);
+                }
+                    ganttRecord._calculateEndDate(this);
 
                 if (currentDuration === 0) {
                     ganttRecord.isMilestone = true;
                 } else {
                     ganttRecord.isMilestone = false;
                 }
+                ganttRecord.width = ganttRecord._calculateWidth(this);
+                if (!ganttRecord.hasChildRecords)
+                    ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);
 
-                ganttRecord.endDate = modifiedEndDate;
-                ganttRecord.width = ganttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);
-                ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);
-                if(model.endDateMapping)
-                    ganttRecord.item[model.endDateMapping] = ganttRecord.endDate;
-                if (ganttRecord.parentItem)
+                if (ganttRecord.parentItem && ganttRecord.parentItem.isAutoSchedule)
                     proxy._updateParentItem(ganttRecord);
+                else if (ganttRecord.parentItem && !ganttRecord.parentItem.isAutoSchedule)
+                    proxy._updateManualParentItem(ganttRecord);
             }
 
             else if (args.columnName == "predecessor") {
@@ -10574,14 +13078,18 @@
 
             else if (args.columnName == "status") {
                 ganttRecord.status = ganttRecord.status > 100 ? 100 : ganttRecord.status;
-                ganttRecord.progressWidth = proxy._getProgressWidth(ganttRecord.width, ganttRecord.status);
-                if (ganttRecord.parentItem) {
-                    if (ganttRecord.parentItem)
-                        proxy._updateParentItem(ganttRecord);
-                    
+                if (!ganttRecord.hasChildRecords)
+                    ganttRecord.progressWidth = proxy._getProgressWidth(ganttRecord.width, ganttRecord.status);
+                if (ganttRecord.parentItem && ganttRecord.parentItem.isAutoSchedule) {                    
+                    proxy._updateParentItem(ganttRecord);
+                }
+                else if (ganttRecord.parentItem && !ganttRecord.parentItem.isAutoSchedule) {                    
+                    proxy._updateManualParentItem(ganttRecord);
                 }
             }
-
+            else if (args.columnName == "taskMode") {
+                proxy._updateGanttRecord(ganttRecord);
+            }
             //proxy._updateEditedGanttRecord(ganttRecord);
             if (ganttRecord.predecessor) {
                 
@@ -10762,12 +13270,37 @@
 
         _updateGanttRecord: function (ganttRecord) {
             var proxy = this,
-                model = proxy.model;            
-            ganttRecord.left = ganttRecord._calculateLeft(proxy._projectStartDate, proxy._perDayWidth, proxy._holidaysList, model);
-            ganttRecord.width = ganttRecord._calculateWidth(proxy._perDayWidth,model.holidays, model);
-            proxy.refreshGanttRecord(ganttRecord);            
-            if (ganttRecord.parentItem)
+                model = proxy.model;
+
+            if (ganttRecord.hasChildRecords && ganttRecord.isAutoSchedule) {
+                ganttRecord.startDate = proxy._checkStartDate(ganttRecord.manualStartDate, ganttRecord);                
+                ganttRecord.left = ganttRecord._calculateManualLeft(this);
+                ganttRecord.width = ganttRecord._calculateManualWidth(this);
+                ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);                
+                ganttRecord.endDate = ganttRecord.manualEndDate;
+                ganttRecord._calculateDuration(this);
+            }
+            else if (ganttRecord.hasChildRecords && !ganttRecord.isAutoSchedule) {                
+                ganttRecord.left = ganttRecord._calculateLeft(this);
+                ganttRecord.width = ganttRecord._calculateWidth(this);
+                ganttRecord._calculateDuration(this);
+                ganttRecord.manualStartDate = ganttRecord.startDate;
+                ganttRecord.manualEndDate = ganttRecord.endDate;                
+                proxy._updateManualParentItem(ganttRecord, null, true);
+            }
+            else {
+                ganttRecord.startDate = proxy._checkStartDate(ganttRecord.startDate, ganttRecord);
+                ganttRecord.endDate = this._getEndDate(ganttRecord.startDate, ganttRecord.duration, ganttRecord.durationUnit, ganttRecord);
+                ganttRecord.left = ganttRecord._calculateLeft(this);
+                ganttRecord.width = ganttRecord._calculateWidth(this);
+                ganttRecord.progressWidth = ganttRecord._calculateProgressWidth(ganttRecord.width, ganttRecord.status);
+            }
+            if (ganttRecord.parentItem && ganttRecord.parentItem.isAutoSchedule)
                 proxy._updateParentItem(ganttRecord);
+            if (ganttRecord.parentItem && !ganttRecord.parentItem.isAutoSchedule)
+                proxy._updateManualParentItem(ganttRecord);
+
+            proxy.refreshGanttRecord(ganttRecord);
         },
 
         refreshGanttRecord: function (ganttRecord) {
@@ -10790,10 +13323,118 @@
             }
         },
 
-        _updateParentItem: function (ganttRecord, editmode) {
+        _updateManualParentItem: function (ganttRecord, editmode, isParent) {
 
             var proxy = this,
-                parentGanttRecord = ganttRecord.parentItem,                
+                parentGanttRecord = isParent ? ganttRecord : ganttRecord.parentItem,
+                model = proxy.model,
+                headerType = model.scheduleHeaderSettings.scheduleHeaderType,
+                headerValue = ej.Gantt.ScheduleHeaderType,
+                prevStartDate = new Date(parentGanttRecord.startDate),
+                prevManualStartDate = new Date(parentGanttRecord.manualStartDate),
+                currentStartDate = new Date(ganttRecord.startDate),
+                prevEndDate = new Date(parentGanttRecord.endDate),
+                prevManualEndDate = new Date(parentGanttRecord.manualEndDate),
+                currentEndDate = new Date(ganttRecord.endDate);                    
+           
+            if (currentStartDate.getTime() < prevManualStartDate.getTime()) {
+                parentGanttRecord.manualStartDate = ganttRecord.startDate;                
+            }
+
+            if (currentEndDate.getTime() > prevEndDate.getTime() && proxy._isLoad) {
+                dateDiff = proxy._daydiff(prevEndDate, currentEndDate);                                
+            }
+
+            if (currentEndDate.getTime() > prevManualEndDate.getTime()) {
+                parentGanttRecord.manualEndDate = ganttRecord.endDate;
+                dateManualDiff = proxy._daydiff(prevManualEndDate, currentEndDate);                
+            }
+
+            var count = 0,
+                childRecords = parentGanttRecord.childRecords,
+                length = childRecords && childRecords.length,
+                childGanttRecord,
+                index = null,
+                minStartDate = null,
+                maxEndDate = null,
+                parentProgress = 0,
+                milestoneCount = 0,
+                totalProgress = 0,               
+                childCompletedWorks = 0;
+
+            for (count = 0; count < length; count++) {
+
+                childGanttRecord = childRecords[count];
+
+                if (minStartDate === null) {
+                    minStartDate = new Date(childGanttRecord.startDate);
+                }
+                if (maxEndDate === null) {
+                    maxEndDate = new Date(childGanttRecord.endDate);
+                    index = model.flatRecords.indexOf(childGanttRecord);
+                }
+                if (childGanttRecord.endDate.getTime() > maxEndDate.getTime()) {
+                    maxEndDate = new Date(childGanttRecord.endDate);
+                    index = model.flatRecords.indexOf(childGanttRecord);
+                }
+                if (childGanttRecord.startDate.getTime() < minStartDate.getTime()) {
+                    minStartDate = new Date(childGanttRecord.startDate);
+                }
+
+                childCompletedWorks += parseInt(childGanttRecord.work);
+
+                if (!childGanttRecord.isMilestone)
+                    totalProgress += parseInt(childGanttRecord.status);
+                else
+                    milestoneCount++;
+            }
+
+            if (prevManualStartDate.getTime() !== minStartDate.getTime()) {
+                parentGanttRecord.manualStartDate = new Date(minStartDate);                
+            }
+
+            if (prevManualEndDate.getTime() != maxEndDate.getTime()) {
+                parentGanttRecord.manualEndDate = new Date(maxEndDate);                
+            }
+           
+            if (proxy._isLoad) {
+                parentGanttRecord._calculateDuration(this);
+                parentGanttRecord.width = parentGanttRecord._calculateWidth(this);
+            }
+                
+            parentGanttRecord.left = parentGanttRecord._calculateLeft(this);
+            parentGanttRecord.manualLeft = parentGanttRecord._calculateManualLeft(this);
+            parentGanttRecord._calculateManualDuration(this);
+            parentGanttRecord.manualWidth = parentGanttRecord._calculateManualWidth(this);            
+
+            //update parent works 
+            parentGanttRecord._updateWorkWithDuration(proxy);
+            //Add child works to parent
+            parentGanttRecord.work += childCompletedWorks;
+
+            //Calculate progressWidth after left and width calulation            
+            var taskCount = length - milestoneCount;
+            parentProgress = taskCount > 0 ? (totalProgress / taskCount) : 0;
+            parentGanttRecord.progressWidth = proxy._getProgressWidth(parentGanttRecord.manualWidth, parentProgress);
+            parentGanttRecord.status = Math.floor(parentProgress);
+
+            if (model.progressMapping)
+                parentGanttRecord.item[model.progressMapping] = parentGanttRecord.status;
+
+            if (proxy._isTreeGridRendered || proxy._isGanttChartRendered)
+                proxy.refreshGanttRecord(parentGanttRecord);
+
+            if (parentGanttRecord.parentItem && parentGanttRecord.parentItem.isAutoSchedule && !isParent) {
+                proxy._updateParentItem(parentGanttRecord);
+            }
+            else if (parentGanttRecord.parentItem && !parentGanttRecord.parentItem.isAutoSchedule && !isParent)
+                proxy._updateManualParentItem(parentGanttRecord,editmode);
+        },
+
+        _updateParentItem: function (ganttRecord, editmode, isParent) {
+
+            var proxy = this,
+                parentGanttRecord = isParent ? ganttRecord : ganttRecord.parentItem,                               
                 model = proxy.model,
                 headerType = model.scheduleHeaderSettings.scheduleHeaderType,
                 headerValue = ej.Gantt.ScheduleHeaderType,
@@ -10826,50 +13467,45 @@
                 maxEndDate = null,
                 parentProgress = 0,
                 milestoneCount = 0,
-                    totalDuration = 0,
-                    completedDuration = 0;
+                totalProgress = 0,               
+                childCompletedWorks = 0;
 
             for (count = 0; count < length; count++) {
 
                 childGanttRecord = childRecords[count];
+                var startDate = childGanttRecord.startDate,
+                                    endDate = childGanttRecord.endDate;
+
+                if (childGanttRecord.hasChildRecords && !childGanttRecord.isAutoSchedule) {
+                    startDate = childGanttRecord.startDate.getTime() > childGanttRecord.manualStartDate.getTime() ?
+                                    childGanttRecord.manualStartDate : childGanttRecord.startDate;
+                }
+
+                if (childGanttRecord.hasChildRecords && !childGanttRecord.isAutoSchedule) {
+                    endDate = childGanttRecord.endDate.getTime() < childGanttRecord.manualEndDate.getTime() ?
+                                    childGanttRecord.manualEndDate : childGanttRecord.endDate;
+                }
 
                 if (minStartDate === null) {
-                    minStartDate = new Date(childGanttRecord.startDate);
+                    minStartDate = new Date(startDate);
                 }
                 if (maxEndDate === null) {
-                    maxEndDate = new Date(childGanttRecord.endDate);
+                    maxEndDate = new Date(endDate);
                     index = model.flatRecords.indexOf(childGanttRecord);
                 }
-                if (childGanttRecord.endDate.getTime() > maxEndDate.getTime()) {
-                    maxEndDate = new Date(childGanttRecord.endDate);
+                if (endDate.getTime() > maxEndDate.getTime()) {
+                    maxEndDate = new Date(endDate);
                     index = model.flatRecords.indexOf(childGanttRecord);
                 }
-                if (childGanttRecord.startDate.getTime() < minStartDate.getTime()) {
-                    minStartDate = new Date(childGanttRecord.startDate);
+                if (startDate.getTime() < minStartDate.getTime()) {
+                    minStartDate = new Date(startDate);
                 }
+
+                childCompletedWorks += parseInt(childGanttRecord.work);
 
                 if (!childGanttRecord.isMilestone) {
-                    //converting days into hours .
-                    //By now 24 hours is default//...
-                    if (model.durationUnit == ej.Gantt.DurationUnit.Hour) {
-                        totalDuration += (childGanttRecord.duration*8);
-                        //summation of progress done of child
-                        completedDuration += ((childGanttRecord.duration*8) * childGanttRecord.status) / 100;
-                    }
-                    else if (model.durationUnit == ej.Gantt.DurationUnit.Minute) {
-                        totalDuration += (childGanttRecord.duration * 60 );
-                        //summation of progress done of child
-                        completedDuration += ((childGanttRecord.duration * 60) * childGanttRecord.status) / 100;
-                    }
-                    else {
-                        totalDuration += (childGanttRecord.duration * 24);
-                        //summation of progress done of child
-                        completedDuration += ((childGanttRecord.duration * 24) * childGanttRecord.status) / 100;
-                    }
-
-
+                    totalProgress += parseInt(childGanttRecord.status);
                 }
-
                 else
                     milestoneCount++;
             }
@@ -10887,52 +13523,30 @@
 
             }
 
-            
-                parentGanttRecord._calculateDuration(new Date(parentGanttRecord.startDate),
-                    new Date(parentGanttRecord.endDate), model.includeWeekend, model.holidays,
-                    parentGanttRecord[model.milestoneMapping], model);
-                if (ej.isNullOrUndefined(editmode) && model.durationMapping && headerType != headerValue.Hour) {
-                    if ((model.durationUnit == ej.Gantt.DurationUnit.Hour || model.durationUnit == ej.Gantt.DurationUnit.Minute)
-                        && model.dateFormat.indexOf("hh:") == -1)
-                        parentGanttRecord.duration = model.flatRecords[index].duration;
-                }
-           
-            //Reduce the duration of parent gantt record according to week end count when include week end is false.
-            if (model.includeWeekend == false) {
-                var dayDiff = proxy._daydiff(parentGanttRecord.startDate, parentGanttRecord.endDate),                    
-                    weekEndCount = proxy._calculateWeekendCount(new Date(parentGanttRecord.startDate), dayDiff);               
-                    if (model.durationUnit == ej.Gantt.DurationUnit.Hour)
-                        parentGanttRecord.duration = parentGanttRecord.duration - (weekEndCount * 24);
-                }            
-
-            if ((model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours ||
-                model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) &&
-           (headerType == headerValue.Day || headerType == headerValue.Hour)) {
-                var beginDate = new Date(parentGanttRecord.startDate);
-                //beginDate.setHours(8);
-                var diffDate = (beginDate - proxy._projectStartDate) / 86400000;
-            }
-            else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours && model.roundOffDayworkingTime) {
-                var diffDate = Math.round((parentGanttRecord.startDate - proxy._projectStartDate) / 86400000);
-            }
-            else {
-                var diffDate = ((new Date(parentGanttRecord.startDate) - proxy._projectStartDate) / 86400000);
-            }
-            if (model.durationUnit == "hour" || model.durationUnit == "minute") {
-                if (model.dateFormat.indexOf("hh:") == -1 && model.endDateMapping &&
-                    model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours)
-                    parentGanttRecord.left = (diffDate * proxy._perDayWidth) + (8 * proxy._perHourWidth);
+            parentGanttRecord._calculateDuration(this);
+            parentGanttRecord.left = parentGanttRecord._calculateLeft(this);
+            parentGanttRecord.width = parentGanttRecord._calculateWidth(this);
+            if (milestoneCount == parentGanttRecord.childRecords.length) {
+                if (parentGanttRecord.startDate.getTime() == parentGanttRecord.endDate.getTime())
+                    parentGanttRecord.width = Math.floor((model.rowHeight - 6) / 2) * 2; //milestone width
                 else
-                    parentGanttRecord.left = (diffDate * proxy._perDayWidth);
+                    parentGanttRecord.width += Math.floor((model.rowHeight - 6) / 2) * 2
             }
-            else
-                parentGanttRecord.left = (diffDate * proxy._perDayWidth);            
-            parentGanttRecord.width = parentGanttRecord._calculateWidth(proxy._perDayWidth, proxy._holidaysList, model);//model.holidays
 
             //Calculate progressWidth after Left and width calculation
-            parentProgress = totalDuration > 0 ? (completedDuration / totalDuration) * 100 : 0;
+            var taskCount = length - milestoneCount;
+            parentProgress = taskCount > 0 ? (totalProgress / taskCount) : 0;            
             parentGanttRecord.progressWidth = proxy._getProgressWidth(parentGanttRecord.width, parentProgress);
-            parentGanttRecord.status = Math.round(parentProgress);
+            parentGanttRecord.status = Math.floor(parentProgress);
+
+            //update parent works 
+            parentGanttRecord._updateWorkWithDuration(proxy);
+            //Add child works to parent
+            parentGanttRecord.work += childCompletedWorks;
+
+            //Default Values of Parent tasks.
+            parentGanttRecord.taskType = ej.Gantt.TaskType.FixedDuration;
+            parentGanttRecord.effortDriven = "false";
 
             if (model.progressMapping)
                 parentGanttRecord.item[model.progressMapping] = parentGanttRecord.status;
@@ -10940,11 +13554,11 @@
             if (proxy._isTreeGridRendered || proxy._isGanttChartRendered)
                 proxy.refreshGanttRecord(parentGanttRecord);
 
-            if (parentGanttRecord.parentItem) {
+            if (parentGanttRecord.parentItem && parentGanttRecord.parentItem.isAutoSchedule && !isParent) {
                 proxy._updateParentItem(parentGanttRecord);
             }
-
-            
+            else if (parentGanttRecord.parentItem && !parentGanttRecord.parentItem.isAutoSchedule && !isParent)
+                proxy._updateManualParentItem(parentGanttRecord);
         },
         UpdatePredecessor: function () {
             var proxy = this;
@@ -11036,11 +13650,13 @@
                     if (proxy._$ganttchartHelper)
                         proxy._$ganttchartHelper.ejGanttChart("removeConnectorline", connectorLineId);
 
-                    if (childGanttRecord.taskId.toString() === predecessor.to && (!validationOn || validationOn == "predecessor"))
-                        proxy._validateChildGanttRecord(parentGanttRecord, record, predecessor, model.enablePredecessorValidation, isOffsetChanged);
-                    if (childGanttRecord.taskId.toString() === predecessor.from && (!validationOn || validationOn == "predecessor"))
-                        proxy._validateChildGanttRecord(parentGanttRecord, record, predecessor, model.enablePredecessorValidation, isOffsetChanged);
-
+                   if (record.isAutoSchedule || model.validateManualTasksOnLinking)
+                       proxy._isValidationEnabled = true;
+                   else
+                       proxy._isValidationEnabled = false;
+                   if ((childGanttRecord.taskId.toString() === predecessor.to || childGanttRecord.taskId.toString() === predecessor.from) &&
+                       (!validationOn || validationOn == "predecessor") && proxy._isValidationEnabled)
+                       proxy._validateChildGanttRecord(parentGanttRecord, record, predecessor, model.enablePredecessorValidation, isOffsetChanged);
                 }
                 for (count = 0; count < predecessorLength; count++) {
                     predecessor = predecessors[count];
@@ -11077,9 +13693,13 @@
                     record = flatRecords[ids.indexOf(predecessor.to)];
                     connectorLineId = "parent" + parentGanttRecord['taskId'] + "child" + record['taskId'];
                     isOffsetChanged = proxy._isOffsetChange(predecessor, previousValue, count);
+                    if (record.isAutoSchedule || model.validateManualTasksOnLinking)
+                        proxy._isValidationEnabled = true;
+                    else
+                        proxy._isValidationEnabled = false;
                     if (proxy._$ganttchartHelper)
                         proxy._$ganttchartHelper.ejGanttChart("removeConnectorline", connectorLineId);
-                    if(validationOn != "predecessor")
+                    if (validationOn != "predecessor" && proxy._isValidationEnabled)
                         proxy._validateChildGanttRecord(parentGanttRecord, record, predecessor, model.enablePredecessorValidation, isOffsetChanged);
                     if ((model.enableVirtualization === false && (parentGanttRecord.isExpanded === false || record.isExpanded == false)))
                         continue;
@@ -11242,18 +13862,19 @@
         {
             var proxy = this,
                 args = {},
-                model=this.model,
+                model = this.model,
                 collapsedRecordCount = 0,
                 height = 0;
 
             if (model.enableVirtualization) {
                 args.requestType = ej.TreeGrid.Actions.ExpandCollapse;
+                proxy._$treegridHelper.ejTreeGrid("updateAltRowOnCollapseAll");
                 proxy._$treegridHelper.ejTreeGrid("sendDataRenderingRequest", args);
                 model.updatedRecords = proxy.getUpdatedRecords();
                 model.currentViewData = proxy.getCurrentViewData();
                 proxy._$ganttchartHelper.ejGanttChart("clearConnectorLines");
                 proxy._$ganttchartHelper.ejGanttChart("refreshHelper", proxy.model.currentViewData, proxy.model.updatedRecords);
-                proxy._$treegridHelper.ejTreeGrid("refreshHeight");
+                proxy._$treegridHelper.ejTreeGrid("updateHeight");
             } else {
                 //If need refresh chart if record is added after searching or sorting
                 if (proxy._isRefreshAddedRecord) {
@@ -11277,6 +13898,9 @@
                 proxy._connectorlineIds = [];
                 proxy._connectorLinesCollection = [];
                 proxy._createConnectorLinesCollection();
+            }
+            if (proxy.isCriticalPathEnable == true) {
+                proxy._$ganttchartHelper.ejGanttChart("criticalConnectorLine", proxy.criticalPathCollection, proxy.detailPredecessorCollection, true, proxy.collectionTaskId);
             }
         },
         //Collapse all parent and inner level parent records
@@ -11374,17 +13998,39 @@
                 return new Date(date);
             }
             if (date) {
-                return ej.parseDate(date, this.model.dateFormat) == null ?
-                    new Date(date) : ej.parseDate(date, this.model.dateFormat);
+                return ej.parseDate(date, this.model.dateFormat, this.model.locale) == null ?
+                    new Date(date) : ej.parseDate(date, this.model.dateFormat, this.model.locale);
             }
         },
-        _getFormatedDate: function (dateObject, dateformat) {
-            return ej.format(dateObject, dateformat);
+        _getFormatedDate: function (dateObject, dateformat, locale) {
+            return ej.format(dateObject, dateformat, locale);
         },
 
         
         _destroy: function () {
             var proxy = this;
+            //Unbind all events binded to Document and window and chart side and TreeGrid side
+            this.element.off();
+            proxy._off($(window), "resize", proxy.windowResize);
+            $("#" + proxy._id + "_dialogEdit").data("ejDialog") && $("#" + proxy._id + "_dialogEdit").data("ejDialog").destroy();
+            $("#" + proxy._id + "_dialogAdd").data("ejDialog") && $("#" + proxy._id + "_dialogAdd").data("ejDialog").destroy();
+            $("#" + proxy._id + "_dialogAdd").remove();
+            $("#" + proxy._id + "_dialogEdit").remove();
+            $("#" + this._id + "_toolbarItems_Main").remove();
+            $("#" + this._id + "_dialogEdit_wrapper").remove();
+            $("#" + this._id + "startDateEdit_popup").remove();
+            $("#" + this._id + "endDateEdit_popup").remove();
+            $("#" + this._id + "startDateAdd_popup").remove();
+            $("#" + this._id + "endDateAdd_popup").remove();
+            $("#" + this._id + "taskTypeEdit_popup_wrapper").remove();
+            $("#" + this._id + "_dialogAdd_wrapper").remove();
+            $("#" + this._id + "effortDrivenEdit_popup_wrapper").remove();
+            //Chart side
+            var ganttChartObj = proxy._$ganttchartHelper.ejGanttChart("instance");
+            ganttChartObj.destroy();
+            //TreeGrid side
+            var treeGridObj = proxy._$treegridHelper.ejTreeGrid("instance");
+            treeGridObj.destroy();
             proxy.element.empty().removeClass("e-gantt-core e-gantt " + proxy.model.cssClass);
         },
         _updateToolbar: function () {
@@ -11435,6 +14081,22 @@
                 proxy._$ganttchartHelper.ejGanttChart("onScrollHelper", top);
             }
             proxy._clearContextMenu();
+        },
+        /*Get string value from record*/
+        _getDurationStringValue: function (data) {
+            var val = "";
+            if (data.duration != null && data.duration != undefined)
+                val += data.duration + " ";
+            if (data.durationUnit != null && data.durationUnit != undefined) {
+                var multiple = data.duration != 1;
+                if (data.durationUnit == "day")
+                    val += multiple ? this._durationUnitTexts.days : this._durationUnitTexts.day;
+                else if (data.durationUnit == "hour")
+                    val += multiple ? this._durationUnitTexts.hours : this._durationUnitTexts.hour;
+                else
+                    val += multiple ? this._durationUnitTexts.minutes : this._durationUnitTexts.minute;
+            }
+            return val;
         }
         
 
@@ -11463,7 +14125,10 @@
         ExpandAll: "expandAll",
         CollapseAll: "collapseAll",
         PrevTimeSpan: "prevTimeSpan",
-        NextTimeSpan:"nextTimeSpan",
+        NextTimeSpan: "nextTimeSpan",
+        NextTimeSpan: "nextTimeSpan",
+        CriticalPath: "criticalPath",
+        ExcelExport: "excelExport"
     };
 
     ej.Gantt.ScheduleHeaderType = {
@@ -11487,7 +14152,16 @@
         Hour: "hour",
         Minute:"minute"
     };
-
+    ej.Gantt.WorkUnit = {
+        Day: "days",
+        Hour: "hours",
+        Minute: "minutes"
+    };
+    ej.Gantt.TaskType = {
+        FixedUnit: "fixedUnit",
+        FixedWork: "fixedWork",
+        FixedDuration: "fixedDuration"
+    }
     ej.Gantt.workingTimeScale = {
         TimeScale8Hours: "TimeScale8Hours",
         TimeScale24Hours: "TimeScale24Hours",
@@ -11528,6 +14202,12 @@
         Cell: "cell"
     };
 
+    ej.Gantt.TaskSchedulingMode = {
+        Auto: "auto",
+        Manual: "manual",
+        Custom: "custom"
+    };
+
     ej.Gantt.Locale = ej.Gantt.Locale || {};
 
     ej.Gantt.Locale["default"] = ej.Gantt.Locale["en-US"] = {
@@ -11541,7 +14221,8 @@
             predecessorEditingValidationAlert: "Cyclic Dependency Occured, Please Check The Predecessor",
             predecessorAddingValidationAlert: "Fill all the columns in predecessor table",
             idValidationAlert: "Duplicate ID",
-            dateValidationAlert: "Invalid End date"
+            dateValidationAlert: "Invalid End date",
+            dialogResourceAlert: "Fill All the columns in resource table"
         },
 
         //headerText to be displayed in treegrid
@@ -11553,21 +14234,33 @@
             resourceInfo: "Resources",
             duration: "Duration",
             status: "Progress",
+            taskMode: "Task Mode",
+            subTasksStartDate: "SubTasks Start Date",
+            subTasksEndDate: "SubTasks End Date",
+            scheduleStartDate: "Schedule Start Date",
+            scheduleEndDate: "Schedule End Date",
             predecessor: "Predecessors",
             type: "Type",
             offset: "Offset",
             baselineStartDate: "Baseline Start Date",
             baselineEndDate: "Baseline End Date",
             WBS: "WBS",
-            WBSPredecessor: "WBS Predecessor"
+            WBSPredecessor: "WBS Predecessor",
+            dialogCustomFieldName: "Column Name",
+            dialogCustomFieldValue: "Value",
+            notes: "Notes",
+            taskType: "Task Type",
+            work: "Work",
+            unit:"Unit",
+            effortDriven: "Effort Driven"
         },
 
         //string to display in dialog 
         editDialogTexts: {
             addFormTitle: "New Task",
-            editFormTitle: "Edit Task",
+            editFormTitle: "Task Information",
             saveButton: "Save",
-            deleteButton: "Delete",
+            deleteButton: "Delete Task",
             cancelButton: "Cancel",
             addPredecessor: "Add New",
             removePredecessor: "Remove"
@@ -11607,14 +14300,41 @@
             expandAllTool: "ExpandAll",
             collapseAllTool: "CollapseAll",
             nextTimeSpanTool: "Next Timespan",
-            prevTimeSpanTool: "Previous Timespan"
+            prevTimeSpanTool: "Previous Timespan",
+            prevTimeSpanTool: "Previous Timespan",
+            criticalPathTool: "Critical Path",
+			excelExportTool:"Excel Export"
         },
 
         //string to be displayed in taskbar tooltip for duration unit 
         durationUnitTexts: {           
             days: "days",
             hours: "hours",
-            minutes:"minutes"
+            minutes: "minutes",
+            day: "day",
+            hour: "hour",
+            minute: "minute",
+        },
+        durationUnitEditText: { minute: ["m", "min", "minute", "minutes"], hour: ["h", "hr", "hour", "hours"], day: ["d", "dy", "day", "days"] },
+
+        //string to be displayed in taskbar tooltip for duration unit 
+        workUnitTexts: {
+            days: "days",
+            hours: "hours",
+            minutes: "minutes"           
+        },
+
+        //String to be displayed in default type drop down.
+        taskTypeTexts: {
+            fixedWork: "Fixed Work",
+            fixedUnit: "Fixed Units",
+            fixedDuration: "Fixed Duration"
+        },
+
+        //String to be displayed in effort drven drop down box.
+        effortDrivenTexts: {
+            yes: "Yes",
+            no: "No"
         },
 
         //string to be displayed in context menu 
@@ -11644,6 +14364,11 @@
             renameColumn: "Rename Column"
         },
 
+        taskModeTexts: {
+            manual: "Manual",
+            auto: "Auto"
+        },
+
         //string to be displayed in column add dialog title 
         columnDialogTitle: {
             insertColumn: "Insert Column",
@@ -11660,248 +14385,88 @@
         predecessorEditingTexts: {
             fromText: "From",
             toText : "To"
-        }
+        },
+
+        dialogTabTitleTexts: {
+            generalTabText: "General",
+            predecessorsTabText: "Predecessors",
+            resourcesTabText: "Resources",
+            customFieldsTabText: "Custom Fields",
+            notesTabText:"Notes"
+        },
+        predecessorCollectionText: [
+                { id: "SS", text: "Start-Start", value: "Start-Start" },
+                { id: "SF", text: "Start-Finish", value: "Start-Finish" },
+                { id: "FS", text: "Finish-Start", value: "Finish-Start" },
+                { id: "FF", text: "Finish-Finish", value: "Finish-Finish" }
+            ],        
     };
 
     /*-----Initialize the GanttRecord object--------------*/
 
-    ej.Gantt.GanttRecord = function() {
+    ej.Gantt.GanttRecord = function () {
         var proxy = this;
-        proxy.taskId = null,
-        proxy.taskName = null,
-        proxy.startDate = null,
-        proxy.endDate = null,
-        proxy.duration = null,
-        proxy.isMilestone = false,
-        proxy.status = null,
-        proxy.predecessor = null,
-        proxy.resourceInfo = null,
-        proxy.parentItem = null,
-        proxy.isSelected = false,
-        proxy.childRecords = null,
-        proxy.hasChildRecords = false,
-        proxy.expanded = false,
-        proxy.level = 0,
-        proxy.left = 0,
-        proxy.width = 0,
-        proxy.progressWidth = 0,
-        proxy.item = null,
-        proxy.baselineLeft = 0,
-        proxy.baselineWidth = 0,
-        proxy.baselineStartDate = null,
-        proxy.baselineEndDate = null,
+        proxy.taskId = null;
+        proxy.taskName = null;
+        proxy.startDate = null;
+        proxy.endDate = null;
+        proxy.duration = null;
+        proxy.isMilestone = false;
+        proxy.status = null;
+        proxy.predecessor = null;
+        proxy.resourceInfo = null;
+        proxy.parentItem = null;
+        proxy.isSelected = false;
+        proxy.childRecords = null;
+        proxy.hasChildRecords = false;
+        proxy.expanded = false;
+        proxy.level = 0;
+        proxy.left = 0;
+        proxy.width = 0;
+        proxy.progressWidth = 0;
+        proxy.item = null;
+        proxy.baselineLeft = 0;
+        proxy.baselineWidth = 0;
+        proxy.baselineStartDate = null;
+        proxy.baselineEndDate = null;
+        proxy.isCritical = false,
+        proxy.slack = null,
         proxy.isReadOnly = false;
         proxy.hasFilteredChildRecords = true;
+        proxy.taskbarBackground = null;
+        proxy.progressbarBackground = null;
+        proxy.parentProgressbarBackground = null;
+        proxy.cellBackgroundColor = null;
+        proxy.rowBackgroundColor = null;
+        proxy.treeMappingName = [];
+        proxy.dragState = true;
+        proxy.isSelected = false;
+        proxy.durationUnit = "";
+        proxy.isAutoSchedule = true;
+        proxy.manualStartDate = null;
+        proxy.manualEndDate = null;
+        proxy.manualLeft = 0;
+        proxy.manualDuration = 0;
+        proxy.manualWidth = 0;
     }
 
     ej.Gantt.GanttRecord.prototype = {
 
         //calculate the left position of the taskbar
-        _calculateLeft: function (projectStartDate, dayWidth, holidays, model) {
+        _calculateLeft: function (ganttObj) {
+            return ganttObj._getTaskLeft(this.startDate);
+        },
 
-            var proxy = this,
-                diffDate,
-                enddatecount = 0,
-                beginDate = new Date(proxy.startDate),
-                endDate = new Date(proxy.endDate),
-                endDateHours = endDate && endDate.getHours(),
-                endDateMinutes = endDate && endDate.getMinutes(),
-                endDateSeconds = endDate && endDate.getSeconds(),
-                headerType = model.scheduleHeaderSettings.scheduleHeaderType,
-                headerValue = ej.Gantt.ScheduleHeaderType,
-                durationUnitValue = ej.Gantt.DurationUnit,
-                duration = 0, timeScale = model.workingTimeScale;
-
-            if (endDate) {
-                endDateHours = endDate.getHours();
-                endDateMinutes = endDate.getMinutes();
-                endDateSeconds = endDate.getSeconds();
-            }
-            if (headerType == headerValue.Hour && model.durationUnit == durationUnitValue.Hour) {                
-                        var totalHours = beginDate.getHours() + proxy.duration;
-                        endDateHours = (parseInt(totalHours % (24)) > 0) ? parseInt(totalHours % (24)) : 0;
-                        duration = endDateHours > 0 ? parseInt(proxy.duration / (24)) + 1 : parseInt(proxy.duration / (24));
-            }
-           else if (model.durationUnit == durationUnitValue.Minute) {
-               var totalMinutes = beginDate.getMinutes() + proxy.duration + (beginDate.getHours() * 60);
-                endDateMinutes = (parseInt(totalMinutes % (60)) > 0) ? parseInt(totalMinutes % (60)) : 0;
-                duration = totalMinutes > 0 ? parseInt(totalMinutes / (24 * 60)) + 1 : parseInt(totalMinutes / (24 * 60));
-            }
-            else if (model.durationUnit == durationUnitValue.Hour) {
-                if (model.durationMapping && !endDate) {
-                    if (timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                        endDateHours = (parseInt(proxy.duration % 24) > 0) ? parseInt(proxy.duration % 24) : 0;
-                        duration = endDateHours > 0 ? parseInt(proxy.duration / 24) + 1 : parseInt(proxy.duration / 24);
-
-                    }
-                    else if (timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        endDateHours = (parseInt(proxy.duration % 8) > 0) ? parseInt(proxy.duration % 8) : 0;
-                        duration = endDateHours > 0 ? parseInt(proxy.duration / 8) + 1 : parseInt(proxy.duration / 8);
-                    }
-                }
-                    //To update Tooltip end date when the task bar is ended in next day.
-                else {
-                    if (timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours)
-                        duration = endDateHours > 0 ? parseInt((proxy.duration + beginDate.getHours()) / 24) + 1 : parseInt(proxy.duration / 24);
-                    else if (timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        if (model.dateFormat.indexOf("hh:") == -1)
-                            beginDate.setHours(8);
-                        duration = proxy.duration % 8 != 0 ? Math.floor(proxy.duration / 8) + 1 : Math.round(proxy.duration / 8);
-                        if (beginDate.getHours() > 15 && model.durationMapping) {
-                            remainDate = 24-(24 - beginDate.getHours()) + proxy.duration;
-                            if (remainDate > 24)
-                                duration += 1;
-                        }
-                    }
-                }
-            }
-            else {
-                duration = parseInt(proxy.duration);
-            }
-
-            if (endDate == null) {
-
-                endDate = new Date(proxy.startDate);
-                endDate.setDate(endDate.getDate() + duration);
-            }
-
-
-            if (model.includeWeekend == false) {
-
-                if (beginDate.getDay() == 0) {
-                    beginDate.setDate(beginDate.getDate() + 1);
-                }
-                if (beginDate.getDay() == 6) {
-                    beginDate.setDate(beginDate.getDate() - 1);
-                }
-
-                proxy._updateHoliday(beginDate, holidays, model);
-
-                var emptyDate = new Date(beginDate);
-                for (var i = 0; i < duration; i++) {
-                    if (emptyDate.getDay() == 0) {
-                        enddatecount++;
-                    } else if (emptyDate.getDay() == 6) {
-                        enddatecount += 2;
-                        emptyDate.setDate(emptyDate.getDate() + 2);
-                    }
-                    emptyDate.setDate(emptyDate.getDate() + 1);
-                }
-                endDate = new Date(beginDate);
-                enddatecount = duration === 0 ? 1 : enddatecount;
-                if (headerType == headerValue.Hour) {
-                    if (model.durationUnit == durationUnitValue.Minute)
-                        endDate.setMinutes(endDate.getMinutes() + proxy.duration);
-                    else
-                        endDate.setHours(endDate.getHours() + proxy.duration);                    
-                }                    
-                else
-                    endDate.setDate(endDate.getDate() + (duration + enddatecount - 1));
-
-
-                if (endDate.getDay() == 0) {
-                    endDate.setDate(endDate.getDate() + 1);
-                }
-                if (endDate.getDay() == 6) {
-                    endDate.setDate(endDate.getDate() + 2);
-                }
-            }
-
-            else if (model.includeWeekend == true && headerType != headerValue.Hour) {
-                proxy._updateHoliday(beginDate, holidays, model);
-                endDate = new Date(beginDate);
-                if (duration > 0) {
-                    endDate.setDate(endDate.getDate() + (duration - 1));
-                }
-
-            }
-            if (model.includeWeekend == false && headerType == headerValue.Hour) {
-                if (endDate.getDay() == 0)
-                    endDateHours = endDateHours + 24;
-                if (endDate.getDay() == 6)
-                    endDateHours = endDateHours + 48;                
-            }
-            if (endDateHours) {
-                if ((timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) &&
-                    model.durationUnit == durationUnitValue.Hour) {
-                    if (endDateHours > 0) {                        
-                        if (endDateHours>24)
-                            endDate.setHours(8 + endDateHours);
-                        else
-                            endDate.setHours(endDateHours);
-                    }
-                    else
-                        endDate.setHours(17);
-                }
-                else
-                    endDate.setHours(endDateHours);
-            }
-            else if ((timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours && model.durationUnit == durationUnitValue.Hour)) {
-                endDate.setHours(17);
-            }
-
-            else if ((timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours && model.dateFormat.toLowerCase().indexOf("hh") != -1) ||
-                (timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours && model.durationUnit == durationUnitValue.Hour)) {
-                if (headerType != headerValue.Hour && (headerType != headerValue.Week && model.durationUnit != durationUnitValue.Day))
-                endDate.setHours(24);
-            }
-            if (endDateMinutes > 0 && model.dateFormat.toLowerCase().indexOf("hh") != -1) {
-                    endDate.setMinutes(endDateMinutes);
-                endDate.setSeconds(endDateSeconds);
-            }
-            // endDate.setMinutes(endDateMinutes);
-            proxy.startDate = new Date(beginDate);
-            proxy.endDate = new Date(endDate);
-
-            if (model.endDateMapping)
-                proxy.item[model.endDateMapping] = proxy.endDate;
-
-            if (model.startDateMapping)
-                proxy.item[model.startDateMapping] = proxy.startDate;
-            diffDate = Math.round((beginDate - projectStartDate) / 86400000);
-
-            if ((timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours)
-                && model.scheduleHeaderSettings.scheduleHeaderType != ej.Gantt.ScheduleHeaderType.Day) {
-                diffDate = ((beginDate - projectStartDate) / 86400000);
-            }
-
-            else if ((timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours ) &&
-                model.scheduleHeaderSettings.scheduleHeaderType == ej.Gantt.ScheduleHeaderType.Day &&
-                model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                diffDate = ((beginDate - projectStartDate) / 86400000);
-            }
-
-            else if ((timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours || timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) &&
-                  model.scheduleHeaderSettings.scheduleHeaderType == ej.Gantt.ScheduleHeaderType.Day &&
-                   model.dateFormat.toLowerCase().indexOf("hh") != -1) {
-
-                diffDate = ((beginDate - projectStartDate) / 86400000);
-            }
-
-            else if ((timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) && model.roundOffDayworkingTime) {
-                diffDate = Math.round((beginDate - projectStartDate) / 86400000);
-            }
-
-
-            return (diffDate * dayWidth);
+        _calculateManualLeft: function (ganttObj) {
+            return ganttObj._getTaskLeft(this.manualStartDate);
         },
 
         //calculate the left margin of the baseLine element.
-        _calculateBaselineLeft: function (projectStartDate, dayWidth, includeWeekend, dateformat, model) {
-
-            var diffDate,
-                proxy = this,
-                beginDate = new Date(proxy.baselineStartDate),
-                endDate = new Date(proxy.baselineEndDate);
-
-            if (beginDate && endDate && projectStartDate) {
-                if (proxy.isMilestone && beginDate.getTime() != endDate.getTime())
-                    this.baselineEndDate = proxy.item[model.baselineEndDateMapping] = new Date(beginDate);
-
-                diffDate = (beginDate - projectStartDate) / 86400000;
-                if (model.durationUnit != ej.Gantt.DurationUnit.Minute)
-                    diffDate = Math.ceil(diffDate);
-                return (diffDate * dayWidth);
+        _calculateBaselineLeft: function (ganttObj) {
+            var beginDate = new Date(this.baselineStartDate),
+                endDate = new Date(this.baselineEndDate);
+            if (beginDate && endDate) {
+                return ganttObj._getTaskLeft(beginDate);
             } else {
                 return 0;
             }
@@ -11918,7 +14483,7 @@
 
                     tempDate.setHours(0, 0, 0, 0);
 
-                    if (this._getFormatedDate(holidays[j], model.dateFormat) == this._getFormatedDate(date, model.dateFormat)) {
+                    if (this._getFormatedDate(holidays[j], model.dateFormat, model.locale) == this._getFormatedDate(date, model.dateFormat, model.locale)) {
                         date.setDate(date.getDate() + 1);
                     }
                 }
@@ -12041,221 +14606,34 @@
             return (diffDate) * dayWidth;
         },
 
-        _calculateWidth: function (dayWidth, holidays, model) {
-
+        _calculateWidth: function (ganttObj) {
             var proxy = this,
-                diffDate,
-                startdate =new Date(proxy.startDate),
-                enddate = new Date(proxy.endDate),
-                duration = proxy.duration;
-
-            if (enddate == null) {
-                duration = parseInt(duration);
-                enddate = new Date(startdate);
-                enddate.setDate(enddate.getDate() + duration - 1);
-            }
-
-            proxy._calculateEndDate(model.includeWeekend, holidays, model, dayWidth);
-
-            if (model.durationUnit == ej.Gantt.DurationUnit.Hour) {
-                if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                    //To Get proper width of child Gantt Record when include weekend is false in Day-Hour Schedule mode.
-                    if (model.includeWeekend == false && model.scheduleHeaderSettings.scheduleHeaderType != ej.Gantt.ScheduleHeaderType.Hour) {
-                        if (startdate.getDay() == 0)
-                            startdate.setDate(startdate.getDate() + 1);
-                        else if (startdate.getDay() == 6)
-                            startdate.setdate(startdate.getDate() + 2);
-                    }
-                    if (model.durationUnit == ej.Gantt.DurationUnit.Hour && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                        diffDate = proxy.duration;
-                    }
-                    else {
-                        diffDate = proxy._hourdiff(new Date(startdate),new Date(proxy.endDate));
-                    }
-                }
-                else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                    if (model.durationUnit == ej.Gantt.DurationUnit.Hour && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                        if (model.durationMapping) {
-                            startdate.setHours(8);
-                            enddate.setHours(8 + proxy.duration);
-                            diffDate = proxy._hourdiff(startdate, enddate);
-                        }
-                        else
-                            diffDate = (proxy.duration / 8) * 24 + (proxy.duration % 8) - 15;                                          
-                    }
-                    else {
-                        diffDate = proxy._hourdiff(new Date(proxy.startDate),new Date(proxy.endDate));
-                    }
-                }
-                return (diffDate * (dayWidth / 24));
-            }
-            else if (model.durationUnit == ej.Gantt.DurationUnit.Minute) {
-                startdate = new Date(startdate);
-                enddate = new Date(enddate);
-                if (model.endDateMapping)
-                    proxy._calculateDuration(startdate, enddate, model.includeWeekend, model.holidays, proxy.isMilestone, model);
-                diffDate = proxy.duration;
-                return (diffDate * (dayWidth / (24*60)));
-            }
-            else {
-                if ((model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours)
-                      && model.scheduleHeaderSettings.scheduleHeaderType != ej.Gantt.ScheduleHeaderType.Day &&
-                    (model.dateFormat.indexOf("hh:") != -1)) {
-                    diffDate = ((new Date(proxy.endDate) - new Date(proxy.startDate)) / 86400000);// + 1;//Math.ceil
-                }
-
-                else if ((model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours)
-                  && model.scheduleHeaderSettings.scheduleHeaderType != ej.Gantt.ScheduleHeaderType.Day &&
-                   (model.dateFormat.indexOf("hh:") == -1)) {
-                    diffDate = ((new Date(proxy.endDate) - new Date(proxy.startDate)) / 86400000) + 1;//Math.ceil
-                }
-                    //Calculating width for 8 hour timescale  for dateformats without time
-                else if ((model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) &&
-                model.scheduleHeaderSettings.scheduleHeaderType == ej.Gantt.ScheduleHeaderType.Day &&
-                    model.durationUnit != ej.Gantt.DurationUnit.Hour) {
-
-                    var tStartDate = new Date(proxy.startDate),
-                        tEndDate = new Date(proxy.endDate);
-                    tStartDate.setHours(8);
-                    tEndDate.setHours(17);
-
-                    diffDate = ((tEndDate - tStartDate) / 86400000);
-                }
-
-                else if ((model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) &&
-                         model.scheduleHeaderSettings.scheduleHeaderType == ej.Gantt.ScheduleHeaderType.Day &&
-                         model.durationUnit == ej.Gantt.DurationUnit.Hour) {
-                    var tStartDate = new Date(proxy.startDate),
-                       tEndDate = new Date(proxy.endDate);
-
-                    diffDate = ((tEndDate - tStartDate) / 86400000);
-                }
-                else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours && (model.dateFormat.indexOf("hh:") != -1)
-                    && model.scheduleHeaderSettings.scheduleHeaderType == ej.Gantt.ScheduleHeaderType.Week)
-                    diffDate = Math.round((new Date(proxy.endDate) - new Date(proxy.startDate)) / 86400000);
-
-                else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours &&
-                   (model.dateFormat.indexOf("hh:") == -1) || model.roundOffDayworkingTime)
-                    diffDate = Math.round((new Date(proxy.endDate) - new Date(proxy.startDate)) / 86400000) + 1;
-
-                return (diffDate) * dayWidth;
-            }
+                startdate = new Date(proxy.startDate),
+                enddate = new Date(proxy.endDate);
+            return ganttObj._getTaskWidth(startdate, enddate);
         },
 
-
-        _calculateTaskbarWidth: function (dayWidth, model) {
+        _calculateManualWidth: function (ganttObj) {
             var proxy = this,
-                diffDate = 0,
-                dateFormat = model.dateFormat,
-                durationUnitValue = ej.Gantt.DurationUnit,
-                timeScale = model.workingTimeScale;
-            if (model.scheduleHeaderSettings.scheduleHeaderType == ej.Gantt.ScheduleHeaderType.Hour) {
-                diffDate = proxy.duration;
-                if (model.durationUnit == durationUnitValue.Minute)
-                return (diffDate * (dayWidth / (24 * 60)));
-            else
-                return(diffDate*(dayWidth/24));
-        }
-            else if (model.durationUnit == durationUnitValue.Hour) {
-                if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-
-                    if (model.durationUnit == durationUnitValue.Hour && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                        diffDate = proxy.duration;
-                    }
-                    else {
-                        diffDate = proxy._hourdiff(proxy.startDate, proxy.endDate);
-                    }
-                }
-                else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                    if (model.durationUnit == durationUnitValue.Hour && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                        var startdate = new Date(proxy.startDate),
-                            enddate = new Date(proxy.endDate);
-                        startdate.setHours(8);
-                        if (model.durationMapping)
-                            enddate.setHours(8 + proxy.duration);
-                        else
-                            enddate.setHours(16);
-                        diffDate = proxy._hourdiff(startdate, enddate);
-                    }
-                    else {
-                        diffDate = proxy._hourdiff(proxy.startDate, proxy.endDate);
-                    }
-                }
-                return (diffDate * (dayWidth / 24));
-            }
-            else {
-                if (timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours && model.durationUnit == durationUnitValue.Day &&
-                    model.scheduleHeaderSettings.scheduleHeaderType != ej.Gantt.ScheduleHeaderType.Day && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                    diffDate = proxy._daydiff(proxy.startDate, proxy.endDate) + 1;
-                }
-
-                else if (timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                    diffDate = proxy._daydiff(proxy.startDate, proxy.endDate);
-                }//+ 1;
-
-                else if (timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                    diffDate = Math.round(proxy._daydiff(proxy.startDate, proxy.endDate, dateFormat) + 1);
-                }
-                else {
-                    diffDate = proxy._daydiff(proxy.startDate, proxy.endDate, dateFormat);//+ 1;
-                }
-                return (diffDate * dayWidth);
-            }
+                manualStartDate = new Date(proxy.manualStartDate),
+                manualEndDate = new Date(proxy.manualEndDate);
+            return ganttObj._getTaskWidth(manualStartDate, manualEndDate);
         },
-        _calculateBaseLineWidth: function (dayWidth, model)
-        {
+
+        _calculateBaseLineWidth: function (ganttObj) {
             var proxy = this,
-                diffDate = 0,
-                dateFormat = model.dateFormat,
-                timeScale = model.workingTimeScale;
-
-            if (model.durationUnit == ej.Gantt.DurationUnit.Hour) {
-                if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-
-                    if (model.durationUnit == ej.Gantt.DurationUnit.Hour && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                        diffDate = proxy.duration;
-                    }
-                    else {
-                        diffDate = proxy._hourdiff(proxy.baselineStartDate, proxy.baselineEndDate);
-                    }
-                }
-                else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                    if (model.durationUnit == ej.Gantt.DurationUnit.Hour && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                        diffDate = proxy.duration;
-                    }
-                    else {
-                        diffDate = proxy._hourdiff(proxy.baselineStartDate, proxy.baselineEndDate);
-                    }
-                }
-                return (diffDate * (dayWidth / 24));
-            }
-            else {
-                if (timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours &&
-                    model.scheduleHeaderSettings.scheduleHeaderType != ej.Gantt.ScheduleHeaderType.Day && model.dateFormat.toLowerCase().indexOf("hh") == -1) {
-                    diffDate = proxy._daydiff(proxy.baselineStartDate, proxy.baselineEndDate) + 1;
-                }
-
-                else if (timeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                    diffDate = proxy._daydiff(proxy.baselineStartDate, proxy.baselineEndDate);
-                }//+ 1;
-
-                else if (timeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                    diffDate = Math.round(proxy._daydiff(proxy.baselineStartDate, proxy.baselineEndDate) + 1);
-                }
-                else {
-                    diffDate = proxy._daydiff(proxy.baselineStartDate, proxy.baselineEndDate);//+ 1;
-                }
-                return (diffDate * dayWidth);
-            }
+               startdate = new Date(this.baselineStartDate),
+                   enddate = new Date(this.baselineEndDate);
+            return ganttObj._getTaskWidth(startdate, enddate);
         },
-        _getFormatedDate: function (dateObject, dateformat) {
-            return ej.format(dateObject, dateformat);
+        _getFormatedDate: function (dateObject, dateformat, locale) {
+            return ej.format(dateObject, dateformat, locale);
         },
 
-        _getDateFromFormat: function (dateString, dateformat) {
+        _getDateFromFormat: function (dateString, dateformat, locale) {
             if (dateString) {
-                return ej.parseDate(dateString, dateformat) == null ?
-                    new Date(dateString) : ej.parseDate(dateString, dateformat);
+                return ej.parseDate(dateString, dateformat, locale) == null ?
+                    new Date(dateString) : ej.parseDate(dateString, dateformat, locale);
             }
         },
 
@@ -12263,9 +14641,9 @@
             return (parentWidth * percent) / 100;
         },
 
-        _setResourceInfo: function (resourceIdcollection, resourceIdMapping, resourceNameMapping, resourcecollection) {
+        _setResourceInfo: function (resourceIdcollection, resourceIdMapping, resourceNameMapping, resourceUnitMapping, resourcecollection) {
 
-            var count = 0,
+            var proxy=this, count = 0,
             resources = [];
 
             for (count; count < resourceIdcollection.length; count++) {
@@ -12274,8 +14652,11 @@
                     return resourceIdcollection[count] === resourceInfo[resourceIdMapping];
                 });
 
-                if (resource.length)
-                    resources.push(resource[0]);
+                var ganttRecordResource = $.extend({}, resource[0]);
+                if (resource.length) {
+                    resources.push(ganttRecordResource);
+                    proxy._updateResourceUnit(resource[0], ganttRecordResource, resourceUnitMapping);
+                }
                 else {
                     resourceIdcollection.splice(count, 1);
                     count--;
@@ -12283,7 +14664,14 @@
             }
             return resources;
         },
-
+        _updateResourceUnit: function (resource, ganttRecordResource, resourceUnitMapping) {          
+            if (resourceUnitMapping != "") {
+                if (ej.isNullOrUndefined(resource[resourceUnitMapping]))
+                    ganttRecordResource[resourceUnitMapping] = 100;
+            }
+            else                
+                ganttRecordResource.unit = 100;            
+        },
         _updateEndDate: function (prevStartDate, includeWeekend, dateFormat) {
             var proxy = this,
                 formatedPrevStartDate = new Date(prevStartDate),
@@ -12306,37 +14694,34 @@
             proxy.endDate = new Date(modifiedEndDate);
         },
 
-        _calculateFormatedDate: function (date, format) {
-            return ej.format(date, format);
+        _calculateFormatedDate: function (date, format, locale) {
+            return ej.format(date, format, locale);
         },
 
-        _updateParentProgress: function (parent,progressMapping) {
+        _updateParentProgress: function (parent, progressMapping) {
             var parentProgress = 0,
-                childCount = parent.childRecords && parent.childRecords.length,
-                totalDuration = 0,
-                completedDuration = 0;
+                childRecords = parent.childRecords,
+                childCount = childRecords ? childRecords.length : 0,
+                totalProgress = 0,
+                milesStoneCount = 0,
+                taskCount = 0;
 
-
-            if (parent.childRecords) {
+            if (childRecords) {
                 for (var i = 0; i < childCount; i++) {
-
-                    //converting days into hours .
-                    //By now 24 hours is default
-                    totalDuration += (parent.childRecords[i].duration * 24);
-
-                    //summation of progress done of child
-                    completedDuration += ((parent.childRecords[i].duration * 24) * parent.childRecords[i].status) / 100;
-                  
+                    if (!childRecords[i].isMilestone)
+                        totalProgress += parseInt(childRecords[i].status);
+                    else
+                        milesStoneCount += 1;
                 }
-
-                parentProgress = (completedDuration / totalDuration) * 100;
+                taskCount = childCount - milesStoneCount;
+                parentProgress = taskCount > 0 ? (totalProgress / taskCount) : 0;
                 if (isNaN(parentProgress))
                     parentProgress = 0;
-                parent.progressWidth = this._getProgressWidth(parent.width, parentProgress);
-                parent.status = Math.round(parentProgress);
+                var width = parent.isAutoSchedule ? parent.width : parent.manualWidth;
+                parent.progressWidth = this._getProgressWidth(width, parentProgress);
+                parent.status = Math.floor(parentProgress);
                 if (progressMapping)
                     parent.item[progressMapping] = parent.status;
-
             }
             if (parent.parentItem) {
                 this._updateParentProgress(parent.parentItem, progressMapping);
@@ -12348,13 +14733,14 @@
             return (parentwidth * percent) / 100;
         },
 
-        _calculatePredecessor: function (string) {
+        _calculatePredecessor: function (string, durationUnitLabels, defaultDurationUnit) {
             var collection = [],
                 match,
                 obj = {},
                 values,
                 to = this.taskId.toString(),
-                offsetvalue;
+                offsetvalue,
+                ganttRecord = this;
             if (typeof string === 'string')
             {
                 string.split(',').forEach(function (el) {
@@ -12368,14 +14754,49 @@
                     obj = {
                         from: match[0],
                         predecessorsType: match.length > 1 ? match[1].toUpperCase() : "FS",
-                        offset: values.length > 1 ? offsetvalue + "" + values[1] : "",
+                        offset: values.length > 1 ? offsetvalue + "" + values[1] : "0",
                         isdrawn: false,
                         to: to
                     };
+                    var offsetUnits = ganttRecord._getOffsetDurationUnit(obj.offset, durationUnitLabels, defaultDurationUnit);
+                    obj.offset = offsetUnits.duration;
+                    obj.offsetDurationUnit = offsetUnits.durationUnit;
                     collection.push(obj);
                 });
            }
             return collection;
+        },
+        /*Get duration and duration unit value from tasks*/
+        _getOffsetDurationUnit: function (val, durationUnitLabels, defaultDurationUnit) {
+            var duration = 0,
+                  durationUnit = defaultDurationUnit;
+
+            if (typeof val == "string") {
+                var values = val.match(/(-?\d*\.*\d+|[A-z]+)/g);
+                if (values && values.length <= 2) {
+                    duration = parseFloat(values[0]);
+                    durationUnit = values[1] ? values[1].toLowerCase() : "";
+                    if (durationUnitLabels.minute.indexOf(durationUnit) != -1)
+                        durationUnit = ej.Gantt.DurationUnit.Minute;
+                    else if (durationUnitLabels.hour.indexOf(durationUnit) != -1)
+                        durationUnit = ej.Gantt.DurationUnit.Hour;
+                    else if (durationUnitLabels.day.indexOf(durationUnit) != -1)
+                        durationUnit = ej.Gantt.DurationUnit.Day;
+                    else
+                        durationUnit = defaultDurationUnit;
+                }
+            } else {
+                duration = val;
+                durationUnit = defaultDurationUnit;
+            }
+            if (isNaN(duration)) {
+                duration = 0;
+                durationUnit = ej.Gantt.DurationUnit.Day;
+            }
+            var output = {};
+            output.duration = duration;
+            output.durationUnit = durationUnit;
+            return output;
         },
 
         _updateGanttRecord: function (startDateMappingName, endDateMappingName, durationMappingName, includeWeekend, scheduleStartDay, perDayWidth, dateFormat, holidays) {
@@ -12392,8 +14813,8 @@
                 startDate.setDate(startDate.getDate() + 2);
 
             proxy.startDate = new Date(startDate);
-            proxy.left = proxy._calculateLeft(scheduleStartDay, perDayWidth, includeWeekend, dateFormat, endDateMappingName);
-            proxy.width = proxy._calculateWidth(perDayWidth, includeWeekend, holidays, dateFormat);
+            proxy.left = proxy._calculateLeft(this);
+            proxy.width = proxy._calculateWidth(this);
             if (proxy.parentItem)
                 proxy._updateParentItem(proxy, startDateMappingName, endDateMappingName, durationMappingName, includeWeekend, scheduleStartDay, perDayWidth, dateFormat, holidays);
         },
@@ -12435,214 +14856,12 @@
             );
         },
 
-        _calculateEndDate: function (includeWeekend, holidays, model, perDayWidth, editMode) {
-            var proxy = this,
-                count = 0,
-                dateFormat = model.dateFormat,
-                startDate = new Date(proxy.startDate),
-                endDate = proxy.endDate && new Date(proxy.endDate),
-                endDateHours = 0, endDateMinutes = 0, endDateSeconds = 0, day = 0,
-                duration = 0,// proxy.duration && parseInt(proxy.duration),
-                remainingHours = 0, totalLength,
-                headerType = model.scheduleHeaderSettings.scheduleHeaderType,
-                headerValue = ej.Gantt.ScheduleHeaderType,
-                durationUnitValue = ej.Gantt.DurationUnit,
-                remainingLength;
-
-            if (ej.isNullOrUndefined(editMode))
-                editMode = "";
-            if (endDate) {
-                endDateHours = endDate.getHours();
-                endDateMinutes = endDate.getMinutes();
-                endDateSeconds = endDate.getSeconds();
-            }
-            if (headerType == headerValue.Hour && model.durationUnit == durationUnitValue.Hour) {                              
-                    var totalMinutes = startDate.getMinutes() + proxy.duration;                   
-                    if (!model.endDateMapping || editMode == "dragging") {
-                        var totalHours = parseInt(startDate.getHours() + Math.round(proxy.duration));                      
-                        endDateHours = (parseInt(totalHours % (24)) > 0) ? parseInt(totalHours % (24)) : 0;                       
-                        endDay = parseInt(totalHours / 24);                        
-                    }
-                    else {
-                        if (endDate) {
-                            endDateHours = endDate.getHours();
-                            endDateMinutes = endDate.getMinutes();
-                        }
-                        else {
-                            endDateHours= (parseInt(totalMinutes % 24) > 0) ? parseInt(totalMinutes % 24) : 0;
-                        }
-                    }                                          
-                        duration = endDateHours > 0 ? parseInt((totalHours) / 24) + 1 :
-                                parseInt(totalHours) / 24;                                            
-                }
-            else if (model.durationUnit == durationUnitValue.Hour) {
-                if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                    if (!model.endDateMapping || editMode == "dragging") {
-                        var totalHours = startDate.getHours() + proxy.duration;
-                        endDateHours = (parseInt(totalHours % 24) > 0) ? parseInt(totalHours % 24) : 0;
-                    } else {
-                        if (endDate) {
-                            endDateHours = endDate.getHours();
-                            endDateMinutes = endDate.getMinutes();
-                        } else {
-                            endDateHours = (parseInt(proxy.duration % 24) > 0) ? parseInt(proxy.duration % 24) : 0;
-                        }
-                    }
-                    duration = endDateHours > 0 ? parseInt((startDate.getHours() + parseInt(proxy.duration)) / 24) + 1 :
-                        parseInt(startDate.getHours() + proxy.duration) / 24;
-                   
-                }
-                else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                    if (!model.endDateMapping || editMode == "dragging") {
-                        var totalHours = startDate.getHours() + proxy.duration,                           
-                        endDateHours = (parseInt(totalHours % 8) > 0) ? parseInt(totalHours % 8) : 0;
-                        endDateHours = proxy._calculateTimeScale8Hour(startDate.getHours(), endDateHours) % 24;
-                        if (editMode == "dragging" && totalHours > 16 && model.durationMapping)
-                            endDateHours += 16;
-                    }
-                    else {
-                        if (endDate) {
-                            endDateHours = endDate.getHours();
-                            if (model.dateFormat.indexOf("hh:") == -1)
-                                endDateHours = 16;
-                            endDateMinutes = endDate.getMinutes();
-                        } else {
-                            endDateHours = proxy._calculateTimeScale8Hour(startDate.getHours(), proxy.duration) % 24;
-                        }
-                    }
-                    var endHour = proxy._calculateTimeScale8Hour(startDate.getHours(), proxy.duration);                   
-                    var checkEndDate = proxy._dateUpdate(startDate, 0, (endHour-startDate.getHours()));
-                    var calculatedEndHour = proxy.duration % 8 > 0 ? Math.floor(proxy.duration / 8) + 1 : Math.round(proxy.duration / 8);                    
-                         
-                     if ((24 - startDate.getHours()) < 8 && model.durationMapping)
-                         calculatedEndHour += 1;                     
-                    duration = endDateHours > 0 ? Math.round(calculatedEndHour)
-                        : parseInt(proxy.duration) / 8;
-
-                }
-                 
-                //duration = parseInt(proxy.duration);
-            }
-           else if (model.durationUnit == durationUnitValue.Minute) {
-               var totalMinutes = startDate.getMinutes() + proxy.duration + (startDate.getHours() * 60);
-                if (!model.endDateMapping || editMode == "dragging" || editMode == "Resizing") {
-                    var totalMinutes = startDate.getMinutes() + proxy.duration;
-                    endDateMinutes = (parseInt(totalMinutes % (60)) > 0) ? parseInt(totalMinutes % (60)) : 0;
-                    endDateHours = startDate.getHours() + (parseInt(totalMinutes / 60));
-                    endDateSeconds = startDate.getSeconds();
-                }
-                else {
-                    if (endDate) {
-                        endDateHours = endDate.getHours();
-                        endDateMinutes = endDate.getMinutes();
-                        endDateSeconds = endDate.getSeconds();
-                    }
-                    else {
-                        endDateMinutes = (parseInt(totalMinutes % 60) > 0) ? parseInt(totalMinutes % 60) : 0;
-                    }
-                }
-                var reduceDuration = parseInt((startDate.getMinutes() + proxy.duration) / (60 * 24));
-                duration = totalMinutes >= 0 ? parseInt((totalMinutes) / (60 * 24)) + 1 :
-                        parseInt(totalMinutes) / (60 * 24);
-                if (model.durationMapping && model.endDateMapping && editMode != "dragging")
-                    duration = duration;
-                else if (model.durationMapping || editMode == "dragging" || editMode == "Resizing")
-                    duration = duration - reduceDuration;
-            }
-            else {
-                duration = parseInt(proxy.duration);
-            }
-
-            
-            if (proxy.width > 0) {
-                totalLength = proxy.left + proxy.width;
-                remainingLength = totalLength % perDayWidth;
-                remainingHours = (remainingLength / (perDayWidth / 24));//hour calculation
-            }
-
-            if (duration === 0) {
-                proxy.endDate = proxy.startDate;
-                return;
-            }
-
-            if (includeWeekend === false && headerType != headerValue.Hour) {
-                for (count = 1; count < duration; count++) {
-                    if (startDate.getDay() == 0)
-                        startDate.setDate(startDate.getDate() + 1);
-                    else if (startDate.getDay() == 6)
-                        startDate.setDate(startDate.getDate() + 2);
-
-                    startDate.setDate(startDate.getDate() + 1);
-                }
-            } else {
-                startDate.setDate(startDate.getDate() + duration - 1);
-            }
-
-            if (includeWeekend === false && headerType != headerValue.Hour) {
-                if (startDate.getDay() == 0)
-                    startDate.setDate(startDate.getDate() + 1);
-                else if (startDate.getDay() == 6)
-                    startDate.setDate(startDate.getDate() + 2);
-            }
-
-            if (holidays && holidays.length) {
-                var holidayIndex = 0,
-                    holidayslength = holidays.length,
-                    holiday;
-                for (holidayIndex = 0; holidayIndex < holidayslength; holidayIndex++) {
-                    holiday = proxy._getDateFromFormat(holidays[holidayIndex]);
-                    if (holiday >= proxy.startDate && holiday <= startDate) {
-                        startDate.setDate(startDate.getDate() + 1);
-                        if (includeWeekend === false) {
-                            if (startDate.getDay() == 0) {
-                                startDate.setDate(startDate.getDate() + 1);
-                            } else if (startDate.getDay() == 6) {
-                                startDate.setDate(startDate.getDate() + 2);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (includeWeekend === false && headerType != headerValue.Hour) {
-                if (startDate.getDay() == 0)
-                    startDate.setDate(startDate.getDate() + 1);
-                else if (startDate.getDay() == 6)
-                    startDate.setDate(startDate.getDate() + 2);
-            }
-            if (remainingHours > 0 && model.durationUnit != "minute")//To restrict the over updation of date during dragging.
-                startDate.setHours(remainingHours);//endDateHours
-            if (endDateHours >= 0) {
-                if ((model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) &&
-                    model.durationUnit == durationUnitValue.Hour) {
-                    startDate.setHours(endDateHours);
-                }
-                else
-                    startDate.setHours(endDateHours);
-            }
-            if (model.dateFormat.indexOf("hh:") != -1) {
-                startDate.setMinutes(endDateMinutes);
-                startDate.setSeconds(endDateSeconds);
-            }
-            
-            if (model.dateFormat.indexOf("hh:") !== -1 &&
-                      model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours &&
-                model.scheduleHeaderSettings.scheduleHeaderType != ej.Gantt.ScheduleHeaderType.Day) {
-                startDate.setHours(17);
-            }
-            else if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours
-                && model.durationUnit == durationUnitValue.Hour) {
-                if (endDateHours > 0) {
-                    startDate.setHours(endDateHours);
-                }
-                else
-                    startDate.setHours(24);
-            }
-
-            proxy.endDate = startDate;
-
+        _calculateEndDate: function (ganttObj) {
+            var model = ganttObj.model,
+                tempEndDate = ganttObj._getEndDate(this.startDate, this.duration, this.durationUnit, this);
+            this.endDate = new Date(tempEndDate);
             if (model.endDateMapping)
-                proxy.item[model.endDateMapping] = proxy.endDate;
+                this.item[model.endDateMapping] = this.endDate;
         },
 
         _calculateTimeScale8Hour: function (startHour, duration) {
@@ -12689,104 +14908,18 @@
             );
         },
 
-
-        _calculateDuration: function (startDate, endDate, includeWeekend, holidays, milestone, model) {
-            var proxy = this,
-                dateDiff,
-                durationUnitValue = ej.Gantt.DurationUnit,
-                headerType = model.scheduleHeaderSettings.scheduleHeaderType,
-                headerValue = ej.Gantt.ScheduleHeaderType;
-            if (model.durationUnit == durationUnitValue.Hour) {
-                if (model.dateFormat.indexOf("hh:") == -1 && model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                    startDate.setHours(8);
-                    endDate.setHours(16);
-                }
-                var dayDiff =((endDate - startDate) / (1000 * 60 * 60 * 24));
-                dateDiff = proxy._hourdiff(startDate, endDate);               
-                if (dateDiff < 0) {
-                    //dateDiff = dateDiff * -1;
-                }
-                if (model.endDateMapping)
-                    dayDiff = dayDiff < 1 ? 0.5 : dayDiff;
-                if (model.durationMapping)  
-                    dayDiff = Math.round(dayDiff);                
-                if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours){
-                    var remainDiff = startDate.getHours() - 8;                    
-                    if (startDate.getHours() == 0)
-                        remainDiff += 8;
-                    if (dayDiff >= 1)
-                        proxy.duration = (dateDiff) - (dayDiff * 16) + remainDiff;
-                        else
-                            proxy.duration = dateDiff;
-                    if (startDate.getHours() > 16) {
-                        if (model.durationMapping)
-                            proxy.duration -= (8 - (24 - startDate.getHours()));
-                        if (model.endDateMapping)
-                            proxy.duration += (8 - (24 - startDate.getHours()));
-                    }
-                    proxy.duration = Math.round(proxy.duration);
-                    if (model.durationMapping && proxy.item)
-                        proxy.item[model.durationMapping] = proxy.duration;
-                    return proxy.duration;
-                    }
-                }            
-            else if (model.durationUnit == durationUnitValue.Minute) {
-                dateDiff = proxy._minutediff(startDate, endDate);               
+        _calculateDuration: function (ganttObj) {
+            var tempDuration = ganttObj._getDuration(this.startDate, this.endDate, this.durationUnit, this.isAutoSchedule);
+            this.duration = tempDuration;
+            if (model.durationMapping && this.item) {
+                this.item[model.durationMapping] = tempDuration;
+                model.durationUnitMapping && (this.item[model.durationUnitMapping] = this.durationUnit);
             }
-            else {
-                //To restrict the over updation of parent record duration in date-time date format.
-                if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours)
-                    endDate.setHours(0);
-                dateDiff = proxy._daydiff(startDate, endDate);
-            }
+        },
 
-            if (includeWeekend === false && model.durationUnit != durationUnitValue.Minute && model.durationUnit != durationUnitValue.Hour)
-                offset = proxy._calculateDateDifference(new Date(startDate), dateDiff);
-            else {
-                if (model.durationUnit != durationUnitValue.Hour && model.durationUnit != durationUnitValue.Minute)
-                    offset = dateDiff + 1;
-                else
-                    offset = dateDiff;
-            }
-
-            for (var count = 0; count < holidays.length; count++) {
-                if (proxy._getDateFromFormat(holidays[count].day) >= startDate && proxy._getDateFromFormat(holidays[count].day) <= endDate) {
-                    if (model.durationUnit == durationUnitValue.Hour)
-                        offset -= 24;
-                    else
-                        offset--;
-                }
-            }
-
-            if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours ||
-                model.durationUnit == durationUnitValue.Hour) {
-
-                var decimal = (offset - parseInt(offset, 10));
-                decimal = (decimal * 10);
-                if (decimal == 5) { offset = (parseInt(offset, 10) + 0.5); }
-
-                else {
-                    offset = offset;
-                }
-            }
-            //else if (model.scheduleHeaderSettings.scheduleHeaderType == ej.Gantt.ScheduleHeaderType.Day) {
-
-            //    offset = Math.round(offset) - 1;
-            //}
-            else
-                offset = Math.round(offset);
-
-            if (ej.isNullOrUndefined(milestone))
-                proxy.duration = offset;
-            else if (milestone && proxy._calculateDateDifference(new Date(startDate), dateDiff) == 0)
-                proxy.duration = 0;                
-            else
-                proxy.duration = (offset == 0 && milestone == false) ? 1 : offset;
-            //To check the decimal places.
-            if (proxy.duration % 1 != 0)
-                proxy.duration = parseFloat(proxy.duration.toFixed(2));
-            if (model.durationMapping && proxy.item)
-                proxy.item[model.durationMapping] = proxy.duration;
+        _calculateManualDuration: function (ganttObj) {
+            var tempDuration = ganttObj._getDuration(this.manualStartDate, this.manualEndDate, this.durationUnit, this.isAutoSchedule);
+            this.manualDuration = tempDuration;
         },
 
         _calculateDateDifference: function (emptyDate, dateDiff) {
@@ -12829,6 +14962,112 @@
             }
             return weekendCount;
         },
+        //Update duration with respect to work and units of resources of a task.
+        _updateDurationWithWork: function (proxy) {
+            var model = proxy.model, totalHours,
+                resourceInfo = this.resourceInfo,
+                resourceLength = resourceInfo ? resourceInfo.length : 0,
+                totalResourceOneDayWork = 0,
+                updatedDuration = 0,
+                ActualOneDayWork = proxy._secondsPerDay / (60 * 60); //in hours
+
+            for (var length = 0; length < resourceLength; length++) {
+                var resourceUnit = resourceInfo[length][model.resourceUnitMapping], //in percentage 
+                    resourceOneDayWork = (ActualOneDayWork * resourceUnit) / 100; //in hours
+
+                totalResourceOneDayWork += resourceOneDayWork;
+            }
+
+            totalHours = this._getTotalWorksInHours(model,ActualOneDayWork);
+
+            if (resourceLength != 0)
+                updatedDuration += (totalHours / totalResourceOneDayWork);
+
+            //Update work as per defined unit.
+            if (model.durationUnit == "minute")
+                updatedDuration = updatedDuration * ActualOneDayWork * 60;
+            if (model.durationUnit == "hour")
+                updatedDuration = updatedDuration * ActualOneDayWork;
+
+            //To check the decimal places.
+            if (updatedDuration % 1 != 0)
+                updatedDuration = updatedDuration.toFixed(2);
+
+            proxy._isDurationUpdated = true;
+
+            this.duration = updatedDuration;
+        },
+        //Update work with respect to duration and units of resources of a task.
+        _updateWorkWithDuration: function (proxy) {
+            var model = proxy.model,
+                resourceInfo = this.resourceInfo,
+                resourceLength = resourceInfo ? resourceInfo.length : 0,
+                updatedWorks = 0,
+                ActualOneDayWork = proxy._secondsPerDay / (60 * 60), //in hours
+                durationInDay = this._getDurationInDays(ActualOneDayWork);
+
+            for (var length = 0; length < resourceLength; length++) {
+                var resourceUnit = resourceInfo[length][model.resourceUnitMapping], //in percentage 
+                    resourceOneDayWork = (ActualOneDayWork * resourceUnit) / 100; //in hours
+                updatedWorks += (resourceOneDayWork * durationInDay);
+            }
+
+            //Update work as per defined unit.
+            if (model.workUnit == "minutes")
+                updatedWorks = updatedWorks * 60;
+            if (model.workUnit == "days")
+                updatedWorks = updatedWorks / ActualOneDayWork;
+
+            //To check the decimal places.
+            if (updatedWorks % 1 != 0)
+                updatedWorks = updatedWorks.toFixed(2);
+
+            this.work = parseFloat(updatedWorks);
+        },
+        //Update units of resources with respect to duration and work of a task.
+        _updateUnitWithWork: function (proxy) {
+            var model = proxy.model,
+                resourceInfo = this.resourceInfo,
+                resourceLength = resourceInfo ? resourceInfo.length : 0,
+                ActualOneDayWork = proxy._secondsPerDay / (60 * 60); //in hours
+            if (resourceLength == 0)
+                return;
+            var durationInDay = this._getDurationInDays(ActualOneDayWork),
+                totalWorksInHour = this._getTotalWorksInHours(model, ActualOneDayWork),
+                totalUnitInPercentage = (totalWorksInHour / (durationInDay * ActualOneDayWork)) * 100,
+                individualUnit = totalUnitInPercentage / resourceLength;
+
+            //To check the decimal places.
+            if (individualUnit % 1 != 0)
+                individualUnit = individualUnit.toFixed(2);
+
+            for (var length = 0; length < resourceLength; length++) {
+                resourceInfo[length][model.resourceUnitMapping] = individualUnit;
+            }
+        },
+        _getTotalWorksInHours:function(model, oneDayWork){
+            var proxy = this, worksInHour;
+            if (model.workUnit == "days")
+                worksInHour = proxy.work * oneDayWork;
+            else if (model.workUnit == "minutes")
+                worksInHour = proxy.work / 60;
+            else
+                worksInHour = proxy.work;
+
+            return worksInHour;
+        },
+        _getDurationInDays:function(oneDayWork){
+            var proxy = this, durationInDay;
+            if (this.durationUnit == "hour")
+                durationInDay = proxy.duration / oneDayWork;
+            else if (this.durationUnit == "minute")
+                durationInDay = proxy.duration / (oneDayWork * 60);
+            else
+                durationInDay = proxy.duration;
+
+            return durationInDay;
+        },       
+
         //Get day difference from two dates time
         _daydiff: function (first, second) {
             return ((second - first) / (1000 * 60 * 60 * 24));
@@ -12848,11 +15087,122 @@
         _minutediff: function (first, second) {
             return ((second - first) / (1000 * 60));
         },
+        _setTime: function (seconds, date) {
+            var hour = parseInt(seconds / (3600)),
+               min = parseInt((seconds - (hour * 3600)) / 60),
+               sec = seconds - (hour * 3600) - (min * 60);
+            date.setHours(hour, min, sec, 0);
+        },
+        _endDateUpdate: function (date, days, minutes, workingTimeRanges, headerType) {
+            if (!minutes)
+                minutes = 0;
+            var newDate = new Date(
+                date.getFullYear(),
+                date.getMonth(),
+                date.getDate() + days,
+                date.getHours(),
+                date.getMinutes(),
+                date.getSeconds(),
+                date.getMilliseconds()
+            );
+            if (headerType == "day" || headerType == "hour") {
+                //Rounding off to next day
+                newDate.setHours(24);
+                //Then assigning the dayDecimal duration values in Minutes for exact time
+                newDate.setMinutes(minutes);
+            }
+            else {
+                if (workingTimeRanges.length) {
+                    if (minutes > 0) {
+                        //Rounding off to next day
+                        newDate.setHours(24);
+                        //Updating to start time of the next day
+                        this._setTime(workingTimeRanges[0].from, newDate);
+                        //Then assigning the dayDecimal duration values in Minutes for exact time
+                        newDate.setMinutes(minutes);
+                    }
+                    else
+                        this._setTime(workingTimeRanges[workingTimeRanges.length - 1].to, newDate);
+                }
+            }
+            return newDate;
+        },
+        _startDateUpdate: function (date, days, minutes, workingTimeRanges, headerType) {
+            if (!minutes)
+                minutes = 0;
+            var newDate = new Date(
+                date.getFullYear(),
+                date.getMonth(),
+                date.getDate() + days,
+                date.getHours(),
+                date.getMinutes(),
+                date.getSeconds(),
+                date.getMilliseconds()
+            );
+            if (headerType == "day" || headerType == "hour") {
+                newDate.setMinutes(minutes);
+            }
+            else {
+                if (workingTimeRanges.length) {
+                    if (minutes > 0) {
+                        //Updating to start time of the day
+                        this._setTime(workingTimeRanges[0].from, newDate);
+                        //Then add the balance dayDecimal duration values in Minutes for exact time
+                        newDate.setMinutes(minutes);
+                    }
+                    else
+                        this._setTime(workingTimeRanges[0].from, newDate);
+                }
+            }
+            return newDate;
+        }
     };
     //Get predecessor value
-    ej.Gantt._getPredecessorsValue = function (mappingName) {
-        return this.data.item ? this.data.item[mappingName] : "";
-    };    
+    ej.Gantt._getPredecessorsValue = function (data) {
+        var predecessors = data.predecessor,
+                returnVal = "";
+        if (predecessors) {
+            var length = predecessors.length,
+                resultString = "";
+            for (var i = 0; i < length; i++) {
+                var cPredecessor = predecessors[i],
+                    temp = "";
+                if (cPredecessor.from != data.taskId) {
+                    temp = cPredecessor.from + cPredecessor.predecessorsType;
+                    if (cPredecessor.offset != 0) {
+                        temp += cPredecessor.offset > 0 ? ("+" + cPredecessor.offset + " ") : (cPredecessor.offset + " ");
+                        var multiple = cPredecessor.offset != 1;
+                        if (cPredecessor.offsetDurationUnit == "day")
+                            temp += multiple ? this.model.durationUnitTexts.days : this.model.durationUnitTexts.day;
+                        else if (cPredecessor.offsetDurationUnit == "hour")
+                            temp += multiple ? this.model.durationUnitTexts.hours : this.model.durationUnitTexts.hour;
+                        else
+                            temp += multiple ? this.model.durationUnitTexts.minutes : this.model.durationUnitTexts.minute;
+                    }
+                    if (resultString.length > 0)
+                        resultString = resultString + "," + temp;
+                    else
+                        resultString = temp;
+                }
+            }
+        }
+        return resultString;
+    };
+    ej.Gantt._getDurationStringValue = function (data) {
+        var val = "";
+        if (data.duration != null && data.duration != undefined)
+            val += data.duration + " ";
+        if (data.durationUnit != null && data.durationUnit != undefined) {
+            var multiple = data.duration != 1;
+            if (data.durationUnit == "day")
+                val += multiple ? this.model.durationUnitTexts.days : this.model.durationUnitTexts.day;
+            else if (data.durationUnit == "hour")
+                val += multiple ? this.model.durationUnitTexts.hours : this.model.durationUnitTexts.hour;
+            else
+                val += multiple ? this.model.durationUnitTexts.minutes : this.model.durationUnitTexts.minute;
+        }
+        return val;
+    };
     //Returns cell value
     ej.Gantt._getCellValue = function (columnName) {
 
@@ -13004,10 +15354,11 @@
             perHourWidth:null,
             queryTaskbarInfo: null,
 
-            taskbarTemplate: null,
+            taskbarTemplate: "",
             progressbarTemplate: null,
-            parenttaskbarTemplate: null,
+            parenttaskbarTemplate: "",
             parentprogressbarTemplate: null,
+            milestoneTemplate:"",
 
             //internal collections
             flatRecords: [],
@@ -13085,7 +15436,8 @@
             //localized string to be displayed in toolTip
             columnHeaderTexts: null,
             predecessorEditingTexts: null,
-            enablePredecessorEditing:true,
+            enablePredecessorEditing: true,
+            taskbarClick: null
         },
 
         updateHighlightWeekends: function (boolValue) {
@@ -13130,7 +15482,15 @@
             proxy.model.connectorlineWidth = parseInt(lineWidth);
             proxy._createConnectorLineTemplate();
         },
+        updateEditedRecordEndDate: function (endDate) {
+            var proxy = this;
+            proxy._currentEditedRecord.endDate = endDate;
+        },
 
+        updateEditedRecordDuration: function (duration) {
+            var proxy = this;
+            proxy._currentEditedRecord.duration = duration;
+        },
 
         updateTaskbarBackground: function (bgcolor) {
             var proxy = this;
@@ -13264,7 +15624,14 @@
             proxy._createConnectorLineTemplate();
         },
 
-
+        focusGanttElement: function () {
+            if (ej.browserInfo().name == "msie") {
+                try { this.element[0].setActive(); } catch (e) { }
+            }
+            else
+                this.element[0].focus();
+        },
+        
         //returns the schedule year width
         _getYearWidth: function () {
             var proxy = this,count=0,width=0;
@@ -13288,7 +15655,7 @@
                     date = new Date(startDate);
                 }
                 else {
-                    date = ej.parseDate(startDate, "MM/dd/yyyy");
+                    date = ej.parseDate(startDate, this.model.dateFormat, this.model.locale);
                 }
                 var monthLastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
@@ -13370,8 +15737,8 @@
         },
 
         //returns the string date type 
-        _getFormatedDate: function (date, format) {
-            return ej.format(date, format);
+        _getFormatedDate: function (date, format, locale) {
+            return ej.format(date, format, locale);
         },
 
         //returns the viewport height
@@ -13554,6 +15921,7 @@
             proxy._progressbarItem = null,
             proxy._progressResizer = null,
             proxy._rightResizer = null,
+            proxy._manualRightResizer = null,
             proxy._tasknameContainer = null,
             proxy._mousePosX = 0,
             proxy._currMousePosX = 0,
@@ -13567,6 +15935,44 @@
             proxy._rightResizerGripper = null,
             proxy._progressHandle = null,
             proxy._progressHandleChild = null,
+            proxy._currentEditedRecord = {
+                taskId: null,
+                taskName: null,
+                startDate: null,
+                endDate: null,
+                duration: null,
+                isMilestone: false,
+                status: null,
+                predecessor: null,
+                resourceInfo: null,
+                parentItem: null,
+                isSelected: false,
+                childRecords: null,
+                hasChildRecords: false,
+                expanded: false,
+                level: 0,
+                left: 0,
+                width: 0,
+                progressWidth: 0,
+                item: null,
+                baselineLeft: 0,
+                baselineWidth: 0,
+                baselineStartDate: null,
+                baselineEndDate: null,
+                isReadOnly: false,
+                hasFilteredChildRecords: true,
+                serialNumber: null,
+                taskbarBackground: null,
+                progressbarBackground: null,
+                parentProgressbarBackground: null,
+                parentTaskbarBackground: null,
+                cellBackgroundColor: null,
+                rowBackgroundColor: null,
+                treeMappingName: [],
+                dragState: true,
+                isSelected: false,
+                durationUnit: "",
+            },
             proxy._mouseHoverTooltip = document.getElementById(this.model.tooltipTemplate),
             proxy._progressBarTooltipID = document.getElementById(this.model.progressbarTooltipTemplateId),
             proxy._taskbarEditingTooltipID = document.getElementById(this.model.taskbarEditingTooltipTemplateId),
@@ -13950,26 +16356,9 @@
                         model.stripLines[match[1]].label + "</td></tr>", {}, {});
 
                 tooltiptable.append(tooltipbody);
-                if (!model.tooltipTemplate) {
-                    proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "", tooltiptable,
-                        { 'position': 'absolute', 'z-index': '6' }, {});
-                } else {
-                    if (typeof (model.tooltipTemplate) != "object") {
-                        var parser = $.parseHTML(model.tooltipTemplate);
-                        proxy._mouseHoverTooltip = parser[0];
-                    }
-                    else {
-                        var markup = $(model.tooltipTemplate)[0].innerHTML;
-                        parser = $.parseHTML(markup);
-                        proxy._mouseHoverTooltip = parser[1];
-                    }
+                proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "", tooltiptable,
+                    { 'position': 'absolute', 'z-index': proxy._getmaxZindex() + 1 }, {});
 
-                    $(proxy._mouseHoverTooltip).css({
-                        "position": "absolute"
-                    });
-                    $(proxy._mouseHoverTooltip).addClass("customTooltip");
-                    proxy._mouseHoverTooltip.innerHTML = "<table>" + tooltiptable[0].innerHTML + "</table>";
-                }
                 setTimeout(function () {
                     $(document.body).append(proxy._mouseHoverTooltip);
                     proxy._updateTooltipPosition(proxy._mouseHoverTooltip, posx, posy);
@@ -13989,8 +16378,6 @@
         _clearTooltip: function () {
             var proxy = this;
             proxy._mouseHoverTooltip && $(proxy._mouseHoverTooltip).remove();
-            proxy._taskbarEditingTooltipID && $(proxy._taskbarEditingTooltipID).remove();
-            proxy._progressBarTooltipID && $(proxy._progressBarTooltipID).remove();
             $('.e-editingtooltip').remove();
             $("#tooltipgantt").remove();
             $(".e-progressbartooltip").remove();
@@ -14116,25 +16503,37 @@
                     predecessor = fromItem.taskId + 'F';
                 }
 
-                if ($target.hasClass('e-connectorpoint-left')) {
-                    predecessor += 'S';
-                    currentTarget = "Start"
+                if ($target.hasClass('e-connectortouchpoint')) {
+                    if ($target.parent().hasClass('e-connectorpoint-left')) {
+                        predecessor += 'S';
+                        currentTarget = "Start"
+                    }
+                    else if ($target.parent().hasClass('e-connectorpoint-right')) {
+                        predecessor += 'F';
+                    }
+                } else {
+                    if ($target.hasClass('e-connectorpoint-left')) {
+                        predecessor += 'S';
+                        currentTarget = "Start"
+                    }
+                    else if ($target.hasClass('e-connectorpoint-right')) {
+                        predecessor += 'F';
+                        currentTarget = "Finish"
+                    }
                 }
-                else if ($target.hasClass('e-connectorpoint-right')) {
-                    predecessor += 'F';
-                    currentTarget = "Finish"
-                }
-
+                
                 //Append second item in predecessor tooltip
+                //update tooltip on over of second connector point
+                if (proxy._predecessorTooltip) {
+                    $table = proxy._predecessorTooltip.find("table");
+                    $td = $table.find("tbody").find("tr:eq(1)").find("td:eq(2)").text(toItem.taskName);
+                    $td = $table.find("tbody").find("tr:eq(1)").find("td:eq(3)").text(currentTarget);
+                }
 
-                $table = proxy._predecessorTooltip.find("table");
-                $td = $table.find("tbody").find("tr:eq(1)").find("td:eq(2)").text(toItem.taskName);
-                $td = $table.find("tbody").find("tr:eq(1)").find("td:eq(3)").text(currentTarget);
                 var args = {};
                 args.requestType = "validatePredecessor";
                 args.fromItem = fromItem;
                 args.toItem = toItem;
-
                 if (args.toItem.item[proxy.model.predecessorMapping]) {
                     fullPredecessor = args.toItem.item[proxy.model.predecessorMapping] + "," + predecessor;
                 }
@@ -14146,15 +16545,18 @@
                 args.predecessorString = [];
                 args.predecessorString.push(fullPredecessor);
                 var validation = proxy._completeAction(args);
-                $td = $table.find("tbody").find("tr:eq(0)").find("td:eq(0)");
-                if (validation) {
-                   // $td.text("True");
-                    $td.removeClass();
-                    $td.addClass("e-predecessor-true");
-                } else {
-                  //  $td.text("False");
-                    $td.removeClass();
-                    $td.addClass("e-predecessor-false");
+                //update tooltip after validation
+                if (proxy._predecessorTooltip) {
+                    $td = $table.find("tbody").find("tr:eq(0)").find("td:eq(0)");
+                    if (validation) {
+                        // $td.text("True");
+                        $td.removeClass();
+                        $td.addClass("e-predecessor-true");
+                    } else {
+                        //  $td.text("False");
+                        $td.removeClass();
+                        $td.addClass("e-predecessor-false");
+                    }
                 }
 
                 //Here also update on moueup//same code is required
@@ -14171,6 +16573,8 @@
             var proxy = this,
               $target = e.target,
               div = $target.parentNode;
+            if (e.type == "touchmove" && $(e.target).hasClass('e-connectortouchpoint'))
+                div = $target.parentNode.parentNode;
             if (proxy.model.predecessorMapping && proxy.model.allowGanttChartEditing && proxy.model.enablePredecessorEditing && proxy.model.readOnly == false) {
                 if (this._mouseDown == false ) {
                     $target.style.cursor = "pointer";
@@ -14196,6 +16600,8 @@
             var proxy = this,
              $target = e.target,
              div = $target.parentNode;
+            if (e.type == "touchmove" && $(e.target).hasClass('e-connectortouchpoint'))
+                div = $target.parentNode.parentNode;
             if (proxy.model.predecessorMapping && proxy.model.allowGanttChartEditing && proxy.model.enablePredecessorEditing && proxy.model.readOnly == false) {
                 if (this._mouseDown == false) {
                     $target.style.cursor = "pointer";
@@ -14274,6 +16680,12 @@
                     $(proxy._leftConnectorPoint).addClass("e-connectorpoint-hover");
                     $(proxy._rightConnectorPoint).addClass("e-connectorpoint-hover");
 
+                    if($(div).hasClass("e-manualparenttaskbar"))
+                    {
+                        $(proxy._leftConnectorPoint).addClass("e-gantt-manualparenttaskbar-connectorpoint-hover");
+                        $(proxy._rightConnectorPoint).addClass("e-gantt-manualparenttaskbar-connectorpoint-hover");
+                    }
+
                 }
             }
         },
@@ -14295,8 +16707,8 @@
             if (proxy.model.enablePredecessorEditing) {
                 if (proxy.model.predecessorMapping && proxy._mouseDown == false) {
 
-                    $(proxy._leftConnectorPoint).removeClass('e-connectorpoint-hover');
-                    $(proxy._rightConnectorPoint).removeClass('e-connectorpoint-hover');
+                    $(proxy._leftConnectorPoint).removeClass('e-connectorpoint-hover').removeClass('e-gantt-manualparenttaskbar-connectorpoint-hover');
+                    $(proxy._rightConnectorPoint).removeClass('e-connectorpoint-hover').removeClass('e-gantt-manualparenttaskbar-connectorpoint-hover');
                     proxy._leftConnectorPoint = null;
                     proxy._rightConnectorPoint = null;
                 }
@@ -14346,8 +16758,14 @@
             if (ej.isNullOrUndefined(item)) {
                 return;
             }
+
+            if (e.type == "touchstart") {
+                $(".e-connectortouchpoint").addClass("e-enableconnectortouchpoint");
+            }
+
             proxy._editingItem = item;
             proxy._editingTarget = $target;
+            proxy._allowExpandCollapse = true;
 
             if ($(div).hasClass("progressbarresizer-right")) {
                 div = div.parentNode;
@@ -14379,7 +16797,7 @@
                 }
 
                 if (e.target.style.cursor == "w-resize" && ($(div).hasClass("e-childContainer")
-                    || ($(div).hasClass("e-gantt-milestone")))
+                    || ($(div).hasClass("e-gantt-milestone")) || $(div).hasClass("e-parentContainer"))
                     || (e.type == "touchstart" && e.target.className == "taskbarresizer-right")) {
                         proxy._updateEditingType();
                     proxy._rightResizing = true;
@@ -14394,12 +16812,12 @@
                 }
                 var childTaskbar = $(e.target).closest("[style*='cursor: move']");
                 if ((e.target.style.cursor == "move" || (childTaskbar.length && childTaskbar[0].style.cursor == "move")) && ($(div).hasClass("e-childContainer")
-                    || ($(div).hasClass("e-gantt-milestone")) || $(div).hasClass("e-gantt-milestone-container"))) {
+                    || ($(div).hasClass("e-gantt-milestone")) || $(div).hasClass("e-gantt-milestone-container")) || $($target[0]).hasClass("e-gantt-manualparenttaskbar")) {
                     proxy._updateEditingType();
                     proxy._allowDragging = true;
                 }
                 if (e.target.style.cursor == "" && ((childTaskbar.length && childTaskbar[0].style.cursor == "") || childTaskbar.length==0) && ($(div).hasClass("e-childContainer")
-                  || ($(div).hasClass("e-gantt-milestone")) || $(div).hasClass("e-gantt-milestone-container"))) {
+                  || ($(div).hasClass("e-gantt-milestone")) || $(div).hasClass("e-gantt-milestone-container")) || (item.isAutoSchedule && $($target).hasClass("e-gantt-manualparenttaskbar"))) {
                     proxy._updateEditingType();
                     if (e.target.className == "taskbarresizer-left e-icon" || e.target.className == "taskbarresizer-left e-icon gripper")
                         proxy._leftResizing = true;
@@ -14441,18 +16859,20 @@
                 }
 
                 if (e.originalEvent.pageX || e.originalEvent.pageY) {
-                    proxy._currMousePosX = e.originalEvent.pageX;
-                    proxy._currMousePosY = e.originalEvent.pageY;
+                    proxy._posX1 = proxy._currMousePosX = e.originalEvent.pageX;
+                    proxy._posY1 = proxy._currMousePosY = e.originalEvent.pageY;
                     proxy.dragPosX = e.originalEvent.pageX;
                 }
                 else if (e.originalEvent.clientX || e.originalEvent.clientY) {
-                    proxy.dragPosX = e.originalEvent.clientX + document.body.scrollLeft
+                    proxy._posX1 = proxy.dragPosX = e.originalEvent.clientX + document.body.scrollLeft
                         + document.documentElement.scrollLeft;
+                    proxy._posY1 = e.originalEvent.clientY + document.body.scrollTop
+                            + document.documentElement.scrollTop;
                 }
                 else if (e.originalEvent && e.originalEvent.changedTouches
                     && e.originalEvent.changedTouches.length > 0) {
-                    proxy._currMousePosX = e.originalEvent.changedTouches[0].pageX;
-                    proxy._currMousePosY = e.originalEvent.changedTouches[0].pageY;
+                    proxy._posX1 = proxy._currMousePosX = e.originalEvent.changedTouches[0].pageX;
+                    proxy._posY1 = proxy._currMousePosY = e.originalEvent.changedTouches[0].pageY;
                     proxy.dragPosX = e.originalEvent.changedTouches[0].pageX;
                 }
 
@@ -14473,26 +16893,11 @@
 
                 $(proxy._$bodyContainer).bind("mousemove", $.proxy(proxy.handleMouseMove, proxy));                
             }
-
-            if (($(div).hasClass("e-parentContainer")) && !$target.hasClass("e-connectorpoint-left") && !$target.hasClass("e-connectorpoint-right")) { // here check drag point class
-                if (proxy._allowExpandCollapse && item && item.hasChildRecords) {
-                    recordIndex = model.updatedRecords.indexOf(item);
-                    /*cancel edited cell in treegrid on mouse down event on parent task bar*/
-                    proxy._trigger("cancelEditCell");
-                    if (model.selectedRowIndex !== recordIndex && model.allowSelection) {
-
-                        if (!proxy._rowSelectingEventTrigger(model.selectedRowIndex, recordIndex)) {
-                            proxy.selectRows(recordIndex);
-                            proxy._rowSelectedEventTrigger(recordIndex);
-                        }
-                    }
-                    proxy._expandCollapse(recordIndexr);
-                }
-            } else {
+             
                 proxy._appendTooltip($target, recordIndexr);
-            }
+
             proxy._trigger("clearColumnMenu");
-            return false;
+            //return false;
         },
 
         //Get previous parent item values
@@ -14510,6 +16915,13 @@
                     parentPrevItem.endDate = parentItem.endDate;
                     parentPrevItem.width = parentItem.width;
                     parentPrevItem.index = parentItem.index;
+
+                    if (!parentPrevItem.isAutoSchedule) {
+                        parentPrevItem.manualLeft = parentItem.manualLeft;
+                        parentPrevItem.manualStartDate = parentItem.manualStartDate;
+                        parentPrevItem.manualEndDate = parentItem.manualEndDate;
+                        parentPrevItem.manualDuration = parentItem.manualDuration;
+                    }
                     allParentRecords.push(parentPrevItem);
                     record = parentItem;
                     parentPrevItem = {};
@@ -14539,6 +16951,8 @@
             if (ej.isNullOrUndefined(e.pageX)) {
                 x2 = e.originalEvent.changedTouches[0].pageX;
                 y2 = e.originalEvent.changedTouches[0].pageY;
+                if (!ej.isNullOrUndefined(proxy._predecessorTooltip))
+                e.target = document.elementFromPoint(x2, y2);
             }
             else {
                 x2 = e.pageX;
@@ -14547,12 +16961,23 @@
 
             
             //Calculate and validate predecessor and draw connectorline after second connector point connects
-            if (($(e.target).hasClass('e-connectorpoint-left') || $(e.target).hasClass('e-connectorpoint-right')) && proxy._falseLine && !$(e.target).parent().hasClass('e-parentContainer')) {
+            if (($(e.target).hasClass('e-connectorpoint-left') || $(e.target).hasClass('e-connectorpoint-right') || $(e.target).hasClass('e-connectortouchpoint'))
+                && proxy._falseLine && !$(e.target).parent().hasClass('e-parentContainer')) {
                 proxy._trigger("cancelEditCell");
+                if ($(e.target).hasClass('e-connectortouchpoint'))
+                    e.target = $(e.target).parent();
                 var newArgs = proxy._secondMouseOverConnectorPoint(e, true);
-                if (newArgs.predecessorValidation) {
-                    newArgs.requestType = "drawConnectorLine";
-                    proxy._completeAction(newArgs);
+                args.currentRecord = newArgs.currentRecord;
+                args.fromItem = newArgs.fromItem;
+                args.toItem = newArgs.toItem;
+                args.predecessor = newArgs.predecessor;
+                args.predecessorString = newArgs.predecessorString;
+                args.requestType = "validatePredecessor";
+                if (!proxy._trigger("actionBegin",args)) {
+                    if (newArgs.predecessorValidation) {
+                        newArgs.requestType = "drawConnectorLine";
+                        proxy._completeAction(newArgs);
+                    }
                 }
             }
 
@@ -14574,10 +16999,9 @@
                 proxy._editingTarget = null;
                 proxy._editingItem = null;
                 proxy._$ganttChartContainer[0].style.cursor = "auto";
-                proxy._allowExpandCollapse = true;
 
                 if (item != null && (proxy._allowDragging || proxy._leftResizing || proxy._rightResizing || proxy._progressResizing)) {
-                    args.editingFields = { startdate: item.startDate, enddate: item.endDate, progress: item.status, duration: item.duration };
+                    args.editingFields = { startdate: item.startDate, enddate: item.endDate, progress: item.status, duration: item.duration, durationunit: item.durationUnit };
                     args.data = item;
                     args.previousData = proxy._prevItem;
                     args.dragging = proxy._allowDragging;
@@ -14604,8 +17028,8 @@
                 proxy._falseLine = null;
                 proxy._predecessorTooltip && proxy._predecessorTooltip.remove();
                 proxy._predecessorTooltip = null;
-                $(proxy._leftConnectorPoint).removeClass("e-connectorpoint-hover");
-                $(proxy._rightConnectorPoint).removeClass("e-connectorpoint-hover");
+                $(proxy._leftConnectorPoint).removeClass("e-connectorpoint-hover").removeClass("e-gantt-manualparenttaskbar-connectorpoint-hover");
+                $(proxy._rightConnectorPoint).removeClass("e-connectorpoint-hover").removeClass("e-gantt-manualparenttaskbar-connectorpoint-hover");
                 $(proxy._childRightConnectorPoint).removeClass("e-connectorpoint-hover");
                 $(proxy._childLeftConnectorPoint).removeClass("e-connectorpoint-hover");
                 proxy._leftConnectorPoint = null;
@@ -14624,11 +17048,12 @@
                     proxy._predecessorTooltip = null;
 
                     tooltipElement = {
-                        ttipstartDate: this._getFormatedDate(item.startDate, this.model.dateFormat),
-                        ttipendDate: this._getFormatedDate(item.endDate, this.model.dateFormat),
+                        ttipstartDate: this._getFormatedDate(item.startDate, this.model.dateFormat, this.model.locale),
+                        ttipendDate: this._getFormatedDate(item.endDate, this.model.dateFormat, this.model.locale),
                         ttipduration: item.duration,
                         ttipprogress: item.status.toString(),
                         ttiptaskname: item.taskName,
+                        ttipdurationunit: item.durationUnit
                     };
 
 
@@ -14640,7 +17065,7 @@
                         tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "tooltipTemplate"](tooltipElement), {}, {});
                         tooltiptable.append(tooltipbody);
                         proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "", tooltiptable,
-                           { 'position': 'absolute', 'z-index': '7', 'border-radius': '5px' }, {});
+                           { 'position': 'absolute', 'z-index': proxy._getmaxZindex() + 1, 'border-radius': '5px' }, {});
 
                         proxy._mouseHoverTooltip.innerHTML = "<table>" + tooltiptable[0].innerHTML + "</table>";
 
@@ -14652,7 +17077,7 @@
                     }
                     else if (proxy.model.tooltipTemplate) {
                         proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "", "",
-                            { 'position': 'absolute', 'z-index': '7', 'border-radius': '5px' }, {});
+                            { 'position': 'absolute', 'z-index': proxy._getmaxZindex() + 1, 'border-radius': '5px' }, {});
 
                         proxy.tooltipState = "Template";
                         var tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "tooltipTemplate"](item), {}, {});
@@ -14666,7 +17091,7 @@
                     }
                     else if (proxy.model.tooltipTemplateId) {
                         proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "", "",
-                               { 'position': 'absolute', 'z-index': '7', 'border-radius': '5px' }, {});
+                               { 'position': 'absolute', 'z-index': proxy._getmaxZindex() + 1, 'border-radius': '5px' }, {});
 
                         proxy.tooltipState = "TemplateID";
                         var tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "tooltipTemplate"](item), {}, {});
@@ -14682,6 +17107,9 @@
                     proxy._trigger("clearColumnMenu");
                 }
             }
+            if (e.type == "touchend") {
+                $(".e-connectortouchpoint").removeClass("e-enableconnectortouchpoint");
+            }
         },
 
         getChildCount: function (record, count) {
@@ -14696,6 +17124,62 @@
                 }
             }
             return count;
+        },
+
+        // Mapping the critical path ID's, Index and Collections from gantt to ganttchart
+        criticalDataMapping: function (criticalPathIds, condition, collection, collectionTaskId) {
+            if (condition == true) {
+                this.model.isCriticalPathEnable = true;
+                if (!ej.isNullOrUndefined(criticalPathIds)) {
+                    this.model.criticalPathCollection = criticalPathIds;
+                    this.model.detailPredecessorCollection = collection;
+                    this.collectionTaskId = collectionTaskId;
+                }
+            }
+            if (condition == false) {
+                this.model.isCriticalPathEnable = false;
+            }
+        },
+
+        // Render color to the critical task.
+        criticalPathColor: function (criticalPathIds, condition, collection, collectionTaskId) {
+            if (condition == true) {
+                if (!ej.isNullOrUndefined(criticalPathIds)) {
+                    this._refresh();
+                    if (!ej.isNullOrUndefined(collection))
+                        this.criticalConnectorLine(criticalPathIds, collection, true, collectionTaskId);
+                }
+            }
+            if (condition == false) {
+                this.criticalConnectorLine(criticalPathIds, collection, false, collectionTaskId);
+                this._refresh();
+            }
+        },
+
+        // Render color to the critical connector lines.
+        criticalConnectorLine: function (criticalPathIds, collection, condition, collectionTaskId) {
+            if (condition == false) {
+                this.element.find(".e-line").removeClass("e-criticalconnectorline");
+                this.element.find(".connectorline-rightarrow").removeClass("e-criticalconnectorlinerightarrow");
+                this.element.find(".connectorline-leftarrow").removeClass("e-criticalconnectorlineleftarrow");
+            } else if (collection.length != 0) {
+                var index = 0, currentdata, checking = [], checkint;
+                for (var xx = 0; xx < this.model.criticalPathCollection.length; xx++) {
+                    index = collectionTaskId.indexOf(this.model.criticalPathCollection[xx]);
+                    currentdata = collection[index];
+                    if (index != -1 && currentdata.to) {
+                        checking = currentdata.to.split(",");
+                        for (var m = 0; m < checking.length; m++) {
+                            checkint = parseInt(checking[m]);
+                            if (criticalPathIds.indexOf(checkint) != -1) {
+                                this.element.find("#ConnectorLineparent" + currentdata.taskid + "child" + checkint).find(".e-line").addClass("e-criticalconnectorline");
+                                this.element.find("#ConnectorLineparent" + currentdata.taskid + "child" + checkint).find(".connectorline-rightarrow").addClass("e-criticalconnectorlinerightarrow");
+                                this.element.find("#ConnectorLineparent" + currentdata.taskid + "child" + checkint).find(".connectorline-leftarrow").addClass("e-criticalconnectorlineleftarrow");
+                            }
+                        }
+                    }
+                }
+            }
         },
 
         //get the Expand status of GridRecord
@@ -14755,7 +17239,7 @@
                 proxy._$bodyContainer.ejScroller("scrollY", rowTop, true);
 
                 if (model.enableVirtualization) {
-                    proxy.element[0].focus();
+                    proxy.focusGanttElement();
                 }
             }
         },
@@ -14800,7 +17284,7 @@
 
                             if (currentSelectingRecord && selectingRowIndex <= lastRowIndex && !proxy._rowSelectingEventTrigger(model.selectedRowIndex, selectingRowIndex)) {
                                 proxy.selectRows(selectingRowIndex);
-                                proxy.element[0].focus();
+                                proxy.focusGanttElement();
                                 proxy.updateScrollBar();
                                 proxy._rowSelectedEventTrigger(model.selectedRowIndex);
                             }
@@ -14818,7 +17302,7 @@
 
                         if (!proxy._rowSelectingEventTrigger(model.selectedRowIndex, selectingRowIndex)) {
                             proxy.selectRows(selectingRowIndex);
-                            proxy.element[0].focus();
+                            proxy.focusGanttElement();
                             proxy.updateScrollBar();
                             proxy._rowSelectedEventTrigger(model.selectedRowIndex);
                         }
@@ -14830,7 +17314,7 @@
                     if (updatedRecords.length > 0) {
                         if (!proxy._rowSelectingEventTrigger(model.selectedRowIndex, 0)) {
                             proxy.selectRows(0);
-                            proxy.element[0].focus();
+                            proxy.focusGanttElement();
                             proxy.updateScrollBar();
                             proxy._rowSelectedEventTrigger(0);
                         }
@@ -14847,7 +17331,7 @@
 
                         if (!proxy._rowSelectingEventTrigger(model.selectedRowIndex, selectingRowIndex)) {
                             proxy.selectRows(selectingRowIndex);
-                            proxy.element[0].focus();
+                            proxy.focusGanttElement();
                             proxy.updateScrollBar();
                             proxy._rowSelectedEventTrigger(selectingRowIndex);
                         }
@@ -14868,7 +17352,7 @@
                             if (rowIndex >= 0)
                                 isExpandCollapseEnabeled = proxy._trigger("expanding", args);
                             if (model.enableVirtualization)
-                                proxy.element[0].focus();
+                                proxy.focusGanttElement();
                         }
                     }
                     break;
@@ -14886,14 +17370,14 @@
                                 if (rowIndex >= 0)
                                     proxy._trigger("collapsing", args);
                                 if (model.enableVirtualization)
-                                    proxy.element[0].focus();
+                                    proxy.focusGanttElement();
                             }
                         }
                     break;
                 case "deleteRecord":
                     if (model.editSettings.allowDeleting && model.selectedRowIndex >= 0) {
                         proxy._trigger("deleteRow");
-                        proxy.element[0].focus();
+                        proxy.focusGanttElement();
                     }
                     break;
                 case "totalRowCollapse":
@@ -15307,14 +17791,18 @@
                 item.width = item.width < proxy.model.perMinuteWidth ? proxy.model.perMinuteWidth : item.width;
             else
                 item.width = item.width < proxy.model.perDayWidth ? proxy.model.perDayWidth : item.width;
-
-            item.progressWidth = proxy._getProgressWidth(item.width, item.status);
+            if (!item.hasChildRecords) {
+                item.progressWidth = proxy._getProgressWidth(item.width, item.status);
+                $(proxy._tasknameContainer).css({ "left": (item.left) + "px", "width": (item.width) + "px" });
+            }
+            else
+                $(proxy._manualRightResizer).css({ "left": (item.width - (parseInt(proxy._manualRightResizer.style.borderRightWidth.replace("px", "")))) + "px" });
 
             $(proxy._taskbarItem).css({ "left": (item.left) + "px", "width": (item.width) + "px" });
             $(proxy._progressbarItem).css({ "width": (item.progressWidth) + "px"});
             $(proxy._rightResizer).css({ "left": (item.left + item.width - proxy._resizerRightAdjust) + "px" });
             $(proxy._progressResizer).css({ "left": (item.left + item.progressWidth - 10) + "px" });
-            $(proxy._tasknameContainer).css({ "left": (item.left) + "px", "width": (item.width) + "px" });
+            
 
             $(proxy._leftConnectorPoint).css({ "left": (item.left - proxy._connectorPointWidth) + "px" });
             $(proxy._rightConnectorPoint).css({ "left": (item.left + item.width) + "px" });
@@ -15402,7 +17890,7 @@
                             proxy._progressBarTooltipID = ej.buildTag("div.e-progressbartooltip#progressbartooltip" + proxy._id + "", "",
                               {
                                   'position': 'absolute',
-                                  'z-index': '7'
+                                  'z-index': proxy._getmaxZindex() + 1
                               }, {});
                             //proxy.tooltipState = "editingTemplateID";
                             var tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "progressbarTooltipTemplate"](item), {}, {});
@@ -15412,7 +17900,7 @@
                             proxy._progressBarTooltipID = ej.buildTag("div.e-progressbartooltip#progressbartooltip" + proxy._id + "", "",
                                     {
                                         'position': 'absolute',
-                                        'z-index': '7'
+                                        'z-index': proxy._getmaxZindex() + 1
                                     }, {});
 
                             //proxy.tooltipState = "editingTemplate";
@@ -15424,7 +17912,7 @@
                                 tooltiptable,
                                 {
                                     'position': 'absolute',
-                                    'z-index': '7'
+                                    'z-index': proxy._getmaxZindex() + 1
                                 }, { 'onselectstart': 'return false' });
                         }
                         if (proxy._progressBarTooltipID) {
@@ -15441,7 +17929,7 @@
                                           "top": (proxy._currMousePosY + 10) + "px",
                                           "left": (proxy._currMousePosX + 10) + "px",
                                           'position': 'absolute',
-                                          'z-index': '7'
+                                          'z-index': proxy._getmaxZindex() + 1
                                       }, { 'onselectstart': 'return false' });
                             tooltiptable = ej.buildTag("table.e-tooltiptable", "", {}, { 'cellspacing': '2px', 'cellpadding': '2px' });
                             tooltipbody = ej.buildTag("tbody", "", {}, {});
@@ -15461,23 +17949,25 @@
                         proxy._$ganttChartContainer[0].style.cursor = "e-resize";
 
                         tooltipElement = {
-                            ttipstartDate: this._getFormatedDate(item.startDate, model.dateFormat),
+                            ttipstartDate: this._getFormatedDate(item.startDate, model.dateFormat, model.locale),
                             ttipduration: item.duration,
+                            ttipdurationunit: item.durationUnit
                         };
                     } else if (proxy._rightResizing == true) {
 
                         proxy._$ganttChartContainer[0].style.cursor = "w-resize";
 
                         tooltipElement = {
-                            ttipendDate: this._getFormatedDate(item.endDate, model.dateFormat),
+                            ttipendDate: this._getFormatedDate(item.endDate, model.dateFormat, model.locale),
                             ttipduration: item.duration,
+                            ttipdurationunit: item.durationUnit
                         };
                     } else if (proxy._allowDragging == true) {
                         proxy._$ganttChartContainer[0].style.cursor = "move";
 
                         tooltipElement = {
-                            ttipstartDate: this._getFormatedDate(item.startDate, model.dateFormat),
-                            ttipendDate: this._getFormatedDate(item.endDate, model.dateFormat),
+                            ttipstartDate: this._getFormatedDate(item.startDate, model.dateFormat, model.locale),
+                            ttipendDate: this._getFormatedDate(item.endDate, model.dateFormat, model.locale),
                         };
                     }
 
@@ -15488,7 +17978,7 @@
                         proxy._taskbarEditingTooltipID = ej.buildTag("div.e-editingtooltip#editingtooltip" + proxy._id + "", "",
                            {
                                'position': 'absolute',
-                               'z-index': '7'
+                               'z-index': proxy._getmaxZindex() + 1
                            }, {});
                         proxy.tooltipState = "editingTemplateID";
                         var tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "editingTooltipTemplate"](item), {}, {});
@@ -15498,7 +17988,7 @@
                         proxy._taskbarEditingTooltipID = ej.buildTag("div.e-editingtooltip#editingtooltip" + proxy._id + "", "",
                                 {
                                     'position': 'absolute',
-                                    'z-index': '7'
+                                    'z-index': proxy._getmaxZindex() + 1
                                 }, {});
 
                         proxy.tooltipState = "editingTemplate";
@@ -15516,7 +18006,7 @@
                         proxy._taskbarEditingTooltipID = ej.buildTag("div.e-editingtooltip#editingtooltip" + proxy._id + "", tooltiptable,
                             {
                                 'position': 'absolute',
-                                'z-index': '7'
+                                'z-index': proxy._getmaxZindex() + 1
                             }, {});
                     }
                     if (proxy._taskbarEditingTooltipID) {
@@ -15594,7 +18084,8 @@
                     startdate: item.startDate,
                     enddate: item.endDate,
                     progress: item.status,
-                    duration: item.duration
+                    duration: item.duration,
+                    durationunit: item.durationUnit
                 };
                 args.rowData = { rowData: item };
 
@@ -15644,9 +18135,15 @@
                             }
 
                         }
+                        else if (($(div).hasClass("e-parentContainer")) && !item.isAutoSchedule) {
+                            proxy._editingContainer = div;
+                            proxy._taskbarItem = proxy._editingContainer.querySelector(".e-gantt-manualparenttaskbar");
+                            proxy._rightResizer = proxy._editingContainer.querySelector(".taskbarresizer-right");
+                            proxy._manualRightResizer = proxy._editingContainer.querySelector(".e-gantt-manualparenttaskbar-right");
+                        }
 
                         if ($(row).hasClass("e-editmode") &&
-                            (($(div).hasClass("e-parentContainer")) || $(div).hasClass("e-gantt-milestone-container") || $(div).hasClass("e-childContainer"))) {
+                            (($($target[0]).closest("e-gantt-manualparenttaskbar")) || $(div).hasClass("e-gantt-milestone-container") || $(div).hasClass("e-childContainer"))) {
 
                             if (proxy._leftResizing == true) {
                                 proxy._enableLeftResizing(e, item);
@@ -15675,12 +18172,36 @@
 
                             //for predecessor , draw false line move the tooltip
                             else if (proxy._editPredecessor == true) {
+                                //if ($(e.target).hasClass('e-connectortouchpoint')) {
+                                //    e.target = $target.parent();
+                                //}
                                 proxy._drawFalseLine(e, item);
                             }
                         }
                     }
                     proxy._clearTooltip();
                     proxy._appendTooltip($target, recordIndexr);
+                }
+            }
+            if (ej.isNullOrUndefined(e.pageX) && e.type == "touchmove" && proxy._predecessorTooltip) {
+                if (ej.isNullOrUndefined(e.pageX)) {
+                    x2 = e.originalEvent.changedTouches[0].pageX;
+                    y2 = e.originalEvent.changedTouches[0].pageY;
+                    e.target = document.elementFromPoint(x2, y2);
+                }
+                else {
+                    x2 = e.pageX;
+                    y2 = e.pageY;
+                    
+                }
+                if ($(e.target).hasClass('e-connectorpoint-left') || $(e.target).hasClass('e-connectortouchpoint')) {
+                    proxy._dragLeftOver(e);
+                } else if ($(e.target).hasClass('e-connectorpoint-right')) {
+                    proxy._dragRightOver(e);
+                } else {
+                    proxy._mouseLeave();
+                    $(proxy._leftConnectorPoint).addClass("e-connectorpoint-hover");
+                    $(proxy._rightConnectorPoint).addClass("e-connectorpoint-hover");
                 }
             }
         },
@@ -15748,67 +18269,53 @@
                 scheduleHeaderType = model.scheduleHeaderSettings.scheduleHeaderType,
                 scheduleHeaderValue = ej.Gantt.ScheduleHeaderType,
                 durationUnitValue = ej.Gantt.DurationUnit,
-                projectStartDate = ganttRecord._getFormatedDate(model.projectStartDate, model.dateFormat),
-                projectStartDate = ganttRecord._getDateFromFormat(projectStartDate, model.dateFormat),
+                projectStartDate = ganttRecord._getFormatedDate(model.projectStartDate, model.dateFormat, model.locale),
+                projectStartDate = ganttRecord._getDateFromFormat(projectStartDate, model.dateFormat, model.locale),
                 projectStartDateHours = ganttRecord.startDate.getHours(),
                 projectStartDateMinutes = ganttRecord.startDate.getMinutes(),
 
-                remainDays, day, offset, rem, startDate, endDate;
+               remainDays, day, remainDaysInDecimal, perDayHourUnit, offset, rem, startDate, endDate;
 
             switch (reason) {
 
                 case 'dragging':
-                    remainDays = ganttRecord.left % model.perDayWidth,
-                    day = (ganttRecord.left - remainDays) / model.perDayWidth,
-                    offset = 0;
-                    if (remainDays > 0 && (model.workingTimeScale != ej.Gantt.workingTimeScale.TimeScale24Hours)) {
-                        if (scheduleHeaderType == scheduleHeaderValue.Day)
-                            offset = remainDays > ((model.perDayWidth / 2) + (3 * model.perHourWidth)) ? 1 : 0;
-                        else
-                            offset = remainDays >= model.perDayWidth / 2 ? 1 : 0;                        
-                    }
-                    var remainingHours = Math.round(remainDays / (model.perDayWidth / 24)),//hour calculation
-                           remainingMinutes = Math.round(remainDays / model.perMinuteWidth);
-                    if (scheduleHeaderType == scheduleHeaderValue.Day ||
-                        (scheduleHeaderType == scheduleHeaderValue.Week)) {
-                        projectStartDate.setDate(projectStartDate.getDate() + day + offset);
-                        if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                            if (model.durationUnit == durationUnitValue.Minute && model.dateFormat.indexOf("hh:")!=-1)
-                                projectStartDate.setMinutes(remainingMinutes);
-                            else if (model.durationUnit == durationUnitValue.Hour && model.dateFormat.indexOf("hh:") != -1)
-                                projectStartDate.setHours(remainingHours);
+                    remainDays = ganttRecord.left % model.perDayWidth;
+                    day = (ganttRecord.left - remainDays) / model.perDayWidth;
+                    remainDaysInDecimal = remainDays / model.perDayWidth;
+                    /*Rounding the decimal value for week-month-year schedule mode*/
+                    if (scheduleHeaderType == scheduleHeaderValue.Week || scheduleHeaderType == scheduleHeaderValue.Month || scheduleHeaderType == scheduleHeaderValue.Year) {
+                        if (remainDaysInDecimal <= 0.25) {
+                            remainDaysInDecimal = 0;
                         }
-                        else {
-                            projectStartDate.setHours(remainingHours);
-                            //Update tooltip duration value only in the range between 8.00 AM to 4.00 PM. 
-                            if (projectStartDate.getHours() > 8 && projectStartDate.getHours() < 16)
-                                projectStartDate.setHours(remainingHours);
-                            else
-                                projectStartDate.setHours(8);
+                        else if (remainDaysInDecimal > 0.25 && remainDaysInDecimal <= 0.75) {
+                            remainDaysInDecimal = 0.5;
                         }
-                            
+                        else if (remainDaysInDecimal > 0.75) {
+                            day += 1;
+                            remainDaysInDecimal = 0;
+                        }
                     }
-                    else if (scheduleHeaderType == scheduleHeaderValue.Hour) {
-                        var remainingMinutes = (remainDays / (model.perDayWidth / (24 * 60)));                       
-                            projectStartDate.setMinutes(remainingMinutes);
-                            projectStartDate.setDate(projectStartDate.getDate() + day + offset);                               
+                    if (scheduleHeaderType == scheduleHeaderValue.Day || scheduleHeaderType == scheduleHeaderValue.Hour)
+                        perDayHourUnit = 24;
+                    else
+                        perDayHourUnit = model.secondsPerDay / 3600;
+                    /*Calculating the day decimal values in to hours and then minutes*/
+                    if (perDayHourUnit && remainDaysInDecimal != 1) {
+                        var perHourDecimalWidth = 1 / perDayHourUnit,
+                            decimalWidthInHours = remainDaysInDecimal / perHourDecimalWidth,
+                            inMinutes = Math.round(decimalWidthInHours * 60);
                     }
-                    else if (model.dateFormat.indexOf("hh:") !== -1 &&
-                       model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        var remainingHours = Math.round(remainDays / (model.perDayWidth / 9));
-                        projectStartDate.setHours(8 + remainingHours);
-                        projectStartDate.setDate(projectStartDate.getDate() + day + offset);
-                    }
-                    else {
-                        projectStartDate.setDate(projectStartDate.getDate() + day + offset);
-                        if (model.durationUnit == durationUnitValue.Hour)
-                            projectStartDate.setHours(remainingHours);
-                        else if (model.durationUnit == durationUnitValue.Minute)
-                            projectStartDate.setMinutes(remainingMinutes);                                                  
-                    }                                        
+                    projectStartDate = ganttRecord._startDateUpdate(projectStartDate, day, inMinutes, model.workingTimeRanges, scheduleHeaderType);                                                           
                     ganttRecord.startDate = new Date(projectStartDate);
-                    ganttRecord._calculateEndDate(model.includeWeekend, model.holidays, model, model.perDayWidth, reason);
-                   
+
+                    var editArgs = {};
+                    editArgs.startDate = ganttRecord.startDate;
+                    editArgs.duration = ganttRecord.duration;
+                    editArgs.durationUnit = ganttRecord.durationUnit;
+                    editArgs.record = ganttRecord;
+
+                    proxy._calculateEndDate(editArgs);
+                    ganttRecord.endDate = proxy._currentEditedRecord.endDate;
                     //update on dataSource
                     if (model.startDateMapping)
                         ganttRecord.item[model.startDateMapping] = ganttRecord.startDate;
@@ -15819,212 +18326,112 @@
 
                 case 'leftResizing':
                     var editMode = "Resizing";
-                    remainDays = ganttRecord.left % model.perDayWidth,
-                    day = (ganttRecord.left - remainDays) / model.perDayWidth,
-                    offset = 0;
-                    if (remainDays > 0 && (model.workingTimeScale != ej.Gantt.workingTimeScale.TimeScale24Hours)) {// 
-                        if (scheduleHeaderType == scheduleHeaderValue.Day)
-                            offset = remainDays > ((model.perDayWidth / 2) + (3 * model.perHourWidth)) ? 1 : 0;
-                        else
-                            offset = remainDays >= model.perDayWidth / 2 ? 1 : 0;
-                    }
-
-                    var remainingHours = Math.round(remainDays / (model.perDayWidth / 24)),//hour calculation
-                        remainingMinutes = Math.round(remainDays / model.perMinuteWidth);
-
-                    projectStartDate.setDate(projectStartDate.getDate() + day + offset);
-
-                    if (scheduleHeaderType == scheduleHeaderValue.Day ||
-                        (scheduleHeaderType == scheduleHeaderValue.Week && model.dateFormat.toLowerCase().indexOf("hh") != -1)) {
-                        if (model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                            if (model.durationUnit == durationUnitValue.Minute)
-                                projectStartDate.setMinutes(remainingMinutes);
-                            else if (model.durationUnit == durationUnitValue.Hour)
-                                projectStartDate.setHours(remainingHours);
+                    remainDays = ganttRecord.left % model.perDayWidth,                        
+                    day = (ganttRecord.left - remainDays) / model.perDayWidth;
+                    remainDaysInDecimal = remainDays / model.perDayWidth;
+                    /*Rounding the decimal value for week-month-year schedule mode*/
+                    if (scheduleHeaderType == scheduleHeaderValue.Week || scheduleHeaderType == scheduleHeaderValue.Month || scheduleHeaderType == scheduleHeaderValue.Year) {
+                        if (remainDaysInDecimal <= 0.25) {
+                            remainDaysInDecimal = 0;
                         }
-                        else {
-                            if (remainingHours >= 8 && remainingHours <= 15)
-                                projectStartDate.setHours(remainingHours);
-                            else {
-                                projectStartDate.setDate(projectStartDate.getDate() - 1);
-                                projectStartDate.setHours(15);
-                            }
-                        }                            
-                    }
-                    else if (scheduleHeaderType == scheduleHeaderValue.Hour) {
-                        var remainingMinutes = remainDays / (model.perDayWidth / (24 * 60));
-                        projectStartDate.setMinutes(remainingMinutes);                        
-                    }
-                    else if (model.dateFormat.indexOf("hh:") !== -1 &&
-                        model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        var remainingHours = Math.round(remainDays / (model.perDayWidth / 9));
-                        projectStartDate.setHours(8 + remainingHours);
-                    }
-                    else {                       
-                        if (model.durationUnit == durationUnitValue.Hour)
-                            projectStartDate.setHours(remainingHours);
-                        else if (model.durationUnit == durationUnitValue.Minute)
-                            projectStartDate.setMinutes(remainingMinutes);
-                    }
 
-                    //if (projectStartDate < new Date(ganttRecord.endDate)) {
+                        else if (remainDaysInDecimal > 0.25 && remainDaysInDecimal <= 0.75) {
+                            remainDaysInDecimal = 0.5;
+                        }
+                        else if (remainDaysInDecimal > 0.75) {
+                            day += 1;
+                            remainDaysInDecimal = 0;
+                        }
+                    }
+                    if (scheduleHeaderType == scheduleHeaderValue.Day || scheduleHeaderType == scheduleHeaderValue.Hour)
+                        perDayHourUnit = 24;
+                    else
+                        perDayHourUnit = model.secondsPerDay / 3600;
+                    /*Calculating the day decimal values in to hours and then minutes*/
+                    if (perDayHourUnit && remainDaysInDecimal > 0) {
+                        var perHourDecimalWidth = 1 / perDayHourUnit,
+                            decimalWidthInHours = remainDaysInDecimal / perHourDecimalWidth,
+                            inMinutes = Math.round(decimalWidthInHours * 60);
+                    }
+                    projectStartDate = ganttRecord._startDateUpdate(projectStartDate, day, inMinutes, model.workingTimeRanges, scheduleHeaderType);
                     ganttRecord.startDate = new Date(projectStartDate);
-                    ganttRecord._calculateDuration(projectStartDate, new Date(ganttRecord.endDate),
-                        model.includeWeekend, model.holidays, false, model);
-                    //}
                     if (ganttRecord.startDate.getTime() == ganttRecord.endDate.getTime()
                         && ej.isNullOrUndefined(ganttRecord.isMilestone) && ganttRecord.isMilestone == false && ganttRecord.duration == 0) {
                         ganttRecord.duration = 1;
                     }
+                    var editArgs = {};
+                    editArgs.startDate = ganttRecord.startDate;
+                    editArgs.endDate = ganttRecord.endDate;
+                    editArgs.durationUnit = ganttRecord.durationUnit;
+                    editArgs.record = ganttRecord;
 
+                    proxy._calculateDuration(editArgs);
+                    ganttRecord.duration = proxy._currentEditedRecord.duration;
                     //update on dataSource
                     if (model.startDateMapping)
                         ganttRecord.item[model.startDateMapping] = ganttRecord.startDate;
-                    if(model.durationMapping)
+                    if (model.durationMapping)
                         ganttRecord.item[model.durationMapping] = ganttRecord.duration;
-
                     break;
 
                 case 'rightResizing':
                     var editMode = "Resizing";
-                    day = ganttRecord.width / model.perDayWidth,
-                    rem = ganttRecord.width % model.perDayWidth,
-                    startDate = new Date(ganttRecord.startDate);                    
-                    offset = 0;
-
-                    if (rem > 0 && (model.workingTimeScale != "TimeScale24Hours")) {
-                        if (scheduleHeaderType == scheduleHeaderValue.Day)
-                            offset = rem > ((model.perDayWidth / 2) + (3 * model.perHourWidth)) ? 1 : 0;
+                    if (scheduleHeaderType == scheduleHeaderValue.Day || scheduleHeaderType == scheduleHeaderValue.Hour) {
+                        var tempStartDate = new Date(ganttRecord.startDate),
+                            tempNewStartDate = new Date(ganttRecord.startDate), timeDiff, taskTempWidth;
+                        tempNewStartDate.setHours(0, 0, 0, 0);
+                        timeDiff = tempStartDate.getTime() - tempNewStartDate.getTime();
+                        if (timeDiff > 0)
+                            taskTempWidth = ganttRecord.width + ((timeDiff / (1000 * 60 * 60 * 24)) * model.perDayWidth);
                         else
-                            offset = rem >= (model.perDayWidth / 2) ? 1 : 0;                        
+                            taskTempWidth = ganttRecord.width;
+                        remainDays = taskTempWidth % model.perDayWidth;
+                        day = (taskTempWidth - remainDays) / model.perDayWidth;
+                        perDayHourUnit = 24;
                     }
-
-                    var totalLength = ganttRecord.left + ganttRecord.width;
-                    var remainingLength = totalLength % model.perDayWidth;
-
-                    var remainingHours = Math.round(remainingLength / (model.perDayWidth / 24)),//hour calculation
-                        remainingMinutes = Math.round(remainingLength / (model.perDayWidth / (24*60)));
-
-
-                    if ((scheduleHeaderType == scheduleHeaderValue.Day
-                        && model.dateFormat.toLowerCase().indexOf("hh") == -1)) {
-
-                        var startDateHour = (ganttRecord.left % model.perDayWidth) / model.perHourWidth;
-                        var endDateHour = ((ganttRecord.left + ganttRecord.width) % model.perDayWidth) / model.perHourWidth;
-                        var remainingHourDiff = Math.round(remainingLength % (model.perHourWidth));
-
-                        endDate = day < 1 ? ganttRecord._dateUpdate(startDate, 0, (endDateHour)) :
-                            ganttRecord._dateUpdate(startDate, Math.ceil(day - 1 + offset), endDateHour);
-
-                        startDate.setHours(startDateHour);
-                    }
-
-                    else if (scheduleHeaderType == scheduleHeaderValue.Week)
-                    {
-                        var startDateHour = ganttRecord.left / (model.perDayWidth / 24);
-                        var remainingHourDiff = totalLength / (model.perDayWidth / 24);
-                        remainingHourDiff -= startDateHour;
-                        var dayCount = day + offset;
-                        dayCount = Math.floor(dayCount);
-                        if (model.dateFormat.toLowerCase().indexOf("hh") != -1) {                           
-                            if (model.durationUnit == durationUnitValue.Hour)
-                                endDate = ganttRecord._dateUpdate(startDate, 0, remainingHourDiff, remainingMinutes % (remainingHourDiff * 60));
-                            else if (model.durationUnit == durationUnitValue.Minute)
-                                endDate = ganttRecord._dateUpdate(startDate, dayCount, 0, remainingMinutes);
-                            else if (model.durationUnit == durationUnitValue.Day && model.roundOffDayworkingTime) {
-                                startDate.setHours(0);
-                                startDate.setMinutes(0);
-                                endDate = ganttRecord._dateUpdate(startDate, dayCount, 0, 0);
-                            }
-                            else
-                                endDate = ganttRecord._dateUpdate(startDate, dayCount, 0);
-                        }
-                        else
-                            endDate = ganttRecord._dateUpdate(startDate, day - 1 + offset, 0);
-                    }
-                    else if ((scheduleHeaderType == scheduleHeaderValue.Hour && model.dateFormat.toLowerCase().indexOf("hh") != -1)) {                                        
-                        var startDateHour = Math.round((ganttRecord.left % model.perDayWidth) / (model.perDayWidth / (24 * 60)));
-                        var remainingMinDiff = Math.round(totalLength / (model.perDayWidth / (24 * 60)));
-                        remainingMinDiff -= startDateHour;
-                        remainingMinDiff = remainingMinDiff % (24 * 60);                        
-                        endDate = ganttRecord._dateUpdate(startDate, day, 0, remainingMinDiff);
-                    }
-
-
-                    else if ((scheduleHeaderType == scheduleHeaderValue.Day
-                        && model.dateFormat.toLowerCase().indexOf("hh") != -1)) {
-                        if (model.durationUnit == durationUnitValue.Hour) {
-                            var startDateHour = ganttRecord.left / model.perHourWidth;
-                            var remainingHourDiff = Math.round(totalLength / (model.perHourWidth));
-                            remainingHourDiff -= startDateHour;
-
-                            endDate = ganttRecord._dateUpdate(startDate, 0, (remainingHourDiff));
-                        }
-                        else {
-                            var startDateHour = ganttRecord.left / model.perMinuteWidth;
-                            var remainingMinuteDiff = Math.round(totalLength / (model.perMinuteWidth));
-                            remainingMinuteDiff -= startDateHour;
-
-                            endDate = ganttRecord._dateUpdate(startDate, 0, 0, remainingMinuteDiff);
-                        }
-                    }
-
                     else {
-                        if (model.durationUnit == durationUnitValue.Hour && model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                            endDate = ganttRecord._dateUpdate(startDate, day - 1 + offset, remainingHours);
-                        else if (model.durationUnit == durationUnitValue.Minute && model.dateFormat.toLowerCase().indexOf("hh") != -1)
-                            endDate = ganttRecord._dateUpdate(startDate, day + offset, 0, remainingMinutes);                       
-                        else
-                            endDate = ganttRecord._dateUpdate(startDate, day + offset, 0);
+                        remainDays = ganttRecord.width % model.perDayWidth;
+                        day = (ganttRecord.width - remainDays) / model.perDayWidth;
+                        perDayHourUnit = model.secondsPerDay / 3600;
                     }
-                    
-                    if (scheduleHeaderType == scheduleHeaderValue.Day ||
-                        (scheduleHeaderType == scheduleHeaderValue.Week && model.dateFormat.toLowerCase().indexOf("hh") != -1)) {
-                        if (model.workingTimeScale != ej.Gantt.workingTimeScale.TimeScale24Hours) {
-                            if (model.durationUnit == durationUnitValue.Hour) {
-                                endDate.setHours(Math.round(remainingHours));
-                                if (endDate.getHours() > 16)
-                                    endDate.setHours(Math.round(24 + 9));
-                                else if (endDate.getHours() < 8)
-                                    endDate.setHours(Math.round(9));                                                                    
-                            }
-                            else
-                                endDate.setHours(17);
-                        }
-                    }
-                    else if (model.dateFormat.indexOf("hh:") != -1 &&
-                       model.workingTimeScale == ej.Gantt.workingTimeScale.TimeScale8Hours) {
-                        var remainingHours = Math.round(remainingLength / (model.perDayWidth / 9));
-                        endDate.setHours(Math.round(8 + remainingHours));
-                    }
-                    ganttRecord.endDate = new Date(endDate);
 
-                    if (model.holidays && model.holidays.length) {
-                        var holidayIndex = 0,
-                            holidayslength = model.holidays.length,
-                            holiday;
-                        for (holidayIndex = 0; holidayIndex < holidayslength; holidayIndex++) {
-                            holiday = this._getDateFromFormat(model.holidays[holidayIndex]);
-                            if (endDate === holiday) {
-                                endDate.setDate(endDate.getDate() - 1);
-                            }
+                    remainDaysInDecimal = remainDays / model.perDayWidth,
+                    startDate = new Date(ganttRecord.startDate);
+                    /*Rounding the decimal value for week-month-year schedule mode*/
+                    if (scheduleHeaderType == scheduleHeaderValue.Week || scheduleHeaderType == scheduleHeaderValue.Month || scheduleHeaderType == scheduleHeaderValue.Year) {
+                        if (remainDaysInDecimal <= 0.25) {
+                            remainDaysInDecimal = 0;
+                        }
+                        else if (remainDaysInDecimal > 0.25 && remainDaysInDecimal <= 0.75) {
+                            remainDaysInDecimal = 0.5;
+                        } else if (remainDaysInDecimal > 0.75) {
+                            day += 1;
+                            remainDaysInDecimal = 0;
                         }
                     }
-                    if (this.model.includeWeekend == false) {
-                        if (endDate.getDay() == 0)
-                            endDate.setDate(endDate.getDate() + 2);
-                        else if (endDate.getDay() == 6)
-                            endDate.setDate(endDate.getDate() + 1);
+
+                    /*Calculating the remaining day decimal values in to hours and then minutes*/
+                    if (perDayHourUnit && remainDaysInDecimal > 0) {
+                        var perHourDecimalWidth = 1 / perDayHourUnit,
+                            decimalWidthInHours = remainDaysInDecimal / perHourDecimalWidth,
+                            inMinutes = Math.round(decimalWidthInHours * 60);
                     }
-                    ganttRecord._calculateDuration(startDate, endDate, model.includeWeekend, model.holidays, false, model);
+                    endDate = ganttRecord._endDateUpdate(startDate, day - 1, inMinutes, model.workingTimeRanges, scheduleHeaderType);
+                    ganttRecord.endDate = new Date(endDate);
+                    var editArgs = {};
+                        editArgs.startDate = startDate;
+                        editArgs.endDate = endDate;
+                        editArgs.durationUnit = ganttRecord.durationUnit;
+                        editArgs.record = ganttRecord;
+ 
+                        proxy._calculateDuration(editArgs);
+                        ganttRecord.duration = proxy._currentEditedRecord.duration;
 
                     //update on datasource
-                    if(model.endDateMapping)
+                    if (model.endDateMapping)
                         ganttRecord.item[model.endDateMapping] = ganttRecord.endDate;
                     if (model.durationMapping)
                         ganttRecord.item[model.durationMapping] = ganttRecord.duration;
-
-
                     break;
 
                 case 'progressResizing':
@@ -16035,6 +18442,14 @@
             }
         },
 
+        _calculateEndDate: function (args) {
+            var proxy = this;
+            return proxy._trigger("calculateEndDate", args);
+        },
+        _calculateDuration: function (args) {
+            var proxy = this;
+            return proxy._trigger("calculateDuration", args);
+        },
 
         //false line implementation 
         _drawFalseLine: function (e, item) {
@@ -16049,8 +18464,8 @@
             if (ej.isNullOrUndefined(e.pageX)) {
                 x2 = e.originalEvent.changedTouches[0].pageX - proxy._$bodyContent.offset().left,
                 y2 = e.originalEvent.changedTouches[0].pageY - proxy._$bodyContent.offset().top;
-                pageX = e.originalEvent.changedTouches[0].pageX;
-                pageY = e.originalEvent.changedTouches[0].pageY;
+                pageX = Math.round(e.originalEvent.changedTouches[0].pageX);
+                pageY = Math.round(e.originalEvent.changedTouches[0].pageY);
             }
             else{
                 x2 = e.pageX - proxy._$bodyContent.offset().left,
@@ -16058,6 +18473,7 @@
 
             }
               
+            if ($(document.elementFromPoint(pageX, pageY)).closest("#ganttViewTablebody" + proxy._id).length != 0) {
 
             //var sy=proxy._$bodyContainer.ejScroller("option", "scrollTop");
             //var sx = proxy._$bodyContainer.ejScroller("option", "scrollLeft");
@@ -16088,7 +18504,8 @@
                 }
 
                 //Change the position of predecesspr tooltip
-                proxy._updateTooltipPosition(proxy._predecessorTooltip, e.pageX, e.pageY);
+                proxy._updateTooltipPosition(proxy._predecessorTooltip, pageX, pageY);
+            }
         },
 
         _mouseLeave: function () {
@@ -16110,8 +18527,10 @@
 
                 if (proxy.model.predecessorMapping && proxy.model.enablePredecessorEditing) {
 
-                    $(proxy._leftConnectorPoint).removeClass('e-connectorpoint-hover');
-                    $(proxy._rightConnectorPoint).removeClass('e-connectorpoint-hover');
+                    $(proxy._leftConnectorPoint).removeClass('e-connectorpoint-hover').removeClass('e-gantt-manualparenttaskbar-connectorpoint-hover');
+                    $(proxy._rightConnectorPoint).removeClass('e-connectorpoint-hover').removeClass('e-gantt-manualparenttaskbar-connectorpoint-hover');
+
+                    
                     proxy._leftConnectorPoint = null;
                     proxy._rightConnectorPoint = null;
                 }
@@ -16122,6 +18541,17 @@
                     proxy._removeEditingElements();
                 }
             }
+        },
+
+        _getmaxZindex: function () {
+            var maxZ = 1;
+            maxZ = Math.max.apply(null, $.map($('body *'), function (e, n) {
+                if ($(e).css('position') == 'absolute')
+                    return parseInt($(e).css('z-index')) || 1;
+            }));
+            if (maxZ == undefined || maxZ == null)
+                maxZ = 1;
+            return maxZ;
         },
 
         _getOffsetRect: function (elem) {
@@ -16143,10 +18573,10 @@
                     containerBoundary = proxy._getOffsetRect(proxy._$bodyContainer[0]),
                     topEnd = containerBoundary.top + proxy._$bodyContainer.height(),
                     leftEnd = containerBoundary.left + proxy._$bodyContainer.width(),
-                    rowHeight = proxy.model.rowHeight;
+                    rowHeight = proxy.model.rowHeight, pos = 0;
                 //Left update
-                if (((posx + tooltip.width() + rowHeight) > leftEnd)) {
-                    var pos = posx - tooltip.width() - rowHeight;
+                if (((posx + tooltip.width() + 30) > leftEnd)) {
+                    pos = posx - tooltip.width() - 30;//while tooltip rendered outdide of Gantt chart
                     tooltip.css('left', ((pos) + 'px'));
                 }
                 else {
@@ -16156,8 +18586,12 @@
                         tooltip.css('left', (posx) + 'px');
                 }
                 //Top update
-                if (isEditingTooltip || ((posy + tooltip.height() + rowHeight) > topEnd)) {
-                    var pos = posy - tooltip.height() - rowHeight;
+                if (isEditingTooltip || ((posy + tooltip.height() + 30) > topEnd)) {
+                    if (!isEditingTooltip)
+                        pos = posy - tooltip.height() - 30;//while tooltip rendered outdide of Gantt chart
+                    else
+                        pos = posy - tooltip.height() - rowHeight;
+
                     tooltip.css('top', ((pos) + 'px'));
                 } else {
                     tooltip.css('top', (posy + 10) + 'px');
@@ -16203,7 +18637,7 @@
             if (proxy._rightResizing == false && proxy._leftResizing == false &&
                 proxy._progressResizing == false && proxy._mouseDown == false) {
 
-                if (proxy.model.allowGanttChartEditing && proxy.model.readOnly == false && ($target.is('.e-gantt-childtaskbar,.e-tasklabel') || $target.closest(".e-gantt-childtaskbar").length)) {
+                if (proxy.model.allowGanttChartEditing && proxy.model.readOnly == false && ($target.is('.e-gantt-childtaskbar,.e-tasklabel, .e-gantt-manualparenttaskbar') || $target.closest(".e-gantt-childtaskbar").length)) {
                     e.target.style.cursor = "move";
                 }
 
@@ -16254,12 +18688,16 @@
                     }
 
                     //Before Mouse Down  , Apply style for drag points in child cotainer and miles stone container
-                    if ($(div).hasClass("e-childContainer") && proxy.model.predecessorMapping && proxy.model.allowGanttChartEditing && proxy.model.enablePredecessorEditing && proxy.model.readOnly == false) {
+                    if (($(div).hasClass("e-childContainer") || $(div).hasClass("e-parentContainer")) && proxy.model.predecessorMapping && proxy.model.allowGanttChartEditing && proxy.model.enablePredecessorEditing && proxy.model.readOnly == false) {
 
                         proxy._leftConnectorPoint = div.querySelector(".e-connectorpoint-left");
                         proxy._rightConnectorPoint = div.querySelector(".e-connectorpoint-right");
                         $(proxy._leftConnectorPoint).addClass("e-connectorpoint-hover");
                         $(proxy._rightConnectorPoint).addClass("e-connectorpoint-hover");
+                        if ($(div).hasClass("e-parentContainer") && !item.isAutoSchedule) {                            
+                            $(proxy._leftConnectorPoint).addClass("e-gantt-manualparenttaskbar-connectorpoint-hover");
+                            $(proxy._rightConnectorPoint).addClass("e-gantt-manualparenttaskbar-connectorpoint-hover");
+                        }
                     }
                     else if (($(div).hasClass("e-gantt-milestone") || $(div).hasClass("e-gantt-milestone-container")) && proxy.model.predecessorMapping && proxy.model.allowGanttChartEditing && proxy.model.enablePredecessorEditing && proxy.model.readOnly == false) {
                         var milesStoneContainer = div.parentNode;
@@ -16270,14 +18708,42 @@
                     }
 
 
-                    if (item && proxy.model.enableTaskbarTooltip && !ej.isTouchDevice()) {
-                        tooltipElement = {
-                            ttipstartDate: this._getFormatedDate(item.startDate,this.model.dateFormat),
-                            ttipendDate: this._getFormatedDate(item.endDate, this.model.dateFormat),
-                            ttipduration: item.duration,
-                            ttipprogress: item.status.toString(),
-                            ttiptaskname: item.taskName,
-                        };
+                    if (item && proxy.model.enableTaskbarTooltip && !ej.isTouchDevice() && !$($target).hasClass("e-connectorpoint-hover")) {
+                        proxy._predecessorTooltip && proxy._predecessorTooltip.remove();
+                        proxy._predecessorTooltip = null;
+
+                        if (($($target).hasClass("e-gantt-parenttaskbar-innerdiv") || $($target[0].parentNode).hasClass("e-gantt-parenttaskbar-innerdiv")) && !item.isAutoSchedule) {
+                            tooltipElement = {
+                                ttipscheduleStartDate: this._getFormatedDate(item.manualStartDate, this.model.dateFormat, this.model.locale),
+                                ttipscheduleEndDate: this._getFormatedDate(item.manualEndDate, this.model.dateFormat, this.model.locale),
+                                ttipduration: item.manualDuration,
+                                ttipprogress: item.status.toString(),
+                                ttiptaskname: item.taskName,
+                                ttipdurationunit: item.durationUnit
+                            };
+                        }
+                        else if ($($target).hasClass("e-gantt-manualparenttaskbar") || $($target).hasClass("e-gantt-manualparenttaskbar-left") || $($target).hasClass("e-gantt-manualparenttaskbar-right") && !item.isAutoSchedule) {
+                            tooltipElement = {
+                                ttipstartDate: this._getFormatedDate(item.startDate, this.model.dateFormat, this.model.locale),
+                                ttipsubtaskStartDate: this._getFormatedDate(item.manualStartDate, this.model.dateFormat, this.model.locale),
+                                ttipendDate: this._getFormatedDate(item.endDate, this.model.dateFormat, this.model.locale),
+                                ttipsubtaskEndDate: this._getFormatedDate(item.manualEndDate, this.model.dateFormat, this.model.locale),
+                                ttipduration: item.duration,
+                                ttiptaskname: item.taskName,
+                                ttipdurationunit: item.durationUnit
+
+                            }
+                        }
+                        else {
+                            tooltipElement = {
+                                ttipstartDate: this._getFormatedDate(item.startDate, this.model.dateFormat, this.model.locale),
+                                ttipendDate: this._getFormatedDate(item.endDate, this.model.dateFormat, this.model.locale),
+                                ttipduration: item.duration,
+                                ttipprogress: item.status.toString(),
+                                ttiptaskname: item.taskName,
+                                ttipdurationunit: item.durationUnit
+                            };
+                        }
 
                         tooltiptable = ej.buildTag("table.e-tooltiptable", "", {}, { 'cellspacing': '5' });
                       
@@ -16287,7 +18753,7 @@
                             tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "tooltipTemplate"](tooltipElement), {}, {});
                             tooltiptable.append(tooltipbody);
                             proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "", tooltiptable,
-                                {'position': 'absolute', 'z-index': '7', 'border-radius': '5px' }, {});
+                                { 'position': 'absolute', 'z-index': proxy._getmaxZindex() + 1, 'border-radius': '5px' }, {});
 
                             proxy._mouseHoverTooltip.innerHTML = "<table>" + tooltiptable[0].innerHTML + "</table>";
 
@@ -16299,7 +18765,7 @@
                         }
                         else if (proxy.model.tooltipTemplate) {
                             proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "","",
-                                {'position': 'absolute', 'z-index': '7', 'border-radius': '5px' }, {});
+                                { 'position': 'absolute', 'z-index': proxy._getmaxZindex() + 1, 'border-radius': '5px' }, {});
                                                        
                             proxy.tooltipState = "Template";
                             var tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "tooltipTemplate"](item), {}, {});
@@ -16313,7 +18779,7 @@
                         }
                         else if (proxy.model.tooltipTemplateId) {
                             proxy._mouseHoverTooltip = ej.buildTag("div.e-tooltipgantt#tooltipgantt" + proxy._id + "", "",
-                                {'position': 'absolute', 'z-index': '7', 'border-radius': '5px' }, {});
+                                { 'position': 'absolute', 'z-index': proxy._getmaxZindex() + 1, 'border-radius': '5px' }, {});
 
                             proxy.tooltipState = "TemplateID";
                             var tooltipbody = ej.buildTag("tbody", $.render[proxy._id + "tooltipTemplate"](item), {}, {});
@@ -16340,13 +18806,14 @@
                 helpers = {
                     _getStartDate: proxy._tooltipStartDate,
                     _getEndDate: proxy._tooltipEndDate,
-                    _getDuration: proxy._tooltipDuration,
                     _getTaskName: proxy._tooltipTaskName,
-                    _getProgress: proxy._tooltipProgress
+                    _getProgress: proxy._tooltipProgress,
+                    _checkDuration: proxy._checkDuration
                 },
-                getDurationUnit = proxy._getDurationUnits(),
                 editingTemplateId = proxy.model.taskbarEditingTooltipTemplateId,
                 editingTemplate = proxy.model.taskbarEditingTooltipTemplate;
+
+            helpers["_" + proxy._id + "getDuration"] = $.proxy(proxy._tooltipDuration, proxy);
 
             $.views.helpers(helpers);
 
@@ -16373,10 +18840,10 @@
                     "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
                     "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipendDate}}</td>{{/if}}" +
                     "</tr><tr>" +
-                    "{{if ~_getDuration()}}" +
+                    "{{if ~_checkDuration()}}" +
                     "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["duration"] + "</td>" +
                     "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
-                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipduration}}" +" "+ durationUnitTexts[getDurationUnit] + "</td>{{/if}}" +
+                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:~_" + proxy._id + "getDuration(#data)}}</td>{{/if}}" +
                     "</tr><tr>" +
                     "{{if ~_getProgress()}}" +
                     "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["status"] + "</td>" +
@@ -16418,16 +18885,19 @@
                 durationUnitTexts = proxy.model.durationUnitTexts,
                 helpers = {
                     _getStartDate: proxy._tooltipStartDate,
+                    _getSubtaskStartDate: proxy._tooltipSubtaskStartDate,
+                    _getScheduleStartDate: proxy._tooltipScheduleStartDate,
                     _getEndDate: proxy._tooltipEndDate,
-                    _getDuration: proxy._tooltipDuration,
+                    _getSubtaskEndDate: proxy._tooltipSubtaskEndDate,
+                    _getScheduleEndDate: proxy._tooltipScheduleEndDate,
                     _getTaskName: proxy._tooltipTaskName,
                     _getProgress: proxy._tooltipProgress,
-                    _getDurationUnit: proxy._getDurationUnits,
+                    _checkDuration: proxy._checkDuration
                 },
-                getDurationUnit = proxy._getDurationUnits(),
+              
                 templateId = proxy.model.tooltipTemplateId,
                 template = proxy.model.tooltipTemplate;
-
+            helpers["_" + proxy._id + "getDuration"] = $.proxy(proxy._tooltipDuration, proxy);
             $.views.helpers(helpers);
 
             if (templateId ) {
@@ -16442,23 +18912,43 @@
 
                 td = "{{if ~_getTaskName()}}" +
                     "<td class='e-tooltiptaskname' style='width:40px;text-align:left;' colspan='3';>{{:ttiptaskname}}</td>{{/if}}" +
-                    "</tr><tr>" +
-                    "{{if ~_getStartDate()}}" +
+                    "</tr>" +
+                    "{{if ~_getStartDate()}}<tr>" +
                     "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["startDate"] + "</td>" +
                     "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
                     "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipstartDate}}</td> {{/if}}" +
-                    "</tr><tr>" +
-                    "{{if ~_getEndDate()}}" +
+                    "</tr>" +
+                    "{{if ~_getSubtaskStartDate()}}<tr>" +
+                    "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["subTasksStartDate"] + "</td>" +
+                    "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
+                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipsubtaskStartDate}}</td></tr>{{/if}}" +
+
+                    "{{if ~_getScheduleStartDate()}}<tr>" +
+                    "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["scheduleStartDate"] + "</td>" +
+                    "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
+                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipscheduleStartDate}}</td></tr>{{/if}}" +
+
+                    "{{if ~_getEndDate()}}<tr>" +
                     "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["endDate"] + "</td>" +
                     "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
                     "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipendDate}}</td>{{/if}}" +
-                    "</tr><tr>" +
-                    "{{if ~_getDuration()}}" +
+                    "</tr>" +
+                    "{{if ~_getSubtaskEndDate()}}<tr>" +
+                    "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["subTasksEndDate"] + "</td>" +
+                    "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
+                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipsubtaskEndDate}}</td></tr>{{/if}}" +
+
+                    "{{if ~_getScheduleEndDate()}}<tr>" +
+                    "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["scheduleEndDate"] + "</td>" +
+                    "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
+                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipscheduleEndDate}}</td></tr>{{/if}}" +
+
+                    "{{if ~_checkDuration()}}<tr>" +
                     "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["duration"] + "</td>" +
                     "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
-                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipduration}}"+ " " + durationUnitTexts[getDurationUnit]+"</td>{{/if}}" +
-                    "</tr><tr>" +
-                    "{{if ~_getProgress()}}" +
+                    "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:~_" + proxy._id + "getDuration(#data)}}</td>{{/if}}" +
+                    "</tr>" +
+                    "{{if ~_getProgress()}}<tr>" +
                     "<td class='e-tooltiptd-alignleft' style='width:30px;white-space:nowrap;'>" + columnHeaderTexts["status"] + "</td>" +
                     "<td class='e-tooltiptd-aligncenter' style='width:10px;font-weight:bold;'>:</td>" +
                     "<td class='e-tooltiptd-alignright' style='width:30px;white-space:nowrap;'>{{:ttipprogress}}%</td>{{/if}}";
@@ -16471,7 +18961,10 @@
             templates[proxy._id + "tooltipTemplate"] = parentTr;
             $.templates(templates);
         },
-
+        /*check duration is available in tooltip item*/
+        _checkDuration: function () {
+            return this.data.ttipduration;
+        },
         _tooltipTaskName: function () {
             return this.data.ttiptaskname;
         },
@@ -16484,12 +18977,39 @@
             return this.data.ttipstartDate;
         },
 
+        _tooltipSubtaskStartDate: function () {
+            return this.data.ttipsubtaskStartDate;
+        },
+        _tooltipScheduleStartDate: function () {
+            return this.data.ttipscheduleStartDate;
+        },
+
         _tooltipEndDate: function () {
             return this.data.ttipendDate;
         },
 
-        _tooltipDuration: function () {
-            return this.data.ttipduration;
+        _tooltipSubtaskEndDate: function () {
+            return this.data.ttipsubtaskEndDate;
+        },
+
+        _tooltipScheduleEndDate: function () {
+            return this.data.ttipscheduleEndDate;
+        },
+        /*get localized text of duration value*/
+        _tooltipDuration: function (data) {
+            var val = "";
+            if (data.ttipduration != null && data.ttipduration != undefined)
+                val += data.ttipduration + " ";
+            if (data.ttipdurationunit != null && data.ttipdurationunit != undefined) {
+                var multiple = data.ttipduration != 1;
+                if (data.ttipdurationunit == "day")
+                    val += multiple ? this.model.durationUnitTexts.days : this.model.durationUnitTexts.day;
+                else if (data.ttipdurationunit == "hour")
+                    val += multiple ? this.model.durationUnitTexts.hours : this.model.durationUnitTexts.hour;
+                else
+                    val += multiple ? this.model.durationUnitTexts.minutes : this.model.durationUnitTexts.minute;
+            }
+            return val;
         },
 
         _getDurationUnits: function (data) {
@@ -16511,29 +19031,63 @@
                 args = {},
                 selectedItem,
                 index,
+                rowIndex,
+                div = $target[0],
                 $ganttGridRows = proxy.getGanttChartRows();
 
-            index = $ganttGridRows.index($target.parent());
+            rowIndex = index = $ganttGridRows.index($target.parent());
 
             if (index == -1) {
-                index = $ganttGridRows.index($row);
+                rowIndex = index = $ganttGridRows.index($row);
             }
 
           
-            if (index != -1 && model.allowSelection) {
+            if (($(div).hasClass("e-parentTask") || $(div).closest(".e-parentTask").length > 0) && !$target.hasClass("e-connectorpoint-left") && !$target.hasClass("e-connectorpoint-right")) { // here check drag point class
+
+                var currentRecordIndex = $ganttGridRows.index($row),
+                    selectedItem = model.currentViewData[currentRecordIndex];
+                recordIndex = model.updatedRecords.indexOf(selectedItem);
+                if (proxy._allowExpandCollapse && selectedItem && selectedItem.hasChildRecords) {
+                    /*cancel edited cell in treegrid on mouse down event on parent task bar*/
+                    proxy._trigger("cancelEditCell");
+                    if (model.selectedRowIndex !== recordIndex && model.allowSelection && recordIndex !== -1) {
+
+                        if (!proxy._rowSelectingEventTrigger(model.selectedRowIndex, recordIndex)) {
+                            proxy.selectRows(recordIndex);
+                            proxy._rowSelectedEventTrigger(recordIndex);
+                        }
+                    }
+                    proxy._expandCollapse(currentRecordIndex);
+                }
+            }
+            else if (index != -1 && model.allowSelection) {
                 selectedItem = model.currentViewData[index];
                 index = model.updatedRecords.indexOf(selectedItem);
                 if (model.selectionMode == "row") {                    
                 if (proxy._rowSelectingEventTrigger(model.selectedRowIndex, index))
                     return;
                 proxy.selectRows(index);
-                proxy.element[0].focus();
+                proxy.focusGanttElement();
                 proxy._rowSelectedEventTrigger(index);
             }
                 if (model.selectionMode == "cell")
                     proxy.model.selectedItem = selectedItem;
             }
-
+            if (model.taskbarClick) {
+                if (!$target.is(".e-childContainer,.e-gantt-milestone-container,.e-parentContainer")) {
+                    var taskElement = $target.closest(".e-childContainer,.e-gantt-milestone-container,.e-parentContainer");
+                    if (taskElement.length) {
+                        var args = {}, data;
+                        data = model.currentViewData[rowIndex];
+                        rowIndex = model.updatedRecords.indexOf(data);
+                        args.data = data;
+                        args.index = rowIndex;
+                        args.taskbarElement = taskElement[0];
+                        args.target = $target[0];
+                        this._trigger("taskbarClick", args);
+                    }
+                }
+            }
         },
 
         getRowByIndex: function (from, to) {
@@ -16744,7 +19298,55 @@
             proxy._trigger("zooming", args);
         },
 
+        _updateManualTaskbarItem: function(args, taskElement){
 
+            var parentTaskbar = taskElement.querySelector(".e-gantt-parenttaskbar-innerdiv"),
+                        parentProgressbar = taskElement.querySelector(".e-gantt-parenttaskbar-progress"),
+                        parentOuterTaskbar = taskElement.querySelector(".e-gantt-manualparenttaskbar"),
+                        parentLeftOuterTaskbar = taskElement.querySelector(".e-gantt-manualparenttaskbar-left"),
+                        parentRightOuterTaskbar = taskElement.querySelector(".e-gantt-manualparenttaskbar-right"),
+                        parentRightResizer = taskElement.querySelector(".taskbarresizer-right"),
+                        parentTaskbarStyle = parentTaskbar.style,
+                        parentProgressbarStyle = parentProgressbar && parentProgressbar.style,
+                        parentOuterTaskbarStyle = parentOuterTaskbar && parentOuterTaskbar.style,
+                        parentLeftOuterTaskbarStyle = parentLeftOuterTaskbar && parentLeftOuterTaskbar.style,
+                        parentRightOuterTaskbarStyle = parentRightOuterTaskbar && parentRightOuterTaskbar.style,
+                        parentRightResizerStyle = parentRightResizer && parentRightResizer.style;
+
+            var taskbarHeight, tHeight;
+            if (args.model.renderBaseline) {
+                taskbarHeight = model.rowHeight - 9;
+            } else {
+                taskbarHeight = model.rowHeight - 10;
+            }
+            tHeight = taskbarHeight / 5;                                                          
+            
+            if (!ej.isNullOrUndefined(args.manualParentTaskbarBackground) && parentOuterTaskbarStyle.backgroundColor != args.manualParentTaskbarBackground) {
+                parentOuterTaskbarStyle.backgroundColor = args.manualParentTaskbarBackground;
+                parentLeftOuterTaskbarStyle.borderColor = args.manualParentTaskbarBackground;
+                parentRightOuterTaskbarStyle.borderColor = args.manualParentTaskbarBackground;
+            }
+            parentOuterTaskbarStyle.width = args.data.width + "px";
+            parentOuterTaskbarStyle.left = args.data.left + "px";
+            parentRightOuterTaskbarStyle.left = (args.data.width - parseInt(tHeight)) + "px";
+            parentRightResizerStyle.left = (args.data.width - parseInt(tHeight)) + "px";            
+                      
+            if (args.data.width == args.data.manualWidth && args.data.left == args.data.manualLeft) {
+                parentProgressbarStyle.width = args.data.progressWidth - (tHeight * 2) + "px";
+                parentTaskbarStyle.width = args.data.manualWidth - (tHeight * 2) + "px";
+                parentTaskbarStyle.left = args.data.manualLeft + tHeight + "px";
+            }
+            else if (args.data.left == args.data.manualLeft) {
+                parentTaskbarStyle.left = args.data.manualLeft + tHeight + "px";
+                parentProgressbarStyle.width = args.data.progressWidth - (tHeight) + "px";
+                parentTaskbarStyle.width = args.data.manualWidth - (tHeight) + "px";
+            }
+            else {
+                parentProgressbarStyle.width = args.data.progressWidth + "px";
+                parentTaskbarStyle.width = args.data.manualWidth + "px";
+                parentTaskbarStyle.left = args.data.manualLeft + "px";
+            }
+        },
         //Updates taskbar items styles when chart loads
         _updateTaskbarItems: function (args) {
 
@@ -16775,6 +19377,12 @@
                     }
                     if (parentTaskbarStyle.borderColor != args.parentTaskbarBorder) {
                         parentTaskbarStyle.borderColor = args.parentTaskbarBorder;
+                    }
+                    if (parentProgressbarStyle && parentProgressbarStyle.borderColor != args.parentProgressbarBorder) {
+                        parentProgressbarStyle.borderColor = args.parentProgressbarBorder;
+                    }
+                    if (!args.data.isAutoSchedule && args.data.hasChildRecords) {                                                                        
+                        this._updateManualTaskbarItem(args, taskElement);                        
                     }
                     if (parentProgressbarStyle && parentProgressbarStyle.borderColor != args.parentProgressbarBorder) {
                         parentProgressbarStyle.borderColor = args.parentProgressbarBorder;
@@ -16905,7 +19513,9 @@
             
             //var div = $("#ganttviewerbodyContianer" + this._id);
             //div.scrollTop(scrollTop);
-            
+            if (this.model.isCriticalPathEnable == true && this.model.enableVirtualization == true) {
+                this.criticalConnectorLine(this.model.criticalPathCollection, this.model.detailPredecessorCollection, true, this.collectionTaskId);
+            }
         },
 
 
@@ -17317,13 +19927,13 @@
             $gridLineContainerTable=$("#ganttgridLinesTable" + proxy._id);
 
             proxy._$bodyContent.width(width);//main body container
-            if (scheduleMode === "week")
-                proxy.refreshWeekEndContainer();//weekENd Container
+            proxy.refreshWeekEndContainer();//weekENd Container
             $gridLineContainerTable.width(width);
             $gridLineContainerTable.children("col").width(width);
             proxy._$ganttViewTable.width(width);
             proxy._$ganttViewTable.children("col").width(width);
             proxy._createTaskbarTemplate();
+            proxy._updateCurrentViewData();
             proxy._$secondaryCanvas.empty();
             proxy._$stripLineContainer.empty();
             if (proxy.model.stripLines != null) {
@@ -17385,7 +19995,7 @@
                 rowsLength = $ganttChartRows.length,
                 taskbarContainer,
                 args = {}, progressbar, taskbar,
-                parentProgressbar, parentTaskbar, taskElement, mileStone, taskbarText, baseline;;
+                parentProgressbar,manualParentTaskbar, parentTaskbar, taskElement, mileStone, taskbarText, baseline;
 
             if (rowsLength != 0) {
 
@@ -17404,6 +20014,7 @@
                         if ($(taskElement).hasClass("e-parentContainer")) {
                             parentTaskbar = taskElement.querySelector(".e-gantt-parenttaskbar-innerdiv");
                             parentProgressbar = taskElement.querySelector(".e-gantt-parenttaskbar-progress");
+                            manualParentTaskbar = taskElement.querySelector(".e-gantt-manualparenttaskbar");
                         } else if ($(taskElement).hasClass("e-childContainer")) {
 
                             taskbar = taskElement.querySelector(".e-gantt-childtaskbar");
@@ -17447,6 +20058,12 @@
                         args.milestoneBackground = mileStone != null ?
                             mileStone.style.backgroundColor : null;
 
+                        if (args.data.hasChildRecords && !args.data.isAutoSchedule) {
+
+                            args.manualParentTaskbarBackground = manualParentTaskbar != null ?
+                                manualParentTaskbar.style.backgroundColor : null;
+                        }
+
                         this._queryTaskbarinfo(args);
                     }
                 }
@@ -17470,11 +20087,9 @@
                 if (proxy._vscrollDist !== 0) {
                     margin = proxy._scrollTop;
                     margin -= proxy._rowMargin;
+                    $("#ganttViewTable" + proxy._id + "").css({ "top": margin + "px" });
+                    $("#ganttgridLinesTable" + proxy._id + "").css({ "top": margin + "px" });
                 }
-                $("#ganttViewTable" + proxy._id + "").css({ "top": margin + "px" });
-
-                $("#ganttgridLinesTable" + proxy._id + "").css({ "top": margin + "px" });
-
                 proxy._vTop = proxy._visibleRange.top;
                 proxy._vBottom = proxy._visibleRange.bottom;
                 proxy._rTop = proxy._renderedRange.top;
@@ -17530,17 +20145,11 @@
         //returns the date object
         _getDateType: function (date) {
 
-            if (date != null) {
-                if (typeof (date) == "object") {
-                    return date;
-                } else {
-                    var re = new RegExp("\\-", "g");
-                    var re1 = new RegExp("\\.", "g");
-                    date = date.replace(re, "/");
-                    date = date.replace(re1, "/");
-
-                    return new Date(date);
-                }
+            if (date instanceof Date) {
+                return date;
+            }
+            else if (date != null) {
+                return ej.parseDate(date, this.model.dateFormat, this.model.locale);
             }
             return null;
         },
@@ -17552,8 +20161,8 @@
                 return new Date(date);
             }
             if (date) {
-                return ej.parseDate(date, this.model.dateFormat) == null ?
-                    new Date(date) : ej.parseDate(date, this.model.dateFormat);
+                return ej.parseDate(date, this.model.dateFormat, this.model.locale) == null ?
+                    new Date(date) : ej.parseDate(date, this.model.dateFormat, this.model.locale);
             }
         },
 
@@ -17650,7 +20259,7 @@
                 date = new Date(data);
             }
             else {
-                date = ej.parseDate(data, "MM/dd/yyyy");
+                date = ej.parseDate(data, this.model.dateFormat, this.model.locale);
             }
 
             var monthLastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
@@ -17752,7 +20361,7 @@
                     date = new Date(startDate);
                 }
                 else {
-                    date = ej.parseDate(startDate, "MM/dd/yyyy");
+                    date = ej.parseDate(startDate, model.dateFormat, model.locale);
                 }
                 var monthLastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
                 var beginDate =date.getDate();
@@ -18428,20 +21037,23 @@
         _getLeftTaskLabel: function () {
             var proxy = this,
                 model = proxy.model,
-                leftMappingItems ="",
+                leftMappingItems = "",
                 length = model._columns.length;
          
             if (this.model.leftTaskLabelMapping == this.model.resourceNameMapping)
                 leftMappingItems = "{{:~_resources(#data)}}";
             else if (this.model.leftTaskLabelMapping == this.model.predecessorMapping)
                 leftMappingItems = "{{:predecessorsName}}";
-                else {
+            else {
                 for (var i = 0; i < length; i++) {
                     if (this.model.leftTaskLabelMapping == model._columns[i].mappingName) {
                         leftMappingItems = "{{:" + model._columns[i].field + "}}";
                         break;
                     }
                 }
+            }
+            if (leftMappingItems == "") {
+                leftMappingItems = "{{:" + this.model.leftTaskLabelMapping + "}}";
             }
             return leftMappingItems;
         },
@@ -18461,6 +21073,9 @@
                         break;
                     }
                 }
+            }
+            if (rightMappingItems == "") {
+                rightMappingItems = "{{:" + this.model.rightTaskLabelMapping + "}}";
             }
             return rightMappingItems;
         },
@@ -18482,6 +21097,7 @@
             leftResize = (rowHeight - 10) - (fontSize + margin);
             var decimalPoint = leftResize % 1;
             leftResize = decimalPoint < 0.5 ? Math.floor(leftResize) : Math.ceil(leftResize);
+            leftResize = leftResize < 0 ? 0 : leftResize;
             return leftResize;
         },
 
@@ -18498,10 +21114,13 @@
                 connectorPointWidth = 0,
                 connectorPointRadius = 0,
                 connectorPointMargin = 0,
+                tHeight = 0,
                 leftLabelFlag = false,
                 rightLabelFlag = false,
                 leftField = "",
-                rightField = "",
+                touchLeftConnectorpoint = "",
+                touchRightConnectorpoint = "",
+                rightField = "", istouchLeftConnectorpoint = false,
                 baselineColor = model.baselineColor,
                 template = model.taskbarTemplate, taskbarTemplate, isTaskbarTemplate = false, isProgressbarTemplate = false,
                 parentTemplate = model.parentTaskbarTemplate, parentTaskbarTemplate, isParentTaskbarTemplate = false, isParentProgressbarTemplate = false,
@@ -18545,7 +21164,7 @@
             } else {
                 taskbarHeight = model.rowHeight - 10;
             }
-
+            tHeight = taskbarHeight /5;
             milesStoneRadius = Math.floor((model.rowHeight - 6) / 2);
             proxy._milesStoneWidth = (milesStoneRadius * 2);
             proxy._connectorPointWidth = connectorPointWidth = taskbarHeight / 2;
@@ -18584,7 +21203,7 @@
                         $(this.childNodes).each(function () {
                             if ($(this).hasClass("e-gantt-template-progressbar")) {
                                 isProgressbarTemplate = true;
-                                var classes = "e-gantt-childtaskbar-progress " + $(this).attr("class");
+                                var classes = "e-gantt-childtaskbar-progress " + " " + $(this).attr("class");
                                 $(this).css({
                                     "height": (model.progressbarHeight * ((taskbarHeight) / 100)) + "px",
                                     "position": "absolute", "top": "-1px", "left": "-1px",
@@ -18622,16 +21241,17 @@
                 }
                 else
                     parentTaskbarTemplate = parentTemplate;
-                parentTemplate = parentTemplate.replace(/src/gi, proxy._id + "src");
+                parentTaskbarTemplate = parentTaskbarTemplate.replace(/src/gi, proxy._id + "src");
                 $(parentDiv[0]).html(parentTaskbarTemplate);
                 $(parentDiv[0].childNodes).each(function () {
                     if ($(this).hasClass("e-gantt-template-taskbar")) {
-                        var classes = "e-gantt-parenttaskbar-innerdiv " + $(this).attr("class");
+                        $(this).addClass("e-parentTask");
+                        var classes = "e-gantt-parenttaskbar-innerdiv e-parentTask" + $(this).attr("class");
                         $(this).css({ "height": (taskbarHeight) + "px", "margin-top": "5px" }).attr("class", classes);
                         var innerHtml = "";
                         $(this.childNodes).each(function () {
                             if ($(this).hasClass("e-gantt-template-progressbar")) {
-                                var classes = "e-gantt-parenttaskbar-progress " + $(this).attr("class");
+                                var classes = "e-gantt-parenttaskbar-progress e-parentTask" + " " +$(this).attr("class");
                                 $(this).css({
                                     "height": (model.progressbarHeight * ((taskbarHeight) / 100)) + "px", "top": "-1px", "left": "-1px",
                                     "position": "absolute", "z-index": "3",
@@ -18733,6 +21353,13 @@
                 rightLabelFlag = true;
                 rightField = proxy._getRightTaskLabel();
             }
+            if (proxy.model.rowHeight < 45) {
+                touchLeftConnectorpoint = "<div class='e-connectortouchpoint' style='right:0px;width:20px;margin-top:" + ((connectorPointWidth - 20) / 2) + "px;height:20px;" +
+                "border-radius:10px'></div>";
+                touchRightConnectorpoint = "<div class='e-connectortouchpoint' style='left:0px;width:20px;margin-top:" + ((connectorPointWidth - 20) / 2) + "px;height:20px;"
+                    +"border-radius:10px'></div>";
+            } 
+
             var rightLabelRowHeight = Math.round(-((this.model.rowHeight - 1) / 2));
 
             var parentTr = "<tr class='{{:~_rowClassName()}}  {{if isSelected && ~_SelectState()}}e-ganttrowcell {{:~_expander()}} e-gantt-mouseclick{{else}}e-ganttrowcell {{:~_expander()}}{{/if}}' id='chartrowcell"
@@ -18744,26 +21371,36 @@
                 //Parent taskbar Item
 
                 "<td class='e-chartcell'>" +
-                "<div class='e-tasknameContainer' style='height:" + (this.model.rowHeight - 1) + "px;width:{{:left-10}}px;overflow:hidden;text-overflow: ellipsis;'>" +
+                "<div class='e-tasknameContainer' style='height:" + (this.model.rowHeight - 1) + "px;width:{{if !isAutoSchedule}}{{if left<manualLeft}}{{:left-10}}{{else}}{{:manualLeft-10}}{{/if}}{{else}}{{:left-10}}{{/if}}px;overflow:hidden;text-overflow: ellipsis;'>" +
                 "<div class='e-taskbarname'  style='overflow: hidden;text-overflow: ellipsis;margin-top:5px;margin-right:30px;height:" + (taskbarHeight) + "px;font-weight:bold'>{{if " + isLeftTaskLabelTemplate + "}}" +
                 leftTaskLabelTemplateString +"{{else " + this.model.showTaskNames + " && left > 0 && !" + leftLabelFlag + " }}<span style='line-height:" + (taskbarHeight) + "px;'>{{:taskName}}</span>" +
                 "{{else " + leftLabelFlag + "}}<span style='line-height:" + (taskbarHeight) + "px;'>" + leftField + "</span>{{/if}}</div></div></td>" +
 
                 "<td  class='e-chartcell' vertical-align='middle' style='width:" + tdWidth + "px;'>" +
 
-               "<div class='e-parentContainer' style='height:" + (this.model.rowHeight-1) + "px;z-index:3;'>" +
+               "<div class='e-parentContainer{{if !isAutoSchedule}} e-manualParenttaskbar{{/if}}' style='height:" + (this.model.rowHeight-1) + "px;z-index:3;'>" +
 
-                "<div class='e-connectorpoint-left' style='left:{{:left-" + connectorPointWidth + "}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:" + connectorPointRadius + "px'></div>" +
+                
+                //Manual Parent taskbar
+                "{{if !isAutoSchedule}}<div class='e-gantt-manualparenttaskbar {{:~_expander()}}' style='left: {{:left}}px;margin-top: 5px;height:" + (tHeight) + "px; width: {{:width}}px;'>" +
+                "<div class='e-gantt-manualparenttaskbar-left' style='height:" + (taskbarHeight) + "px;border-left-width:" + tHeight + "px;border-bottom:" + tHeight + "px solid transparent;'></div>" +
+                "<div class='e-gantt-manualparenttaskbar-right' style='left:{{:width - " + parseInt(tHeight) + "}}px;height:" + (taskbarHeight) + "px;border-right-width:" + tHeight + "px;border-bottom:" + tHeight + "px solid transparent;'></div>" +
+                "<div class='taskbarresizer-right' style='left:{{:width -" + (tHeight) + "}}px;width:" + (tHeight) + "px;" +
+                "height:" + (taskbarHeight) + "px;font-size:" + proxy._fontSize + "px;position:absolute;z-index:10;'></div>" +
+                "</div>{{/if}}" +
 
                 "{{if " + isParentTaskbarTemplate + "}}" + parentTaskbarTemplateString + "{{else}}" +
-                "<div class='e-gantt-parenttaskbar-innerdiv {{:~_expander()}}' style='left:{{:left}}px;margin-top:5px;width:{{:width}}px;height:"
-                + (taskbarHeight) + "px;background-color:{{if parentTaskbarBackground }}{{:parentTaskbarBackground}}{{else}} " + this.model.parentTaskbarBackground + "{{/if}} ;'>" +
-                "<div  class='e-gantt-parenttaskbar-progress {{:~_expander()}}  progressbar' id='progressbar' " +
-                "style='top:-1px;border-style:{{if progressWidth}}solid{{else}}none{{/if}}; left:-1px;width:{{:progressWidth}}px;height:" + (taskbarHeight)
-                + "px;position:absolute;background-color:{{if parentProgressbarBackground }}{{:parentProgressbarBackground}}{{else}} " + this.model.parentProgressbarBackground + "{{/if}};z-index:3;" +
-                "border-top-right-radius:" + radius + "px;border-bottom-right-radius:" + radius + "px;'></div>" + "</div>" + "{{/if}}" +
+                "<div class='e-gantt-parenttaskbar-innerdiv {{:~_expander()}} e-parentTask' style='margin-top:{{if isAutoSchedule}}5{{else}}" + (5 + tHeight * 2) +
+                "{{/if}}px;background-color:{{if parentTaskbarBackground }}{{:parentTaskbarBackground}}{{else}} " + this.model.parentTaskbarBackground +
+                "{{/if}}; left:{{if isAutoSchedule}}{{:left}}{{else}}{{:manualLeft}}{{/if}}px;width:{{if isAutoSchedule}}{{:width}}{{else}}{{:manualWidth}}{{/if}}px;height:{{if isAutoSchedule}}" +(taskbarHeight)+ "{{else}}" + (tHeight * 3) + "{{/if}}px;'>" +
 
-                  "<div class='e-connectorpoint-right' style='left:{{:left+width}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:" + connectorPointRadius + "px'></div>" +
+                "<div  class='e-gantt-parenttaskbar-progress {{:~_expander()}} e-parentTask progressbar' id='progressbar'  " +
+                "style='top:-1px;border-style:{{if progressWidth}}solid{{else}}none{{/if}}; left:-1px;width:{{:progressWidth}}px;position:absolute;background-color:{{if parentProgressbarBackground }}{{:parentProgressbarBackground}}{{else}} "
+                + this.model.parentProgressbarBackground + "{{/if}};z-index:3;" +
+                "border-top-right-radius:{{if isAutoSchedule}}" + radius + "{{else}}" + tHeight + "{{/if}}px;border-bottom-right-radius:{{if isAutoSchedule}}" + radius + "{{else}}"
+                + tHeight + "{{/if}}px;height:{{if isAutoSchedule}}" + (taskbarHeight) + "{{else}}" + (tHeight * 3) + "{{/if}}px;'></div>" + "</div>" + "{{/if}}" +
+
+                  
 
              "</div>" +
 
@@ -18775,7 +21412,7 @@
                 "</td>" +
 
                "<td class='e-chartcell' >" +
-                "<div class='e-resourceinfo' style='left:{{:left+width+30}}px;" +
+                "<div class='e-resourceinfo' style='left:{{if (left+width)>(manualLeft+manualWidth)}}{{:left+width+30}}{{else}}{{:manualLeft+manualWidth+30}}{{/if}}px;" +
                 "margin:0;margin-left:5px;margin-top:" + rightLabelRowHeight + "px;position:absolute;background-color:transparent;font-weight:bold;height:" + (this.model.rowHeight - 1) + "px;'>" +
                 "<div class='e-resourcename'  style='overflow-y:hidden;margin-top:5px;height:" + (taskbarHeight) + "px;margin-right:30px;outline:none;'>{{if " + isRightTaskLabelTemplate + "}}" + rightTaskLabelTemplateString +
                 "{{else " + this.model.showResourceNames + " && left > 0 && !" + rightLabelFlag + " }}<span style='line-height:" + (taskbarHeight) + "px;'>{{:~_resources(#data)}}</span>" +
@@ -18794,13 +21431,15 @@
 
                "<td class='e-chartcell' style='width:" + tdWidth + "px;'>" +
                 "<div class='e-gantt-milestone-container' style=height:" + (this.model.rowHeight - 1) + "px;>" +
-                "<div class='e-connectorpoint-left' style='left:{{:left-" + connectorPointWidth + "}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:" + connectorPointRadius + "px;'></div>" +
+                "<div class='e-connectorpoint-left' style='left:{{:left-" + connectorPointWidth + "}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:" +
+                connectorPointRadius + "px;'>" + touchLeftConnectorpoint + "</div>" +
                 "{{if " + isMilestoneTemplate + "}}" + milestoneTemplateString + "{{else}}" +
                 "<div class='e-gantt-milestone' style='position:absolute;left:{{:left}}px;'>" +
                 "<div class='e-gantt-milestone milestone-top'  style='top:" + (3) + "px;border-right-width:" + milesStoneRadius + "px;border-left-width:" + milesStoneRadius + "px;border-bottom-width:" + milesStoneRadius + "px; border-right-color:transparent;border-left-color:transparent;border-style:none solid solid;border-top: none;'></div>" +
                 "<div class='e-gantt-milestone milestone-bottom'  style='top:" + (3 + milesStoneRadius) + "px;border-right-width:" + milesStoneRadius + "px; border-left-width:" + milesStoneRadius + "px; border-top-width:" + milesStoneRadius + "px; border-right-color:transparent;border-left-color:transparent;border-style:solid solid none; border-bottom: none;'></div>" +
                 "</div>" + "{{/if}}" +
-                 "<div class='e-connectorpoint-right' style='left:{{:(left+" + (milesStoneRadius * 2) + ")}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:" + connectorPointRadius + "px;'></div>" +
+                 "<div class='e-connectorpoint-right' style='left:{{:(left+" + (milesStoneRadius * 2) + ")}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:"
+                 + connectorPointRadius + "px;'>" + touchRightConnectorpoint + "</div>" +
                 "</div>" +
 
                 "{{if " + this.model.renderBaseline + " && baselineStartDate && baselineEndDate}}" +
@@ -18838,15 +21477,16 @@
 
                "<div  class='e-childContainer' style='height:" + (this.model.rowHeight - 1) + "px;'>" +
 
-               "<div class='e-connectorpoint-left' style='left:{{:left-" + connectorPointWidth + "}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:" + connectorPointRadius + "px'></div>" +
+               "<div class='e-connectorpoint-left' style='left:{{:left-" + connectorPointWidth + "}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;" +
+               "border-radius:" + connectorPointRadius + "px'>" + touchLeftConnectorpoint + "</div>" +
 
                "<div class='taskbarresizer-left e-icon' style='left:{{:left+2-" + proxy._resizerLeftAdjust + "}}px;width:10px;margin-top:" + proxy._resizerMargin + "px;height:" + (taskbarHeight) + "px;font-size:" + proxy._fontSize + "px;'></div>" +
                "{{if " + isTaskbarTemplate + "}}" + taskbarTemplateString + "{{else}}" +
-               "<div  class='e-gantt-childtaskbar' style='left:{{:left}}px;width:{{:width}}px;height:"
+               "<div  class='e-gantt-childtaskbar {{if isCritical}} e-criticaltaskbar{{/if}} {{if !isAutoSchedule}} manualchildtaskbar{{/if}}' style='left:{{:left}}px;width:{{:width}}px;height:"
                + (taskbarHeight) + "px;background-color:{{if taskbarBackground }}{{:taskbarBackground}}{{else}} "
                + this.model.taskbarBackground + "{{/if}};" + "margin-top:5px;'>" +
 
-               "<div  class='e-gantt-childtaskbar-progress  progressbar' id='progressbar' style='border-style:{{if progressWidth}}solid{{else}}none{{/if}};" +
+               "<div  class='e-gantt-childtaskbar-progress  {{if isAutoSchedule}} progressbar{{else}} manualprogressbar{{/if}} {{if isCritical}} e-criticalprogressbar{{/if}}' id='progressbar' style='border-style:{{if progressWidth}}solid{{else}}none{{/if}};" +
                 "width:{{:progressWidth}}px;text-align:right;line-height:" + (taskbarHeight - 1) + "px;" +
                 //"margin-top:" + (((taskbarHeight) - (this.model.progressbarHeight * ((taskbarHeight) / 100))) / 2) + "px;" +
                 "height:" + (this.model.progressbarHeight * (taskbarHeight / 100)) + "px; top:-1px;left:-1px;" +
@@ -18862,7 +21502,8 @@
                "<div class='taskbarresizer-right e-icon' style='left:{{:left+width-" + proxy._resizerRightAdjust + "}}px;width:10px;" +
                 "height:" + (taskbarHeight) + "px;font-size:" + proxy._fontSize + "px;position:absolute;z-index:2;margin-top:" + proxy._resizerMargin + "px;'></div>" +
 
-                "<div class='e-connectorpoint-right' style='left:{{:left+width}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;border-radius:" + connectorPointRadius + "px'></div>" +
+                "<div class='e-connectorpoint-right' style='left:{{:left+width}}px;width:" + connectorPointWidth + "px;margin-top:" + connectorPointMargin + "px;height:" + (taskbarHeight / 2) + "px;"
+                + "border-radius:" + connectorPointRadius + "px'>" + touchRightConnectorpoint + "</div>" +
                 //"<div class='e-connectorpoint-right' style='left:{{:left-20}}px;width:20px;margin-top:10px;background-color:black;height:" + (taskbarHeight) + "px;'></div>"+
                  "</div>" +
 
@@ -18895,10 +21536,17 @@
                 var resourcelength = data.resourceInfo.length;
                 if (resourcelength > 0) {
                     for (var i = 0; i < resourcelength; i++) {
-                        if (resource == null)
+                        var unit = data.resourceInfo[i][this.model.resourceUnitMapping];
+                        if (resource == null) {                           
                             resource = data.resourceInfo[i][this.model.resourceNameMapping];
-                        else
+                            if (unit != 100)
+                                resource += "[" + unit + "%]";
+                        }
+                        else {
                             resource += " , " + data.resourceInfo[i][this.model.resourceNameMapping];
+                            if (unit != 100)
+                                resource += "[" + unit + "%]";
+                        }
                     }
                     return resource;
                 } else
@@ -19028,16 +21676,16 @@
                 "border-bottom-width:{{:5+" + lineStroke + "}}px;border-top-width:{{:5+" + lineStroke + "}}px;" +
                 "top:{{:-5-" + lineStroke + "}}px;width:0;height:0;position:relative'></div>"
             + "<div class='e-line' style='width:10px;height:" + lineStroke + "px;background-color:" + lineColor + ";" +
-                "position:relative;top:-12.5px;'></div>"
+                "position:relative;top:-13px;'></div>"
             + "<div class='e-line' style='width:" + lineStroke + "px;height:{{:Height-14-" + lineStroke + "}}px;" +
-                "background-color:" + lineColor + ";position:relative;top:-12.5px;'></div>"
+                "background-color:" + lineColor + ";position:relative;top:-13px;'></div>"
             + "<div class='e-line' style='width:{{:(((ParentLeft + ParentWidth) - ChildLeft) + 30)}}px;height:" + lineStroke + "px;" +
-                "background-color:" + lineColor + ";position:relative;top:-12.5px;'></div>"
+                "background-color:" + lineColor + ";position:relative;top:-13px;'></div>"
             + "<div class='e-line' style='left:{{:(((ParentLeft + ParentWidth) - ChildLeft) + 30)}}px;width:" + lineStroke + "px;" +
                 "height:{{:14-" + lineStroke + "}}px;background-color:" + lineColor + ";position:relative;" +
-                "top:-12.5px;'></div>"
+                "top:-13px;'></div>"
             + "<div class='e-line' style='{{if ~_isMilestoneParent()}}left:{{:(((ParentLeft + ParentWidth) - ChildLeft) + 14)}}px;width:16px;{{else}}left:{{:(((ParentLeft + ParentWidth) - ChildLeft) + 20)}}px;width:10px;{{/if}}height:" + lineStroke + "px;" +
-                "background-color:" + lineColor + ";position:relative;top:-12.5px;'></div>"
+                "background-color:" + lineColor + ";position:relative;top:-13px;'></div>"
             + "</div>"
 
             + "{{else ~_getPosition()=='FSType4'}}"
@@ -19050,7 +21698,7 @@
                 "height:" + lineStroke + "px;background-color:" + lineColor + ";position:relative'></div>"
             + "<div class='e-line' style='top:-13px;left:{{:(ChildLeft - (ParentLeft + ParentWidth) - 20)}}px;width:" + lineStroke + "px;" +
                 "height:{{:Height-" + lineStroke + "}}px;background-color:" + lineColor + ";position:relative'></div>"
-            + "<div class='e-line' style='{{if ~_isMilestoneParent()}}left:-6px;{{/if}}top:-12.5px;width:{{if ~_isMilestoneParent()}}{{:(ChildLeft-(ParentLeft + ParentWidth+20 )+ 6)+" + lineStroke + "}}px;{{else}}{{:(ChildLeft-(ParentLeft + ParentWidth + 20))+" + lineStroke + "}}px;{{/if}}" +
+            + "<div class='e-line' style='{{if ~_isMilestoneParent()}}left:-6px;{{/if}}top:-13px;width:{{if ~_isMilestoneParent()}}{{:(ChildLeft-(ParentLeft + ParentWidth+20 )+ 6)+" + lineStroke + "}}px;{{else}}{{:(ChildLeft-(ParentLeft + ParentWidth + 20))+" + lineStroke + "}}px;{{/if}}" +
                 "height:" + lineStroke + "px;background-color:" + lineColor + ";position:relative'></div>"
             + "</div>"
 
@@ -19147,11 +21795,11 @@
             + "<div class='connectorline-leftarrow' style='{{if ~_isMilestone()}}left:-6px;{{/if}}border-right: 10px solid " + lineColor + ";" +
                 "top:{{:-5-" + lineStroke + "}}px;border-bottom-width:{{:5+" + lineStroke + "}}px;" +
                 "border-top-width:{{:5+" + lineStroke + "}}px;width:0;height:0;position:relative'></div>"
-            + "<div class='e-line' style='{{if ~_isMilestone()}}left:4px;width:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))+16}}px;{{else}}left:10px;width:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))+10}}px;{{/if}}top:-12.5px;" +
+            + "<div class='e-line' style='{{if ~_isMilestone()}}left:4px;width:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))+16}}px;{{else}}left:10px;width:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))+10}}px;{{/if}}top:-13px;" +
                 "height:" + lineStroke + "px;background-color:" + lineColor + ";position:relative'></div>"
-            + "<div class='e-line' style='left:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))+20}}px;top:-12.5px;" +
+            + "<div class='e-line' style='left:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))+20}}px;top:-13px;" +
                 "width:" + lineStroke + "px;height:{{:Height-" + lineStroke + "}}px;background-color:" + lineColor + ";position:relative'></div>"
-            + "<div class='e-line' style='{{if ~_isMilestoneParent()}}left:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))-6}}px;width:26px;{{else}}left:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))}}px;width:20px;{{/if}}top:-12.5px;" +
+            + "<div class='e-line' style='{{if ~_isMilestoneParent()}}left:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))-6}}px;width:26px;{{else}}left:{{:((ParentLeft + ParentWidth) - (ChildLeft + ChildWidth))}}px;width:20px;{{/if}}top:-13px;" +
                 "height:" + lineStroke + "px;background-color:" + lineColor + ";position:relative'></div>"
             + "</div>"
 
@@ -19162,11 +21810,11 @@
                 "border-right: 10px solid " + lineColor + ";top:{{:-5-" + lineStroke + "}}px;" +
                 "border-bottom-width:{{:5+" + lineStroke + "}}px;border-top-width:{{:5+" + lineStroke + "}}px;width:0;height:0;" +
                 "position:relative'></div>"
-            + "<div class='e-line' style='{{if ~_isMilestone()}}left:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+4}}px;width:16px;{{else}}left:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+10}}px;width:10px;{{/if}}top:-12.5px;" +
+            + "<div class='e-line' style='{{if ~_isMilestone()}}left:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+4}}px;width:16px;{{else}}left:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+10}}px;width:10px;{{/if}}top:-13px;" +
                 "height:" + lineStroke + "px;background-color:" + lineColor + ";position:relative'></div>"
-            + "<div class='e-line' style='left:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+20}}px;top:-12.5px;width:" + lineStroke + "px;" +
+            + "<div class='e-line' style='left:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+20}}px;top:-13px;width:" + lineStroke + "px;" +
                 "height:{{:Height-" + lineStroke + "}}px;background-color:" + lineColor + ";position:relative'></div>"
-            + "<div class='e-line' style='{{if ~_isMilestoneParent()}}left:-6px;width:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+26}}px;{{else}}width:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+20}}px;{{/if}}top:-12.5px;height:" + lineStroke + "px;" +
+            + "<div class='e-line' style='{{if ~_isMilestoneParent()}}left:-6px;width:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+26}}px;{{else}}width:{{:((ChildLeft +ChildWidth)-(ParentLeft + ParentWidth))+20}}px;{{/if}}top:-13px;height:" + lineStroke + "px;" +
                 "background-color:" + lineColor + ";position:relative'></div>"
             + "</div>"
 
@@ -19352,7 +22000,7 @@
             else if (this.data.ParentTop > this.data.ChildTop) {
                 if ((this.data.ParentLeft < this.data.ChildLeft) && (this.data.ChildLeft > (this.data.ParentLeft + this.data.ParentWidth))) {
                     if (this.data.Type == "FS")
-                        if (this.data.milestoneParent && this.data.ChildLeft == (this.data.milestoneParent ? (this.data.ParentLeft + this.data.ParentWidth + 4) : (this.data.ParentLeft + this.data.ParentWidth)))
+                        if (30 >= (this.data.ChildLeft - (this.data.milestoneParent ? (this.data.ParentLeft + this.data.ParentWidth + 4) : (this.data.ParentLeft + this.data.ParentWidth))))
                             return "FSType3";
                         else
                             return "FSType4"
@@ -19370,7 +22018,7 @@
                     if ((this.data.ChildLeft + this.data.ChildWidth) <= (this.data.ParentLeft + this.data.ParentWidth)) {
                         if (this.data.Type == "FF") return "FFType3";
                         if (this.data.Type == "SF") {
-                            if ((this.data.ChildLeft + this.data.ChildWidth) < (this.data.ParentLeft)) {
+                            if ((this.data.ChildLeft + this.data.ChildWidth + 25) < (this.data.ParentLeft)) {
                                 return "SFType3";
                             } else {
                                 return "SFType4";
@@ -19568,6 +22216,10 @@
         _destroy: function () {
 
             var proxy = this;
+            proxy.element.off();
+            $(document.body).unbind("touchmove", $.proxy(proxy.handleMouseMove, proxy));
+            $(document).unbind("mouseup", $.proxy(proxy._tooltipMouseup, proxy));
+            $(document.body).bind("touchmove", $.proxy(proxy.handleMouseMove, proxy));
             proxy.element.empty().removeClass("e-ganttchart-core e-ganttchart" + proxy.model.cssClass);
 
         },
@@ -19652,7 +22304,9 @@
                         var tempTarget = $(e.target).find(".e-headercelldiv");
                     else
                         var tempTarget = $(e.target).prevAll("th:visible:first").find(".e-headercelldiv");
-                    if ((this.gridInstance.model.enableRTL && _x >= (location.left + 10)) || (_x >= ((this.gridInstance.element.find(".e-headercell").not('.e-detailheadercell').offset().left + 10) - window.pageXOffset))) {
+                    var windowScrollX = window.pageXOffset || document.documentElement.scrollTop || document.body.scrollTop;
+                    var _lx = (this.gridInstance.element.find(".e-headercell").not('.e-detailheadercell').offset().left + 10) - windowScrollX;
+                    if ((this.gridInstance.model.enableRTL && (_x <= _lx)) || (!this.gridInstance.model.enableRTL && (_x >= _lx))) {
                         if ((this.gridInstance.model.showStackedHeader || tempTarget.length) && $.inArray($(tempTarget).attr("ej-mappingname"), this.gridInstance._disabledResizingColumns) == -1) {
                             this.gridInstance.model.showStackedHeader && $($target.parents('thead')).find('tr').css("cursor", "col-resize");
                             !this.gridInstance.model.showStackedHeader && $target.parent().css("cursor", "col-resize");
@@ -19660,6 +22314,8 @@
                                 this._currentCell = this.gridInstance.getHeaderContent().find(".e-headercell:visible").index(_resizableCell);
                             else
                                 this._currentCell = this.gridInstance.getHeaderContent().find(".e-headercell:visible").not(".e-stackedHeaderCell").index(_resizableCell);
+                            if (this.gridInstance.model.enableRTL)
+                                this._currentCell = this._currentCell - 1;
                             this._allowStart = true;
                         }
                         else {
@@ -19761,7 +22417,10 @@
                 this._initialTableWidth = this.gridInstance.getHeaderTable().first().parent().width() + this.gridInstance.getHeaderTable().last().parent().width();
             else
                 this._initialTableWidth = this.gridInstance.getHeaderTable().parent().width();
-            !this.gridInstance.model.enableRTL && this._getResizableCell();
+            if (this.gridInstance.model.enableRTL && (this.gridInstance.model.detailsTemplate || this.gridInstance.model.childGrid))
+                this._currentCell = this._currentCell - 1;
+            else
+                !this.gridInstance.model.enableRTL && this._getResizableCell();
             if (this.gridInstance.model.scrollSettings && this.gridInstance.model.scrollSettings.frozenColumns > 0)
                 var _rowobj = this.gridInstance.getHeaderTable().find('thead');
             else
@@ -19772,15 +22431,27 @@
                 var _outerCell = _childTH[this._currentCell];
                 var _oldWidth = _outerCell.offsetWidth;
                 var _extra = _x - this._orgX;
+                if (this.gridInstance.model.enableRTL)
+                    _extra = -_extra;
                 //Check whether the column minimum width reached
                 if (parseInt(_extra) + parseInt(_oldWidth) > this._colMinWidth) {
                     if (_extra != 0)
                         _rowobj.css("cursor", 'default');
+                     var $prevheaderCol, oldColWidth;
+                    if (ej.getObject("resizeSettings.resizeMode", this.gridInstance.model) == ej.Grid.ResizeMode.NextColumn) {
+                     var $prevheaderCols = this.gridInstance.getHeaderTable().find('colgroup').find("col");
+                     if (!ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate || this.gridInstance.model.childGrid)) {
+                     this.gridInstance._detailColsRefresh();
+                    $prevheaderCols = this.gridInstance._$headerCols;
+                   }
+                    var $prevheaderCol = $prevheaderCols.filter(this._diaplayFinder).eq(!this.gridInstance.model.allowGrouping || !ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate || this.gridInstance.model.childGrid) ? this._currentCell : this._currentCell + this.gridInstance.model.groupSettings.groupedColumns.length)
+                    var oldColWidth = $prevheaderCol.width();
+                   }
                     this._resizeColumnUsingDiff(_oldWidth, _extra);
                     $content = this.gridInstance.element.find(".e-gridcontent").first();
                     var scrollContent = $content.find("div").hasClass("e-content");                    
-                    var browser = this.gridInstance.getBrowserDetails();
-                    if (browser.browser == "msie" && this.gridInstance.model.allowScrolling) {
+                    var browser = !ej.isIOSWebView() && this.gridInstance.getBrowserDetails();
+                    if (browser && browser.browser == "msie" && this.gridInstance.model.allowScrolling) {
                         var oldWidth = this.gridInstance.getContentTable().width(), newwidth = this.gridInstance._calculateWidth();
                         if (this.gridInstance.model.scrollSettings && this.gridInstance.model.scrollSettings.frozenColumns > 0) {
                             this.gridInstance.getHeaderTable().last().width(newwidth - this.gridInstance.getHeaderContent().find(".e-frozenheaderdiv").width());
@@ -19812,52 +22483,76 @@
                         this.gridInstance.rowHeightRefresh();
                     if (this.gridInstance.model.groupSettings.groupedColumns.length && !this.gridInstance.model.isEdit)
                         this.gridInstance._recalculateIndentWidth();
-                    if (this.gridInstance.pluginName != "ejGrid" || ej.getObject("resizeSettings.resizeMode", this.gridInstance.model) == ej.Grid.ResizeMode.NextColumn) {
-                        var $headerCols = this.gridInstance.getHeaderTable().find('colgroup').find("col");
-                        var $ContentCols = this.gridInstance.getContentTable().find('colgroup').find("col");
-                        if (!ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate)) {
-                            this.gridInstance._detailColsRefresh();
-                            $headerCols = this.gridInstance._$headerCols;
-                            $ContentCols = this.gridInstance._$contentCols;
+                    if (ej.getObject("resizeSettings.resizeMode", this.gridInstance.model) != ej.Grid.ResizeMode.Normal) {
+                        if (ej.getObject("resizeSettings.resizeMode", this.gridInstance.model) == ej.Grid.ResizeMode.NextColumn) {
+                            var $headerCols = this.gridInstance.getHeaderTable().find('colgroup').find("col");
+                            var $ContentCols = this.gridInstance.getContentTable().find('colgroup').find("col");
+                            if (!ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate || this.gridInstance.model.childGrid)) {
+                                this.gridInstance._detailColsRefresh();
+                                $headerCols = this.gridInstance._$headerCols;
+                                $ContentCols = this.gridInstance._$contentCols;
+                            }
+                            var nextCell = this._currentCell + 1;
+                            var $headerCol = $headerCols.filter(this._diaplayFinder).eq(!this.gridInstance.model.allowGrouping || !ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate) ? nextCell : nextCell + this.gridInstance.model.groupSettings.groupedColumns.length)
+                            var newWidth = $headerCol.width() + (oldColWidth - $prevheaderCol.width());
+                            if (newWidth < this._colMinWidth)
+                                newWidth = this._colMinWidth;
+                            $headerCol.width(newWidth);
+                            if (this.gridInstance.model.groupSettings && this.gridInstance.model.groupSettings.groupedColumns.length) {
+                                var $tables = this.gridInstance.getContentTable().find(".e-recordtable");
+                                var $colGroup = $tables.find("colgroup");
+                                var colCount = this.gridInstance.getVisibleColumnNames().length;
+                                if (this.gridInstance.getContentTable().find('.e-detailrow').length)
+                                    $colGroup = $colGroup.not($tables.find(".e-detailrow").find("colgroup")).get();
+                                for (var i = 0 ; i < $colGroup.length; i++) {
+                                    var cols = $($colGroup[i]).find("col").filter(this._diaplayFinder);
+                                    if (cols.length > colCount) cols.splice(0, (cols.length - colCount));
+                                    $(cols[nextCell]).width(newWidth);
+                                }
+                            }
+                            if (this.gridInstance.model.scrollSettings && this.gridInstance.model.scrollSettings.frozenColumns) {
+                                if (nextCell >= 0 && nextCell < this.gridInstance.model.scrollSettings.frozenColumns && this._getFrozenResizeWidth() + _extra > this.gridInstance.element.find(".e-headercontent").first().width())
+                                    return;
+                                $ContentCol = $ContentCols.filter(this._diaplayFinder).eq(nextCell);
+                            }
+                            else
+                                $ContentCol = $ContentCols.filter(this._diaplayFinder).eq(!this.gridInstance.model.allowGrouping || !ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate) ? nextCell : nextCell + this.gridInstance.model.groupSettings.groupedColumns.length);
+                            $ContentCol.width(newWidth);
+                            this.gridInstance._findColumnsWidth();
+                            if (this.gridInstance.model.scrollSettings.frozenColumns > 0 && $(_outerCell).is(":last-child") && this.gridInstance.pluginName == "ejGrid") {
+                                var val = $prevheaderCol.width() - oldColWidth;
+                                var frozenWidth = this.gridInstance.getHeaderContent().find('.e-frozenheaderdiv').width() + val;
+                                var movableWidth = this.gridInstance.getHeaderContent().find('.e-movableheaderdiv').width() - val;
+                                var marginLeft = parseInt(this.gridInstance.getHeaderContent().find('.e-movableheader')[0].style["margin-left"]) + val;
+                                this.gridInstance.getHeaderContent().find('.e-frozenheaderdiv').width(frozenWidth);
+                                this.gridInstance.getContent().find('.e-frozencontentdiv').width(frozenWidth);
+                                this.gridInstance.getHeaderContent().find('.e-movableheaderdiv').width(movableWidth);
+                                this.gridInstance.getContent().find('.e-movablecontentdiv').width(movableWidth);
+                                this.gridInstance.getHeaderContent().find('.e-movableheader').css("margin-left", marginLeft);
+                                this.gridInstance.getContent().find('.e-movablecontent').css("margin-left", marginLeft);
+                            }
+
+                            if (this.gridInstance.model.scrollSettings.frozenColumns > 0 && $(this._target).parent('tr').parents('div:first').hasClass('e-frozenheaderdiv')) {
+                                this.gridInstance.getHeaderContent().find('.e-frozenheaderdiv').width(this._newWidth);
+                                this.gridInstance.getContent().find('.e-frozencontentdiv').width(this._newWidth);
+                            }
                         }
-                        var nextCell = this._currentCell + 1;
-                        var $headerCol = $headerCols.filter(this._diaplayFinder).eq(!this.gridInstance.model.allowGrouping || !ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate) ? nextCell : nextCell + this.gridInstance.model.groupSettings.groupedColumns.length)
-                        var newWidth = ($headerCol.width() - (_extra)) > this._colMinWidth ? $headerCol.width() - (_extra) : this._colMinWidth;
-                        $headerCol.width(newWidth);
-                        if (this.gridInstance.model.scrollSettings && this.gridInstance.model.scrollSettings.frozenColumns) {
-                            if (nextCell >= 0 && nextCell < this.gridInstance.model.scrollSettings.frozenColumns && this._getFrozenResizeWidth() + _extra > this.gridInstance.element.find(".e-headercontent").first().width())
-                                return;
-                            $ContentCol = $ContentCols.filter(this._diaplayFinder).eq(nextCell);
-                        }
-                        else
-                            $ContentCol = $ContentCols.filter(this._diaplayFinder).eq(!this.gridInstance.model.allowGrouping || !ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate) ? nextCell : nextCell + this.gridInstance.model.groupSettings.groupedColumns.length);
-                        $ContentCol.width(newWidth);
-                        this.gridInstance._findColumnsWidth();
-                        if (this.gridInstance.model.scrollSettings.frozenColumns > 0 && $(this._target).parent('tr').parents('div:first').hasClass('e-frozenheaderdiv')) {
-                            this.gridInstance.getHeaderContent().find('.e-frozenheaderdiv').width(this._newWidth);
-                            this.gridInstance.getContent().find('.e-frozencontentdiv').width(this._newWidth);
-                            this.gridInstance.setWidthToColumns()
+                        else if (!this.gridInstance.model.scrollSettings.frozenColumns) {
+                            var oldTableWidth = this.gridInstance.getHeaderTable().width();
+                            this.gridInstance.getHeaderTable().css("width", oldTableWidth + parseInt(_extra));
+                            this.gridInstance.getContentTable().css("width", oldTableWidth + parseInt(_extra));
+                            this.gridInstance.model.scrollSettings.width += parseInt(_extra);
+                            if (this.gridInstance.getContent().width() > this.gridInstance.getContentTable().width()) {
+                                this.gridInstance.getContentTable().addClass('e-tableLastCell');
+                                this.gridInstance.getHeaderTable().addClass('e-tableLastCell');
+                            }
+                            else {
+                                this.gridInstance.getContentTable().removeClass('e-tableLastCell');
+                                this.gridInstance.getHeaderTable().removeClass('e-tableLastCell');
+                            }
                         }
                     }
-                    else if (this.gridInstance.model.scrollSettings.frozenColumns > 0 && $(this._target).parent('tr').parents('div:first').hasClass('e-frozenheaderdiv')) {
-                        this.gridInstance.getHeaderContent().find('.e-frozenheaderdiv').width(this._newWidth);
-                        this.gridInstance.getContent().find('.e-frozencontentdiv').width(this._newWidth);
-                    }
-                    else if (!this.gridInstance.model.scrollSettings.frozenColumns) {
-                        var oldTableWidth = this.gridInstance.getHeaderTable().width();
-                        this.gridInstance.getHeaderTable().width(oldTableWidth + parseInt(_extra));
-                        this.gridInstance.getContentTable().width(oldTableWidth + parseInt(_extra));
-                        this.gridInstance.model.scrollSettings.width += parseInt(_extra);
-                        if (this.gridInstance.getContent().width() > this.gridInstance.getContentTable().width()) {
-                            this.gridInstance.getContentTable().addClass('e-tableLastCell');
-                            this.gridInstance.getHeaderTable().addClass('e-tableLastCell');
-                        }
-                        else {
-                            this.gridInstance.getContentTable().removeClass('e-tableLastCell');
-                            this.gridInstance.getHeaderTable().removeClass('e-tableLastCell');
-                        }
-                    }
-                    if (!(browser.browser == "msie") && this.gridInstance.model.allowScrolling && this.gridInstance.model.scrollSettings.frozenColumns == 0) {
+                    if (!(browser.browser == "msie") && browser && this.gridInstance.model.allowScrolling && this.gridInstance.model.scrollSettings.frozenColumns == 0) {
                         this.gridInstance.getHeaderTable().width("100%");
                         this.gridInstance.getContentTable().width("100%");
                         var tableWidth = this.gridInstance._calculateWidth();
@@ -19891,6 +22586,8 @@
                     }
                     if (this.gridInstance.model.allowScrolling) {
                         this.gridInstance._scrollObject.refresh(this.gridInstance.model.scrollSettings.frozenColumns > 0);
+                        if (this.gridInstance.model.isResponsive && this.gridInstance.model.minWidth)
+                            this.gridInstance.windowonresize()
                         if (!scrollContent && $content.find("div").hasClass("e-content"))
                             this.gridInstance.refreshScrollerEvent();
                         this.gridInstance._isHscrollcss();
@@ -19920,7 +22617,6 @@
         _resizeColumnUsingDiff: function (_oldWidth, _extra) {
             var proxy = this, _extraVal;			
             this._currntCe = this._currentCell;
-            
             var $headerCols = this.gridInstance.getHeaderTable().find('colgroup').find("col");
             var $ContentCols = this.gridInstance.getContentTable().find('colgroup').find("col");
             if (!ej.isNullOrUndefined(this.gridInstance.model.detailsTemplate || this.gridInstance.model.childGrid)) {
@@ -19938,6 +22634,14 @@
             if (_newWidth > 0 && _extra != 0) {
                 if (_newWidth < this._colMinWidth)
                     _newWidth = this._colMinWidth;
+                if (ej.getObject("resizeSettings.resizeMode", this.gridInstance.model) == ej.Grid.ResizeMode.NextColumn) {
+                    var nextCol = $headerCol.next();
+                    var isFrozenLastCell = this.gridInstance.model.scrollSettings.frozenColumns && this._currentCell == this.gridInstance.model.scrollSettings.frozenColumns - 1 ? true : false;
+                    if (isFrozenLastCell)
+                        nextCol = $headerCols.eq(this.gridInstance.model.scrollSettings.frozenColumns);
+                    if ((isFrozenLastCell || !$headerCol.is(":last-child")) && (nextCol.width() + ($headerCol.width() - _newWidth) <= this._colMinWidth))
+                        _newWidth = $headerCol.width() + (nextCol.width() - this._colMinWidth);
+                }
                 var _extra = _newWidth - _oldWidth;
                 if (this.gridInstance.model.scrollSettings && this.gridInstance.model.scrollSettings.frozenColumns) {
                     if (this._currentCell >= 0 && this._currentCell < this.gridInstance.model.scrollSettings.frozenColumns && this._getFrozenResizeWidth() + _extra > this.gridInstance.element.find(".e-headercontent").first().width())
@@ -20015,7 +22719,7 @@
                     }
                 }
                 this.gridInstance._findColumnsWidth();
-                if (this.gridInstance.model.scrollSettings && this.gridInstance.model.scrollSettings.frozenColumns && ej.getObject("resizeSettings.resizeMode", this.gridInstance.model) != ej.Grid.ResizeMode.NextColumn) {
+                if (this.gridInstance.model.scrollSettings && this.gridInstance.model.scrollSettings.frozenColumns && ej.getObject("resizeSettings.resizeMode", this.gridInstance.model) != 'nextcolumn' && this.gridInstance.pluginName == "ejGrid") {
                     var frozenColumns = this.gridInstance.getContentTable().find('colgroup').find("col").slice(0, this.gridInstance.model.scrollSettings.frozenColumns)
                         , width = 0, direction;
                     for (i = 0; i < frozenColumns.length; i++)
@@ -20134,18 +22838,19 @@
                 row = this.gridInstance.getHeaderTable().find(".e-columnheader").not('.e-stackedHeaderRow');
             var cell = row.find(".e-headercell").not(".e-hide,.e-detailheadercell");
             var scrollLeft = navigator.userAgent.indexOf("WebKit") != -1 ? document.body.scrollLeft : document.documentElement.scrollLeft;
-            for (var i = 0; i < cell.length; i++) {
-                point = cell[i].getBoundingClientRect();
-                var xlimit = point.left + scrollLeft + 5;
-                if (xlimit > this._orgX && $(cell[i]).height() + point.top >= this._orgY) {
-                    this._currentCell = i - 1;
-                    return;
+            if (!this.gridInstance.model.scrollSettings.frozenColumns || this._currentCell != this.gridInstance.model.scrollSettings.frozenColumns - 1)
+                for (var i = 0; i < cell.length; i++) {
+                    point = cell[i].getBoundingClientRect();
+                    var xlimit = point.left + scrollLeft + 5;
+                    if (xlimit > this._orgX && $(cell[i]).height() + point.top >= this._orgY) {
+                        this._currentCell = i - 1;
+                        return;
+                    }
+                    if (i == cell.length - 1 || (this.gridInstance.model.showStackedHeader && $(this._target).get(0) === cell[i])) {
+                        this._currentCell = i;
+                        return;
+                    }
                 }
-                if (i == cell.length - 1 || (this.gridInstance.model.showStackedHeader && $(this._target).get(0) === cell[i])) {
-                    this._currentCell = i;
-                    return;
-                }
-            }
         },
         _moveVisual: function (_x) {
             /// Used to move the visual element in mouse move
@@ -20255,7 +22960,11 @@
                             contentCols.eq(i + indent).width(finalWidth);
                             if (this.gridInstance.model.isEdit) {
                                 var $editableCol = this.gridInstance.getContentTable().find(".e-editedrow").find("col");
-                                $editableCol.eq(i + indent).width(finalWidth);
+                                var $form = this.gridInstance.element.find(".gridform");
+                                for (j = 0; j < $form.length; j++) {
+                                   var $editableCol = $($form[j]).find("col")
+                                   $editableCol.eq(i + indent).width(finalWidth);
+                               }
                             }
                             argCols.push(this.gridInstance.model.columns[i + hiddenLen]);
                             argExtra.push(Math.abs(finalWidth - oldWidth))

@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.schedule.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.globalize","jsrender","./../common/ej.core","./../common/ej.data","./../common/ej.touch","./../common/ej.draggable","./../common/ej.scroller","./ej.button","./ej.checkbox","./ej.autocomplete","./ej.datepicker","./ej.dialog","./ej.dropdownlist","./ej.togglebutton","./ej.radiobutton","./ej.timepicker","./ej.editor","./ej.navigationdrawer","./ej.recurrenceeditor","./ej.tooltip"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","jsrender","./../common/ej.core","./../common/ej.data","./../common/ej.touch","./../common/ej.draggable","./../common/ej.scroller","./ej.button","./ej.checkbox","./ej.autocomplete","./ej.datepicker","./ej.dialog","./ej.dropdownlist","./ej.togglebutton","./ej.radiobutton","./ej.timepicker","./ej.editor","./ej.navigationdrawer","./ej.recurrenceeditor","./ej.tooltip"], fn) : fn();
 })
 (function () {
 	
@@ -19,28 +19,26 @@
         this._horiDateHeader = ("{{if multiRes == true}}<td class = 'e-horizontalheader'><div class='e-horizontalresheader'>{{:label}}</div></td>{{else}}{{/if}}" +
                                 "<td class='e-horizontaldaterender'><div class='e-horizontaltimecells' style='height:{{:height}}px;'>" +
                                 "<div class='e-headerdays' style='position:absolute;'>" +
-                                "<table class ='e-table' cellpadding='0px' cellspacing='0px' style='width:100%;border-collapse:separate;'><tbody>{{if view !== 'month'}}" +
+                                "<table class ='e-table {{:tablelayout}}' cellpadding='0px' cellspacing='0px' style='width:100%;border-collapse:separate;table-layout:fixed;'><tbody>{{if view !== 'month'}}" +
                                 "<tr style='width:100%;'> <td>{{if view === 'day'}}<table cellspacing='0px' style='width:100%;'>{{else}}<table class='e-table' cellspacing='0px'>{{/if}}<tbody><tr> {{for cols ~headercellWidth = headercellWidth}}<td class='e-headercells {{:cellToday}} e-horizontalheadertddate'><div class='{{:currentDateClass}} e-horizontalheaderdiv'>{{:currentDay}}</div></td>{{/for}} </tr></tbody></table></td> </tr>" +
-
                                 "<tr style='width:100%;position:absolute;'> <td><table class =' e-table e-horizontaltabletimecell' cellspacing='0px' style='border-collapse:collapse;'><tbody><tr> {{for timeTdCount  ~columnvalue =column  }}{{for ~name=time ~dayend=timecellclass ~index=#getIndex() }}<td class='e-horizontaltimetd {{:~dayend}}'><div style='width:{{:timeCellWidth}}'><span class ='e-horizontaltimespan'>{{:~name.slice(0,2)}}</span><div class ='e-horizontaltimespandiv'>{{:~name.slice(3,5)}}</div></div></td>{{for ~columnvalue[~index] ~width = timeCellWidth}}<td class='e-horizontalalternatetd'><div style='width:{{:~width}}'></div></td>{{/for}}{{/for}}{{/for}}  </tr></tbody></table></td> </tr>" +
                                 "{{/if}}" +
-                                "{{if view == 'month'}}<tr>{{for cols}}<td class='e-headercells e-horizontmonthheaderdatetd {{:cellToday}}'><div class='e-dateheadercell e-horizontmonthdatealign'>{{:currentDate}}</div></td>{{/for}}</tr>" +
+                                "{{if view == 'month'}}<tr>{{for cols}}<td class='e-headercells e-horizontmonthheaderdatetd {{:cellToday}}'><div title='{{:title}}' class='e-dateheadercell e-horizontmonthdatealign'>{{:currentDate}}</div></td>{{/for}}</tr>" +
                                 "<tr>{{for cols}}<td class ='e-horizontmonthheaderdaytd'><div class='e-dateheadercell e-horizontmonthdatealign' style='width:{{:cellWidth}}'>{{:currentDay}}</div></td>{{/for}}</tr>" +
                                 "{{/if}}</tbody></table></div></div></td>");
         return this._horiDateHeader;
     };
     var userTimeCellsHoriTemplate = function () {
-
-       this._userTimeCellsHoriTemplate = ("{{if multiRes == true}}<td class = 'e-horizontalheader'><div class='e-horizontalresheader'>{{:label}}</div></td>{{else}}{{/if}}" +
-                                "<td class='e-horizontaldaterender'><div class='e-horizontaltimecells' style='height:{{:height}}px;'>" +
+        this._userTimeCellsHoriTemplate = ("{{if multiRes == true}}<td class = 'e-horizontalheader'><div class='e-horizontalresheader'>{{:label}}</div></td>{{else}}{{/if}}" +
+                                 "<td class='e-horizontaldaterender'><div class='e-horizontaltimecells' style='height:{{:height}}px;'>" +
                                 "<div class='e-headerdays' style='position:absolute;'>" +
-                                "<table class ='e-table' cellpadding='0px' cellspacing='0px' style='width:100%;border-collapse:separate;'><tbody>{{if view !== 'month'}}" +
+                                "<table class ='e-table' cellpadding='0px' cellspacing='0px' style='width:100%;border-collapse:separate;table-layout:fixed;'><tbody>{{if view !== 'month'}}" +
                                 "<tr style='width:100%;'> <td>{{if view === 'day'}}<table cellspacing='0px' style='width:100%;'>{{else}}<table class='e-table' cellspacing='0px'>{{/if}}<tbody><tr> {{for cols ~headercellWidth = headercellWidth}}<td class='e-headercells {{:cellToday}} e-horizontalheadertddate'><div class='{{:currentDateClass}} e-horizontalheaderdiv'>{{:currentDay}}</div></td>{{/for}} </tr></tbody></table></td> </tr>" +
-                               "<tr style='width:100%;position:absolute;'> <td><table class='e-table e-horizontaltabletimecell' cellspacing='0px' style='border-collapse:collapse;'><tbody><tr> {{for timeTdCount  ~userTemplateId = userTemplateId  ~template=template  ~columnvalue =column}}{{for ~name=time ~names=times ~dayend=timecellclass }}<td class='e-horizontaltimetd {{:~dayend}}'><div style='width:{{:timeCellWidth}}'><span class ='e-horizontaltimespan'>{{:~name}}</span><div class ='e-horizontaltimespandiv'></div></div></td>{{for ~columnvalue ~width = timeCellWidth ~names=~names}}<td class='e-horizontalalternatetd' style='vertical-align:middle !important;'><div style='width:{{:~width}};' > {{if ~template ==true || ~userTemplateId==true }}{{:~names[#getIndex()]}}{{else}}</div>{{/if}}</td>{{/for}}{{/for}}{{/for}}  </tr></tbody></table></td> </tr>" +
-                                "{{/if}}" +
-                                "{{if view == 'month'}}<tr>{{for cols}}<td class='e-headercells e-horizontmonthheaderdatetd {{:cellToday}}'><div class='e-dateheadercell e-horizontmonthdatealign'>{{:currentDate}}</div></td>{{/for}}</tr>" +
-                                "<tr>{{for cols}}<td class ='e-horizontmonthheaderdaytd'><div class='e-dateheadercell e-horizontmonthdatealign' style='width:{{:cellWidth}}'>{{:currentDay}}</div></td>{{/for}}</tr>" +
-                                "{{/if}}</tbody></table></div></div></td>");
+                                "<tr style='width:100%;position:absolute;'> <td><table class='e-table e-horizontaltabletimecell' cellspacing='0px' style='border-collapse:collapse;'><tbody><tr> {{for timeTdCount  ~userTemplateId = userTemplateId  ~template=template  ~columnvalue =column}}{{for ~name=time ~names=times ~dayend=timecellclass }}<td class='e-horizontaltimetd {{:~dayend}}'><div style='width:{{:timeCellWidth}}'><span class ='e-horizontaltimespan'>{{:~name}}</span><div class ='e-horizontaltimespandiv'></div></div></td>{{for ~columnvalue ~width = timeCellWidth ~names=~names}}<td class='e-horizontalalternatetd' style='vertical-align:middle !important;'><div style='width:{{:~width}};' > {{if ~template ==true || ~userTemplateId==true }}{{:~names[#getIndex()]}}{{else}}</div>{{/if}}</td>{{/for}}{{/for}}{{/for}}  </tr></tbody></table></td> </tr>" +
+                                 "{{/if}}" +
+                                 "{{if view == 'month'}}<tr>{{for cols}}<td class='e-headercells e-horizontmonthheaderdatetd {{:cellToday}}'><div class='e-dateheadercell e-horizontmonthdatealign'>{{:currentDate}}</div></td>{{/for}}</tr>" +
+                                 "<tr>{{for cols}}<td class ='e-horizontmonthheaderdaytd'><div class='e-dateheadercell e-horizontmonthdatealign' style='width:{{:cellWidth}}'>{{:currentDay}}</div></td>{{/for}}</tr>" +
+                                 "{{/if}}</tbody></table></div></div></td>");
         return this._userTimeCellsHoriTemplate;
     };
 
@@ -55,11 +53,10 @@
 
     var horizontalCellsTemplate = function () {
         this._cellsTemplate = ("<table class='e-table e-workcellstab'cellpadding='0px' cellspacing='0px'>" +
-          "<tbody>{{for cellrows ~cols=cols ~hourdiff=hourdiff ~view=view ~classname=classname ~tdWidth=tdWidth ~columnvalue=column ~userTemp=userTemplate ~userHtml=userHtml}}" +
-          "{{if classname == 'e-parentnode'}} <tr class='e-resourceheadertr' style='width:100%'>{{for ~cols ~tdWidth=tdWidth ~value=#getIndex()}}{{if #index % ~hourdiff == 0 && #index != 0 && ~view !== 'month' }}<td class='e-resourceheadercells e-workcells e-parentworkcell e-dayend' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{else}}<td class='e-resourceheadercells e-workcells e-parentworkcell' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{/if}}<div class='e-appointwrapper'></div>{{if ~userTemp == true}}{{if ~view !== 'month'}}{{:~userHtml[~value][0][#getIndex()]}}{{else}}{{:~userHtml[~value][#getIndex()]}}{{/if}}{{/if}}</td>{{if ~view !== 'month' ~val=#index}}{{for ~columnvalue[#getIndex()] ~width = cellWidth}}<td class='e-resourceheadercells e-workcells e-parentworkcell e-alternateworkcell' style='width:{{:~width}};height:{{:cellHeight}}'><div class='e-appointwrapper'></div>{{if ~userTemp == true}}{{:~userHtml[~value][1][~val][#getIndex()]}}{{/if}}</td>{{/for}}{{/if}}{{/for}}</tr>" +
-          "{{else}}<tr style='width:100%'>{{for ~cols ~tdWidth=tdWidth ~value=#getIndex()}}{{if #index % ~hourdiff == 0 && #index != 0 && ~view !== 'month'  }}<td class='e-workcells e-childworkcell e-dayend' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{else}}<td class='e-workcells e-childworkcell' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{/if}}<div class='e-appointwrapper'></div>{{if ~userTemp == true}}{{if ~view !== 'month'}}{{:~userHtml[~value][0][#getIndex()]}}{{else}}{{:~userHtml[~value][#getIndex()]}}{{/if}}{{/if}}</td>{{if ~view !== 'month' ~val=#index}}{{for ~columnvalue[#getIndex()] ~width = cellWidth}}<td class='e-workcells e-childworkcell e-alternateworkcell' style='width:{{:~width}};height:{{:cellHeight}}'><div class='e-appointwrapper'></div>{{if ~userTemp == true}}{{:~userHtml[~value][1][~val][#getIndex()]}}{{/if}}</td>{{/for}}{{/if}}{{/for}}" +
-          "</tr>{{/if}}" +
-          "{{/for}}</tbody></table>");
+          "<tbody>{{for cellrows ~cols=cols ~hourdiff=hourdiff ~view=view ~classname=classname ~columnvalue=column ~userTemp=userTemplate ~userHtml=userHtml}}" +
+          "{{if classname == 'e-parentnode'}} <tr class='e-resourceheadertr' style='width:100%'>{{for ~cols ~value=#getIndex()}}{{if #index % ~hourdiff == 0 && #index != 0 && ~view !== 'month' }}<td class='e-resourceheadercells e-workcells e-parentworkcell e-dayend' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{else}}<td class='e-resourceheadercells e-workcells e-parentworkcell' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{/if}}{{if ~userTemp == true}}{{if ~view !== 'month'}}{{:~userHtml[~value][0][#getIndex()]}}{{else}}{{:~userHtml[~value][#getIndex()]}}{{/if}}{{/if}}</td>{{if ~view !== 'month' ~val=#index}}{{for ~columnvalue[#getIndex()] ~width = cellWidth}}<td class='e-resourceheadercells e-workcells e-parentworkcell e-alternateworkcell' style='width:{{:~width}};height:{{:cellHeight}}'>{{if ~userTemp == true}}{{:~userHtml[~value][1][~val][#getIndex()]}}{{/if}}</td>{{/for}}{{/if}}{{/for}}</tr>" +
+          "{{else}}<tr style='width:100%'>{{for ~cols ~value=#getIndex()}}{{if #index % ~hourdiff == 0 && #index != 0 && ~view !== 'month'  }}<td class='e-workcells e-childworkcell e-dayend' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{else}}<td class='e-workcells e-childworkcell' style='width:{{:cellWidth}};height:{{:cellHeight}}'>{{/if}}{{if ~userTemp == true}}{{if ~view !== 'month'}}{{:~userHtml[~value][0][#getIndex()]}}{{else}}{{:~userHtml[~value][#getIndex()]}}{{/if}}{{/if}}</td>{{if ~view !== 'month' ~val=#index}}{{for ~columnvalue[#getIndex()] ~width = cellWidth}}<td class='e-workcells e-childworkcell e-alternateworkcell' style='width:{{:~width}};height:{{:cellHeight}}'>{{if ~userTemp == true}}{{:~userHtml[~value][1][~val][#getIndex()]}}{{/if}}</td>{{/for}}{{/if}}{{/for}}" +
+          "</tr>{{/if}}{{/for}}</tbody></table>");
         return this._cellsTemplate;
     };
 
@@ -84,36 +81,17 @@
                         this.currentDate(navidate);
                     }
                     else { return false; }
-                    if (this.model.highlightBusinessHours == true && !ej.isNullOrUndefined(this.model.businessStartHour))
-                        this._businessHourScroller();
-                    else {
-                        var cellOffsetLeft = this.element.find(".e-workcells")[parseInt(currentDateIndex * ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)))].offsetLeft;
-                        if (this.element.find(".e-hscroll").length > 0) {
-                        if (!this.model.enableRTL) {
-                            $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", (-cellOffsetLeft) + "px");
-                            $('div#' + this._id + "_scroller").ejScroller({ scrollLeft: cellOffsetLeft });
-                        } else {
-                            var workcellLeft = this.element.find(".e-workcells")[0].offsetLeft;
-                            var highScrol = workcellLeft - cellOffsetLeft;
-                            $('div#' + this._id + "_scroller").ejScroller({ scrollLeft: highScrol });
-                            var maxLeft = workcellLeft + this.element.find(".e-workcells").width() - this.element.find('.e-draggableworkarea').width();
-                            highScrol = highScrol >= maxLeft ? maxLeft : highScrol;
-                            $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", highScrol + "px");
-                        }
-                    }
-                    }
+                    this._businessHourScroller();
                 }
                 else if (this.currentView() == "month" || (this._isCustomMonthView())) {
                     currentDateIndex = e.currentTarget.cellIndex;
                     if (this.model.views.indexOf("day") == -1) return false;
                     navidate = new Date(this.monthDays[currentDateIndex]);
-                    if (this.model.minDate <= navidate && this.model.maxDate >= navidate) {
+                    if (this.model.minDate <= navidate && this.model.maxDate >= navidate)
                         this.currentDate(navidate);
-                    }
                     else { return false; }
-                    newView = "day";
                     this._navView = true;
-                    this._viewChange(e, this.currentView(), newView);
+                    this._viewChange(e, this.currentView(), "day");
                 }
             }
             else if (e.type == "dblclick") {
@@ -121,45 +99,41 @@
                     var target = $(e.target);
                     var dayTarget = target.hasClass("e-headercells") ? target : target.parent().hasClass("e-headercells") ? target.parent() : target.parent().parent();
                     if (this.model.views.indexOf("day") == -1 || !dayTarget.hasClass("e-headercells")) return false;
-
                     navidate = new Date(this._dateRender[dayTarget.index()]);
-                    if (this.model.minDate <= navidate && this.model.maxDate >= navidate) {
+                    if (this.model.minDate <= navidate && this.model.maxDate >= navidate)
                         this.currentDate(navidate);
-                    }
                     else { return false; }
-                    var newView = "day";
                     this._navView = true;
-                    this._viewChange(e, this.currentView(), newView);
+                    this._viewChange(e, this.currentView(), "day");
                 }
             }
-
         },
 
         _renderHorizontalHeaderDays: function (localizeDays) {
             this.element.find(".e-headercells").addClass("e-dateheaderselect");
-			if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
-				this.element.find(".e-currentdayhighlight").removeClass("e-currentdayhighlight");
+            if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
+                this.element.find(".e-currentdayhighlight").removeClass("e-currentdayhighlight");
                 var curday, temp;
-				if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId)) {
-					var columns = this._getUserDateheaderTemplate();
-					for (i = 0; i < this._dateRender.length; i++) { 
-						$(this.element.find(".e-headercells")[i]).find("div")[0].innerHTML = columns[i].currentDay;
-						if (new Date(new Date(this._dateRender[i]).setHours(0,0,0,0)).getTime() == new Date(new Date().setHours(0,0,0,0)).getTime())
-							$(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
-					}
-				}
-				else {
-					for (var i = 0; i < this._dateRender.length; i++) {
-					    curday = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? this._dayNames[new Date(this._dateRender[i]).getDay()].split("")[0] : (this.currentView() === "day") ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? localizeDays.calendar.days.names[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
-						if (this.model.timeScale.enable)
-							temp = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? curday + parseInt(ej.format(new Date(this._dateRender[i]), "dd")) : this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy") : curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMM yy") : curday + " " + new Date(this._dateRender[i]).getDate();
-						else
-							temp = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? curday + parseInt(ej.format(new Date(this._dateRender[i]), "dd")) : this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy") : ej.format(new Date(this._dateRender[i]), "dd MMM yy") : ("0" + new Date(this._dateRender[i]).getDate()).slice(-2);
-						$(this.element.find(".e-headercells")[i]).find("div")[0].innerHTML = temp;
-						if (new Date(new Date(this._dateRender[i]).setHours(0,0,0,0)).getTime() == new Date(new Date().setHours(0,0,0,0)).getTime())
-							$(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
-					}
-				}
+                if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId)) {
+                    var columns = this._getUserDateheaderTemplate();
+                    for (i = 0; i < this._dateRender.length; i++) {
+                        $(this.element.find(".e-headercells")[i]).find("div")[0].innerHTML = columns[i].currentDay;
+                        if (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
+                            $(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
+                    }
+                }
+                else {
+                    for (var i = 0; i < this._dateRender.length; i++) {
+                        curday = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? this._dayNames[new Date(this._dateRender[i]).getDay()].split("")[0] : (this.currentView() === "day") ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? localizeDays.calendar.days.names[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
+                        if (this.model.timeScale.enable)
+                            temp = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? curday + parseInt(ej.format(new Date(this._dateRender[i]), "dd",this.model.locale)) : this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy",this.model.locale) : curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMM yy",this.model.locale) : curday + " " + new Date(this._dateRender[i]).getDate();
+                        else
+                            temp = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? curday + parseInt(ej.format(new Date(this._dateRender[i]), "dd",this.model.locale)) : this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy",this.model.locale) : ej.format(new Date(this._dateRender[i]), "dd MMM yy",this.model.locale) : ("0" + new Date(this._dateRender[i]).getDate()).slice(-2);
+                        $(this.element.find(".e-headercells")[i]).find("div")[0].innerHTML = temp;
+                        if (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
+                            $(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
+                    }
+                }
                 var currentDate = new Date(this.currentDate());
                 if (this.model.orientation == "horizontal" && this.currentView() != "month" && this.model.timeScale.enable) {
                     if (new Date(this.currentDate()).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) {
@@ -173,47 +147,55 @@
                     new Date(new Date(this.currentDate()).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime() ? $(this.element.find("td.e-horizontalheadertddate")[index]).addClass("e-headerToday") : "";
                 }
             }
-			else {
-				var monthDays = this._horizontalMonthDates();
-				for (var i = 0; i < monthDays.length; i++) {
-					if (new Date(new Date(monthDays[i]).setHours(0,0,0,0)).getTime() == new Date(new Date().setHours(0,0,0,0)).getTime())
-						$(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
-				}
-			}
+            else {
+                var monthDays = this._horizontalMonthDates();
+                for (var i = 0; i < monthDays.length; i++) {
+                    if (new Date(new Date(monthDays[i]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
+                        $(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
+                }
+            }
         },
 
         _horizontalScroll: function (e, proxy) {
-            if (proxy.currentView() == "week" || proxy.currentView() == "workweek" || (this.currentView() === "customview" && this._renderDays <= 7)) {
+            if (ej.isNullOrUndefined(e.scrollLeft)) return;
+            if (proxy.currentView() == "day" || proxy.currentView() == "week" || proxy.currentView() == "workweek" || (this.currentView() === "customview" && this._renderDays <= 7)) {
                 var currentDateIndex = $(proxy.element.find(".e-headercells").find(".e-activeview").parent()).index();
-                var index = Math.floor((Math.abs(e.scrollLeft) / (proxy.element.find(".e-workcells").width() + 1)) / ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)));
-                if (currentDateIndex !== index)
+                var index = 0;
+                if (this.model.enableRTL) {
+                    var leftValue = e.scrollData.scrollable - e.scrollLeft;
+                    $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", leftValue - 1 + "px");
+                    var index = Math.floor((Math.abs(leftValue) / (proxy.element.find(".e-workcells").width() + 1)) / ((proxy.model.endHour - proxy.model.startHour) * proxy.model.timeScale.minorSlotCount));
+                }
+                else
+                    var index = Math.floor((Math.abs(e.scrollLeft) / (proxy.element.find(".e-workcells").width())) / ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)));
+                if (proxy.currentView() != "day" && currentDateIndex !== index)
                     proxy.element.find(".e-headercells").children().removeClass("e-activeview");
-                $(proxy.element.find(".e-headercells")[index]).children().addClass("e-activeview");
+                (proxy.currentView() != "day") && $(proxy.element.find(".e-headercells")[index]).children().addClass("e-activeview");
                 (!this.model.timeScale.enable) && proxy.element.find(".e-headercells").children().removeClass("e-activeview");
             }
         },
 
         _getHorizontalheaderCellCount: function (weekcols) {
             var cols = [];
-			this._isCustomMonthView();
-			if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek))) {
-				cols = this._getUserDateheaderTemplate();
-			}
-			else {
-				var curday, headerCellClass, temp;
-				for (i = 0; i < this._dateRender.length; i++) {
-				    curday = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? this._dayNames[new Date(this._dateRender[i]).getDay()].split("")[0] : (this.currentView() === "month" || this.currentView() === "day" || (this._isCustomMonthView())) ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? weekcols.calendar.days.names[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
-					headerCellClass = (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime()) ? "e-headerToday" : "";
-					temp = (this.currentView() === "month" || this._isCustomMonthView()) ? { currentDay: curday, currentDateClass: "", cellToday: headerCellClass, cellWidth: this.model.cellWidth } : (this.currentView() === "day") ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy"), currentDateClass: "", cellToday: headerCellClass, cellWidth: this.model.cellWidth } : { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMM yy"), currentDateClass: "", cellToday: headerCellClass, cellWidth: this.model.cellWidth } : { currentDay: (this._mediaQuery) ? curday + parseInt(ej.format(new Date(this._dateRender[i]), "dd")) : curday + " " + new Date(this._dateRender[i]).getDate(), currentDateClass: new Date(this._dateRender[i]).getDate() === new Date(this.currentDate()).getDate() ? "e-activeview" : "", cellToday: headerCellClass, cellWidth: this.model.cellWidth };
-					cols.push(temp);
-				}
-			}
+            this._isCustomMonthView();
+            if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek))) {
+                cols = this._getUserDateheaderTemplate();
+            }
+            else {
+                var curday, headerCellClass, temp;
+                for (i = 0; i < this._dateRender.length; i++) {
+                    curday = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? this._dayNames[new Date(this._dateRender[i]).getDay()].split("")[0] : (this.currentView() === "month" || this.currentView() === "day" || (this._isCustomMonthView())) ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? weekcols.calendar.days.names[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
+                    headerCellClass = (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime()) ? "e-headerToday" : "";
+                    temp = (this.currentView() === "month" || this._isCustomMonthView()) ? { currentDay: curday, currentDateClass: "", cellToday: headerCellClass, cellWidth: this.model.cellWidth } : (this.currentView() === "day") ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy",this.model.locale), currentDateClass: "", cellToday: headerCellClass, cellWidth: this.model.cellWidth } : { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMM yy",this.model.locale), currentDateClass: "", cellToday: headerCellClass, cellWidth: this.model.cellWidth } : { currentDay: (this._mediaQuery) ? curday + parseInt(ej.format(new Date(this._dateRender[i]), "dd",this.model.locale)) : curday + " " + new Date(this._dateRender[i]).getDate(), currentDateClass: new Date(this._dateRender[i]).getDate() === new Date(this.currentDate()).getDate() ? "e-activeview" : "", cellToday: headerCellClass, cellWidth: this.model.cellWidth };
+                    cols.push(temp);
+                }
+            }
             return cols;
         },
 
         _getHoriStartEndTime: function (localizeAmPm) {
             var templateValue = !ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId)
-            if(templateValue){
+            if (templateValue) {
                 var userTemp = $.templates($(this.model.timeScale.majorSlotTemplateId).html());
                 var userTemp1 = $.templates($(this.model.timeScale.minorSlotTemplateId).html());
             }
@@ -224,7 +206,7 @@
                 if (templateValue) {
                     var dateValue = new Date(new Date().setHours(0, 0, 0, 0));
                     var j = 0, timelist1 = [];
-                    for (var i = this.model.startHour; i < this.model.endHour;) {           
+                    for (var i = this.model.startHour; i < this.model.endHour;) {
                         var value = this.model.timeScale.majorSlot + j;
                         var jvalue = j;
                         while (j < value) {
@@ -239,15 +221,13 @@
                             }
                             else {
                                 if (this._timeMode === "12") {
-                                    var timelist = ((i === this.model.startHour || i === 12) && (localizeAmPm.AM && localizeAmPm.PM) && j == 0) ? ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh tt") : ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh:mm tt");
-                                    startendTimes.push({ time: timelist, id: i + "_" + j, timecellclass: ((i == this.model.startHour && day != 0 && j == 0)) ? "e-dayend" : "", cellWidth: (!this.model.cellWidth) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, timeCellWidth:headercellWidth });
+                                    var timelist = ((i === this.model.startHour || i === 12) && (localizeAmPm.AM && localizeAmPm.PM) && j == 0) ? ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh tt",this.model.locale) : ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh:mm tt",this.model.locale);
+                                    startendTimes.push({ time: timelist, id: i + "_" + j, timecellclass: ((i == this.model.startHour && day != 0 && j == 0)) ? "e-dayend" : "", cellWidth: (!this.model.cellWidth) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, timeCellWidth: headercellWidth });
                                 }
                                 else
                                     startendTimes.push({ time: (i <= 9 ? "0" + i : i) + " 00", timecellclass: ((i % ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount)) == this.model.startHour && day != 0) ? "e-dayend" : "", cellWidth: (!this.model.cellWidth) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, timeCellWidth: headercellWidth });
                             }
-                            j = !ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId) ? (j / (60 * 1000)) + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) : (j / (60 * 1000)) + this.model.timeScale.majorSlot;;
-
-           
+                            j = !ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId) ? (j / (60 * 1000)) + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) : (j / (60 * 1000)) + this.model.timeScale.majorSlot;
                         }
                         i = (this.model.timeScale.majorSlot > 60) ? i + (this.model.timeScale.majorSlot / 60) : j >= 60 ? i + 1 : i;
                         j = (j >= 60) ? 0 : j;
@@ -266,15 +246,14 @@
                         while (j < 60) {
                             j = j * 60 * 1000;
                             if (this._timeMode === "12") {
-                                var timelist = ((i === this.model.startHour || i === 12) && (localizeAmPm.AM && localizeAmPm.PM) && j == 0) ? ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh tt") : ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh:mm tt");
-                                startendTimes.push({ time: timelist, id: i + "_" + j, timecellclass: ((i == this.model.startHour && day != 0 && j == 0)) ? "e-dayend" : "", cellWidth: (!this.model.cellWidth) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, timeCellWidth:headercellWidth  });
+                                var timelist = ((i === this.model.startHour || i === 12) && (localizeAmPm.AM && localizeAmPm.PM) && j == 0) ? ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh tt",this.model.locale) : ej.format(new Date(new Date(dateValue).setHours(i, 0, 0, j)), "hh:mm tt",this.model.locale);
+                                startendTimes.push({ time: timelist, id: i + "_" + j, timecellclass: ((i == this.model.startHour && day != 0 && j == 0)) ? "e-dayend" : "", cellWidth: (!this.model.cellWidth) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, timeCellWidth: headercellWidth });
                             }
                             else
                                 startendTimes.push({ time: (i <= 9 ? "0" + i : i) + " 00", timecellclass: ((i % ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount)) == this.model.startHour && day != 0) ? "e-dayend" : "", cellWidth: (!this.model.cellWidth) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, timeCellWidth: headercellWidth });
                             j = (j / (60 * 1000)) + this.model.timeScale.majorSlot;
                         }
                         i = (this.model.timeScale.majorSlot > 60) ? i + (this.model.timeScale.majorSlot / 60) : i + 1;
-
                     }
                 }
             }
@@ -282,13 +261,14 @@
         },
 
         _getHorizontalDayAppointments: function (appointmentsList, dateCount, day, res) {
+            var resAvail = [];
             for (var app = 0; app < appointmentsList.length; app++) {
                 if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
-                    var resAvail = new ej.DataManager(this._tempResource[this._tempResource.length - 1].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length - 1].resourceSettings.groupId, ej.FilterOperators.equal, parseInt(appointmentsList[app][this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2]])));
-                else var resAvail = this.res1;
+                    resAvail = new ej.DataManager(this._tempResource[this._tempResource.length - 1].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length - 1].resourceSettings.groupId, ej.FilterOperators.equal, appointmentsList[app][this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2]]));
+                else resAvail = this.res1;
                 if (resAvail.length != 0) {
                     if (new Date(new Date(dateCount[day]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date(appointmentsList[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() &&
-                          new Date(new Date(dateCount[day]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointmentsList[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime() && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources) ? appointmentsList[app][this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()] == this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]] : true &&
+                          new Date(new Date(dateCount[day]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointmentsList[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime() && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources) ? appointmentsList[app][this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()] == this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]] : true &&
                                new Date(new Date(appointmentsList[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointmentsList[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) {
                         this._renderApp(appointmentsList[app], day, res);
                         this._filtered.push(appointmentsList[app]);
@@ -296,51 +276,45 @@
                 }
             }
         },
-		
-		_horizontalMonthDates: function () {
-			var dateFilter = [];
-			for (i = 0; i < this._dateRender.length; i++) {
-				if (new Date(this.currentDate()).getMonth() === new Date(this._dateRender[i]).getMonth())
+
+        _horizontalMonthDates: function () {
+            var dateFilter = [];
+            for (i = 0; i < this._dateRender.length; i++) {
+                if (new Date(this.currentDate()).getMonth() === new Date(this._dateRender[i]).getMonth())
                     dateFilter.push(this._dateRender[i]);
             }
-			return dateFilter;
-		},
-		
-		_horiGroupCollection: function () {
-			if ((this._tempResource.length!=0)) {
-				var rIndex, temp = this._resourceSort(), temp1 = this.res1;
-				var temp2 = temp.filter(function(a) { return temp1.indexOf(a) === -1; });
-				if (ej.isNullOrUndefined(this.model.group)) this.res1 = ["0"];
-				return temp2;
-			}
-		},
-		
+            return dateFilter;
+        },
+
+        _horiGroupCollection: function () {
+            if ((this._tempResource.length != 0)) {
+                var rIndex, temp = this._resourceSort(), temp1 = this.res1;
+                var temp2 = temp.filter(function (a) { return temp1.indexOf(a) === -1; });
+                if (ej.isNullOrUndefined(this.model.group)) this.res1 = ["0"];
+                return temp2;
+            }
+        },
+
         _renderHorizontalApp: function (rStartTime, rEndTime, record, day, cellHeight, timeScaleRowCount, startHour, endHour) {
-            var headerCell = this.element.find(".e-workcellstab tr");
-            var newResCollection = this._resCollection;
-            var newResCollection1 = this._horiGroupCollection();
-            var appHeight, appWidth, topPosition, leftPosition;
-            var categorybarwidth = this.element.find(".e-parentnode").width();
+            var headerCell = this.element.find(".e-workcellstab tr"), appHeight, appWidth, topPosition, leftPosition;
             if (rStartTime <= rEndTime) {
                 var startTime = ((new Date(rStartTime).getHours()) < startHour) ? (new Date(rStartTime).getHours() + (-new Date(rStartTime).getHours()) + (-new Date(rStartTime).getMinutes())) : (new Date(rStartTime).getHours() + (-startHour));
                 var endTime = ((new Date(rEndTime).getHours()) > endHour) ? (new Date(rEndTime).getHours() + (-new Date(rEndTime).getHours() + (endHour - startHour)) + (-new Date(rEndTime).getMinutes())) : (new Date(rEndTime).getHours() + (-startHour));
                 endTime = (new Date(rEndTime).getHours() == endHour) ? (new Date(endTime).getMinutes() + (-new Date(rEndTime).getMinutes())) : endTime;
-                appHeight = 20;
-                topPosition = 0;
+                appHeight = 20; topPosition = 0;
                 var level = 0;
                 if (this.model.startHour <= new Date(rStartTime).getHours() && this.model.endHour >= new Date(rStartTime).getHours()) {
-                    var groupIndex = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && this._grouping.length > 1) ? this._findResourceIndex(newResCollection1, this._tempResource[this._tempResource.length-2].resourceSettings["id"], record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 2].trim()]) + 1 : 0;
+                    var groupIndex = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && this._grouping.length > 1) ? this._findResourceIndex(this._horiHeaderCollection, this._tempResource[this._tempResource.length - 2].resourceSettings["id"], record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 2].trim()]) + 1 : 0;
                     var resValue = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) ? this._findResourceIndex(this.res1, this._tempResource[this._tempResource.length - 1].resourceSettings.id, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) + 1 : 1;
-                    var overlapList = (ej.scheduleFeatures.resources && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && !ej.isNullOrUndefined(this.model.group)) ? this._overlapApp(record["AppTaskId"], record[this._appointmentSettings["startTime"]], record[this._appointmentSettings["endTime"]], record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : this._overlapApp(record["AppTaskId"], record[this._appointmentSettings["startTime"]], record[this._appointmentSettings["endTime"]], null);
-                    if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)  && this._tempResource[0].resourceSettings.dataSource.length!=0 && this._grouping.length > 1)
-						this.overlapList = new ej.DataManager(overlapList).executeLocal(new ej.Query().where(this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2], ej.FilterOperators.equal, record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2]]));
-                    var proxy = this;
+                    var overlapList = (ej.scheduleFeatures.resources && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && !ej.isNullOrUndefined(this.model.group)) ? this._overlapApp(record["AppTaskId"], record[this._appointmentSettings["startTime"]], record[this._appointmentSettings["endTime"]], record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : this._overlapApp(record["AppTaskId"], record[this._appointmentSettings["startTime"]], record[this._appointmentSettings["endTime"]], null);
+                    if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && this._grouping.length > 1)
+                        this.overlapList = new ej.DataManager(overlapList).executeLocal(new ej.Query().where(this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2], ej.FilterOperators.equal, record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2]]));
                     var userAppTemplId = (this.model.appointmentTemplateId) ? true : false;
-                    var userTempHtml = this._getUserAppointmentTemplate(record);
-                    appHeight = (!this.model.appointmentTemplateId) ? appHeight : ($(userTempHtml).css('height') == "100%" ? (cellHeight - 15) : $(userTempHtml).css('height') == "0px" ? appHeight : $(userTempHtml).height());
+                    var userTempHtml = userAppTemplId && this._getUserAppointmentTemplate(record);
+                    appHeight = (!this.model.appointmentTemplateId) ? appHeight : ($(userTempHtml).css('height') == "100%" ? (!this.model.showOverflowButton ? this.initialCellHeight : (cellHeight - 15)) : $(userTempHtml).css('height') == "0px" ? appHeight : $(userTempHtml).height());
                     level = (ej.scheduleFeatures.resources && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && !ej.isNullOrUndefined(this.model.group)) ? this._getOverlapCount(record, day, this._dateRender, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : this._getOverlapCount(record, day, this._dateRender, null);
                     this._renderedAllDay.push(record);
-                    topPosition = (topPosition + (level * appHeight));
+                    topPosition = (topPosition + (level * (appHeight + 2)));
                     var diffTime, diffDays, diffMinutes, cellIndex;
                     if (record[this._appointmentSettings["allDay"]]) {
                         diffTime = new Date(new Date(new Date(rEndTime).setHours(0, 0, 0, 0)).getTime()) - new Date(new Date(new Date(rStartTime).setHours(0, 0, 0, 0)).getTime());
@@ -349,50 +323,46 @@
                             diffDays = new Date(this._dateRender[this._dateRender.length - 1]).getDay() + 1 - new Date(rStartTime).getDay();
                         diffMinutes = (diffDays * (endHour - startHour) * 60);
                         cellIndex = ((this.model.endHour - this.model.startHour) * timeScaleRowCount) * day;
-                        var totHours = Math.round((record[this._appointmentSettings["endTime"]] - record[this._appointmentSettings["startTime"]]) / 3600000);
-                        appWidth = ((this.element.find(".e-workcells").outerWidth() / (30)) * diffMinutes) + ((diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 1);
+                        appWidth = ((this.cellwidth / 30) * diffMinutes) + ((diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 1);
                         leftPosition = "0";
                     }
                     else if (new Date(new Date(new Date(record[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime()) < new Date(new Date(new Date(record[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())) {
                         var endDiffer = (new Date(rEndTime) < new Date(new Date(rEndTime).setHours(this.model.endHour, 0, 0)) && new Date(rEndTime) < new Date(new Date(rEndTime).setHours(this.model.startHour, 0, 0))) ? (((this.model.endHour) / 2) * 60) : ((new Date(rEndTime).getHours() * 60) + new Date(rEndTime).getMinutes());
                         var startDiffer = new Date(rStartTime) > new Date(new Date(rEndTime).setHours(this.model.startHour, 0, 0)) ? (this.model.startHour * 60) : ((new Date(rStartTime).getHours() * 60) + new Date(rStartTime).getMinutes());
                         var i = 1, rEnd, rStart, end, start, diffTime;
-                         rEnd = this._dateRender.indexOf(new Date(rEndTime).setHours(0, 0, 0, 0));
-                         rStart = this._dateRender.indexOf(new Date(rStartTime).setHours(0, 0, 0, 0));
-                         if (rEnd == -1) {
-                             while (i < 7) {
-                                 if (new Date(this._dateRender[this._dateRender.length - i]).getTime() < new Date(rEndTime).setHours(0, 0, 0, 0)) {
-                                     end = this._dateRender.length - i;
-                                     endDiffer = this.model.endHour * 60;
-                                     break;
-                                 }
-                                 else i++;
-                             }
-                         }
-                         else {
-                             end = rEnd;
-                         }
+                        rEnd = this._dateRender.indexOf(new Date(rEndTime).setHours(0, 0, 0, 0));
+                        rStart = this._dateRender.indexOf(new Date(rStartTime).setHours(0, 0, 0, 0));
+                        if (rEnd == -1) {
+                            while (i < 7) {
+                                if (new Date(this._dateRender[this._dateRender.length - i]).getTime() < new Date(rEndTime).setHours(0, 0, 0, 0)) {
+                                    end = this._dateRender.length - i;
+                                    endDiffer = this.model.endHour * 60;
+                                    break;
+                                }
+                                else i++;
+                            }
+                        }
+                        else
+                            end = rEnd;
                         if (rStart == -1) {
-                             start = day;
+                            start = day;
                             startDiffer = this.model.startHour * 60;
                         }
                         else
-                             start = rStart;
-                         diffTime = end - start;
+                            start = rStart;
+                        diffTime = end - start;
                         diffMinutes = ((((diffTime) * ((endHour - startHour)) * 60) - startDiffer) + endDiffer);
                         cellIndex = (((this.model.endHour - this.model.startHour) * timeScaleRowCount) * (60 / this.model.timeScale.majorSlot) * day) + ((rStart == -1) ? 0 : startTime * timeScaleRowCount) * (60 / this.model.timeScale.majorSlot);
-                        var totHours = Math.round((record[this._appointmentSettings["endTime"]] - record[this._appointmentSettings["startTime"]]) / 3600000);
-                        appWidth = ((this.element.find(".e-workcells").outerWidth() / (30)) * diffMinutes) + ((diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 2);
+                        appWidth = ((this.cellwidth / 30) * diffMinutes) + ((diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 2);
                         if (diffDays > this._dateRender.length) {
                             diffDays = new Date(this._dateRender[this._dateRender.length - 1]).getDay() + 1 - new Date(rStartTime).getDay();
                             diffMinutes = ((diffDays) * (endHour - startHour) * 60);
-                            appWidth = diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * this.element.find(".e-workcells").width() + ((diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 3);
+                            appWidth = diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * this.cellwidth + ((diffMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 3);
                         }
                         leftPosition = (rStart == -1 ? 0 : parseFloat((new Date(rStartTime).getMinutes())) * (this.element.find(".e-workcells")[0].offsetWidth) * timeScaleRowCount / this.model.timeScale.majorSlot);
-
                     }
                     else {
-                        leftPosition = (parseFloat((new Date(rStartTime).getMinutes() + (new Date(rStartTime).getMilliseconds() / 60))) * ($(this.element.find(".e-workcells")[1]).width() * this.model.timeScale.minorSlotCount) / this.model.timeScale.majorSlot) - 1;
+                        leftPosition = (parseFloat((new Date(rStartTime).getMinutes() + (new Date(rStartTime).getMilliseconds() / 60))) * (this.cellwidth * this.model.timeScale.minorSlotCount) / this.model.timeScale.majorSlot) - 1;
                         if ((this.model.endHour - this.model.startHour) == 24)
                             var diffInMinutes = ((new Date(rEndTime).getHours() * 60) + new Date(rEndTime).getMinutes()) - ((new Date(rStartTime).getHours() * 60) + new Date(rStartTime).getMinutes());
                         else {
@@ -401,44 +371,47 @@
                             var diffInMinutes = endDiffer - startDiffer;
                         }
                         diffInMinutes += 1;
-                        appWidth = diffInMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * this.element.find(".e-workcells").width() + ((diffInMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 2) + 1;
+                        appWidth = diffInMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * this.cellwidth + ((diffInMinutes / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - 2) + 1;
                         cellIndex = (((this.model.endHour - this.model.startHour) * timeScaleRowCount) * (60 / this.model.timeScale.majorSlot) * day) + (startTime * timeScaleRowCount * (60 / this.model.timeScale.majorSlot));
                     }
                     var colorAppointment = this._appointmentColor(record);
-                    var appointColor, categoryClass;
-                    if ((!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0))
+                    if ((!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0))
                         cellHeight = $(headerCell[resValue + groupIndex - 1]).find(".e-workcells").outerHeight();
                     else cellHeight = cellHeight;
                     var indicationIcon = this._indicationApp(record);
-                    if ((topPosition + appHeight + 1) < cellHeight) {
-                        var startTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["startTime"]]), this._pattern.t) : ej.format(new Date(record[this._appointmentSettings["startTime"]]), "HH:mm");
-                        var endTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["endTime"]]), this._pattern.t) : ej.format(new Date(record[this._appointmentSettings["endTime"]]), "HH:mm");
+                    if ((topPosition + appHeight + 7) < cellHeight) {
+                        var startTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["startTime"]]), this._pattern.t,this.model.locale) : ej.format(new Date(record[this._appointmentSettings["startTime"]]), "HH:mm",this.model.locale);
+                        var endTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["endTime"]]), this._pattern.t,this.model.locale) : ej.format(new Date(record[this._appointmentSettings["endTime"]]), "HH:mm",this.model.locale);
                         if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
                             var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
-                        var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-appointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication }));
+                        var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-appointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication, resId: (!ej.isNullOrUndefined(this._appointmentSettings["resourceFields"])) ? record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1]] : "" }));
                         (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("appointment", record, timeCellhtml);
-                        $($(headerCell[resValue + groupIndex - 1]).find("div.e-appointwrapper")[cellIndex]).append(timeCellhtml);
+                        var celltd = $($(headerCell[resValue + groupIndex - 1]).find("td.e-workcells")[cellIndex]);
+                        celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(timeCellhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(timeCellhtml));
                     }
                     else {
-                        if (this.model.showOverflowButton) {                            
+                        if (this.model.showOverflowButton) {
                             var overflowIconIndex = cellIndex + Math.round(new Date(rStartTime).getMinutes() / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount));
-                            if ($("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex).length == 0) {
-                                $($(headerCell[resValue + groupIndex - 1]).find("div.e-appointwrapper")[overflowIconIndex]).append('<div id="' + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex + '" class="e-icon e-arrowhead-down e-appsoverflow" cellinfo="' + this._dateRender[day] + '"></div>');
+                            if ($("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy",this.model.locale) + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex).length == 0) {
+                                var celltd = $($(headerCell[resValue + groupIndex - 1]).find("td.e-workcells")[overflowIconIndex]);
+                                var overflowhtml = '<div id="' + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy",this.model.locale) + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex + '" class="e-icon e-arrowhead-down e-appsoverflow" cellinfo="' + this._dateRender[day] + '"></div>';
+                                celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(overflowhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(overflowhtml));
                                 topPosition = cellHeight - this.element.find('.e-appsoverflow').height();
-                                this.element.find("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex).css(this.model.enableRTL ? "right" : "left", (this.element.find(".e-workcells").width() - 25) + "px").css("top", topPosition + "px");
+                                this.element.find("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy",this.model.locale) + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex).css(this.model.enableRTL ? "right" : "left", (this.cellwidth - 25) + "px").css("top", topPosition + "px");
                             }
-                            $("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex).attr("appcount", level + 1);
+                            $("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy",this.model.locale) + "_" + (resValue + groupIndex - 1) + "_" + overflowIconIndex).attr("appcount", level + 1);
                         }
                         else {
                             $(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find(".e-workcells").css('height', cellHeight + appHeight - 1 + "px");
                             $(this.element.find(".e-resourceheadertable tr")[resValue + groupIndex - 1]).find(".e-childnode").css('height', cellHeight + appHeight - 1 + "px");
-                            var startTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["startTime"]]), this._pattern.t) : ej.format(new Date(record[this._appointmentSettings["startTime"]]), "HH:mm");
-                            var endTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["endTime"]]), this._pattern.t) : ej.format(new Date(record[this._appointmentSettings["endTime"]]), "HH:mm");
+                            var startTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["startTime"]]), this._pattern.t,this.model.locale) : ej.format(new Date(record[this._appointmentSettings["startTime"]]), "HH:mm",this.model.locale);
+                            var endTimeDisp = this._timeMode == "12" ? ej.format(new Date(record[this._appointmentSettings["endTime"]]), this._pattern.t,this.model.locale) : ej.format(new Date(record[this._appointmentSettings["endTime"]]), "HH:mm",this.model.locale);
                             if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
                                 var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
-                            var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-appointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication }));
+                            var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-appointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication, resId: (!ej.isNullOrUndefined(this._appointmentSettings["resourceFields"])) ? record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1]] : "" }));
                             (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("appointment", record, timeCellhtml);
-                            $($(headerCell[resValue + groupIndex - 1]).find("div.e-appointwrapper")[cellIndex]).append(timeCellhtml);
+                            var celltd = $($(headerCell[resValue + groupIndex - 1]).find("td.e-workcells")[cellIndex]);
+                            celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(timeCellhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(timeCellhtml));
                             this._overflowFlag = true;
                         }
                     }
@@ -448,90 +421,55 @@
                         if (indicationIcon.rightIndication)
                             this.model.enableRTL ? this.element.find('[guid=' + record.Guid + ']').find(".e-apptime,.e-apptext").css("margin-right", "13px") : this.element.find('[guid=' + record.Guid + ']').find('[guid=' + record.Guid + ']').find(".e-schedulemouseclose").css("margin-right", "11px");
                     }
-					if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
-						this._renderAppointmentCategory(newResCollection1,groupIndex,cellIndex,record,appWidth,leftPosition);
+                    if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
+                        this._renderAppointmentCategory(this._horiHeaderCollection, groupIndex, cellIndex, record, appWidth, leftPosition);
                 }
             }
         },
-		
-		_renderAppointmentCategory: function (resCollection, groupIndex, cellIndex, record, appWidth, leftPosition) {
-			var appointColor, categoryClass, index, rGroupId, resIndex, rObject, rIndex;
-			if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 0) {
+
+        _renderAppointmentCategory: function (resCollection, groupIndex, cellIndex, record, appWidth, leftPosition) {
+            var appointColor, categoryClass, index = 0, rGroupId, resIndex, rObject = [], rIndex;
+            if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 0) {
                 appointColor = this._getResourceColor(record);
                 categoryClass = (appointColor.appointData == "") ? "e-categorycolor" : "";
-				groupIndex -= 1;
-				appWidth = (this.currentView() == "month" || this._isCustomMonthView()) ? appWidth : appWidth + 2;
-				do {
-                    if (this.model.enableRTL)
-                        $($(this.element.find(".e-resourceheadertr")[groupIndex]).find("div.e-appointwrapper")[cellIndex]).append("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.element.find(".e-resourceheadercells").height()) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;right:" + leftPosition + "px;'></div>");
-					else
-                        $($(this.element.find(".e-resourceheadertr")[groupIndex]).find("div.e-appointwrapper")[cellIndex]).append("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.element.find(".e-resourceheadercells").height()) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;left:" + leftPosition + "px;'></div>");
-					for (var a = this._tempResource.length-2; a >= 0; a--) {
-						index = this._tempResource[a].resourceSettings.dataSource.indexOf(resCollection[groupIndex]);
-						if (index != -1) { 
-							index = a;
-							rGroupId = this._tempResource[a].resourceSettings.groupId;
-							break; 
-						}
-					}
-					resIndex = (index == 0) ? index : index - 1;
-					rObject = new ej.DataManager(resCollection).executeLocal(new ej.Query().where(this._tempResource[resIndex].resourceSettings.id, ej.FilterOperators.equal, resCollection[groupIndex][rGroupId]));
-					rIndex = this._tempResource[0].resourceSettings.dataSource.indexOf(rObject[0]);
-					if (rIndex == 0) { 
-						rObject = [];
-						if (this._tempResource.length > 2) {
-							if (this.model.enableRTL)
-								$($(this.element.find(".e-resourceheadertr")[rIndex]).find("div.e-appointwrapper")[cellIndex]).append("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.element.find(".e-resourceheadercells").height()) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;right:" + leftPosition + "px;'></div>");
-							else
-								$($(this.element.find(".e-resourceheadertr")[rIndex]).find("div.e-appointwrapper")[cellIndex]).append("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.element.find(".e-resourceheadercells").height()) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;left:" + leftPosition + "px;'></div>");
-						}
-					}
-					else (rObject.length != 0) ? groupIndex = resCollection.indexOf(rObject[0]) : "";
-				} while (rObject.length != 0)
-			}
-		},
-
-        _renderCategory: function (headerCell, groupIndex, record, cellHeight, minDate, maxDate, appointColor, timeScaleRowCount, day, startTime, endTime) {
-            var diffTime, diffDays, diffMinutes, cellIndex, appWidth, leftPosition;
-            if (record[this._appointmentSettings["allDay"]]) {
-                diffTime = new Date(new Date(new Date(maxDate).setHours(0, 0, 0, 0)).getTime()) - new Date(new Date(new Date(minDate).setHours(0, 0, 0, 0)).getTime());
-                diffDays = Math.round(diffTime / 86400000) + 1;
-                if (diffDays > this.dateRender.length)
-                    diffDays = new Date(this.dateRender[this.dateRender.length - 1]).getDay() + 1 - new Date(minDate).getDay();
-                diffMinutes = (diffDays * 24 * 60);
-                cellIndex = ((this.model.endHour - this.model.startHour) * timeScaleRowCount) * day;
-                appWidth = ((this.element.find(".e-workcells").width() / (30 - 1.1)) * diffMinutes) + 3;
-                leftPosition = "0";
+                groupIndex -= 1;
+                appWidth = (this.currentView() == "month" || this._isCustomMonthView()) ? appWidth : appWidth + 2;
+                do {
+                    var celltd = $($(this.element.find(".e-resourceheadertr")[groupIndex]).find("td.e-workcells")[cellIndex]);
+                    var categorybarhtml = this.model.enableRTL ? ("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.resHeaderHeight) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;right:" + leftPosition + "px;'></div>") : ("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.resHeaderHeight) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;left:" + leftPosition + "px;'></div>");
+                    celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(categorybarhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(categorybarhtml));
+                    if (this._tempResource.length > 2) {
+                        for (var a = this._tempResource.length - 2; a >= 0; a--) {
+                            index = this._tempResource[a].resourceSettings.dataSource.indexOf(resCollection[groupIndex]);
+                            if (index != -1) {
+                                index = a;
+                                rGroupId = this._tempResource[a].resourceSettings.groupId;
+                                if (ej.isNullOrUndefined(rGroupId))
+                                    return;
+                                break;
+                            }
+                        }
+                        resIndex = (index == 0) ? index : index - 1;
+                        rObject = new ej.DataManager(resCollection).executeLocal(new ej.Query().where(this._tempResource[resIndex].resourceSettings.id, ej.FilterOperators.equal, resCollection[groupIndex][rGroupId]));
+                        rIndex = this._tempResource[0].resourceSettings.dataSource.indexOf(rObject[0]);
+                        if (rIndex == 0) {
+                            rObject = [];
+                            if (this._tempResource.length > 2) {
+                                var celltd = $($(this.element.find(".e-resourceheadertr")[rIndex]).find("td.e-workcells")[cellIndex]);
+                                var categorybarhtml = this.model.enableRTL ? ("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.resHeaderHeight) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;right:" + leftPosition + "px;'></div>") : ("<div class='e-categorybar " + categoryClass + "' id='categorybar_" + record.Guid + "' style='position:absolute;height:" + (this.element.find(".e-resourceheadercells").height()) + "px;background:" + appointColor.appointData + ";width:" + appWidth + "px;left:" + leftPosition + "px;'></div>");
+                                celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(categorybarhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(categorybarhtml));
+                            }
+                        }
+                        else (rObject.length != 0) ? groupIndex = resCollection.indexOf(rObject[0]) : "";
+                    }
+                } while (rObject.length != 0)
             }
-            else if (new Date(new Date(new Date(record[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime()) < new Date(new Date(new Date(record[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())) {
-                diffTime = new Date(new Date(new Date(maxDate).setHours(0, 0, 0, 0)).getTime()) - new Date(new Date(new Date(minDate).setHours(0, 0, 0, 0)).getTime());
-                diffDays = Math.round(diffTime / 86400000) + 1;
-                diffMinutes = ((diffDays - 1) * 24 * 60);
-                cellIndex = (((this.model.endHour - this.model.startHour) * timeScaleRowCount) * day) + (startTime * timeScaleRowCount);
-                appWidth = ((this.element.find(".e-workcells").width() / (30 - 1.1)) * diffMinutes) + (new Date(maxDate).getMinutes() * ((this.element.find(".e-workcells")[0].offsetWidth) * timeScaleRowCount) / 60) + ((new Date(maxDate).getHours() - this.model.startHour) * timeScaleRowCount);
-                if (diffDays > this.dateRender.length) {
-                    diffDays = new Date(this.dateRender[this.dateRender.length - 1]).getDay() + 1 - new Date(minDate).getDay();
-                    diffMinutes = ((diffDays) * 24 * 60);
-                    appWidth = ((this.element.find(".e-workcells").width() / (30 - 1.1)) * diffMinutes) - (cellIndex * 25) + 10;
-                }
-                leftPosition = (parseFloat((new Date(minDate).getMinutes())) * (this.element.find(".e-workcells")[0].offsetWidth) * timeScaleRowCount / 60);
-
-            }
-            else {
-                leftPosition = (parseFloat((new Date(minDate).getMinutes())) * (this.element.find(".e-workcells")[0].offsetWidth) * timeScaleRowCount / 60);
-                var diffInMinutes = ((new Date(maxDate).getHours() * 60) + new Date(maxDate).getMinutes()) - ((new Date(minDate).getHours() * 60) + new Date(minDate).getMinutes());
-                appWidth = ((this.element.find(".e-workcells").width() / 30) * diffInMinutes) + ((new Date(maxDate).getHours() - new Date(minDate).getHours()) * timeScaleRowCount) - 2;
-                cellIndex = (((this.model.endHour - this.model.startHour) * timeScaleRowCount) * day) + (startTime * timeScaleRowCount);
-            }
-            if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
-                $($($(headerCell.find("td.e-resourceheadercells")).parent()[groupIndex - 1]).find("div.e-appointwrapper")[cellIndex]).append("<div class='e-categorybar' style='position:absolute;height:" + (cellHeight - 3) + "px;background:" + appointColor.appointData + ";width:" + (appWidth + 1) + "px;left:" + leftPosition + "px;'></div>");
-
         },
 
         _getHorizontalOverlapCount: function (appointments, dateRender, day, record, resValue) {
             var filterData = [];
             for (var i = 0; i < appointments.length; i++) {
-                if (ej.scheduleFeatures.resources && (this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group)) {
+                if (ej.scheduleFeatures.resources && (this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group)) {
                     if ((new Date(new Date(appointments[i][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(dateRender[day]).setHours(0, 0, 0, 0)).getTime()) &&
                     (new Date(new Date(appointments[i][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime() >= new Date(new Date(dateRender[day]).setHours(0, 0, 0, 0)).getTime()) &&
                     (((new Date(record[this._appointmentSettings["startTime"]]) < new Date(appointments[i][this._appointmentSettings["startTime"]]) && new Date(record[this._appointmentSettings["endTime"]]) >= new Date(appointments[i][this._appointmentSettings["startTime"]])) ||
@@ -560,25 +498,24 @@
             if (this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() === "customview" && this._renderDays <= 7)) {
                 if (this.element.find(".e-headercells").children().hasClass("e-activeview")) {
                     var currentDateIndex = $(this.element.find(".e-headercells").find(".e-activeview").parent()).index();
-                    var cellOffsetLeft = this.element.find(".e-workcells")[parseInt(currentDateIndex * ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)))].offsetLeft;
+                    var cellOffsetLeft = $(this.element.find(".e-workcells")[parseInt(currentDateIndex * ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)))]).offset().left;
                     if (this.element.find(".e-hscroll").length > 0) {
                         if (this.model.enableRTL) {
-                            cellOffsetLeft = this.element.find(".e-workcells")[0].offsetLeft - cellOffsetLeft;
-                            $('div#' + this._id + "_scroller").ejScroller({ scrollLeft: cellOffsetLeft });
+                            cellOffsetLeft = this.element.find(".e-workcells:first").offset().left - cellOffsetLeft;
+                            this.element.find('div#' + this._id + "_scroller").ejScroller({ scrollLeft: cellOffsetLeft });
                             $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", cellOffsetLeft + "px");
                         }
                         else {
                             $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", (-cellOffsetLeft) + "px");
-                            $('div#' + this._id + "_scroller").ejScroller({ scrollLeft: cellOffsetLeft });
+                            this.element.find('div#' + this._id + "_scroller").ejScroller({ scrollLeft: cellOffsetLeft });
                         }
                     }
                 }
             }
         },
 
-
         _renderHorizontalHeaderBar: function () {
-            var view = this.model.timeScale.enable ? (this._isCustomMonthView()) ? "month" : this.currentView() : "month"; //var weekcols = ej.preferredCulture(this.model.locale);
+            var customview = this._isCustomMonthView(), view = this.model.timeScale.enable ? (this._isCustomMonthView()) ? "month" : this.currentView() : "month";
             var viewColCount = view == "day" ? 1 : view == "week" ? 7 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : this.model.workWeek.length;
             this._strTime = this._getStartEndTime();
             var colValue = this._columnTimeScale(this._strTime);
@@ -586,7 +523,7 @@
             if (view === 'month' || (this._isCustomMonthView())) {
                 this.datesColumn = [], this.monthDays = [], this.totdays = [];
                 for (var i = 0; i < this._dateRender.length; i++) {
-                    if (this.currentView() === "month") {
+                    if (this.currentView() === "month" || (this._isCustomMonthView() && this._oneWeek)) {
                         if (new Date(this.currentDate()).getMonth() === new Date(this._dateRender[i]).getMonth())
                             this.totdays.push(this._dateRender[i]);
                     }
@@ -594,37 +531,37 @@
                         this.totdays.push(new Date(this._dateRender[i]));
                 }
                 var date = this.totdays.length;
-				if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek))) {
-					var temp, columns = this._getUserDateheaderTemplate();
-					for (i = 0; i < date; i++) {
-					    temp = { currentDate: columns[i].currentDay, currentDateClass: "", currentDay: this.currentView() == "day" ? this._dayFullNames[new Date(this.totdays[i]).getDay()] : this._dayShortNames[new Date(this.totdays[i]).getDay()].toString(), cellWidth: !this.model.cellWidth ? "100%" : this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
-						this.datesColumn.push(temp);
-						this.monthDays.push(this.totdays[i]);
-					}
-				}
-				else {
-					for (var i = 0; i < date; i++) {
-					    var curday = this._dayFullNames[new Date(this.totdays[i]).getDay()];
-						if (this.model.timeScale.enable)
-						    var temp = { currentDate: ej.format(new Date(this.totdays[i]), "dd"), currentDateClass: "", currentDay: this._dayFullNames[new Date(this.totdays[i]).getDay()].toString().slice(0, 1), cellWidth: (!this.model.cellWidth && this.currentView() != "month" && !(this._isCustomMonthView())) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
-						else {
-							if (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek")
-							    var temp = { currentDate: ej.format(new Date(this.totdays[i]), "dd"), currentDateClass: "", currentDay: this.currentView() == "day" ? this._dayFullNames[new Date(this.totdays[i]).getDay()] : this._dayShortNames[new Date(this.totdays[i]).getDay()].toString(), cellWidth: !this.model.cellWidth ? "100%" : this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
-							else
-							    var temp = { currentDate: ej.format(new Date(this.totdays[i]), "dd"), currentDateClass: "", currentDay: this._dayFullNames[new Date(this.totdays[i]).getDay()].toString().slice(0, 1), cellWidth: this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
-						}
-						this.datesColumn.push(temp);
-						this.monthDays.push(this.totdays[i]);
-					}
-				}
+                if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek))) {
+                    var temp, columns = this._getUserDateheaderTemplate();
+                    for (i = 0; i < date; i++) {
+                        temp = { currentDate: columns[i].currentDay, currentDateClass: "", currentDay: this.currentView() == "day" ? this._dayFullNames[new Date(this.totdays[i]).getDay()] : this._dayShortNames[new Date(this.totdays[i]).getDay()].toString(), cellWidth: !this.model.cellWidth ? "100%" : this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
+                        this.datesColumn.push(temp);
+                        this.monthDays.push(this.totdays[i]);
+                    }
+                }
+                else {
+                    var temp, curdate;
+                    for (var i = 0; i < date; i++) {
+                        curdate = customview && new Date(this.totdays[i]).getDate() == 1 ? (ej.format(new Date(this.totdays[i]), "MMM",this.model.locale) + " " + new Date(this.totdays[i]).getDate()) : ej.format(new Date(this.totdays[i]), "dd",this.model.locale);
+                        if (this.model.timeScale.enable)
+                            temp = { title: new Date(this.totdays[i]).toDateString(), currentDate: curdate, currentDateClass: "", currentDay: this._dayFullNames[new Date(this.totdays[i]).getDay()].toString().slice(0, 1), cellWidth: (!this.model.cellWidth && this.currentView() != "month" && !(this._isCustomMonthView())) ? "30px" : this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
+                        else {
+                            if (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek")
+                                temp = { title: new Date(this.totdays[i]).toDateString(), currentDate: curdate, currentDateClass: "", currentDay: this.currentView() == "day" ? this._dayFullNames[new Date(this.totdays[i]).getDay()] : this._dayShortNames[new Date(this.totdays[i]).getDay()].toString(), cellWidth: !this.model.cellWidth ? "100%" : this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
+                            else
+                                temp = { title: new Date(this.totdays[i]).toDateString(), currentDate: curdate, currentDateClass: "", currentDay: this._dayFullNames[new Date(this.totdays[i]).getDay()].toString().slice(0, 1), cellWidth: this.model.cellWidth, cellHeight: this.model.cellHeight, today: (new Date(this.totdays[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime()) };
+                        }
+                        this.datesColumn.push(temp);
+                        this.monthDays.push(this.totdays[i]);
+                    }
+                }
             }
-            var viewclass = this.currentView() == "month" || (this._isCustomMonthView()) ? 1 : 0;
             var userTemplateId = ((!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId) && !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId)) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId)) ? true : false;
             var template = (!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId)) ? true : false;
             if (userTemplateId || template) {
                 var userTemp = $.templates($(this.model.timeScale.minorSlotTemplateId).html());
                 var userTemp1 = $.templates($(this.model.timeScale.majorSlotTemplateId).html());
-                var  timeValue1 = [], j = 0;
+                var timeValue1 = [], j = 0;
                 for (var i = this.model.startHour; i < this.model.endHour;) {
                     var timeValue = [];
                     var value = this.model.timeScale.majorSlot + j;
@@ -634,109 +571,80 @@
                         j = j * 60 * 1000;
                         if (this._timeMode === "12") {
                             if (jval == jvalue && !ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId))
-                                timeValue.push(userTemp1.render(object = {  date: new Date(new Date(this._dateRender[0]).setHours(i, 0, 0, j)) }).trim());
+                                timeValue.push(userTemp1.render(object = { date: new Date(new Date(this._dateRender[0]).setHours(i, 0, 0, j)) }).trim());
                             else
-                                timeValue.push(userTemp.render(object = {  date: new Date(new Date(this._dateRender[0]).setHours(i, 0, 0, j)) }).trim());
+                                timeValue.push(userTemp.render(object = { date: new Date(new Date(this._dateRender[0]).setHours(i, 0, 0, j)) }).trim());
                         }
                         j = (j / 60000) + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
                     }
                     i = (this.model.timeScale.majorSlot > 60) ? i + (this.model.timeScale.majorSlot / 60) : j >= 60 ? i + 1 : i;
                     j = (j >= 60) ? 0 : j;
-
                     timeValue1.push(timeValue);
                 }
                 template = true;
             }
-
-            var multiResources = ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && this._tempResource[0].resourceSettings.dataSource.length!=0) ? true : false;
+            var multiResources = ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && this._tempResource[0].resourceSettings.dataSource.length != 0) ? true : false;
             if (userTemplateId || template)
                 var html = this.userTimeCellHoriTemplate.render({ cols: this.datesColumn, label: this._getLocalizedLabels("Resources"), multiRes: multiResources, view: view, timeTdCount: this._strTime, colspan: view == "month" ? 1 : (this._strTime.length / viewColCount) * 2, height: view == 'month' ? 62 : 59, width: this.model.width, headercellWidth: view == "day" ? "100%" : "55px", column: colValue, userTemplateId: userTemplateId, template: template });
             else
-                var html = this.horizontalHeader.render({ cols: this.datesColumn, label: this._getLocalizedLabels("Resources"), multiRes: multiResources, view: view, timeTdCount: this._strTime, colspan: view == "month" ? 1 : (this._strTime.length / viewColCount) * 2, height: view == 'month' ? 62 : 59, width: this.model.width, headercellWidth: view == "day" ? "100%" : "55px", column: colValue });
+                var html = this.horizontalHeader.render({ tablelayout: customview ? "e-fixedlayout" : '', cols: this.datesColumn, label: this._getLocalizedLabels("Resources"), multiRes: multiResources, view: view, timeTdCount: this._strTime, colspan: view == "month" ? 1 : (this._strTime.length / viewColCount) * 2, height: view == 'month' ? 62 : 59, width: this.model.width, headercellWidth: view == "day" ? "100%" : "55px", column: colValue });
             this.aTR.append(html);
         },
 
         _renderHorizontalContent: function ($contentAreaDiv, $contentTable, $contentBody, $contentTR, $WorkCellTD, $scrollerbarDiv) {
             var templateValue = !ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId);
-            var trCount, resHtml, columnValue = [], cols2 = [], value = (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
-            var strTime = this._getStartEndTime();
-            if (!templateValue) {
-                for (var j = 0; j < strTime.length; j++) {
-                    for (var i = 0; i < this.model.timeScale.minorSlotCount - 1; i++) {
-                        value = value + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
-                        columnValue.push(i);
-                        if ((value > (this.model.endHour - this.model.startHour) * 60) && (i == (this.model.timeScale.minorSlotCount - 2))) {
-                            value = 0;
-                            break;
-                        }
-                    }
-                    cols2.push(columnValue);
-                    value = value + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
-                    columnValue = [];
-                }
-            }
-            else {
-                for (var j = 0; j < strTime.length; j++) {
-                        columnValue.push(j);
-                    }
-                
-            }
-
-             if ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && this._tempResource[0].resourceSettings.dataSource.length!=0) {
+            var trCount, resHtml, columnValue = [], value = (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
+            var strTime = this._strTime;
+            columnValue = this._columnValue;
+            if ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && this._tempResource[0].resourceSettings.dataSource.length != 0) {
                 resHtml = this._renderHorizontalResources();
                 trCount = this._horiResources;
             }
             else {
-                var tdWidth = this.currentView() == "month" || (this._isCustomMonthView()) ? "24px" : "25px";
                 resHtml = "";
-                trCount = [{ classname: "e-childnode", tdWidth: tdWidth }];
+                trCount = [{ classname: "e-childnode" }];
             }
-            var timeCount = 60 / this.model.timeScale.majorSlot;
- 
-			var userTemplate = (!ej.isNullOrUndefined(this.model.workCellsTemplateId)) ? true : false;
-			if (userTemplate) { var workHtml = this._getUserWorkCellsTemplate(); }
-			var workCellhtml = this.cellTemplate.render({ cellrows: trCount, hourdiff: Math.ceil(((this.model.endHour - this.model.startHour)) * timeCount), view: this.model.timeScale.enable ? (this._isCustomMonthView()) ? "month" : this.currentView() : "month", cols: this.model.timeScale.enable ? this.currentView() == 'month' || (this._isCustomMonthView()) ? this.datesColumn : this._getStartEndTime() : this.datesColumn, column: (!templateValue) ? cols2 : (!templateValue) ? cols2 : columnValue, timeScale: this.model.timeScale.minorSlotCount, userTemplate: userTemplate, userHtml: workHtml });
-
+            var userTemplate = (!ej.isNullOrUndefined(this.model.workCellsTemplateId)) ? true : false;
+            if (userTemplate) { var workHtml = this._getUserWorkCellsTemplate(); }
+            var workCellhtml = this.cellTemplate.render({ cellrows: trCount, hourdiff: Math.ceil(((this.model.endHour - this.model.startHour)) * (60 / this.model.timeScale.majorSlot)), view: this.model.timeScale.enable ? (this._isCustomMonthView()) ? "month" : this.currentView() : "month", cols: (this.model.timeScale.enable ? this.currentView() == 'month' || (this._isCustomMonthView()) ? this.datesColumn : strTime : this.datesColumn), column: columnValue, userTemplate: userTemplate, userHtml: workHtml });
             if (resHtml == "")
                 this.wTR.append(ej.buildTag('td').append($contentAreaDiv.append($contentTable.append($contentBody.append($contentTR.append($WorkCellTD.append($scrollerbarDiv.append(this.$WorkCellDiv.append(workCellhtml)))))))));
             else
                 this.wTR.append(ej.buildTag('td.e-horizontalrestd', {}, {}, { width: "15%", height: "100%" }).append(resHtml)).append(ej.buildTag('td').append($contentAreaDiv.append($contentTable.append($contentBody.append($contentTR.append($WorkCellTD.append($scrollerbarDiv.append(this.$WorkCellDiv.append(workCellhtml)))))))));
         },
         _columnTimeScale: function (strTime) {
-            this._columnValue = [], this._cols2 = [];
+            this._columnValue = [], _cols2 = [];
             var value = (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
             var templateValue = !ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplate) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplate);
             var userTemplateId = ((!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplate) && !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplate)) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplate)) ? true : false;
             var template = (!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplate)) ? true : false;
-
             if (!templateValue) {
                 for (var j = 0; j < strTime.length; j++) {
                     for (var i = 0; i < this.model.timeScale.minorSlotCount - 1; i++) {
                         value = value + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
                         if (value > (this.model.endHour - this.model.startHour) * 60) {
-                            this._columnValue.push(i);
+                            _cols2.push(i);
                             if (i == (this.model.timeScale.minorSlotCount - 2)) {
                                 value = 0;
                                 break;
                             }
                         }
                         else
-                            this._columnValue.push(i);
+                            _cols2.push(i);
                     }
-                    this._cols2.push(this._columnValue);
+                    this._columnValue.push(_cols2);
                     value = value + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
-                    this._columnValue = [];
-
+                    _cols2 = [];
                 }
             }
             else {
                 for (var j = 0; j < strTime.length; j++) {
                     this._columnValue.push(j);
                 }
-
             }
-            return (userTemplateId || template) ? this._columnValue : this._cols2;
+            return this._columnValue;
         },
+
         _getResourceHeadTemplate: function (record) {
             var userTemp = $.templates($(this.model.resourceHeaderTemplateId).html());
             var userTempHtml = userTemp.render(record);
@@ -747,9 +655,7 @@
             this._resCollect = []; this._horizontalResRender = []; this._horiResources = [];
             var view = this.currentView();
             var viewColCount = view == "day" ? 1 : view == "week" || view == "month" || (this._isCustomMonthView()) ? 7 : this.model.workWeek.length;
-            var tdWidth = this.currentView() == "month" || (this._isCustomMonthView()) ? "24px" : "25px";
             var userResTemplId = (this.model.resourceHeaderTemplateId) ? true : false;
-            var resTempHtml = "";
             if (!ej.isNullOrUndefined(this.model.group)) {
                 if (this._grouping.length === 1) {
                     var index;
@@ -757,36 +663,35 @@
                         index = this._findResourceIndex(this._tempResource, "name", this._grouping[i]);
                     }
                     for (var i = 0; i < this._resourceInfo[index].dataSource.length; i++) {
-                        this._horiResources.push({ cellHeight: this.model.cellHeight, name: this._resourceInfo[index].dataSource[i][this._resourceInfo[index].text], idnum: this._resourceInfo[index].dataSource[i][this._resourceInfo[index].id], classname: "e-childnode", marginleft: "10px", width: "10px", backgroundcolor: "", border: "1px solid #bbbcbb", bordertop: "", tdWidth: tdWidth, userResHeader: this._getResourceHeadTemplate($.extend(this._resourceInfo[index].dataSource[i], { classname: "e-childnode" })), userResTemplId: userResTemplId });
+                        this._horiResources.push({ cellHeight: this.model.cellHeight, name: this._resourceInfo[index].dataSource[i][this._resourceInfo[index].text], idnum: this._resourceInfo[index].dataSource[i][this._resourceInfo[index].id], classname: "e-childnode", marginleft: "10px", width: "10px", backgroundcolor: "", border: "1px solid #bbbcbb", bordertop: "", userResHeader: this._getResourceHeadTemplate($.extend(this._resourceInfo[index].dataSource[i], { classname: "e-childnode" })), userResTemplId: userResTemplId });
                         this._resCollect.push(this._resourceInfo[index].dataSource[i]);
                     }
                     this._horizontalResRender.push(this._resCollect);
                 }
                 else {
                     var cIndex, rText, rId, lastRes, rGroupId, tempResource1 = this._resourceSort();
-					for (var a = 0; a < tempResource1.length; a++) {
-						lastRes = this.res1.indexOf(tempResource1[a]);
-						for (var b = 0; b < this.render_Resources.length; b++) {
-							rIndex = this.render_Resources[b].indexOf(tempResource1[a]);
-							if (rIndex != -1) { 
-								index = b;
-								rId = this._tempResource[b].resourceSettings.id;
-								rText = this._tempResource[b].resourceSettings.text;
-								rGroupId = this._tempResource[b].resourceSettings.groupId;
-								break;
-							}
-						}
-						
-						if (index == this.render_Resources.length-1) {
-							this._horiResources.push({ cellHeight: this.model.cellHeight, name: tempResource1[a][rText], classname: "e-childnode", marginleft: ((this._mediaQuery) ? (index * 11) : (index * 21)) +"px", width: "20px", backgroundcolor: "", border: "1px dotted #bbbcbb", bordertop: "", tdWidth: tdWidth, userResHeader: this._getResourceHeadTemplate($.extend(tempResource1[a], { classname: "e-childnode" })), userResTemplId: userResTemplId });
-							this._resCollect.push(tempResource1[a]);
-						}
-						else {
-							this._horiResources.push({ cellHeight: this.model.cellHeight, name: tempResource1[a][rText], idnum: tempResource1[a][rId] + "_" + tempResource1[a][rGroupId], classname: "e-parentnode", marginleft: (index * 10) +"px", width: "20px", backgroundcolor: "", border: "1px dotted #bbbcbb", bordertop: "", tdWidth: tdWidth, userResHeader: this._getResourceHeadTemplate($.extend(tempResource1[a], { classname: "e-parentnode" })), userResTemplId: userResTemplId });
-							this._resCollect.push(tempResource1[a]);
-						}
-					}
-					this._horizontalResRender.push(this._resCollect);
+                    for (var a = 0; a < tempResource1.length; a++) {
+                        lastRes = this.res1.indexOf(tempResource1[a]);
+                        for (var b = 0; b < this.render_Resources.length; b++) {
+                            rIndex = this.render_Resources[b].indexOf(tempResource1[a]);
+                            if (rIndex != -1) {
+                                index = b;
+                                rId = this._tempResource[b].resourceSettings.id;
+                                rText = this._tempResource[b].resourceSettings.text;
+                                rGroupId = this._tempResource[b].resourceSettings.groupId;
+                                break;
+                            }
+                        }
+                        if (index == this.render_Resources.length - 1) {
+                            this._horiResources.push({ cellHeight: this.model.cellHeight, name: tempResource1[a][rText], classname: "e-childnode", marginleft: ((this._mediaQuery) ? (index * 11) : (index * 21)) + "px", width: "20px", backgroundcolor: "", border: "1px dotted #bbbcbb", bordertop: "", userResHeader: this._getResourceHeadTemplate($.extend(tempResource1[a], { classname: "e-childnode" })), userResTemplId: userResTemplId });
+                            this._resCollect.push(tempResource1[a]);
+                        }
+                        else {
+                            this._horiResources.push({ cellHeight: this.model.cellHeight, name: tempResource1[a][rText], idnum: tempResource1[a][rId] + "_" + tempResource1[a][rGroupId], classname: "e-parentnode", marginleft: (index * 10) + "px", width: "20px", backgroundcolor: "", border: "1px dotted #bbbcbb", bordertop: "", userResHeader: this._getResourceHeadTemplate($.extend(tempResource1[a], { classname: "e-parentnode" })), userResTemplId: userResTemplId });
+                            this._resCollect.push(tempResource1[a]);
+                        }
+                    }
+                    this._horizontalResRender.push(this._resCollect);
                 }
             }
             else {
@@ -798,26 +703,24 @@
             var html = this.horizontalResHeader.render({ trs: this._horiResources });
             return html;
         },
-		
-		_horizontalResIcon: function () {
-			var resource, resCat, resId, cIndex, resAvail, count;
-			resource = this._resourceSort();
-			resCat = this.element.find(".e-parentnodecategory");
-			for (var a = 0; a < resCat.length; a++) {
-				resId = parseInt(resCat[a].id);
-				for (var b = 0; b < this._tempResource.length; b++) {
-					cIndex = new ej.DataManager(this._tempResource[b].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[b].resourceSettings.id, ej.FilterOperators.equal, resId));
-					if (cIndex.length != 0) { cIndex = b; break; }
-				}
-				count = cIndex + 1;
-				count = (count == this._tempResource.length) ? count-1 : count;
-				for (var c = 0; c < this._tempResource.length; c++) {
-					resAvail = new ej.DataManager(resource).executeLocal(new ej.Query().where(this._tempResource[count].resourceSettings.groupId, ej.FilterOperators.equal, resId));
-					if (resAvail.length == 0) { $(resCat[a]).removeClass("e-resourceicon e-resourcecollapse"); }
-					break;
-				}
-			}
-		},
+
+        _horizontalResIcon: function () {
+            var resCat = this.element.find(".e-parentnodecategory"), resId, cIndex, resAvail, count;
+            for (var a = 0; a < resCat.length; a++) {
+                resId = resCat[a].id.split("_")[0];
+                for (var b = 0; b < this._tempResource.length; b++) {
+                    cIndex = new ej.DataManager(this._tempResource[b].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[b].resourceSettings.id, ej.FilterOperators.equal, resId));
+                    if (cIndex.length != 0) { cIndex = b; break; }
+                }
+                count = cIndex + 1;
+                count = (count == this._tempResource.length) ? count - 1 : count;
+                for (var c = 0; c < this._tempResource.length; c++) {
+                    resAvail = new ej.DataManager(this._resourceSort()).executeLocal(new ej.Query().where(this._tempResource[count].resourceSettings.groupId, ej.FilterOperators.equal, resId));
+                    if (resAvail.length == 0) { $(resCat[a]).removeClass("e-resourceicon e-resourcecollapse"); }
+                    break;
+                }
+            }
+        },
 
         _renderHorizontalCurrentTime: function () {
             if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
@@ -839,92 +742,88 @@
         _horizontalTimePosition: function (temp, now) {
             if (temp.element.find("td.e-headerToday").length > 0) {
                 var headertodaypos = temp.element.find("td.e-headerToday")[0].cellIndex;
-                var startTime = (now.getHours() - temp.model.startHour);
-                var cellIndex = (((temp.model.endHour - temp.model.startHour) * ((60/temp.model.timeScale.majorSlot)*temp.model.timeScale.minorSlotCount)) * headertodaypos) + (startTime * ((60/temp.model.timeScale.majorSlot)*temp.model.timeScale.minorSlotCount));
-                var leftPosition = (parseFloat((now.getMinutes())) * (temp.element.find(".e-workcells")[1].offsetWidth) * temp.model.timeScale.minorSlotCount /temp.model.timeScale.majorSlot);
+                var cellIndex = (((temp.model.endHour - temp.model.startHour) * ((60 / temp.model.timeScale.majorSlot) * temp.model.timeScale.minorSlotCount)) * headertodaypos) + ((now.getHours() - temp.model.startHour) * ((60 / temp.model.timeScale.majorSlot) * temp.model.timeScale.minorSlotCount));
+                var leftPosition = (parseFloat((now.getMinutes())) * (temp.element.find(".e-workcells")[1].offsetWidth) * temp.model.timeScale.minorSlotCount / temp.model.timeScale.majorSlot);
                 $('#' + temp._id + '_HighlightCurrentTimeline').css("left", (cellIndex * temp.element.find(".e-workcells")[1].offsetWidth) + leftPosition);
             }
         },
 
         _horizontalBusinessHighlight: function (renderDates, bStartHour, bEndHour, timeRowsCount, target) {
-
-            var tdLength = (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0) ? this._horiResources.length : 1;
+            var tdLength = (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) ? this._horiResources.length : 1;
             if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) {
                 for (var res = 0; res < tdLength; res++) {
                     for (var k = 0; k < renderDates.length; k++) {
-							for(var j = 0; j < this.model.workWeek.length; j++) {
-							    if (this._dayNamesArray.indexOf(this.model.workWeek[j]) == new Date(renderDates[k]).getDay()) {
-							        $($(this.element.find(".e-workcellstab tr")[res]).find(".e-workcells")[((bStartHour * timeRowsCount) + ((this.model.endHour - this.model.startHour) * timeRowsCount * k)) - 1]).nextAll(".e-workcells").slice(0, ((bEndHour * timeRowsCount) - (bStartHour * timeRowsCount))).addClass("e-businesshighlightworkcells");
-							    }
-							}
+                        for (var j = 0; j < this.model.workWeek.length; j++) {
+                            if (this._dayNamesArray.indexOf(this.model.workWeek[j]) == new Date(renderDates[k]).getDay()) {
+                                $($(this.element.find(".e-workcellstab tr")[res]).find(".e-workcells")[((bStartHour * timeRowsCount) + ((this.model.endHour - this.model.startHour) * timeRowsCount * k)) - 1]).nextAll(".e-workcells").slice(0, ((bEndHour * timeRowsCount) - (bStartHour * timeRowsCount))).addClass("e-businesshighlightworkcells");
+                            }
+                        }
                     }
                 }
-                this._businessHourScroller();
             }
             else {
                 var monthDays = this.monthDays;
                 target = this.element.find(".e-workcells"); target.removeClass("e-monthcellhighlight");
                 for (var res = 0; res < tdLength; res++) {
                     for (var i = 0; i < monthDays.length; i++) {
-                        for(var j = 0; j < this.model.workWeek.length; j++) {
-                        if(this._dayNamesArray.indexOf(this.model.workWeek[j]) == new Date(monthDays[i]).getDay())
-                            $($(this.element.find(".e-workcellstab tr")[res]).find(".e-workcells")[i]).addClass("e-monthcellhighlight");
-						}
+                        for (var j = 0; j < this.model.workWeek.length; j++) {
+                            if (this._dayNamesArray.indexOf(this.model.workWeek[j]) == new Date(monthDays[i]).getDay())
+                                $($(this.element.find(".e-workcellstab tr")[res]).find(".e-workcells")[i]).addClass("e-monthcellhighlight");
+                        }
                     }
                 }
             }
         },
 
         _onResourceClick: function (e) {
-			var index, target, hide, show, tempRes, resCount, pNode, newResCollection, resHeadTable = [], resWorkTable = [];;
+            var index, target, hide, show, tempRes, resCount, pNode, newResCollection, resHeadTable = [], resWorkTable = [];;
             target = $(e.currentTarget);
             if (target.hasClass("e-resourceicon e-resourcecollapse")) {
                 target.removeClass("e-resourceicon e-resourcecollapse").addClass("e-resourceicon e-resourceexpand");
-				hide = true;
+                hide = true;
             }
             else {
                 target.removeClass("e-resourceicon e-resourceexpand").addClass("e-resourceicon e-resourcecollapse");
-				show = true;
-			}
-			this.element.find(".e-workcellstab").css('height','100%');
-			this.element.find(".e-resourceheadertable").css('height','100%');
-			index = $(e.currentTarget).closest("td.e-parentnode").parent().index();
-			newResCollection = this._getResourceCollection();
+                show = true;
+            }
+            this.element.find(".e-workcellstab").css('height', '100%');
+            this.element.find(".e-resourceheadertable").css('height', '100%');
+            index = $(e.currentTarget).closest("td.e-parentnode").parent().index();
+            newResCollection = this._getResourceCollection();
             for (i = 0; i < newResCollection.length; i++) {
-				tempRes = new ej.DataManager(this._tempResource[i].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[i].resourceSettings.id, ej.FilterOperators.equal, parseInt(e.currentTarget.id)));
-				if (tempRes.length != 0) { 
-					resCount = tempRes[0].count;
-					break;
-				}
-			}
-			for (var a = 0; a < resCount; a++) {
-				resHeadTable.push(this.element.find(".e-resourceheadertable tr")[index + a + 1]);
-				resWorkTable.push(this.element.find(".e-workcellstab tr")[index + a + 1]);
-			}
-			
+                tempRes = new ej.DataManager(this._tempResource[i].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[i].resourceSettings.id, ej.FilterOperators.equal, e.currentTarget.id.split("_")[0]));
+                if (tempRes.length != 0) {
+                    resCount = tempRes[0].count;
+                    break;
+                }
+            }
+            for (var a = 0; a < resCount; a++) {
+                resHeadTable.push(this.element.find(".e-resourceheadertable tr")[index + a + 1]);
+                resWorkTable.push(this.element.find(".e-workcellstab tr")[index + a + 1]);
+            }
             for (var i = 0; i < resHeadTable.length ; i++) {
-				if (hide) {
-					pNode = $(resHeadTable[i]).children().hasClass("e-parentnode");
-					if (pNode) $(resHeadTable[i]).find(".e-parentnodecategory").removeClass("e-resourceicon e-resourcecollapse").addClass("e-resourceicon e-resourceexpand");
-					if ($(resHeadTable[i]).is( ":visible" )) { 
-						$(resHeadTable[i]).toggle();
-						$(resWorkTable[i]).toggle();
-					}
-				}
-				else {
-					pNode = $(resHeadTable[i]).children().hasClass("e-parentnode");
-					if (pNode) $(resHeadTable[i]).find(".e-parentnodecategory").removeClass("e-resourceicon e-resourceexpand").addClass("e-resourceicon e-resourcecollapse");
-					if ($(resHeadTable[i]).is( ":hidden" )) { 
-						$(resHeadTable[i]).toggle();
-						$(resWorkTable[i]).toggle();
-					}
-				}
-			}
-			this.element.find(".e-horires").height(this.element.find(".e-draggableworkarea").height());
+                if (hide) {
+                    pNode = $(resHeadTable[i]).children().hasClass("e-parentnode");
+                    if (pNode) $(resHeadTable[i]).find(".e-parentnodecategory").removeClass("e-resourceicon e-resourcecollapse").addClass("e-resourceicon e-resourceexpand");
+                    if ($(resHeadTable[i]).is(":visible")) {
+                        $(resHeadTable[i]).toggle();
+                        $(resWorkTable[i]).toggle();
+                    }
+                }
+                else {
+                    pNode = $(resHeadTable[i]).children().hasClass("e-parentnode");
+                    if (pNode) $(resHeadTable[i]).find(".e-parentnodecategory").removeClass("e-resourceicon e-resourceexpand").addClass("e-resourceicon e-resourcecollapse");
+                    if ($(resHeadTable[i]).is(":hidden")) {
+                        $(resHeadTable[i]).toggle();
+                        $(resWorkTable[i]).toggle();
+                    }
+                }
+            }
+            this.element.find(".e-horires").height(this.element.find(".e-draggableworkarea").height());
             this._horizontalRender();
-			if (this.model.cellHeight != "20px") this._reRenderScroller();
-			if (this._mediaQuery) this.refreshScroller();
-			this._horizontalResIcon();
+            if (this.model.cellHeight != "20px") this._reRenderScroller();
+            if (this._mediaQuery) this.refreshScroller();
+            this._horizontalResIcon();
             this.element.find("div.e-prevapp,div.e-nextapp").remove();
             this.element.find(".e-categorybar").height(this.element.find(".e-parentworkcell").height() - 3);
             this._businessHourScroller();
@@ -948,17 +847,17 @@
             if (this._grouping.length === 1) {
                 var index = this._findResourceIndex(this._tempResource, "name", this._grouping[0]);
                 var resCount = this._resourceInfo[index].dataSource.length;
-				if (this._resWorkWeek) {
-					var count = 0; var res = this._resourceInfo[index].dataSource;
-					for (var a = 0; a < res.length; a++) {
-						if (!ej.isNullOrUndefined(res[a][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]])) {
-							count = count + res[a][this_tempResource[this._tempResource.length-1].resourceSettings["workWeek"]].length;
-						}
-						else {
-							count = count + this.model.workWeek.length;
-						}
-					}
-				}
+                if (this._resWorkWeek) {
+                    var count = 0; var res = this._resourceInfo[index].dataSource;
+                    for (var a = 0; a < res.length; a++) {
+                        if (!ej.isNullOrUndefined(res[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]])) {
+                            count = count + res[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
+                        }
+                        else {
+                            count = count + this.model.workWeek.length;
+                        }
+                    }
+                }
             }
             else {
                 var newResCollection = this._getResourceCollection(), resources = [];
@@ -996,7 +895,7 @@
                 resCount = resources.length;
                 this.res1 = resources.length;
             }
-			count = (this._resWorkWeek) ? count : count * resCount;
+            count = (this._resWorkWeek) ? count : count * resCount;
             return { resCount: resCount, count: count };
         },
 
@@ -1038,7 +937,6 @@
             var newResCollection = this.render_Resources;
             var Text = this.model.enableRTL ? 'margin-right:30px;margin-top:-18px' : 'float:left';
             var Color = this.model.enableRTL ? 'float:none' : 'float:left';
-            this._resCollection = this._getResourceCollection();
             for (var i = 0; i < newResCollection.length; i++) {
                 if (!this._tempResource[i].allowMultiple)
                     control.find('.owner_' + i).ejAutocomplete({
@@ -1082,26 +980,26 @@
                         }
                         var currentVal = ((!e.value) || ej.isNullOrUndefined(e.value) || result.length <= 0) ? selectedItems[0][resourceCollection[j - 1].id] : result[0][resourceCollection[j - 1].id];
                         if (!ej.isNullOrUndefined(currentVal)) {
-							for (a = j; a < resourceCollection.length; a++) {
-								resApp1 = new ej.DataManager(resourceCollection[j].dataSource).executeLocal(new ej.Query().where(resourceCollection[j].groupId, ej.FilterOperators.equal, currentVal));
-								if (resApp1.length != 0)
-									currentVal = resApp1[0][resourceCollection[j - 1].id]; 
-								fieldCollection = [];
-								for (var k = 0; k < resApp1.length; k++) {
-									fieldCollection.push(resApp1[k]);
-								}
-								if (resApp1.length != 0) {
-									proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("clearText");
-									proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("option", "dataSource", fieldCollection);
-									proxy._appointmentAddWindow.find('.owner_' + j).data("ejAutocomplete").selectValueByKey(resApp1[0][resourceCollection[j].id]);
-									selectedItems = resApp1[0][resourceCollection[j].id];
-								}
-								else {
-									proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("clearText");
-									proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("option", "dataSource", fieldCollection);
-								}
-								j++;
-							}
+                            for (a = j; a < resourceCollection.length; a++) {
+                                resApp1 = new ej.DataManager(resourceCollection[j].dataSource).executeLocal(new ej.Query().where(resourceCollection[j].groupId, ej.FilterOperators.equal, currentVal));
+                                if (resApp1.length != 0)
+                                    currentVal = resApp1[0][resourceCollection[j - 1].id];
+                                fieldCollection = [];
+                                for (var k = 0; k < resApp1.length; k++) {
+                                    fieldCollection.push(resApp1[k]);
+                                }
+                                if (resApp1.length != 0) {
+                                    proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("clearText");
+                                    proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("option", "dataSource", fieldCollection);
+                                    proxy._appointmentAddWindow.find('.owner_' + j).data("ejAutocomplete").selectValueByKey(resApp1[0][resourceCollection[j].id]);
+                                    selectedItems = resApp1[0][resourceCollection[j].id];
+                                }
+                                else {
+                                    proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("clearText");
+                                    proxy._appointmentAddWindow.find('.owner_' + j).ejAutocomplete("option", "dataSource", fieldCollection);
+                                }
+                                j++;
+                            }
                         }
                     }
                     else {
@@ -1137,8 +1035,8 @@
 
         _getResourceCollection: function () {
             var resIndexCollection = [], index;
-            if ((this._tempResource.length!=0)) {
-                if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)  && this._tempResource[0].resourceSettings.dataSource.length!=0) {
+            if ((this._tempResource.length != 0)) {
+                if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) {
                     for (var i = 0; i < this._grouping.length; i++) {
                         index = this._findResourceIndex(this._tempResource, "name", this._grouping[i]);
                         resIndexCollection.push({ index: index, name: this._tempResource[i].name });
@@ -1161,53 +1059,52 @@
                 return newResCollection;
             }
         },
-		
-		_resourceSort: function () {
-			var nextRes, count, resAvail, index, rIndex, cRes, rId, tempResource = [], rCollection = [], tempRes1 = [];
-			if (this._tempResource.length > 1) {
-				for (i = 0; i < this._tempResource.length; i++) {
-					for (j = 0; j < this._tempResource[i].resourceSettings.dataSource.length; j++) {
-						tempResource.push(this._tempResource[i].resourceSettings.dataSource[j]);
-					}
-				}
-				
-				count = 1;
-				for (a = 0; a < this._tempResource.length; a++) {
-					for (b = 0, cRes = this._tempResource[a].resourceSettings.dataSource; b < cRes.length; b++) {
-						rId = this._tempResource[a].resourceSettings.id;
-						resAvail = rCollection.indexOf(cRes[b]);
-						(resAvail == -1) ? rCollection.push(cRes[b]) : "";
-						nextRes = new ej.DataManager(tempResource).executeLocal(new ej.Query().where(this._tempResource[count].resourceSettings.groupId, ej.FilterOperators.equal, cRes[b][rId]));
-						nextRes = nextRes.filter(function(a) { return cRes.indexOf(a) === -1; });
-						index = rCollection.indexOf(cRes[b]);
-						if (nextRes.length != 0) {
-							for (c = 0; c < nextRes.length; c++) {
-								rIndex = index + c + 1;
-								resAvail = rCollection.indexOf(nextRes[c]);
-								(resAvail == -1) ? rCollection.splice(rIndex, 0, nextRes[c]) : "";
-							}
-						}
-					}
-					count++;
-					count = (count == this._tempResource.length) ? count-1 : count;
-				}
-				for (x = 0; x < rCollection.length; x++) {
-					index = this.res1.indexOf(rCollection[x]);
-					if (index != -1) tempRes1.push(rCollection[x]);
-				}
-				this.res1 = tempRes1;
-			}
-			else 
-				rCollection = this.res1;
-			return rCollection;
-		},
+
+        _resourceSort: function () {
+            var nextRes, count, resAvail, index, rIndex, cRes, rId, tempResource = [], rCollection = [], tempRes1 = [];
+            if (this._tempResource.length > 1) {
+                for (i = 0; i < this._tempResource.length; i++) {
+                    for (j = 0; j < this._tempResource[i].resourceSettings.dataSource.length; j++) {
+                        tempResource.push(this._tempResource[i].resourceSettings.dataSource[j]);
+                    }
+                }
+                count = 1;
+                for (a = 0; a < this._tempResource.length; a++) {
+                    for (b = 0, cRes = this._tempResource[a].resourceSettings.dataSource; b < cRes.length; b++) {
+                        rId = this._tempResource[a].resourceSettings.id;
+                        resAvail = rCollection.indexOf(cRes[b]);
+                        (resAvail == -1) ? rCollection.push(cRes[b]) : "";
+                        nextRes = new ej.DataManager(tempResource).executeLocal(new ej.Query().where(this._tempResource[count].resourceSettings.groupId, ej.FilterOperators.equal, cRes[b][rId]));
+                        nextRes = nextRes.filter(function (a) { return cRes.indexOf(a) === -1; });
+                        index = rCollection.indexOf(cRes[b]);
+                        if (nextRes.length != 0) {
+                            for (c = 0; c < nextRes.length; c++) {
+                                rIndex = index + c + 1;
+                                resAvail = rCollection.indexOf(nextRes[c]);
+                                (resAvail == -1) ? rCollection.splice(rIndex, 0, nextRes[c]) : "";
+                            }
+                        }
+                    }
+                    count++;
+                    count = (count == this._tempResource.length) ? count - 1 : count;
+                }
+                for (x = 0; x < rCollection.length; x++) {
+                    index = this.res1.indexOf(rCollection[x]);
+                    if (index != -1) tempRes1.push(rCollection[x]);
+                }
+                this.res1 = tempRes1;
+            }
+            else
+                rCollection = this.res1;
+            return rCollection;
+        },
 
         _renderMultipleResourceHeaderTemplate: function (tbody, cols) {
             this.res1 = []; this.render_Resources = []; this.level_Resources = [];
             var view = this.currentView(); var newResCollection = this._getResourceCollection();
             var viewColCount = view == "day" ? 1 : view == "week" || view == "month" ? 7 : this.model.workWeek.length;
             viewColCount = (view == "customview" && this._dateRender.length >= 7) ? 7 : (view == "customview" && this._dateRender.length < 7) ? this._dateRender.length : viewColCount;
-            if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0) {
+            if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) {
                 var userResTemplId = (this.model.resourceHeaderTemplateId) ? true : false;
                 var resources = [];
                 if (this._grouping.length === 1) {
@@ -1216,9 +1113,9 @@
                         index = this._findResourceIndex(this._tempResource, "name", this._grouping[i]);
                     }
                     for (var i = 0; i < this._resourceInfo[index].dataSource.length; i++) {
-						if (this._resWorkWeek)
-							var colCount = !ej.isNullOrUndefined(this._resourceInfo[index].dataSource[i][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]]) ? this._resourceInfo[index].dataSource[i][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]].length : viewColCount;
-						(this.currentView() != "agenda") && resources.push({ resourceNam: this._resourceInfo[index].dataSource[i][this._resourceInfo[index].text], colspan: (this._resWorkWeek) ? colCount : viewColCount, userResHeader: this._getResourceHeadTemplate($.extend(this._resourceInfo[index].dataSource[i], { classname: "e-childnode" })), userResTemplId: userResTemplId });
+                        if (this._resWorkWeek)
+                            var colCount = !ej.isNullOrUndefined(this._resourceInfo[index].dataSource[i][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]) ? this._resourceInfo[index].dataSource[i][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length : viewColCount;
+                        (this.currentView() != "agenda") && resources.push({ resourceNam: this._resourceInfo[index].dataSource[i][this._resourceInfo[index].text], colspan: (this._resWorkWeek) ? colCount : viewColCount, userResHeader: this._getResourceHeadTemplate($.extend(this._resourceInfo[index].dataSource[i], { classname: "e-childnode" })), userResTemplId: userResTemplId });
                         this.res1.push(this._resourceInfo[index].dataSource[i]);
                         this.level_Resources.push(this.res1[i]);
                     }
@@ -1227,12 +1124,12 @@
                     if (this.model.orientation == "vertical" && this.currentView() != "agenda" && tbody !== null && cols != null) {
                         var leftCellwidth = view == "month" ? 50 : 56;
                         var resourceHeaderHtml = this.resourceHeadTemplate.render({ cols: cols, resourceName: resources, leftWidth: leftCellwidth });
-                        tbody.append(ej.buildTag('tr.e-headerbar').css("height", "28px").append(resourceHeaderHtml));
+                        tbody.append(ej.buildTag('tr.e-headerbar').append(resourceHeaderHtml));
                     }
                 }
                 else {
                     var groupDatasource = [], firstValue = [], collection = [], resAppValueCount = 0, valueCount = [];
-					var res = []; var level = []; var variable = []; this.resourceValue = 0; var resourceLength = 0;
+                    var res = []; var level = []; var variable = []; this.resourceValue = 0; var resourceLength = 0;
                     groupDatasource = $.merge(groupDatasource, newResCollection);
                     if (this._tempResource.length) {
                         var k = 0;
@@ -1250,7 +1147,7 @@
                         }
                         this._valueCollection = collection;
                         newResCollection[newResCollection.length - 1].dataSource = collection;
-						var resClone = $.extend(true, [], newResCollection);
+                        var resClone = $.extend(true, [], newResCollection);
                     }
                     for (var i = this._tempResource.length - 1; i >= 0 ; i--) {
                         level.push(i);
@@ -1268,7 +1165,7 @@
                                         for (k = 0; k < resApp.length; k++)
                                             resAppValueCount = resAppValueCount + (!ej.isNullOrUndefined(resApp[k].count) ? resApp[k].count : 0);
 
-                                        resourceLength = this.model.orientation== "vertical" ? resAppValueCount : resAppValueCount + resApp.length;
+                                        resourceLength = this.model.orientation == "vertical" ? resAppValueCount : resAppValueCount + resApp.length;
                                         newResCollection[i].dataSource[j].count = resourceLength;
                                         resAppValueCount = 0;
                                     }
@@ -1279,22 +1176,22 @@
                                     this.resourceValue = resourceLength;
                                     resApp.length = 0;
                                 }
-								if (this._resWorkWeek) {
-									var weekCount = 0;
-									if (i != this._tempResource.length-1) {
-										var query = new ej.Query().where(resClone[i + 1].groupId, ej.FilterOperators.equal, resClone[i].dataSource[j][resClone[i].id]);
-										var colCount = new ej.DataManager(resClone[i + 1].dataSource).executeLocal(query);
-										for (var a = 0; a < colCount.length; a++) {
-											weekCount += !ej.isNullOrUndefined(colCount[a][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]]) ? colCount[a][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]].length : !ej.isNullOrUndefined(colCount[a].colspan) ? colCount[a].colspan : viewColCount;
-										}
-									}
-									else {
-										weekCount += !ej.isNullOrUndefined(resClone[i].dataSource[j][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]]) ? resClone[i].dataSource[j][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]].length : viewColCount;
-									}
-									resClone[i].dataSource[j]["colspan"] = weekCount;
-									this.resourceValue = weekCount;
-								}
-								(this.currentView() != "agenda") && resources.push({ resourceNam: newResCollection[i].dataSource[j][newResCollection[i].text], colspan: (this._resWorkWeek) ? this.resourceValue : this.resourceValue * viewColCount, userResHeader: this._getResourceHeadTemplate($.extend(newResCollection[i].dataSource[j], { classname: "e-childnode" })), userResTemplId: userResTemplId });
+                                if (this._resWorkWeek) {
+                                    var weekCount = 0;
+                                    if (i != this._tempResource.length - 1) {
+                                        var query = new ej.Query().where(resClone[i + 1].groupId, ej.FilterOperators.equal, resClone[i].dataSource[j][resClone[i].id]);
+                                        var colCount = new ej.DataManager(resClone[i + 1].dataSource).executeLocal(query);
+                                        for (var a = 0; a < colCount.length; a++) {
+                                            weekCount += !ej.isNullOrUndefined(colCount[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]) ? colCount[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length : !ej.isNullOrUndefined(colCount[a].colspan) ? colCount[a].colspan : viewColCount;
+                                        }
+                                    }
+                                    else {
+                                        weekCount += !ej.isNullOrUndefined(resClone[i].dataSource[j][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]) ? resClone[i].dataSource[j][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length : viewColCount;
+                                    }
+                                    resClone[i].dataSource[j]["colspan"] = weekCount;
+                                    this.resourceValue = weekCount;
+                                }
+                                (this.currentView() != "agenda") && resources.push({ resourceNam: newResCollection[i].dataSource[j][newResCollection[i].text], colspan: (this._resWorkWeek) ? this.resourceValue : this.resourceValue * viewColCount, userResHeader: this._getResourceHeadTemplate($.extend(newResCollection[i].dataSource[j], { classname: (this._tempResource.length - 1 == i) ? "e-childnode" : "e-parentnode" })), userResTemplId: userResTemplId });
                                 this.level_Resources.push(newResCollection[i].dataSource[j]);
                                 res.length = 0;
 
@@ -1302,7 +1199,7 @@
                             if (this.model.orientation == "vertical" && this.currentView() != "agenda" && tbody !== null && cols != null) {
                                 leftCellwidth = view == "month" ? 50 : 56;
                                 resourceHeaderHtml = this.resourceHeadTemplate.render({ cols: cols, resourceName: resources, leftWidth: leftCellwidth });
-                                variable[i] = ej.buildTag('tr.e-headerbar').css("height", "28px").append(resourceHeaderHtml)[0];
+                                variable[i] = ej.buildTag('tr.e-headerbar').append(resourceHeaderHtml)[0];
                             }
                         }
                         valueCount[i] = newResCollection[i].dataSource;
@@ -1316,18 +1213,18 @@
                 for (var k = 0; k < this._tempResource.length; k++) {
                     this.render_Resources.push(this._tempResource[k].resourceSettings.dataSource);
                 }
-					this.res1 = [0];
+                this.res1 = [0];
             }
             return tbody;
         },
 
         _getMultipleResourceAlldayApp: function (renderDate, day, res, i) {
-			this.allDayCount = [];
+            this.allDayCount = [];
             if ((new Date(new Date(renderDate[day]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date(this._processed[i][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime()) && (this._processed[i][this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()] == this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings.id]) &&
 				(this._processed[i][this._appointmentSettings["allDay"]] === true || (((new Date(this._processed[i][this._appointmentSettings["endTime"]]) - new Date(this._processed[i][this._appointmentSettings["startTime"]])) / 3600000) >= 24))) {
                 this._setAllDayPos(this._processed[i], day, res);
                 this._filtered.push(this._processed[i]);
-				this.allDayCount.push(i);
+                this.allDayCount.push(i);
             }
         },
 
@@ -1335,11 +1232,16 @@
             var newResCollection = this._resCollection;
             var resourceDataIndex, appointData = "", appointCustomcss = "";
             if (!ej.isNullOrUndefined(this.model.group)) {
-                resourceDataIndex = this._findResourceIndex(this.render_Resources[0], newResCollection[0].id, record[this._appointmentSettings.resourceFields.split(',')[0].trim()]);
-                if (!ej.isNullOrUndefined(resourceDataIndex)) {
-                    appointData = !ej.isNullOrUndefined(this.render_Resources[0][resourceDataIndex][newResCollection[0].color]) ? this.render_Resources[0][resourceDataIndex][newResCollection[0].color] : appointData;
-                    appointCustomcss = !ej.isNullOrUndefined(this.render_Resources[0][resourceDataIndex][newResCollection[0].appointmentClass]) ? this.render_Resources[0][resourceDataIndex][newResCollection[0].appointmentClass] : appointCustomcss;
+                for (var a = 0; a < this.render_Resources.length; a++) {
+                    resourceDataIndex = this._findResourceIndex(this.render_Resources[a], newResCollection[a].id, record[this._appointmentSettings.resourceFields.split(',')[a].trim()]);
+                    if (!ej.isNullOrUndefined(resourceDataIndex)) {
+                        appointData = (appointData == "" || ej.isNullOrUndefined(appointData)) ? this.render_Resources[a][resourceDataIndex][newResCollection[a].color] : appointData;
+                        appointCustomcss = (appointCustomcss == "" || ej.isNullOrUndefined(appointCustomcss)) ? this.render_Resources[a][resourceDataIndex][newResCollection[a].appointmentClass] : appointCustomcss;
+                        if (!ej.isNullOrUndefined(appointData) && !ej.isNullOrUndefined(appointCustomcss)) break;
+                    }
                 }
+                appointData = !ej.isNullOrUndefined(appointData) && appointData != "" ? appointData : "";
+                appointCustomcss = !ej.isNullOrUndefined(appointCustomcss) && appointCustomcss != "" ? appointCustomcss : "";
             }
             else {
                 resourceDataIndex = this._findResourceIndex(this.render_Resources[this.render_Resources.length - 1], newResCollection[newResCollection.length - 1].id, record[this._appointmentSettings.resourceFields.split(',')[this._appointmentSettings.resourceFields.split(',').length - 1].trim()]);
@@ -1353,7 +1255,7 @@
 
         _getResourceValue: function (target, index) {
             var resDetails;
-            if (ej.scheduleFeatures.resources && (this._tempResource.length!=0)) {
+            if (ej.scheduleFeatures.resources && (this._tempResource.length != 0)) {
                 var resource = this._getResourceDetails(target);
                 resDetails = ej.DataManager(this._resCollection[resource.length - 1].dataSource).executeLocal(new ej.Query().where(this._tempResource[resource.length - 1].resourceSettings["id"], "equal", resource[0].id))[0];
             }
@@ -1361,29 +1263,29 @@
         },
 
         _getResourceDetails: function (target, index) {
-            if ((this._tempResource.length!=0)) {
+            if ((this._tempResource.length != 0)) {
                 if (this._tempResource.length > 0) {
                     var noOfDays = this.currentView() == "day" ? 1 : this.currentView() == "week" || this.currentView() == "month" ? 7 : this.model.workWeek.length;
                     noOfDays = (this.currentView() == "customview" && this._dateRender.length >= 7) ? 7 : (this.currentView() == "customview" && this._dateRender.length < 7) ? this._dateRender.length : noOfDays;
                     index = this.currentView() === "month" || this.currentView() == "customview" ? target.index() : (!ej.isNullOrUndefined(this._cellIndex) && ej.isNullOrUndefined(this._multiple)) ? this._cellIndex : target.index();
                     !target.hasClass("e-detailedapp") ? this.index = index : "";
                     index = target.hasClass("e-detailedapp") ? this.index : index;
-					if (this._resWorkWeek) {
-						var resIndex = 0;
-						for (var a = 0; a < this._valueCollection.length; a++) {
-						    if (!ej.isNullOrUndefined(this._valueCollection[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]))
-						        resIndex += this._valueCollection[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
-							else
-								resIndex += this.model.workWeek.length;
-							
-							if (resIndex > target.index()) {
-								index = a;
-								break;
-							}
-						}
-					}
-					else
-						index = this.model.orientation == "vertical" ? parseInt(index / noOfDays) : !ej.isNullOrUndefined(this._workCellIndex) ? this._workCellIndex : target.parent().index();
+                    if (this._resWorkWeek) {
+                        var resIndex = 0;
+                        for (var a = 0; a < this._valueCollection.length; a++) {
+                            if (!ej.isNullOrUndefined(this._valueCollection[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]))
+                                resIndex += this._valueCollection[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
+                            else
+                                resIndex += this.model.workWeek.length;
+
+                            if (resIndex > target.index()) {
+                                index = a;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                        index = this.model.orientation == "vertical" ? parseInt(index / noOfDays) : !ej.isNullOrUndefined(this._workCellIndex) ? this._workCellIndex : target.parent().index();
                     var res1 = this.model.orientation == "vertical" ? this._valueCollection : this._resCollect;
                     var group, resourceData, query, result; this._resourceCollection = [];
                     var newResCollection = this._resCollection;
@@ -1412,7 +1314,7 @@
         },
 
         _getResourceFields: function (obj) {
-            if (!ej.isNullOrUndefined(this.model.group) || this._tempResource.length>1 ) {
+            if (!ej.isNullOrUndefined(this.model.group) || this._tempResource.length > 1) {
                 for (var j = 0, i = this._resourceCollection.length - 1; j < this._resourceCollection.length; j++, i--)
                     obj[this._appointmentSettings.resourceFields.split(',')[j].trim()] = this._resourceCollection[i].id;
             }
@@ -1422,29 +1324,27 @@
         },
         _getDragDropResourceData: function (proxy, cellIndex, newAddList) {
             if (!ej.isNullOrUndefined(cellIndex)) {
-                var noOfCols = proxy.model.currentView == "day" ? 1 : proxy.model.currentView == "week" || proxy.model.currentView == "month" ? 7 : proxy.model.workWeek.length;
-                noOfCols = (proxy.model.currentView == "customview" && proxy._dateRender.length >= 7) ? 7 : (proxy.model.currentView == "customview" && proxy._dateRender.length < 7) ? proxy._dateRender.length : noOfCols;
+                var noOfCols = proxy.currentView() == "day" ? 1 : proxy.currentView() == "week" || proxy.currentView() == "month" ? 7 : proxy.model.workWeek.length;
+                noOfCols = (proxy.currentView() == "customview" && proxy._dateRender.length >= 7) ? 7 : (proxy.currentView() == "customview" && proxy._dateRender.length < 7) ? proxy._dateRender.length : noOfCols;
                 var index = proxy.model.enableRTL ? proxy.res1.length - Math.floor(cellIndex / noOfCols) - 1 : Math.floor(cellIndex / noOfCols);
-				if (proxy._resWorkWeek) {
-					var resIndex = 0;
-					for (var a = 0; a < proxy.res1.length; a++) {
-						if (!ej.isNullOrUndefined(proxy.res1[a][proxy.model.resources[proxy.model.resources.length-1].resourceSettings["workWeek"]]))
-							resIndex += proxy.res1[a][proxy.model.resources[proxy.model.resources.length-1].resourceSettings["workWeek"]].length;
-						else
-							resIndex += proxy.model.workWeek.length;
-						
-						if (resIndex > cellIndex) {
-							index = a;
-							break;
-						}
-					}
-				}
+                if (proxy._resWorkWeek) {
+                    var resIndex = 0;
+                    for (var a = 0; a < proxy.res1.length; a++) {
+                        if (!ej.isNullOrUndefined(proxy.res1[a][proxy.model.resources[proxy.model.resources.length - 1].resourceSettings["workWeek"]]))
+                            resIndex += proxy.res1[a][proxy.model.resources[proxy.model.resources.length - 1].resourceSettings["workWeek"]].length;
+                        else
+                            resIndex += proxy.model.workWeek.length;
+
+                        if (resIndex > cellIndex) {
+                            index = a;
+                            break;
+                        }
+                    }
+                }
                 var newRes = proxy.model.orientation == "vertical" ? proxy.res1[index] : proxy._resCollect[cellIndex];
-                this._ownerId = newRes[proxy.model.resources[proxy.model.resources.length - 1].resourceSettings.id];
-                this._groupId = newRes[proxy.model.resources[proxy.model.resources.length - 1].resourceSettings.groupId];
                 newAddList[proxy._appointmentSettings.resourceFields.split(',')[proxy._appointmentSettings.resourceFields.split(',').length - 1].trim()] = newRes[proxy.model.resources[proxy.model.resources.length - 1].resourceSettings.id];
-                if(proxy._appointmentSettings.resourceFields.split(',').length > 1)
-					newAddList[proxy._appointmentSettings.resourceFields.split(',')[proxy._appointmentSettings.resourceFields.split(',').length - 2].trim()] = newRes[proxy.model.resources[proxy.model.resources.length - 1].resourceSettings.groupId];
+                if (proxy._appointmentSettings.resourceFields.split(',').length > 1)
+                    newAddList[proxy._appointmentSettings.resourceFields.split(',')[proxy._appointmentSettings.resourceFields.split(',').length - 2].trim()] = newRes[proxy.model.resources[proxy.model.resources.length - 1].resourceSettings.groupId];
             }
             return newAddList;
         },
@@ -1474,7 +1374,7 @@
         },
 
         _bindResourcesData: function () {
-            if ((this._tempResource.length!=0)) {
+            if ((this._tempResource.length != 0)) {
                 this._resourceInfo = []; var resFlag = false;
                 for (var i = 0; i < this._tempResource.length; i++) {
                     if (!ej.isNullOrUndefined(this._tempResource[i].resourceSettings)) {
@@ -1495,8 +1395,7 @@
 
         _renderResourceElements: function ($appWindow) {
             for (var i = 0; i < this._tempResource.length; i++) {
-                $appWindow += "<tr><td class='e-leftfields e-textlabel'>" + this._tempResource[i].title + ":</td><td colspan='3' class='e-rightfields'>" +
-						  "<input id='" + this._id + "_ownerfield_" + i + "'  class='owner_" + i + "' type='text' value=''/><div id='ownerlist'></div></td></tr>";
+                $appWindow += "<tr><td class='e-leftfields e-textlabel'>" + this._tempResource[i].title + ":</td><td colspan='3' class='e-rightfields'><input id='" + this._id + "_ownerfield_" + i + "'  class='owner_" + i + "' type='text' value=''/><div id='ownerlist'></div></td></tr>";
             }
             return $appWindow;
         },
@@ -1526,22 +1425,22 @@
         "<tbody>{{for cellrows ~cols1=cols1 ~userTemp=userTemplate ~userHtml=userHtml}}" +
         "<tr>{{for ~cwidth=cwidth ~cheight=cheight ~cols1 ~value=#getIndex()}}" +
         "<td class='e-monthcells' width='{{:~cwidth}}' height='{{:~cheight}}'>" +
-        "<div class='e-monthheader'></div><div class='e-appointwrapper'></div>{{if ~userTemp == true}}{{:~userHtml[~value][#getIndex()]}}{{/if}}</td>{{/for}}" +
+        "<div class='e-monthheader'></div>{{if ~userTemp == true}}{{:~userHtml[~value][#getIndex()]}}{{/if}}</td>{{/for}}" +
         "</tr>{{/for}}</tbody></table>");
         return this._monthCellsTemplate;
     };
 
     var appointmentTemplate = function () {
-        this._appTemplate = ("<div class='{{:appClass}} {{:appointCustomcss}}' id='Appointment_{{:id}}' guid= '{{:uid}}' role='presentation' style='{{if rtl == true}}right{{else}}left{{/if}}: {{:left}}; width: {{:appWidth}}; background: {{:appointData}};  color:{{:appointtextcolor}}; height: {{:appHeight}}px; top: {{:top}}px;' >" +
+        this._appTemplate = ("<div class='{{:appClass}} {{:appointCustomcss}}' id='Appointment_{{:id}}' guid= '{{:uid}}' resource='{{:resId}}' role='presentation' style='{{if rtl == true}}right{{else}}left{{/if}}: {{:left}}; width: {{:appWidth}}; background: {{:appointData}};  color:{{:appointtextcolor}}; height: {{:appHeight}}px; top: {{:top}}px;' >" +
        "{{if appResize == true}}{{if appClass == 'e-appointment'}}" +
        "{{if orientation == 'vertical'}}<div class='e-tophandle'></div><div class='e-bottomhandle'></div>{{else}}<div class='e-lefthandle'></div><div class='e-righthandle'></div>{{/if}}" +
        "{{else}}{{if currentview != 'day'}}<div class='e-lefthandle'></div><div class='e-righthandle'></div>{{/if}}{{/if}}{{/if}}" +
-       "<span class='e-icon e-schedulemouseclose'/></span>"+
+       "<span class='e-icon e-schedulemouseclose'/></span>" +
 	   "{{if (priority!=undefined && priority!='') && ((priorityTemplate!=undefined && priorityTemplate!=''))}}{{if enablePriority==null}}<div class='e-priority e-{{:priorityTemplate}}'></div>{{else}}<div class='e-priority'>{{:priorityTemplate}}</div>{{/if}}{{/if}}" +
 	   "{{if userAppTemplId == false}}" +
        "{{if leftInd ==true}}<span class='e-icon e-arrow-sans-left e-leftind'></span>{{/if}}{{if rightInd ==true}}<span class='e-icon e-arrow-sans-right e-rightind'></span>{{/if}}" +
        "{{if bottomInd ==true}}<span class='e-icon e-arrow-sans-down e-bottomind'></span>{{/if}}{{if topInd ==true}}<span class='e-icon e-arrow-sans-up e-topind'></span>{{/if}}" +
-       "<div class='e-appointinnertext'><div class='e-apptext {{if (priority!=undefined && priority!='')}}e-priorwidth{{/if}}'>{{if recurrence == true}}{{if recurrenceEdit == true}}<span class='e-icon e-recureditapp'></span>{{else}}<span class='e-icon e-recurapp'></span>{{/if}}{{/if}}{{:subject}} </div><div class='e-apptime {{if (priority!=undefined && priority!='')}}e-priorwidth{{/if}}'> {{:startTime}} - {{:endTime}}</div></div>{{if value == true}}<div class='e-multipleCategory'>{{:multiDiv}}</div>{{/if}}</div>" +
+       "<div class='e-appointinnertext'><div class='e-apptext {{if (priority!=undefined && priority!='')}}e-priorwidth{{/if}}'>{{if recurrence == true}}{{if recurrenceEdit == true}}<span class='e-icon e-recureditapp'></span>{{else}}<span class='e-icon e-recurapp'></span>{{/if}}{{/if}}{{:subject}} </div><div class='e-apptime {{if (priority!=undefined && priority!='')}}e-priorwidth{{/if}}'> {{:startTime}} - {{:endTime}}</div>{{if value == true}}<div class='e-multipleCategory'>{{:multiDiv}}</div>{{/if}}</div>" +
        "{{else}}{{if recurrence == true}}{{if recurrenceEdit == true}}<span class='e-icon e-recureditapp'></span>{{else}}<span class='e-icon e-recurapp'></span>{{/if}}{{/if}}{{:userTemplate}}{{/if}}</div>");
         return this._appTemplate;
     };
@@ -1553,10 +1452,7 @@
     };
 
     var categorizeMultipleTemplate = function () {
-        this._categorizeMultipleTemplate = (
-            "{{for renderData }}<div style='background:{{:value}};height:11px;width:6px;float:left'>" +
-            "</div>{{/for}}"
-            );
+        this._categorizeMultipleTemplate = ("{{for renderData }}<div style='background:{{:value}};height:11px;width:6px;float:left'></div>{{/for}}");
         return this._categorizeMultipleTemplate;
     };
 
@@ -1581,26 +1477,21 @@
     };
 
     var workCellsTemplate = function () {
-        this._workCellsTemplate = ("<table class='e-table e-workcellstab' width='100%' cellpadding='0px' cellspacing='0px'>" +
+        this._workCellsTemplate = ("<table class='e-table e-workcellstab' width='100%' height='100%' cellpadding='0px' cellspacing='0px'>" +
         "<tbody >{{for cellrows  ~timesc=timeScale ~cols1=cols1 ~userTemp=userTemplate ~userHtml=userHtml}}" +
-         "<tr>{{for ~index=#index ~cwidth=cwidth ~cheight=cheight ~cols1 ~value=#getIndex()}}" +
-         "{{if ((~index+1) % ~timesc) == 0 }}<td class='e-workcells' width='{{:~cwidth}}' height='{{:~cheight}}'>{{else}}<td class='e-workcells e-alternatecells'width='{{:~cwidth}}' height='{{:~cheight}}'>{{/if}}<div class='e-appointwrapper'></div>{{if ~userTemp == true}}{{:~userHtml[~value][#getIndex()]}}{{/if}}</td>" +
+        "<tr>{{for ~index=#index ~cwidth=cwidth ~cheight=cheight ~cols1 ~value=#getIndex()}}" +
+        "{{if ((~index+1) % ~timesc) == 0 }}<td class='e-workcells' width='{{:~cwidth}}' height='{{:~cheight}}'>{{else}}<td class='e-workcells e-alternatecells'width='{{:~cwidth}}' height='{{:~cheight}}'>{{/if}}{{if ~userTemp == true}}{{:~userHtml[~value][#getIndex()]}}{{/if}}</td>" +
         "{{/for}}</tr>{{/for}}</tbody></table>");
         return this._workCellsTemplate;
     };
 
     var timeCellsTemplate = function () {
-
-        this._timeCellsTemplate = ("<div class='e-scrolltimecells'><table class='e-table e-timecelltable' cellpadding='0px' cellspacing='0px'>" +
-               "<tbody>{{for timerows ~timesc=timeScale ~cols1=cols1 ~view1=viewclass ~userTemplateId = userTemplateId ~timeValue1=timeValue1 ~template=template}}" +
-               "<tr>{{for ~name=time ~id=id ~view=~view1 ~index=#index }} " +
-
-"{{if ~view == 0}}{{if ~userTemplateId==true}}<td class='e-timecells'>{{for ~cols1[~index] }}{{if (#index+1)% ~timesc ==0}}<div class='e-timecelldivs' style='height: 20px'>{{:~timeValue1[~index][#getIndex()]}}</div>{{else}}<div class='e-timecelldivs' style='height: 21px'>{{:~timeValue1[~index][#getIndex()]}}</div>{{/if}}{{/for}}</td>" +
-
-"{{else}}<td class='e-timecells'><div class='e-timecelldivs'>{{if ~template==true}}{{:~name}}{{else}}{{:~name.slice(0,2)}}{{/if}}</div></td>{{/if}} " +
-
-"<td class='e-timecells' rowspan='1'>{{for ~cols1[~index] }}{{if (#index+1)% ~timesc ==0}}<div class='e-ampmdisplay'></div>  {{else}} {{if (#getIndex())== 0}}<div id='{{:~id}}' class='e-ampmdisplay e-ampmstyle e-idAmpmstyle'> {{if ~template ==true || ~userTemplateId==true }}{{else}}{{:~name.slice(3,6)}}{{/if}}</div>{{else}}<div class='e-ampmdisplay e-ampmstyle'></div>{{/if}} {{/if}}{{/for}}</td>{{else}}<td class='e-timecells' style='width:51px;'><div class='e-timecelldivs'></div></td>{{/if}}{{/for}}</tr>{{/for}}</tbody></table></div>");
-
+        this._timeCellsTemplate = ("<div class='e-scrolltimecells' style='width:auto;height:100%;'><table class='e-table e-timecelltable' width='100%' height='100%' cellpadding='0px' cellspacing='0px'>" +
+        "<tbody>{{for timerows ~timesc=timeScale ~cols1=cols1 ~view1=viewclass ~userTemplateId = userTemplateId ~timeValue1=timeValue1 ~template=template}}" +
+        "<tr>{{for ~name=time ~id=id ~view=~view1 ~index=#index }}" +
+        "{{if ~view == 0}}{{if ~userTemplateId==true}}<td class='e-timecells'>{{for ~cols1[~index] }}{{if (#index+1)% ~timesc ==0}}<div class='e-timecelldivs' style='height: 20px'>{{:~timeValue1[~index][#getIndex()]}}</div>{{else}}<div class='e-timecelldivs' style='height: 21px'>{{:~timeValue1[~index][#getIndex()]}}</div>{{/if}}{{/for}}</td>" +
+        "{{else}}<td class='e-timecells'><div class='e-timecelldivs'>{{if ~template==true}}{{:~name}}{{else}}{{:~name.slice(0,2)}}{{/if}}</div></td>{{/if}}" +
+        "<td class='e-timecells' rowspan='1'>{{for ~cols1[~index] }}{{if (#index+1)% ~timesc ==0}}<div class='e-ampmdisplay'></div>  {{else}} {{if (#getIndex())== 0}}<div id='{{:~id}}' class='e-ampmdisplay e-ampmstyle e-idAmpmstyle'> {{if ~template ==true || ~userTemplateId==true }}{{else}}{{:~name.slice(3,6)}}{{/if}}</div>{{else}}<div class='e-ampmdisplay e-ampmstyle'></div>{{/if}} {{/if}}{{/for}}</td>{{else}}<td class='e-timecells' style='width:51px;'><div class='e-timecelldivs'></div></td>{{/if}}{{/for}}</tr>{{/for}}</tbody></table></div>");
         return this._timeCellsTemplate;
     };
 
@@ -1614,12 +1505,7 @@
         return this._userTimeCellsTemplate;
     };
     var agendaHeaderTemplate = function () {
-        this._agendaHeaderTemplate = (
-        "<tr>{{for cols}}" +
-        "<td class='e-headercells {{:className}} {{if (#index==0)}}e-firstcolumn{{/if}}'>" +
-        "<div class='e-textwrapper'><b>{{:headertext}}</b></div>" +
-        "</td>" +
-        "{{/for}}</tr>");
+        this._agendaHeaderTemplate = ("<tr>{{for cols}}<td class='e-headercells {{:className}} {{if (#index==0)}}e-firstcolumn{{/if}}'><div class='e-textwrapper'><b>{{:headertext}}</b></div></td>{{/for}}</tr>");
         return this._agendaHeaderTemplate;
     };
 
@@ -1712,6 +1598,7 @@
             enablePersistence: false,
             showQuickWindow: true,
             showLocationField: false,
+            showTimeZoneFields: true,
             businessStartHour: 9,
             businessEndHour: 18,
             workHours: {
@@ -1797,6 +1684,7 @@
                 resourceId: null
             },
             appointmentSettings: {
+                applyTimeOffset: true,
                 dataSource: [],
                 query: null,
                 tableName: null,
@@ -1820,7 +1708,7 @@
             renderDates: null,
             orientation: "vertical",
             categorizeSettings: {
-                title:null,
+                title: null,
                 enable: false,
                 allowMultiple: false,
                 dataSource:
@@ -1838,7 +1726,7 @@
                 fontColor: "fontColor"
             },
             prioritySettings: {
-                title:null,
+                title: null,
                 enable: false,
                 template: null,
                 dataSource:
@@ -1891,11 +1779,11 @@
             create: null,
             load: null,
             destroy: null,
-            queryCellInfo:null
+            queryCellInfo: null
         },
         dataTypes: {
             views: "array",
-            workWeek:"array",
+            workWeek: "array",
             timeZoneCollection: {
                 dataSource: "data",
                 query: "data"
@@ -1946,9 +1834,9 @@
         _ignoreOnPersist: [
             "appointmentSettings.query", "appointmentSettings.dataSource", "timeZoneCollection.dataSource",
             "allowKeyboardNavigation", "showQuickWindow", "cssClass", "locale", "enableResize", "showHeaderBar",
-            "readOnly", "enableRTL", "enableAppointmentNavigation",,"showAppointmentNavigator", "appointmentTemplateId", "resourceHeaderTemplateId", "allowDragDrop","allowDragAndDrop", "enableAppointmentResize",
-            "showCurrentTimeIndicator", "reminderSettings.enable", "contextMenuSettings.enable", "group.resources", "categorizeSettings.enable", "categorizeSettings.dataSource",
-            "cellClick","overflowButtonClick ", "overflowButtonHover", "keyDown", "appointmentClick", "cellDoubleClick", "appointmentWindowOpen", "appointmentSaved", "appointmentEdited", "appointmentDeleted","beforeAppointmentCreate", "beforeAppointmentChange", "beforeAppointmentRemove","appointmentCreated", "appiontmentChanged", "appointmentRemoved", "navigation", "dragStart", "dragStop",
+            "readOnly", "enableRTL", "enableAppointmentNavigation", "showAppointmentNavigator", "appointmentTemplateId", "resourceHeaderTemplateId", "allowDragDrop", "allowDragAndDrop", "enableAppointmentResize",
+            "showCurrentTimeIndicator", "reminderSettings.enable", "contextMenuSettings.enable", "group", "categorizeSettings.enable", "categorizeSettings.dataSource",
+            "cellClick", "overflowButtonClick ", "overflowButtonHover", "keyDown", "appointmentClick", "cellDoubleClick", "appointmentWindowOpen", "appointmentSaved", "appointmentEdited", "appointmentDeleted", "beforeAppointmentCreate", "beforeAppointmentChange", "beforeAppointmentRemove", "appointmentCreated", "appiontmentChanged", "appointmentRemoved", "navigation", "dragStart", "dragStop",
             "resizeStart", "resize", "resizeStop", "menuItemClick", "beforeContextMenuOpen", "reminder", "prioritySettings.dataSource", "prioritySettings.enable", "agendaViewSettings.daysInAgenda", "agendaViewSettings.dateColumnTemplateId", "agendaViewSettings.timeColumnTemplateId", "blockoutSettings.dataSource"
         ],
         _ignoreFromAppointmentOnExport: ["dataSource", "query", "tableName", "resourceFields"],
@@ -1977,7 +1865,6 @@
         _init: function () {
             if ($.isEmptyObject(this.model.group)) this.model.group = null;
             this._localizedLabels = ej.getLocalizedConstants("ej.Schedule", this.model.locale);
-            // Added while deprcating the Business hours API
             if (this.model.locale != "en-US")
                 this._recurrenceLocal();
             if (ej.isNullOrUndefined(this.model.workHours.start)) this.model.workHours.start = this.model.businessStartHour;
@@ -1993,7 +1880,6 @@
             if (ej.isNullOrUndefined(this.model.beforeAppointmentChange)) this.model.beforeAppointmentChange = this.model.appointmentEdited;
             if (ej.isNullOrUndefined(this.model.beforeAppointmentRemove)) this.model.beforeAppointmentRemove = this.model.appointmentDeleted;
             this._processAppointmentSettings();
-            
             this._currentDateFormat(this.model.dateFormat);
             this._trigger("load");
             this.element.addClass("e-schedule");
@@ -2022,19 +1908,21 @@
                 this._checkReminders();
                 this._reminderInterval = window.setInterval($.proxy(this._checkReminders, this), 60000);
             }
-            this._businessHourScroller();
         },
         _processAppointmentSettings: function () {
             this._appointmentSettings = {}, resource = "";
+            this._applyTimeOffset = this.model.appointmentSettings.applyTimeOffset;
             for (var col in this.model.appointmentSettings) {
-                if (col !== "tableName" && col !== "query" && col !== "dataSource") {
-                    this._appointmentSettings[col] = ($.type(this.model.appointmentSettings[col]) == "string" || ej.isNullOrUndefined(this.model.appointmentSettings[col])) ? this.model.appointmentSettings[col] : this.model.appointmentSettings[col].field;
-                    if (col !== "resourceFields" && col !== "categorize" && col !== "priority")
-                        (ej.isNullOrUndefined(this._appointmentSettings[col])) && (this._appointmentSettings[col] = col.charAt(0).toUpperCase() + col.slice(1));
-                    if (col == "resourceFields" && ej.isNullOrUndefined(this._appointmentSettings.resourceFields) && !ej.isNullOrUndefined(this.model.resources)) {
-                        for (var i = 0, len = this.model.resources.length; i < len; i++) {
-                            resource = this.model.resources[i].field.charAt(0).toUpperCase() + this.model.resources[i].field.slice(1);
-                            this._appointmentSettings[col] += ((i !== 0) ? "," : "") + resource;
+                if (col != "applyTimeOffset") {
+                    if (col !== "tableName" && col !== "query" && col !== "dataSource") {
+                        this._appointmentSettings[col] = ($.type(this.model.appointmentSettings[col]) == "string" || ej.isNullOrUndefined(this.model.appointmentSettings[col])) ? this.model.appointmentSettings[col] : this.model.appointmentSettings[col].field;
+                        if (col !== "resourceFields" && col !== "categorize" && col !== "priority")
+                            (ej.isNullOrUndefined(this._appointmentSettings[col])) && (this._appointmentSettings[col] = col.charAt(0).toUpperCase() + col.slice(1));
+                        if (col == "resourceFields" && ej.isNullOrUndefined(this._appointmentSettings.resourceFields) && !ej.isNullOrUndefined(this.model.resources)) {
+                            for (var i = 0, len = this.model.resources.length; i < len; i++) {
+                                resource = this.model.resources[i].field.charAt(0).toUpperCase() + this.model.resources[i].field.slice(1);
+                                this._appointmentSettings[col] += ((i !== 0) ? "," : "") + resource;
+                            }
                         }
                     }
                 }
@@ -2057,23 +1945,23 @@
                         }
                         if (this.model.views.toString().toLowerCase().split(',').indexOf(this.currentView()) == -1) {
                             this._navView = true;
-							if (this.model.views.length == 0) {
-								this.model.views = this.model.currentView.toString().toLowerCase().split(",");
-								flag = true;
-							}
-							else
-								this._viewChange(null, null, this.model.views[0].toLowerCase());
+                            if (this.model.views.length == 0) {
+                                this.model.views = this.currentView().toString().toLowerCase().split(",");
+                                flag = true;
+                            }
+                            else
+                                this._viewChange(null, null, this.model.views[0].toLowerCase());
                         }
                         break;
                     case "currentView":
                         if (this.model.views.toString().toLowerCase().split(',').indexOf(ej.util.getVal(options[prop]).toLowerCase()) != -1) {
-							this._navView = true;
-                        	this._viewChange(null, null, ej.util.getVal(options[prop]).toLowerCase()) 
-						}
-						else { 
-							this._navView = false;
-							this.currentView((this.element.find(".e-activeview")[0].className.split("e-")[2]).split(" ")[0]);
-						}
+                            this._navView = true;
+                            this._viewChange(null, null, ej.util.getVal(options[prop]).toLowerCase())
+                        }
+                        else {
+                            this._navView = false;
+                            this.currentView((this.element.find(".e-activeview")[0].className.split("e-")[2]).split(" ")[0]);
+                        }
                         break;
                     case "currentDate":
                         if ($.type(options[prop]) == "string")
@@ -2108,7 +1996,7 @@
                             this._bindBlockData();
                         else
                             this._renderBlockAppointments();
-                        break; 
+                        break;
                     case "timeScale":
                         $.extend(this.model.timeScale, options[prop]);
                         flag = true;
@@ -2119,29 +2007,53 @@
                         this._appointmentAddWindow.find('.startutc').ejDropDownList({ dataSource: this.model.timeZoneCollection.dataSource });
                         this._appointmentAddWindow.find('.endutc').ejDropDownList({ dataSource: this.model.timeZoneCollection.dataSource });
                         break;
+                    case "showTimeZoneFields":
+                        this.model.showTimeZoneFields = options[prop];
+                        if (this.model.showTimeZoneFields) {
+                            if (this._appointmentAddWindow.find("#" + this._id + "_appStartTime").children().length < 4) {
+                                if (this._mediaQuery) {
+                                    var $startTimeZone = "<td width='31%'><input id='" + this._id + "startTimeZone' class='startutc'  name='" + this._appointmentSettings["startTimeZone"] + "' type='text' value=''/><div id='Timezoneliststr'></div></td>";
+                                    var $endTimeZone = "<td><input  id='" + this._id + "endTimeZone' class='endutc' name='" + this._appointmentSettings["endTimeZone"] + "' type='text' value=''/><div id='Timezonelistend'></div></td>";
+                                }
+                                else {
+                                    var $startTimeZone = "<td width='28%'><input  id='" + this._id + "startTimeZone'  class='startutc'  name='" + this._appointmentSettings["startTimeZone"] + "' type='text' value=''/><div id='Timezoneliststr'></div></td>";
+                                    var $endTimeZone = "<td><input id='" + this._id + "endTimeZone'  class='endutc'  name='" + this._appointmentSettings["endTimeZone"] + "'  type='text' value=''/><div id='Timezonelistend'></div></td>";
+                                }
+                                this._appointmentAddWindow.find("#" + this._id + "_appStartTime").append($startTimeZone);
+                                this._appointmentAddWindow.find("#" + this._id + "_appEndTime").append($endTimeZone);
+                                this._appointmentAddWindow.find("#" + this._id + "startTimeZone").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: this.model.timeZoneCollection.dataSource, fields: { text: this.model.timeZoneCollection["text"], id: this.model.timeZoneCollection["id"], value: this.model.timeZoneCollection["value"] }, width: "100%", select: $.proxy(this._startUtc, this), cssClass: this.model.cssClass });
+                                this._appointmentAddWindow.find("#" + this._id + "endTimeZone").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: this.model.timeZoneCollection.dataSource, fields: { text: this.model.timeZoneCollection["text"], id: this.model.timeZoneCollection["id"], value: this.model.timeZoneCollection["value"] }, width: "100%", select: $.proxy(this._endUtc, this), cssClass: this.model.cssClass });
+                            }
+                            this._timeZoneCollection(null);
+                        }
+                        else {
+                            this._appointmentAddWindow.find("#" + this._id + "_appStartTime").children().last().remove();
+                            this._appointmentAddWindow.find("#" + this._id + "_appEndTime").children().last().remove();
+                        }
+                        break;
                     case "startHour":
                         this.model.startHour = options[prop];
-						if(this.model.startHour < 0)this.model.startHour = 0;
+                        if (this.model.startHour < 0) this.model.startHour = 0;
                         (this.currentView() !== "agenda") && this._setNewStartEndHours();
                         break;
                     case "endHour":
                         this.model.endHour = options[prop];
-						if(this.model.endHour > 24) this.model.endHour = 24;
+                        if (this.model.endHour > 24) this.model.endHour = 24;
                         (this.currentView() !== "agenda") && this._setNewStartEndHours();
                         break;
                     case "highlightBusinessHours":
                         this.model.workHours.highlight = options[prop];
                         if (this.currentView() !== "agenda") {
                             (this.model.workHours.highlight) ? this._highlightBusinessHours() : this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells") && this.element.find(".e-monthcells").removeClass("e-monthcellhighlight");
-                            (this.model.workHours.highlight == false) ? this._businessHourScroller() : "";
+                            this._businessHourScroller();
                         }
                         break;
                     case "workHours":
                         $.extend(this.model.workHours, options[prop]);
                         if (this.currentView() !== "agenda") {
                             (this.model.workHours.highlight) ? this._highlightBusinessHours() : this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells") && this.element.find(".e-monthcells").removeClass("e-monthcellhighlight");
-                            (this.model.workHours.highlight == false) ? this._businessHourScroller() : "";
-							this._renderUpDownIconPosition();
+                            this._businessHourScroller();
+                            this._renderUpDownIconPosition();
                         }
                         break;
                     case "showAllDayRow":
@@ -2188,6 +2100,7 @@
                         if (this.currentView() !== "agenda") {
                             this.currentView() !== "month" && !(this._isCustomMonthView()) ? this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells") : this.element.find(".e-monthcells").removeClass("e-monthcellhighlight");
                             this.model.workHours.highlight && this._highlightBusinessHours();
+                            this._businessHourScroller();
                         }
                         break;
                     case "businessEndHour":
@@ -2195,6 +2108,7 @@
                         if (this.currentView() !== "agenda") {
                             this.currentView() !== "month" && !(this._isCustomMonthView()) ? this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells") : this.element.find(".e-monthcells").removeClass("e-monthcellhighlight");
                             this.model.workHours.highlight && this._highlightBusinessHours();
+                            this._businessHourScroller();
                         }
                         break;
                     case "height":
@@ -2215,7 +2129,7 @@
                         this.model.locale = options[prop];
                         this._localizedLabels = ej.getLocalizedConstants("ej.Schedule", this.model.locale);
                         if (this.model.locale != "en-US")
-                        this._recurrenceLocal();
+                            this._recurrenceLocal();
                         this._culture = ej.preferredCulture(this.model.locale);
                         this._dayShortNames = this._culture.calendar.days.namesAbbr;
                         this._dayFullNames = this._culture.calendar.days.names;
@@ -2267,18 +2181,18 @@
                         if (!ej.isNullOrUndefined(this.dataSource()))
                             this._renderAppointmentAll();
                         break;
-					case "allDayCellsTemplateId":
-						this.model.allDayCellsTemplateId = options[prop];
-						flag = true;
-						break;
-					case "dateHeaderTemplateId":
-						this.model.dateHeaderTemplateId = options[prop];
-						flag = true;
-						break;
-					case "workCellsTemplateId":
-						this.model.workCellsTemplateId = options[prop];
-						flag = true;
-						break;
+                    case "allDayCellsTemplateId":
+                        this.model.allDayCellsTemplateId = options[prop];
+                        flag = true;
+                        break;
+                    case "dateHeaderTemplateId":
+                        this.model.dateHeaderTemplateId = options[prop];
+                        flag = true;
+                        break;
+                    case "workCellsTemplateId":
+                        this.model.workCellsTemplateId = options[prop];
+                        flag = true;
+                        break;
                     case "allowKeyboardNavigation":
                         this.model.allowKeyboardNavigation = options[prop];
                         if (this.model.allowKeyboardNavigation) {
@@ -2291,7 +2205,6 @@
                         }
                         break;
                     case "renderDates":
-					    this._renderDate=true;
                         $.extend(this.model.renderDates, options[prop]);
                         this._navView = true; this._navigate = false;
                         this._viewChange(null, null, "customview");
@@ -2316,12 +2229,12 @@
                             this.element.find("div.e-appointment,div.e-alldayappointment,div.e-monthappointment,div.e-appsoverflow").remove();
                             !ej.isNullOrUndefined(this.model.appointmentSettings) && (this._dataManager = this.dataSource() instanceof ej.DataManager ? this.dataSource() : this.dataSource() != null ? ej.DataManager(this.dataSource()) : null);
                             this._setmodelvalue = true;
-							this._bindAppointmentsData("Load");
+                            this._bindAppointmentsData("Load");
                         }
                         break;
                     case "contextMenuSettings":
                         $.extend(this.model.contextMenuSettings, options[prop]);
-                        if (this.model.contextMenuSettings.enable && ej.isNullOrUndefined(this._contextMenu))
+                        if (this.model.contextMenuSettings.enable && (ej.isNullOrUndefined(this._contextMenu) || this.model.categorizeSettings.enable))
                             this._showContextMenu(this.model.contextMenuSettings.enable);
                         break;
                     case "reminderSettings":
@@ -2333,15 +2246,15 @@
                     case "showAppointmentNavigator":
                     case "enableAppointmentNavigation":
                         this.model.showAppointmentNavigator = this.model.enableAppointmentNavigation = options[prop];
-                        if (!this.model.showAppointmentNavigator){
+                        if (!this.model.showAppointmentNavigator) {
                             this.element.find(".e-prevapp,.e-nextapp").remove();
-							this.element.find(".e-upicon,.e-downicon").remove();
-						}
+                            this.element.find(".e-upicon,.e-downicon").remove();
+                        }
                         else {
                             this._nextPrevAppointment(this.model.showAppointmentNavigator);
-							if (this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && this.currentView() != "month" && (!this._isCustomMonthView()) && (!this._mediaQuery))
-								this._renderUpDownIcon();
-							if (!ej.isNullOrUndefined(this.dataSource()))
+                            if (this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && this.currentView() != "month" && (!this._isCustomMonthView()) && (!this._mediaQuery))
+                                this._renderUpDownIcon();
+                            if (!ej.isNullOrUndefined(this.dataSource()))
                                 this._renderAppointmentAll();
                         }
                         break;
@@ -2354,18 +2267,17 @@
                     case "resources":
                         if (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.resources)) {
                             ej.copyObject(this.model.resources, options[prop]);
-                            this.model.resources = options[prop];                           
+                            this.model.resources = options[prop];
                             if (this.model.resources.length == 0) {
                                 this.model.resources = null;
-								this.model.group = null;
-								flag = true;
-							}
+                                this.model.group = null;
+                                flag = true;
+                            }
                             else
                                 flag = true;
                         }
                         break;
                     case "categorizeSettings":
-                        var control;
                         $.extend(this.model.categorizeSettings, options[prop]);
                         if (!ej.isNullOrUndefined(this.model.categorizeSettings)) {
                             if (this.model.categorizeSettings.enable) {
@@ -2374,20 +2286,17 @@
                                 var $appWindow = "<tr id='" + this._id + "categorizetr'><td class='e-leftfields e-textlabel'>" + this._getLocalizedLabels("Categorize") + ":</td><td colspan='3' class='e-rightfields'>" + "<input id= '" + this._id + "categorize' class='e-categorizevalue' type='text' name='" + this._appointmentSettings["categorize"] + "' value=''/></td></tr>";
                                 this._appointmentAddWindow.find('.' + this._id + "summary").after($appWindow);
                                 this._renderTemplates();
-                                control = this._appointmentAddWindow;
-                                this._renderCategoryItems(control);
+                                this._renderCategoryItems(this._appointmentAddWindow);
                             }
                             else
                                 this._appointmentAddWindow.find('#' + this._id + "categorizetr").remove();
                             this._showContextMenu(this.model.contextMenuSettings.enable);
                             this._appointmentAddWindow.find(".e-categorizevalue").ejAutocomplete("clearText");
-                            control = this._appointmentAddWindow;
-                            this._renderCategoryItems(control);
+                            this._renderCategoryItems(this._appointmentAddWindow);
                             if (!ej.isNullOrUndefined(this.dataSource()))
                                 this._renderAppointmentAll();
                         }
                         break;
-
                     case "group":
                         if (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.resources)) {
                             $.extend(this.model.group, options[prop]);
@@ -2397,23 +2306,21 @@
                         break;
                     case "cellWidth":
                         this.model.cellWidth = options[prop];
-                        if (this.model.showCurrentTimeIndicator) this.element.find(".e-highlightcurrenttimeline").remove();
                         (this.currentView() !== "agenda") && (flag = true);
                         break;
                     case "cellHeight":
                         this.model.cellHeight = options[prop];
-                        if (this.model.showCurrentTimeIndicator) this.element.find(".e-highlightcurrenttimeline").remove();
                         (this.currentView() !== "agenda") && (flag = true);
                         break;
                     case "orientation":
                         this.model.orientation = options[prop];
-                        if (ej.scheduleFeatures.resources && (this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && this.model.orientation == "horizontal")
+                        if (ej.scheduleFeatures.resources && (this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && this.model.orientation == "horizontal")
                             this._on(this.element, "click", ".e-parentnodecategory", $.proxy(this._onResourceClick, this));
                         flag = true;
                         break;
                     case "resourceHeaderTemplateId":
                         this.model.resourceHeaderTemplateId = options[prop];
-                        if (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) {
+                        if (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) {
                             if (this.currentView() != "agenda") {
                                 if (this.model.orientation == "horizontal") {
                                     var resDiv = $(this.wTR.find("td")[0]);
@@ -2454,8 +2361,7 @@
                             }
                             $appWindow = "<td colspan='1' class='e-textlabel " + this._id + "priorityshow'>" + this._getLocalizedLabels("Priority") + ":</td><td colspan='1' class='" + this._id + "prioritylistshow'><input id='" + this._id + "priority' class='priority' type='text' name='" + this._appointmentSettings["priority"] + "' value='' /><div id='prioritylist'></div></td>";
                             this._appointmentAddWindow.find("." + this._id + "parrow").prepend($appWindow);
-                            var control = this._appointmentAddWindow;
-                            this._renderPriorityItems(control);
+                            this._renderPriorityItems(this._appointmentAddWindow);
                             this._renderTemplates();
                         }
                         else {
@@ -2553,9 +2459,9 @@
                 this._scheduleDrawer = null;
                 $("#" + this._id + "AppointmentAddEditWindow_wrapper,#" + this._id + "AppointmentQuickWindow_wrapper,#" + this._id + "AppDetailsWindow_wrapper,#" + this._id + "RecurrenceEdit_wrapper").remove();
                 if (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.resources)) this._resourceSegregate();
-				this._setmodelvalue = true;
+                this._setmodelvalue = true;
                 (this._tempResource.length == 0 && this._grouping.length == 0) ? this._renderInitSchedule() : this._bindResourcesData();
-                (this.model.workHours.highlight == true) ? this._businessHourScroller() : "";
+                this._businessHourScroller();
                 if (!ej.isNullOrUndefined(this.dataSource()))
                     this._dataProcessing(this._currentAppointmentData);
                 this._renderAppointmentAll();
@@ -2566,17 +2472,23 @@
         _touchSchedule: function (e) {
             if ($(e.target).is(".e-appointment,.e-alldayappointment,.e-monthappointment") || $(e.target).parents().is(".e-appointment,.e-alldayappointment,.e-monthappointment"))
                 return false;
-			if (this.model.orientation == "horizontal") return false;
-            var event, value = parseInt(this.element.find(".e-draggableworkarea").css("margin-left"));
+            if (this.model.orientation == "horizontal") return false;
+            var eventType = this.model.enableRTL ? (e.type == "swipeleft" ? "swiperight" : "swipeleft") : e.type;
+            var marginType = this.model.enableRTL ? "margin-right" : "margin-left";
+            var event, value = parseInt(this.element.find(".e-draggableworkarea").css(marginType));
             var resWidth = Math.round(this.element.find(".e-draggableworkarea").width() / this.res1.length);
-            switch (e.type) {
+            var resPos = Math.abs((this.element.find(".e-draggableworkarea").offset().left - this.element.find(".e-workleftindent").outerWidth() - 1) / resWidth);
+            switch (eventType) {
                 case "swipeleft":
                     if (this._mediaQuery && this.currentView() != "agenda" && this.model.orientation == "vertical") {
                         if (-value < (this.element.find(".e-draggableworkarea").width() - (resWidth))) {
-                            this.element.find(".e-headeralldaydiv,.e-draggableworkarea").animate({ "margin-left": value + (-resWidth) }, 500);
+                            var marginValue = -((resPos + 1) * resWidth);
+                            this.element.find(".e-headeralldaydiv,.e-draggableworkarea").animate((this.model.enableRTL ? { "margin-right": marginValue } : { "margin-left": marginValue }), 500);
+                            this.element.find(".e-headeralldaydiv,.e-draggableworkarea").css(this.model.enableRTL ? { "margin-left": 0 } : { "margin-right": 0 });
+                            if (resPos + 1 == this.res1.length - 1) this._showScrollTd();
                             return false;
                         }
-                        this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-emptyscrolltd").css("margin-left", "0px");
+                        this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-emptyscrolltd").css({ marginLeft: "0px", marginRight: "0px" });
                     }
                     event = { currentTarget: this.element.find('.e-navigatenext') };
                     this._navigateClick(event, "Next");
@@ -2584,10 +2496,13 @@
                 case "swiperight":
                     if (this._mediaQuery && this.currentView() != "agenda" && this.model.orientation == "vertical") {
                         if (-value > 0) {
-                            this.element.find(".e-headeralldaydiv,.e-draggableworkarea").animate({ "margin-left": value + resWidth }, 500);
+                            var marginValue = -((resPos - 1) * resWidth);
+                            this.element.find(".e-headeralldaydiv,.e-draggableworkarea").animate((this.model.enableRTL ? { "margin-right": marginValue } : { "margin-left": marginValue }), 500);
+                            this.element.find(".e-headeralldaydiv,.e-draggableworkarea").css(this.model.enableRTL ? { "margin-left": 0 } : { "margin-right": 0 });
+                            if (resPos + 1 == this.res1.length - 1) this._showScrollTd();
                             return false;
                         }
-                        this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-emptyscrolltd").css("margin-left", -(this.element.find(".e-draggableworkarea").width() - (resWidth)));
+                        this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-emptyscrolltd").css({ marginLeft: "0px", marginRight: "0px" });
                     }
                     event = { currentTarget: this.element.find('.e-navigateprevious') };
                     this._navigateClick(event, "Previous");
@@ -2596,14 +2511,12 @@
         },
 
         _initPrivateProperties: function () {
-            this._navSelected = this._navDrawer = this._alldayLevel = this._reminderClose = this._navView = this._editKey = this._cellClick = this._recurChecked = this._setCurrentDate = this._leftResizing = this._rightResizing = this._topResizing = this._bottomResizing = this._navigate = this._navigate = false;
+            this._navSelected = this._navDrawer = this._alldayLevel = this._reminderClose = this._navView = this._editKey = this._cellClick = this._recurChecked = this._setCurrentDate = this._leftResizing = this._rightResizing = this._topResizing = this._bottomResizing = this._navigate = this._navigate = this._allDayDrag = false;
             this._gotoDate = this._bindapp = this._showBlockAlert = true;
             this._tempStart = this._tempEnd = this._currentAction = "";
             this._currentRowIndex = this._currentColIndex = 0;
-            this._appId = this._parentId = this._splitId = 1;
-            this._tempResource = [];
-            this._grouping = [];
-            this.overlapList = this._currentAppointmentData = this._processed = this._dateRender = this._app = [];
+            this._appId = this._parentId = 1;
+            this.overlapList = this._currentAppointmentData = this._processed = this._dateRender = this._app = this._grouping = this._tempResource = [];
             this.res1 = [0];
             this._appMainId = null;
             this._dayNamesArray = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -2615,7 +2528,10 @@
             this._pattern = this._culture.calendar.patterns;
             this._browserInfo = ej.browserInfo();
             this._safariBrowser = this._browserInfo.name == "webkit" && !ej.isTouchDevice();
-			this._focused = null;
+            this._focused = null;
+            String.prototype.trim = String.prototype.trim || function () { return this.replace(/^\s+|\s+$/g, ''); };
+            String.prototype.capitalizeFirstString = String.prototype.capitalizeFirstString || function () { return this.charAt(0).toUpperCase() + this.slice(1); };
+            Date.prototype.parseISO8601 = function (date) { return (typeof (date) === 'string') ? new Date(date.replace(/-/g, "/")) : new Date(date); };
         },
 
         _destroy: function () {
@@ -2624,8 +2540,9 @@
             this._appointmentAddWindow.find("#" + this._id + "recurrenceEditor").ejRecurrenceEditor("destroy");
             this.element.find("#" + this._id + "_navigator").ejDatePicker("destroy");
             window.clearInterval(this._intervalID);
+            !ej.isNullOrUndefined(this.element.data("ejTooltip")) && this.element.ejTooltip("destroy");
             $("#" + this._id + "AppointmentAddEditWindow_wrapper,#" + this._id + "AppointmentQuickWindow_wrapper,#" + this._id + "AppDetailsWindow_wrapper,#" + this._id + "RecurrenceEdit_wrapper,#" + this._id + "gotoWindow_wrapper").remove();
-            $("#" + this._id + "_WorkCells_Template,#" + this._id + "_MonthCells_Template,#" + this._id + "_TimeCells_Template,#" + this._id + "_HeaderDate_Template,#" + this._id + "_Appointment_Template,#" + this._id + "_AlldayCells_Template,#" + this._id + "_LeftIndentCells_Template,#" + this._id + "_AgendaCells_Template,#" + this._id + "_userTimeCells_Template").remove();
+            $("#" + this._id + "_WorkCells_Template,#" + this._id + "_MonthCells_Template,#" + this._id + "_TimeCells_Template,#" + this._id + "_HeaderDate_Template,#" + this._id + "_Appointment_Template,#" + this._id + "_AlldayCells_Template,#" + this._id + "_LeftIndentCells_Template,#" + this._id + "_AgendaCells_Template,#" + this._id + "_userTimeCells_Template,#" + this._id + "_BlockTime_Template,#" + this._id + "_HorizontalHeader_Template,#" + this._id + "_HorizontalCells_Template,#" + this._id + "_HorizontalResources_Template").remove();
             this.element.empty().removeClass("e-schedule");
         },
 
@@ -2644,7 +2561,7 @@
             }
         },
         _closeRecurence: function (args) {
-        if (this._appointmentAddWindow.find('.e-recuruntil').ejRadioButton("option", "checked") && args.model.text != this._getLocalizedLabels("Cancel") && this._appointmentAddWindow.find("#recurstartdate").ejDatePicker("option", "value") > this.element.find(".e-until").ejDatePicker("option", "value")) {
+            if (this._appointmentAddWindow.find('.e-recuruntil').ejRadioButton("option", "checked") && args.model.text != this._getLocalizedLabels("Cancel") && this._appointmentAddWindow.find('.recurstartdate').ejDatePicker("option", "value") > this._appointmentAddWindow.find(".e-until").ejDatePicker("option", "value")) {
                 this._alertWindow.find(".e-alerttext").html(this._getLocalizedLabels("WrongPattern"));
                 this._alertWindow.ejDialog("open");
                 return false;
@@ -2653,11 +2570,11 @@
                 this._appointmentAddWindow.find(".e-recurFinalRule").html() == "" && this._appointmentAddWindow.find("#" + this._id + "recurrence").ejCheckBox({ checked: false });
             }
             else {
-            var obj = this._appointmentAddWindow.find(".e-recurEditor").data("ejRecurrenceEditor");
-            var _rRuleStr = obj.closeRecurPublic();
-            var dateChange = obj.element.find("#recurstartdate").ejDatePicker("option", "value");
-            if(new Date(this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value")).getTime()!= new Date(dateChange).getTime())
-            this._recurDateChange(dateChange);
+                var obj = this._appointmentAddWindow.find(".e-recurEditor").data("ejRecurrenceEditor");
+                var _rRuleStr = obj.closeRecurPublic();
+                var dateChange = obj.element.find(".recurstartdate").ejDatePicker("option", "value");
+                if (new Date(this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value")).setHours(0, 0, 0, 0) != new Date(dateChange).getTime())
+                    this._recurDateChange(dateChange);
                 this._appointmentAddWindow.find("." + this._id + "summary").css("display", "table-row");
                 this._appointmentAddWindow.find(".e-recurFinalRule").html(_rRuleStr);
                 this._appointmentAddWindow.find(".e-recuredit").css("display", "inline");
@@ -2689,7 +2606,7 @@
             (this._mediaQuery || ej.isMobile()) && this._on(this.element, "tap", ".e-appointment,.e-alldayappointment,div.e-monthappointment,.e-agendaappointment", $.proxy(this._appointmentWindow, this));
             this._on(this.element, "mouseover", ".e-appointment,.e-alldayappointment,.e-monthappointment,.e-agendaappointment", $.proxy(this._onAppointMouseOver, this));
             this._on(this.element, "mouseout", ".e-appointment,.e-alldayappointment,.e-monthappointment,.e-agendaappointment", $.proxy(this._onAppointMouseOver, this));
-			this._on(this.element, "click", ".e-appup,.e-appdown", $.proxy(this._renderAppPosition, this));
+            this._on(this.element, "click", ".e-appup,.e-appdown", $.proxy(this._renderAppPosition, this));
             (this._mediaQuery || this.element.width() < 600) && this._on(this.element, "click", "#" + this._id + "navDrawerIcon", $.proxy(this._drawerOpen, this));
             if (this.model.allowKeyboardNavigation) {
                 this._on(this.element, "keydown", $.proxy(this._onKeyDown, this));
@@ -2706,7 +2623,7 @@
         },
 
         _drawerOpen: function () {
-            this._scheduleDrawer.ejNavigationDrawer("open");            
+            this._scheduleDrawer.ejNavigationDrawer("open");
         },
 
         _mouseButtonClick: function (e) {
@@ -2727,7 +2644,7 @@
                     var curDates = new Date(renderDate[cellindexs]);
                     if ((curDates >= this.model.minDate) && (curDates <= this.model.maxDate)) {
                         if ($(oEl).hasClass('e-workcells') || $(oEl).hasClass('e-monthcells') || $(oEl).hasClass('e-alldaycells')) {
-                            oRowCell.bind(ej.eventType.mouseMove, function (e) {
+                            oRowCell.on(ej.eventType.mouseMove, function (e) {
                                 proxy.model.showQuickWindow && (proxy._quickAppointWindow.ejDialog("close") && proxy._quickAppDetailsWindow.ejDialog("close"));
                                 e.preventDefault();
                                 var currTarget = e.target;
@@ -2739,8 +2656,8 @@
                                 proxy._mouseSelection(e, proxy, oEl, currTarget);
                                 proxy._moveScrollContent(oEl, proxy);
                             });
-                            oRowCell.bind(ej.eventType.mouseUp, function (e) {
-                                oRowCell.unbind(ej.eventType.mouseMove);
+                            oRowCell.on(ej.eventType.mouseUp, function (e) {
+                                oRowCell.off(ej.eventType.mouseMove);
                             });
                             this.element.find("e.workcells,e.alldaycells,.e-monthcells").removeClass("e-mousehover");
                             this.element.find(".e-workcells,.e-alldaycells,.e-monthcells").removeClass("e-selectedCell");
@@ -2752,18 +2669,31 @@
         },
         _mouseSelection: function (e, proxy, oE1, currTarget) {
             var oRowCell = proxy.element.find('div.e-draggableworkarea tr');
-            var sourceRowIndex = $(oE1).parent()[0].rowIndex;
-            var sourceColumnIndex = $(oE1)[0].cellIndex;
+            var sourceRowIndex = $(oE1).parent().index();
+            var sourceColumnIndex = $(oE1).index();
             var rowcount = oRowCell.length - 1;
             var i, j, k;
-            var currentRowIndex = $(currTarget).parent()[0].rowIndex;
-            var currentColumnIndex = $(currTarget)[0].cellIndex;
+            var currentRowIndex = $(currTarget).parent().index();
+            var currentColumnIndex = $(currTarget).index();
             var ad = proxy.element.find(".e-alldaycells").parent();
             var alldaytr = proxy.model.showAllDayRow;
-            var viewCount = proxy.model.orientation == "horizontal" ? oRowCell[0].cells.length : ((proxy.currentView() == "month" || proxy._isCustomMonthView()) ? (oRowCell[0].cells.length / proxy.res1.length) : proxy._dateRender.length);
-            var resIndex = Math.floor($(currTarget).index() / viewCount);
-            var resmaxcolindex = (viewCount * (resIndex + 1));
-            var resmincolindex = (viewCount * resIndex);
+            if (this._resWorkWeek) {
+                var resmincolindex = 0;
+                for (var z = 0; z < this.res1.length; z++) {
+                    if (currentColumnIndex <= (resmincolindex + (this.res1[z][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length - 1))) {
+                        var resmaxcolindex = resmincolindex + this.res1[z][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
+                        break;
+                    }
+                    else
+                        resmincolindex += this.res1[z][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
+                }
+            }
+            else {
+                var viewCount = proxy.model.orientation == "horizontal" ? oRowCell[0].cells.length : ((proxy.currentView() == "month" || proxy._isCustomMonthView()) ? (oRowCell[0].cells.length / proxy.res1.length) : proxy._dateRender.length);
+                var resIndex = Math.floor($(currTarget).index() / viewCount);
+                var resmaxcolindex = (viewCount * (resIndex + 1));
+                var resmincolindex = (viewCount * resIndex);
+            }
             if ($(currTarget).hasClass('e-workcells')) {
                 if (proxy.model.orientation == "vertical") {
                     if (sourceColumnIndex >= parseInt(resmincolindex) && sourceColumnIndex <= parseInt(resmaxcolindex) - 1 && currentColumnIndex != "undefined") {
@@ -2914,9 +2844,9 @@
             if (proxy.model.orientation === "horizontal") {
                 var leftValue = proxy.element.find(".e-draggableworkarea").scrollLeft();
                 if (proxy.model.enableRTL) {
-                    if (ej.browserInfo().name == "mozilla")
+                    if (proxy._browserInfo.name == "mozilla")
                         leftValue = leftValue > 0 ? leftValue : (leftValue * -1);
-                    else if (ej.browserInfo().name == "chrome" || ej.browserInfo().name == "webkit")
+                    else if (proxy._browserInfo.name == "chrome" || proxy._browserInfo.name == "webkit")
                         leftValue = proxy.element.find(".e-workcells")[0].offsetLeft + proxy.element.find(".e-workcells").width() - proxy.element.find(".e-draggableworkarea").scrollLeft() - proxy.element.find(".e-draggableworkarea").width();
                     else
                         leftValue = Math.abs(leftValue);
@@ -2943,6 +2873,7 @@
             if (!_targ.hasClass("e-workcells") && !appointdiv.hasClass("e-appointment") && !appointdiv.hasClass("e-alldayappointment") && !appointdiv.hasClass("e-monthappointment") && !_targ.hasClass("e-alldaycells") && !_targ.hasClass("e-monthcells") && !(_targ).parents(".e-scheduledialog").hasClass("e-scheduledialog")) {
                 this.model.showQuickWindow && (this._quickAppointWindow.ejDialog("close") && this._quickAppDetailsWindow.ejDialog("close"));
                 this.element.find(".e-workcells").removeClass("e-mousehover");
+                this._scrollerPosition();
             }
         },
 
@@ -2973,12 +2904,12 @@
                 }
                 var renderDate = (this.model.orientation == "horizontal" && this.currentView() == "month") ? this.monthDays : this.model.orientation == "vertical" ? this.dateRender : this._dateRender;
                 var curDate = new Date(renderDate[index]);
-				this._slotByElement($(e.target), "cellHover");
-                var event = { cellIndex: index, startTime: new Date(this.cellHoverStartTime), endTime: new Date(this.cellHoverEndTime), target: e, resources: (!ej.isNullOrUndefined(this.model.cellHover) && (this._tempResource.length!=0)) ? this._getResourceValue(element, index) : null };
+                this._slotByElement($(e.target), "cellHover");
+                var event = { cellIndex: index, startTime: new Date(this.cellHoverStartTime), endTime: new Date(this.cellHoverEndTime), target: e, resources: (!ej.isNullOrUndefined(this.model.cellHover) && (this._tempResource.length != 0)) ? this._getResourceValue(element, index) : null };
                 if ((curDate >= this.model.minDate) && (curDate <= this.model.maxDate)) {
                     if (e.type === "mouseover") {
                         if (this._trigger("cellHover", event)) return false;
-						this.element.find(".e-mousehover").removeClass("e-mousehover");
+                        this.element.find(".e-mousehover").removeClass("e-mousehover");
                         if ((element.hasClass("e-workcells") || element.hasClass("e-monthcells")) && !element.hasClass("e-resourceheadercells"))
                             element.addClass("e-mousehover");
                     }
@@ -3109,6 +3040,39 @@
             return { X: x, Y: y };
         },
 
+        _scrollerPosition: function () {
+            if (this.currentView() != "agenda" && (this.element.find(".e-vscroll").length > 0 || this.element.find(".e-hscroll").length > 0)) {
+                var scrolObj = this.element.find("#" + this._id + "_scroller").ejScroller("instance");
+                if (this.model.orientation == "vertical") {
+                    if (scrolObj.isVScroll()) {
+                        var scrollValue = this.element.find(".e-draggableworkarea").offset().top - this.element.find(".e-workcellstab").offset().top;
+                        this.element.find("#" + this._id + "_scroller").ejScroller({ scrollTop: scrollValue });
+                    }
+                    if (scrolObj.isHScroll()) {
+                        var scrollValue = this.element.find(".e-draggableworkarea").offset().left - this.element.find(".e-workcellstab").offset().left;
+                        this.element.find("#" + this._id + "_scroller").ejScroller({ scrollLeft: Math.abs(scrollValue) });
+                    }
+                }
+                else {
+                    if (this._grouping.length > 0) {
+                        if (scrolObj.isVScroll()) {
+                            if (this.element.find(".e-resourceheadertable").offset().top != this.element.find(".e-workcellstab").offset().top) {
+                                var scrollValue = this.element.find(".e-draggableworkarea").offset().top - this.element.find(".e-workcellstab").offset().top;
+                                this.element.find("#" + this._id + "_scroller").ejScroller({ scrollTop: scrollValue });
+                            }
+                        }
+                        if (scrolObj.isHScroll()) {
+                            var leftValue = (this.currentView() == "month" || this._isCustomMonthView()) ? this.element.find(".e-headerdays").offset().left : this.element.find(".e-horizontaltabletimecell").closest("tr").offset().left;
+                            if (this.element.find(".e-workcellstab").offset().left != leftValue) {
+                                var scrollValue = this.element.find(".e-draggableworkarea").offset().left - this.element.find(".e-workcellstab").offset().left;
+                                this.element.find("#" + this._id + "_scroller").ejScroller({ scrollLeft: Math.abs(scrollValue) });
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
         _cellSelection: function (e) {
             if (e.shiftKey)
                 return false;
@@ -3118,9 +3082,9 @@
             var _target = !ej.isNullOrUndefined(e.target) ? $(e.target) : $(e);
             if (_target.hasClass("e-blocktimeappointment") || _target.closest(".e-blocktimeappointment").length > 0)
                 return false;
-			if (!ej.isNullOrUndefined(this.model.workCellsTemplateId) || !ej.isNullOrUndefined(this.model.allDayCellsTemplateId)) {
-			    _target = (_target.hasClass("e-apptime") || _target.hasClass("e-apptext") || _target.hasClass("e-appointinnertext") || _target.hasClass("e-schedulemouseclose") || _target.hasClass("e-monthheader")) ? $(e.target) : _target.closest(".e-workcells, .e-alldaycells, .e-monthcells");
-			}
+            if (this.currentView() != "agenda" && !_target.hasClass("e-schedulemouseclose") && (!ej.isNullOrUndefined(this.model.workCellsTemplateId) || !ej.isNullOrUndefined(this.model.allDayCellsTemplateId))) {
+                _target = (_target.closest(".e-appointment,.e-monthappointment").length > 0) ? _target.closest(".e-appointment,.e-monthappointment") : (_target.hasClass("e-apptime") || _target.hasClass("e-apptext") || _target.hasClass("e-appointinnertext") || _target.hasClass("e-schedulemouseclose") || _target.hasClass("e-monthheader")) ? $(e.target) : _target.closest(".e-workcells, .e-alldaycells, .e-monthcells");
+            }
             _target.hasClass("e-appointwrapper") || _target.hasClass("e-textwrapper") && (_target = $(_target).parent());
             if (!ej.isNullOrUndefined(e.type) && e.type == "beforeOpen") {
                 var selectedCells = this.element.find("td.e-selectedCell");
@@ -3134,9 +3098,11 @@
                     this.model.showQuickWindow && this._quickAppDetailsWindow.ejDialog("close");
                     this._slotByElement(_target, "cellClick");
                     if ((this.model.minDate > this.curDate || this.model.maxDate < this.curDate)) { return false; }
-                    var _quickString = this._dayFullNames[new Date(this.curDate).getDay()] + ", " + ej.format(new Date(this.curDate), "MMMM") + " " + new Date(this.curDate).getDate() + ", " + ej.format(new Date(this.cur_StartTime), this._timeMode == "12" ? this._pattern.t : "HH:mm") + " - " + ej.format(new Date(this.cur_EndTime), this._timeMode == "12" ? this._pattern.t : "HH:mm");
+                    var _quickString = this._dayFullNames[new Date(this.curDate).getDay()] + ", " + ej.format(new Date(this.curDate), "MMMM", this.model.locale) + " " + new Date(this.curDate).getDate() + ", " + ej.format(new Date(this.cur_StartTime), this._timeMode == "12" ? this._pattern.t : "HH:mm", this.model.locale) + " - " + ej.format(new Date(this.cur_EndTime), this._timeMode == "12" ? this._pattern.t : "HH:mm", this.model.locale);
                     var event = { cellIndex: this._cellIndex, startTime: new Date(this.cur_StartTime), endTime: this.cur_EndTime, target: e, resources: ((this.model.cellClick != null || !ej.isNullOrUndefined(this.model.serverEvents) && (this.model.serverEvents.indexOf("cellClick") != -1)) && (this._tempResource.length != 0)) ? this._getResourceValue(_target) : null, quickString: _quickString };
                     if (this._trigger("cellClick", event)) return false;
+                    _target.addClass("e-selectedCell").attr("tabIndex", 0).focus();
+                    this._scrollerPosition();
                     if (this.model.showQuickWindow) {
                         this._quickAppointWindow.find("#" + this._id + "_quickAppwindow").css("display", "block");
                         this._quickAppointWindow.find('.e-quickstartend').html(event.quickString);
@@ -3147,10 +3113,9 @@
                         var y = topElmt.offset().top - this._quickAppointWindow.height() - 10;
                         var xy = this._quickWindowPosition(x, y, topElmt, this._quickAppointWindow);
                         this._quickAppointWindow.ejDialog({ position: { X: xy["X"], Y: xy["Y"] } });
-                        if (ej.scheduleFeatures.resources && (this._tempResource.length!=0))
+                        if (ej.scheduleFeatures.resources && (this._tempResource.length != 0))
                             this._getResourceDetails(_target, this._cellIndex);
                     }
-                    _target.addClass("e-selectedCell").attr("tabIndex", 0).focus();
                     this._focused = $(":focus");
                     this.model.showQuickWindow && this._quickAppointWindow.find('.subject').focus();
                     this._cellClick = true;
@@ -3193,14 +3158,14 @@
                         }
                         if (this.model.showQuickWindow) {
                             this._quickAppDetailsWindow && this._quickAppDetailsWindow.find('.e-quicksubject').html(temp[this._appointmentSettings["subject"]]).attr("title", temp[this._appointmentSettings["subject"]]);
-                            var startTimeDisp = this._timeMode == "12" ? ej.format(templist[0][this._appointmentSettings["startTime"]], this._pattern.t) : ej.format(templist[0][this._appointmentSettings["startTime"]], "HH:mm");
-							var endTimeDisp = this._timeMode == "12" ? ej.format(templist[templist.length - 1][this._appointmentSettings["endTime"]], this._pattern.t) : ej.format(templist[templist.length - 1][this._appointmentSettings["endTime"]], "HH:mm");                       
-							this._quickAppDetailsWindow.find('.e-rightfields').html(dueIn);
-							var days = Math.ceil((templist[0][this._appointmentSettings["endTime"]] - templist[0][this._appointmentSettings["startTime"]]) / 3600000) / 24;
+                            var startTimeDisp = this._timeMode == "12" ? ej.format(templist[0][this._appointmentSettings["startTime"]], this._pattern.t, this.model.locale) : ej.format(templist[0][this._appointmentSettings["startTime"]], "HH:mm", this.model.locale);
+                            var endTimeDisp = this._timeMode == "12" ? ej.format(templist[templist.length - 1][this._appointmentSettings["endTime"]], this._pattern.t, this.model.locale) : ej.format(templist[templist.length - 1][this._appointmentSettings["endTime"]], "HH:mm", this.model.locale);
+                            this._quickAppDetailsWindow.find('.e-rightfields').html(dueIn);
+                            var days = Math.ceil((templist[0][this._appointmentSettings["endTime"]] - templist[0][this._appointmentSettings["startTime"]]) / 3600000) / 24;
                             if ((templist.length > 1) || (this.model.orientation == "horizontal" && this.currentView() == "month" && days > 1) || (templist[0][this._appointmentSettings["startTime"]].getDay() != templist[templist.length - 1][this._appointmentSettings["endTime"]].getDay()))
-                                var dateShow = this._dayFullNames[templist[0][this._appointmentSettings["startTime"]].getDay()] + ", " + ej.format(templist[0][this._appointmentSettings["startTime"]], "MMMM") + " " + templist[0][this._appointmentSettings["startTime"]].getDate() + " - " + startTimeDisp + " " + "to" + " " + this._dayFullNames[templist[templist.length - 1][this._appointmentSettings["endTime"]].getDay()] + ", " + ej.format(templist[templist.length - 1][this._appointmentSettings["endTime"]], "MMMM") + " " + templist[templist.length - 1][this._appointmentSettings["endTime"]].getDate() + " - " + endTimeDisp;
-							else
-                                var dateShow = this._dayFullNames[templist[0][this._appointmentSettings["startTime"]].getDay()] + ", " + ej.format(templist[0][this._appointmentSettings["startTime"]], "MMMM") + " " + templist[0][this._appointmentSettings["startTime"]].getDate() + ", " + startTimeDisp + " " + "-" + " " + endTimeDisp;
+                                var dateShow = this._dayFullNames[templist[0][this._appointmentSettings["startTime"]].getDay()] + ", " + ej.format(templist[0][this._appointmentSettings["startTime"]], "MMMM", this.model.locale) + " " + templist[0][this._appointmentSettings["startTime"]].getDate() + " - " + startTimeDisp + " " + "to" + " " + this._dayFullNames[templist[templist.length - 1][this._appointmentSettings["endTime"]].getDay()] + ", " + ej.format(templist[templist.length - 1][this._appointmentSettings["endTime"]], "MMMM", this.model.locale) + " " + templist[templist.length - 1][this._appointmentSettings["endTime"]].getDate() + " - " + endTimeDisp;
+                            else
+                                var dateShow = this._dayFullNames[templist[0][this._appointmentSettings["startTime"]].getDay()] + ", " + ej.format(templist[0][this._appointmentSettings["startTime"]], "MMMM", this.model.locale) + " " + templist[0][this._appointmentSettings["startTime"]].getDate() + ", " + startTimeDisp + " " + "-" + " " + endTimeDisp;
                             this._quickAppDetailsWindow.find('.e-quickstartendtime').html(dateShow);
                             if (temp[this._appointmentSettings["recurrence"]] == 1)
                                 this._quickAppDetailsWindow.find('.e-editseries').removeClass("e-disable");
@@ -3262,15 +3227,15 @@
                 this._appointmentAddWindow.find(".allday").ejCheckBox({ checked: false });
             }
             else {
-				if (type == "cellHover") {
-					this.cellHoverStartTime = new Date(new Date(curDate).setHours(0, 0, 0));
-					this.cellHoverEndTime = new Date(new Date(curDate).setHours(23, 59, 59));
-				}
-				else {
-					this.cur_StartTime = new Date(new Date(curDate).setHours(0, 0, 0));
-					this.cur_EndTime = new Date(new Date(curDate).setHours(23, 59, 59));
-					this._appointmentAddWindow.find(".allday").ejCheckBox({ checked: true });
-				}
+                if (type == "cellHover") {
+                    this.cellHoverStartTime = new Date(new Date(curDate).setHours(0, 0, 0));
+                    this.cellHoverEndTime = new Date(new Date(curDate).setHours(23, 59, 59));
+                }
+                else {
+                    this.cur_StartTime = new Date(new Date(curDate).setHours(0, 0, 0));
+                    this.cur_EndTime = new Date(new Date(curDate).setHours(23, 59, 59));
+                    this._appointmentAddWindow.find(".allday").ejCheckBox({ checked: true });
+                }
             }
         },
         _calcCurrentTime: function (curDate, _target, type) {
@@ -3279,22 +3244,22 @@
             this._timeScaleMin = (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
             this._timeScaleMin = this._timeScaleMin * 60 * 1000;
             if (type == "cellHover") {
-				this.cellHoverStartTime = new Date(curDate).setMilliseconds(time);
-				var min = (parseInt(new Date(this.cellHoverStartTime).getHours()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getHours() && parseInt(new Date(this.cellHoverStartTime).getMinutes()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getMinutes()) ? time + (this._timeScaleMin - 1) : new Date(this.cellHoverStartTime).getMilliseconds() + this._timeScaleMin;
-				this.cellHoverEndTime = new Date(new Date(this.cellHoverStartTime).setMilliseconds(min));
-				this.cellHoverEndTime = (new Date(this.cellHoverStartTime).getDay() < new Date(this.cellHoverEndTime).getDay()) ? new Date(new Date(this.cellHoverStartTime).setHours(23, 59, 59)) : this.cellHoverEndTime;
-			}
-			else {
-				this.cur_StartTime = new Date(curDate).setMilliseconds(time);
-				var min = (parseInt(new Date(this.cur_StartTime).getHours()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getHours() && parseInt(new Date(this.cur_StartTime).getMinutes()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getMinutes()) ? time + (this._timeScaleMin - 1) : new Date(this.cur_StartTime).getMilliseconds() + this._timeScaleMin;
-				this.cur_EndTime = new Date(new Date(this.cur_StartTime).setMilliseconds(min));
-				this.cur_EndTime = (new Date(this.cur_StartTime).getDay() < new Date(this.cur_EndTime).getDay()) ? new Date(new Date(this.cur_StartTime).setHours(23, 59, 59)) : this.cur_EndTime;
-			}
+                this.cellHoverStartTime = new Date(curDate).setMilliseconds(time);
+                var min = (parseInt(new Date(this.cellHoverStartTime).getHours()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getHours() && parseInt(new Date(this.cellHoverStartTime).getMinutes()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getMinutes()) ? time + (this._timeScaleMin - 1) : new Date(this.cellHoverStartTime).getMilliseconds() + this._timeScaleMin;
+                this.cellHoverEndTime = new Date(new Date(this.cellHoverStartTime).setMilliseconds(min));
+                this.cellHoverEndTime = (new Date(this.cellHoverStartTime).setHours(0, 0, 0, 0) < new Date(this.cellHoverEndTime).setHours(0, 0, 0, 0)) ? new Date(new Date(this.cellHoverStartTime).setHours(23, 59, 59)) : this.cellHoverEndTime;
+            }
+            else {
+                this.cur_StartTime = new Date(curDate).setMilliseconds(time);
+                var min = (parseInt(new Date(this.cur_StartTime).getHours()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getHours() && parseInt(new Date(this.cur_StartTime).getMinutes()) == new Date(new Date(curDate).setMinutes((this._timeScaleMin * this.model.timeScale.minorSlotCount * (this.model.endHour - this.model.startHour)) - this.model.timeScale.minorSlotCount)).getMinutes()) ? time + (this._timeScaleMin - 1) : new Date(this.cur_StartTime).getMilliseconds() + this._timeScaleMin;
+                this.cur_EndTime = new Date(new Date(this.cur_StartTime).setMilliseconds(min));
+                this.cur_EndTime = (new Date(this.cur_StartTime).setHours(0, 0, 0, 0) < new Date(this.cur_EndTime).setHours(0, 0, 0, 0)) ? new Date(new Date(this.cur_StartTime).setHours(23, 59, 59)) : this.cur_EndTime;
+            }
         },
         _checkReminders: function (args) {
             this._todayAppointments = [];
             for (var i = 0; i < this._processed.length; i++) {
-                if ((new Date(new Date(this._processed[i][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date().setHours(0, 0, 0, 0)).getTime())) {
+                if ((new Date(new Date(this._processed[i][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() >= new Date(new Date().setHours(0, 0, 0, 0)).getTime())) {
                     this._todayAppointments.push(this._processed[i]);
                 }
             }
@@ -3335,11 +3300,14 @@
                             break;
                         }
                     }
-                    if (categorizeFlag)
+                    if (categorizeFlag) {
+                        var deletedItems = new ej.DataManager(this.model.contextMenuSettings.menuItems.appointment).executeLocal(new ej.Query().where("parentId", ej.FilterOperators.equal, "categorize"));
+                        new ej.DataManager(this.model.contextMenuSettings.menuItems.appointment).saveChanges({ added: [], changed: [], deleted: deletedItems }, "parentId");
                         for (var i = 0; i < dataLength; i++) {
                             var dataSet = this.model.categorizeSettings;
                             this.model.contextMenuSettings.menuItems.appointment.push({ text: dataSet.dataSource[i][dataSet.text], id: "categorize_" + dataSet.dataSource[i][dataSet.id], fontColor: dataSet.dataSource[i][dataSet.fontColor], color: dataSet.dataSource[i][dataSet.color], parentId: this.model.contextMenuSettings.menuItems.appointment[menuId].id.toString() });
                         }
+                    }
                 }
                 if (this._gotoDate) {
                     if (this.model.contextMenuSettings.enable) {
@@ -3360,7 +3328,7 @@
 
         _beforeopen: function (args) {
             if (this.model.contextMenuSettings.enable) {
-                $(document).unbind(ej.eventType.mouseMove);
+                $(document).off(ej.eventType.mouseMove);
                 var targetClass = $(args.target), appFlag, appointment = null, event;
                 var tempargs = ($(targetClass).parents(".e-draggableworkarea tr").length > 0 && $(targetClass).parentsUntil(".e-draggableworkarea tr").is(".e-agendaappointment,.e-eventcolumn,.e-timecolumn")) || $(targetClass).is(".e-agendaappointment,.e-eventcolumn,.e-timecolumn");
                 if (!targetClass.hasClass("e-appointment") && !targetClass.hasClass("e-workcells") && !targetClass.hasClass("e-alldaycells") && !targetClass.hasClass("e-monthcells") && !ej.isNullOrUndefined(this.model.appointmentTemplateId)) {
@@ -3377,7 +3345,7 @@
                 }
                 this._cellSelection(args);
                 if (targetClass.hasClass("e-workcells") || targetClass.hasClass("e-alldaycells") || targetClass.hasClass("e-monthcells")) {
-                    event = { currentDate: this.curDate, cellIndex: this._cellIndex, events: args, resources: (!ej.isNullOrUndefined(this.model.beforeContextMenuOpen) && (this._tempResource.length!=0)) ? this._getResourceValue(targetClass, this._cellIndex) : null };
+                    event = { currentDate: this.curDate, cellIndex: this._cellIndex, events: args, resources: (!ej.isNullOrUndefined(this.model.beforeContextMenuOpen) && (this._tempResource.length != 0)) ? this._getResourceValue(targetClass, this._cellIndex) : null };
                 }
                 if (targetClass.hasClass("e-alldayappointment") || targetClass.hasClass("e-monthappointment") || targetClass.hasClass("e-appointinnertext") || targetClass.hasClass("e-apptime") || targetClass.hasClass("e-apptext") || targetClass.hasClass("e-appointment")) {
                     appointment = this._getAppDetails(args);
@@ -3458,7 +3426,7 @@
         _onMenuSelect: function (args) {
             var id = args.events.ID.split("_"), parentData = "", menuApp;
             var target = this._baseTarget;
-			var proxy=this;
+            var proxy = this;
             if ($(target).is(".e-appointment,.e-alldayappointment,.e-monthappointment,.e-agendaappointment") || target.parents(".e-appointment").hasClass("e-appointment") || target.parents(".e-monthappointment").hasClass("e-monthappointment") || target.parents(".e-alldayappointment").hasClass("e-alldayappointment") || this.currentView() == "agenda" && this.element.find(".e-selectedCell").parent().find(".e-agendaappointment")) {
                 var query = new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid);
                 var appointDetails = ej.DataManager(this._processed).executeLocal(query);
@@ -3468,7 +3436,7 @@
                 parentData = { startTime: new Date(this.cur_StartTime), endTime: this.cur_EndTime, resourceInfo: this._getResourceDetails(target) };
             }
             if (this._trigger("menuItemClick", { events: args, targetInfo: parentData })) return false;
-			var oldIdValue = parentData[this._appointmentSettings["categorize"]]; 
+            var oldIdValue = parentData[this._appointmentSettings["categorize"]];
             switch (id[0]) {
                 case "new":
                     this._appointmentWindow(this._target);
@@ -3476,7 +3444,7 @@
                 case "recurrence":
                     this._appointmentWindow(this._target);
                     this._appointmentAddWindow.find(".recurrence").ejCheckBox({ checked: true });
-                    this._repeat(args = { isChecked: true });
+                    this._repeat(args = { isChecked: true, isInteraction: true });
                     break;
                 case "open":
                     this._appointmentWindow(this._target);
@@ -3487,7 +3455,7 @@
                 case "view":
                     if (!ej.isNullOrUndefined(id[1])) {
                         var newView = id[1].toLowerCase();
-                        this._navView =  true;
+                        this._navView = true;
                         (this.currentView() != newView) && this._viewChange(null, this.currentView(), newView);
                     }
                     break;
@@ -3562,33 +3530,30 @@
                                 idValue = getId.toString();
                             }
                             parentData[this._appointmentSettings["categorize"]] = idValue;
-							if(!ej.isNullOrUndefined(id[1]))
-							{
-							  if (this._trigger("beforeAppointmentChange", { appointment: parentData })) {
-							      parentData[this._appointmentSettings["categorize"]] = oldIdValue;
-							      return false;
-							   }
-							}
-							var temp = this._timeZoneAppointments(parentData, "");
-							var promise;
-							if (this.dataSource() instanceof ej.DataManager) {
-							    promise = this._dataManager.update(this._appointmentSettings["id"], temp, this.model.appointmentSettings.query._fromTable);
+                            if (!ej.isNullOrUndefined(id[1])) {
+                                if (this._trigger("beforeAppointmentChange", { appointment: parentData })) {
+                                    parentData[this._appointmentSettings["categorize"]] = oldIdValue;
+                                    return false;
+                                }
                             }
-							else
-					            promise = this._dataManager.update("AppTaskId", temp);
-							var updateTemp = this._timeZoneAppointments(temp, "reverse");
-                            new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTemp);
-                            new ej.DataManager(this._processed).update("AppTaskId", updateTemp);
-							if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
+                            var temp = this._timeZoneAppointments(parentData, "");
+                            var promise;
+                            if (this.dataSource() instanceof ej.DataManager) {
+                                promise = this._dataManager.update(this._appointmentSettings["id"], temp, this.model.appointmentSettings.query._fromTable);
+                            }
+                            else
+                                promise = this._dataManager.update("AppTaskId", temp);
+                            new ej.DataManager(this._currentAppointmentData).update("AppTaskId", this._timeZoneAppointments(temp, "reverse"));
+                            if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
                                 promise.done(function (e) {
-                                proxy._processUrlBinding(e);
-							    proxy._trigger("appointmentChanged", { appointment: parentData });
-                            });
+                                    proxy._processUrlBinding(e);
+                                    proxy._trigger("appointmentChanged", { appointment: parentData });
+                                });
                             }
-					        else{
-					            this._renderSingleApp(parentData, parentData);
-					            this._trigger("appointmentChanged", { appointment: parentData });
-							}
+                            else {
+                                this._renderSingleApp();
+                                this._trigger("appointmentChanged", { appointment: parentData });
+                            }
                             break;
                         }
                     }
@@ -3604,7 +3569,7 @@
                 var view = this.model.timeScale.enable ? (this._isCustomMonthView()) ? "month" : this.currentView() : "month";
                 var viewColCount = view == "day" ? 1 : view == "week" ? 7 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 5;
                 this.datesColumn = this._getHeaderAllDayCellsCount();
-                var multiResources = ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group)) ? true : false;
+                var multiResources = ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group)) ? true : false;
                 if (userTemplateId || template)
                     var html = this.userTimeCellHoriTemplate.render({ cols: this.datesColumn, label: this._getLocalizedLabels("Resources"), multiRes: multiResources, view: view, timeTdCount: columnValueCount.strTime, colspan: view == "month" ? 1 : (columnValueCount.strTime.length / viewColCount) * 2, height: view == 'month' ? 62 : 59, width: this.model.width, headercellWidth: view == "day" ? "100%" : "55px", column: columnValueCount.columnCount, userTemplateId: userTemplateId, template: template });
                 else
@@ -3641,7 +3606,7 @@
             if ($(args.currentTarget).hasClass("e-gotoOk")) {
                 var date = this._gotoWindow.find("#" + this._id + "gotodate").ejDatePicker("option", "value");
                 var view = this._gotoWindow.find("#" + this._id + "show").ejDropDownList("option", "itemValue");
-                data = { currentView: this.currentView(), currentDate: new Date(this.currentDate()), target: args, requestType: "dateNavigate" };
+                data = { currentView: this.currentView(), currentDate: new Date(this.currentDate()), target: args };
                 if (this._trigger("actionBegin", { data: data, requestType: "dateNavigate" }))
                     return false;
                 var oldDate = this.currentDate();
@@ -3669,7 +3634,24 @@
 
         _renderGoto: function () {
             this._gotoWindow.find("#" + this._id + "gotodate").ejDatePicker({ buttonText: this._getLocalizedLabels("Today"), enableRTL: this.model.enableRTL, width: '100%', value: this.currentDate(), locale: this.model.locale, cssClass: this.model.cssClass, minDate: this.model.minDate, maxDate: this.model.maxDate });
-            this._gotoWindow.find("#" + this._id + "show").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: [{ text: this._getLocalizedLabels("Day"), value: "day" }, { text: this._getLocalizedLabels("Week"), value: "week" }, { text: this._getLocalizedLabels("WorkWeek"), value: "workweek" }, { text: this._getLocalizedLabels("Month"), value: "month" }, { text: this._getLocalizedLabels("Agenda"), value: "agenda" }], width: "100%", selectedItemIndex: 0, cssClass: this.model.cssClass });
+            var views = []
+            for (var i = 0; i < this.model.views.length; i++) {
+                switch (this.model.views[i]) {
+                    case "day": views.push({ text: this._getLocalizedLabels("Day"), value: "day" });
+                        break;
+                    case "week": views.push({ text: this._getLocalizedLabels("Week"), value: "week" });
+                        break;
+                    case "workweek": views.push({ text: this._getLocalizedLabels("WorkWeek"), value: "workweek" });
+                        break;
+                    case "month": views.push({ text: this._getLocalizedLabels("Month"), value: "month" });
+                        break;
+                    case "customview": views.push({ text: this._getLocalizedLabels("CustomView"), value: "customview" });
+                        break;
+                    case "agenda": views.push({ text: this._getLocalizedLabels("Agenda"), value: "agenda" });
+                        break;
+                }
+            }
+            this._gotoWindow.find("#" + this._id + "show").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: views, width: "100%", selectedItemIndex: 0, cssClass: this.model.cssClass });
             this._gotoWindow.find(".e-gotobutton").ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "60px", cssClass: this.model.cssClass });
         },
 
@@ -3700,16 +3682,16 @@
 
         _highlightCurrentTime: function (showIndicator) {
             ej.preferredCulture(this.model.locale);
-            if (showIndicator) {
+            if (showIndicator && this.model.timeScale.enable) {
                 var flag = false, index = 0;
                 for (var i = 0; i < this._dateRender.length; i++) {
                     if (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime()) {
                         flag = true;
-                        index=i;
-						break;
+                        index = i;
+                        break;
                     }
                 }
-				var tdelement=this.element.find(".e-workcellstab tr").first().find("td");
+                var tdelement = this.element.find(".e-workcellstab tr").first().find("td");
                 if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
                     if (flag) {
                         var temp = this;
@@ -3727,22 +3709,30 @@
                             }
                         }
                         function ChangeCurrentTimePosition() {
-                            var now = new Date();
-                            now.setMinutes(now.getMinutes());
-                            var position;
-                            if (now.getHours() >= temp.model.startHour && now.getHours() <= temp.model.endHour) {
-                                if (temp.model.orientation == "vertical") {
-                                    var topVal = ((((now.getHours() - temp.model.startHour) * 60) + now.getMinutes()) * (temp.element.find(".e-workcells").height() + 1) * temp.model.timeScale.minorSlotCount) / temp.model.timeScale.majorSlot;
-                                    for (var i = 0; i < temp.res1.length; i++)
-                                        $('#' + temp._id + i + '_HighlightCurrentTimeline').css("top", topVal - 1);
-                                    var currentTime = temp._timeMode == "12" ? ej.format(new Date(), "hh:mm tt") : ej.format(new Date(), "HH:mm");
-                                    for (var i = 0; i < temp.res1.length; i++) {
-                                        $('#' + temp._id + i + '_HighlightCurrentTimeline').find(".e-currenttime").html(currentTime);
-                                        if (temp._timeMode == "12") $('#' + temp._id + i + '_HighlightCurrentTimeline').find(".e-currenttime").addClass("e-timewidth");
+                            if (temp.currentView() != "month" && !temp._isCustomMonthView()) {
+                                var tdelement = temp.element.find(".e-workcellstab tr").first().find("td");
+                                var view = temp.currentView() === "week" ? 7 : temp.currentView() === "workweek" ? temp.model.workWeek.length : temp.currentView() == "customview" ? temp._dateRender.length : 1;
+                                var now = new Date();
+                                now.setMinutes(now.getMinutes());
+                                var index = temp._dateRender.indexOf(new Date(now).setHours(0, 0, 0, 0));
+                                if (now.getHours() >= temp.model.startHour && now.getHours() <= temp.model.endHour) {
+                                    if (temp.model.orientation == "vertical") {
+                                        temp.element.find(".e-currentdayhighlight").removeClass("e-currentdayhighlight");
+                                        var topVal = ((((now.getHours() - temp.model.startHour) * 60) + now.getMinutes()) * (temp.element.find(".e-workcells").height() + 1) * temp.model.timeScale.minorSlotCount) / temp.model.timeScale.majorSlot;
+                                        for (var i = 0; i < temp.res1.length; i++) {
+                                            temp.element.find('#' + temp._id + i + '_HighlightCurrentTimeline').css("top", topVal - 1);
+                                            temp.element.find('#' + temp._id + i + '_HighlightCurrentTimeline').css("left", tdelement[index + (view * i)].offsetLeft);
+                                            $(temp.element.find(".e-dateheader").children()[index + (view * i)]).addClass("e-currentdayhighlight");
+                                        }
+                                        var currentTime = temp._timeMode == "12" ? ej.format(new Date(), "hh:mm tt", temp.model.locale) : ej.format(new Date(), "HH:mm", temp.model.locale);
+                                        for (var i = 0; i < temp.res1.length; i++) {
+                                            temp.element.find('#' + temp._id + i + '_HighlightCurrentTimeline').find(".e-currenttime").html(currentTime);
+                                            if (temp._timeMode == "12") temp.element.find('#' + temp._id + i + '_HighlightCurrentTimeline').find(".e-currenttime").addClass("e-timewidth");
+                                        }
                                     }
-                                }
-                                else {
-                                    temp._horizontalTimePosition(temp, now);
+                                    else {
+                                        temp._horizontalTimePosition(temp, now);
+                                    }
                                 }
                             }
                         }
@@ -3760,11 +3750,11 @@
                     if (flag) {
                         if (this.model.orientation == "vertical") {
                             var rowPosition = Math.floor(index / 7);
-							var cellId = Math.abs(index - (rowPosition * 7));
+                            var cellId = Math.abs(index - (rowPosition * 7));
                             if (!this.model.group) this.res1 = ["0"];
                             for (var i = 0; i < this.res1.length; i++) {
                                 !$($(this.element.find(".e-workcellstab tr")[rowPosition]).children()[Math.floor(cellId)]).hasClass("e-othermonths") && $($(this.element.find(".e-workcellstab tr")[rowPosition]).children()[Math.floor(cellId)]).addClass("e-currentdayhighlight");
-								cellId += 7;
+                                cellId += 7;
                             }
                         }
                         else
@@ -3788,34 +3778,31 @@
             return filter;
         },
         _getPreviousNextAppointment: function () {
-            var dateCount = this._dateRender;
-			if (this.model.orientation == "horizontal" && this.currentView() == "month") {
-				dateCount = this._horizontalMonthDates();
-			}
+            var dateCount = ((this.model.orientation == "horizontal" || !this.model.showNextPrevMonth) && this.currentView() == "month") ? this.monthDays : this._dateRender;
             var appointmentsList = this._filter();
             this._previousList = [];
             this._nextList = [];
             this.appointment;
-			if (this.currentView() != "workweek") {
-				for (var app = 0; app < appointmentsList.length; app++) {
-					if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) < new Date(dateCount[0]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) < new Date(dateCount[0]))
-						this._previousList.push(appointmentsList[app]);
-					else if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) > new Date(dateCount[(dateCount.length - 1)]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) > new Date(dateCount[(dateCount.length - 1)]))
-						this._nextList.push(appointmentsList[app]);
-				}
-			}
-			else {
-				for (var app = 0; app < appointmentsList.length; app++) {
-					for (var i = 0; i < dateCount.length; i++) {
-						if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]).getDay() == new Date(dateCount[i]).getDay()) {
-							if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) < new Date(dateCount[0]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) < new Date(dateCount[0]))
-								this._previousList.push(appointmentsList[app]);
-							else if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) > new Date(dateCount[(dateCount.length - 1)]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) > new Date(dateCount[(dateCount.length - 1)]))
-								this._nextList.push(appointmentsList[app]);
-						}
-					}
-				}
-			}
+            if (this.currentView() != "workweek") {
+                for (var app = 0; app < appointmentsList.length; app++) {
+                    if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) < new Date(dateCount[0]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) < new Date(dateCount[0]))
+                        this._previousList.push(appointmentsList[app]);
+                    else if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) > new Date(dateCount[(dateCount.length - 1)]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) > new Date(dateCount[(dateCount.length - 1)]))
+                        this._nextList.push(appointmentsList[app]);
+                }
+            }
+            else {
+                for (var app = 0; app < appointmentsList.length; app++) {
+                    for (var i = 0; i < dateCount.length; i++) {
+                        if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]).getDay() == new Date(dateCount[i]).getDay()) {
+                            if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) < new Date(dateCount[0]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) < new Date(dateCount[0]))
+                                this._previousList.push(appointmentsList[app]);
+                            else if (new Date(appointmentsList[app][this._appointmentSettings["startTime"]]) > new Date(dateCount[(dateCount.length - 1)]) && new Date(appointmentsList[app][this._appointmentSettings["endTime"]]) > new Date(dateCount[(dateCount.length - 1)]))
+                                this._nextList.push(appointmentsList[app]);
+                        }
+                    }
+                }
+            }
             this.appointment = { previous: this._previousList, next: this._nextList };
         },
 
@@ -3824,7 +3811,7 @@
                 var base = this.element.find("#" + this._id + "_scroller");
                 this.height = base.height();
                 this.width = base.width();
-                var scroll = this.element.find(".e-vscroll").width();
+                var scroll = (base.ejScroller('instance').isVScroll()) ? this.element.find("#" + this._id + "_scroller").find(".e-vscroll").width() : 0;
                 var timecell = this.element.find(".e-scrolltimecells").width();
                 timecell = ej.isNullOrUndefined(timecell) ? this.model.orientation == "vertical" ? 56 : 0 : timecell;
                 var top = (this.height / 2) - (150 / 2), left;
@@ -3834,11 +3821,11 @@
                 this.width = (this.model.timeScale.enable && this.currentView() != "agenda") ? this.width : this.width - timecell;
                 if (!this.model.enableRTL) {
                     prev.css("top", (top + 40) + "px").css("transform", "rotate(90deg)").css("left", left + "px");
-                    next.css("top", (top + 40) + "px").css("transform", "rotate(-90deg)").css("left", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 41 : this.model.orientation == "vertical" ? 34 : 90)) + "px");
+                    next.css("top", (top + 40) + "px").css("transform", "rotate(-90deg)").css("left", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 40 : this.model.orientation == "vertical" ? 35 : 90)) + "px");
                 }
                 else {
                     prev.css("top", (top + 40) + "px").css("transform", "rotate(-90deg)").css("right", left + "px");
-                    next.css("top", (top + 40) + "px").css("transform", "rotate(90deg)").css("right", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 41 : this.model.orientation == "vertical" ? 34 : 90)) + "px");
+                    next.css("top", (top + 40) + "px").css("transform", "rotate(90deg)").css("right", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 40 : this.model.orientation == "vertical" ? 35 : 90)) + "px");
                 }
                 base.append(prev).append(next);
             }
@@ -3847,22 +3834,22 @@
         _nextPrev: function (e) {
             var proxy = this;
             if ($(e.currentTarget).hasClass("e-prevapp")) {
-				if (!ej.isNullOrUndefined(this.appointment)) {
-					this.appointment.previous.sort(function (a, b) {
-						return new Date(b[proxy._appointmentSettings["startTime"]]) - new Date(a[proxy._appointmentSettings["startTime"]]);
-					});
-					if (this.currentView() == "customview") this._daterend = this.appointment.previous[0][this._appointmentSettings["startTime"]];
-					this._navigateClick(this.currentDate(new Date(this.appointment.previous[0][this._appointmentSettings["startTime"]])), "Previous");
-				}
+                if (!ej.isNullOrUndefined(this.appointment)) {
+                    this.appointment.previous.sort(function (a, b) {
+                        return new Date(b[proxy._appointmentSettings["startTime"]]) - new Date(a[proxy._appointmentSettings["startTime"]]);
+                    });
+                    if (this.currentView() == "customview") this._daterend = this.appointment.previous[0][this._appointmentSettings["startTime"]];
+                    this._navigateClick(this.currentDate(new Date(this.appointment.previous[0][this._appointmentSettings["startTime"]])), "Previous");
+                }
             }
             else if ($(e.currentTarget).hasClass("e-nextapp")) {
-				if (!ej.isNullOrUndefined(this.appointment)) {
-					this.appointment.next.sort(function (a, b) {
-						return new Date(a[proxy._appointmentSettings["startTime"]]) - new Date(b[proxy._appointmentSettings["startTime"]]);
-					});
-					if (this.currentView() == "customview") this._daterend = this.appointment.next[0][this._appointmentSettings["startTime"]];
-					this._navigateClick(this.currentDate(new Date(this.appointment.next[0][this._appointmentSettings["startTime"]])), "Next");
-				}
+                if (!ej.isNullOrUndefined(this.appointment)) {
+                    this.appointment.next.sort(function (a, b) {
+                        return new Date(a[proxy._appointmentSettings["startTime"]]) - new Date(b[proxy._appointmentSettings["startTime"]]);
+                    });
+                    if (this.currentView() == "customview") this._daterend = this.appointment.next[0][this._appointmentSettings["startTime"]];
+                    this._navigateClick(this.currentDate(new Date(this.appointment.next[0][this._appointmentSettings["startTime"]])), "Next");
+                }
             }
         },
 
@@ -3870,6 +3857,7 @@
             if (app.length != 0)
                 this.element.find(".e-prevapp,.e-nextapp").css("display", "none");
             else {
+                this.currentView() == "agenda" && this._refreshAppNavigation();
                 this._getPreviousNextAppointment();
                 this.element.find(".e-prevapp,.e-nextapp").css("display", "block");
                 if (this.appointment.previous.length == 0)
@@ -3881,7 +3869,6 @@
                 else
                     this.element.find(".e-nextapp").addClass("enable").css("opacity", "1");
             }
-
         },
 
         _navigateView: function (e) {
@@ -3940,14 +3927,14 @@
             if (this.model.views.toString().toLowerCase().split(",").indexOf("day") !== -1) {
                 if (this._trigger("overflowButtonClick", { event: e, Datas: this._overflowApp })) return false;
                 !ej.isNullOrUndefined(this.element.data("ejTooltip")) && this.element.ejTooltip('hide');
-				if (this.model.orientation == "vertical") {
-					var index = ($(e.target).closest(".e-monthcells,.e-workcells").parent().index() * 7) + ($(e.target).closest(".e-monthcells,.e-workcells").index() % 7);
-					this.currentDate(new Date(this._dateRender[index]));
-				}
-				else {
-					var index = parseInt($(e.target).attr("id").split("_")[$(e.target).attr("id").split("_").length-1]);
-					this.currentDate((this.currentView() == "month" || this._isCustomMonthView()) ? new Date(this._dateRender[index]) : new Date(parseInt($(e.target).attr("cellinfo"))));
-				}
+                if (this.model.orientation == "vertical") {
+                    var index = ($(e.target).closest(".e-monthcells,.e-workcells").parent().index() * 7) + ($(e.target).closest(".e-monthcells,.e-workcells").index() % 7);
+                    this.currentDate(new Date(this._dateRender[index]));
+                }
+                else {
+                    var index = parseInt($(e.target).attr("id").split("_")[$(e.target).attr("id").split("_").length - 1]);
+                    this.currentDate((this.currentView() == "month" || this._isCustomMonthView()) ? new Date(this.monthDays[index]) : new Date(parseInt($(e.target).attr("cellinfo"))));
+                }
                 this._navView = true;
                 this._viewChange(e, this.currentView(), "day");
             }
@@ -3978,8 +3965,9 @@
 
         _viewChange: function (e, oldview, newView) {
             this._viewchange = true; this._renderedApp = [];
+            newView = ej.isNullOrUndefined(newView) ? (e.currentTarget.className.split("e-")[2]).split(" ")[0] : newView;
             var flag = true, data;
-            data = { currentView: this.currentView(), currentDate: new Date(this.currentDate()), target: e, requestType: "viewNavigate" };
+            data = { currentView: this.currentView(), currentDate: new Date(this.currentDate()), target: e };
             if (this._trigger("actionBegin", { data: data, requestType: "viewNavigate" }))
                 return false;
             this.model.showQuickWindow && (this._quickAppointWindow.ejDialog("close") && this._quickAppDetailsWindow.ejDialog("close"));
@@ -4007,65 +3995,21 @@
         _renderCurrentView: function (currentAction) {
             !ej.isNullOrUndefined(this.element.data("ejTooltip")) && this.element.ejTooltip('hide');
             this._resWorkWeek = (this.model.orientation == "vertical" && this.currentView() == "workweek" && (this._tempResource.length != 0) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]));
-            this.element.find(".e-commonviewbutton").blur();
-            this.element.find(".e-commonviewbutton").removeClass("e-activeview");
+            this.element.find(".e-commonviewbutton").blur().removeClass("e-activeview");
             if (this.model.orientation == "vertical")
                 this.element.find(".e-headerdaydisplay,.e-datedisplay,.e-headrealldaytable").children().remove();
             this.wTR.children().remove();
             this.aTR.children().remove();
             this._calculateCustomDays()._getRenderDates();
             this.element.find(".e-commonviewbutton.e-" + this.currentView()).addClass("e-activeview").attr("tabIndex", 0).focus();
-            if((!ej.isNullOrUndefined(this._scheduleDrawer)) && (!this._navSelected))
-            this._scheduleDrawer.ejNavigationDrawer({ listViewSettings: { selectedItemIndex: this.model.views.toString().toLowerCase().split(',').indexOf(this.currentView()) + 1 } });
+            if ((!ej.isNullOrUndefined(this._scheduleDrawer)) && (!this._navSelected))
+                this._scheduleDrawer.ejNavigationDrawer({ listViewSettings: { selectedItemIndex: this.model.views.toString().toLowerCase().split(',').indexOf(this.currentView()) + 1 } });
             this._renderHeaderAllDayTemplate();
             this._renderContentAreaTemplate();
-            if (this.currentView() != "agenda") {
-                if (this.model.orientation == "horizontal" && (this.currentView() == "month" || this._isCustomMonthView()) && this.element.find('.e-workcells').width() < this.element.find('.e-dateheadercell').width() && this.model.cellWidth == "")
-                    this.element.find('.e-workcells').width(this.element.find('.e-horizontmonthheaderdaytd').width());
-                if (this.model.orientation == "vertical") {
-                    this._headerbarWidth();
-                    this.element.find(".e-schedulesettings").html(this._getLocalizedLabels("AllDay"));
-                    this.element.find(".e-ampmdisplay").height(this.element.find(".e-workcells").height());
-                    if (!this.model.timeScale.enable) {
-                        this.element.find(".e-headercells").first("td").css("border-left", "none");
-                        this.element.find(".e-workcellstab").find("tr").find("td:first-child").css("border-left", "none");
-                    }
-                }
-                (this.model.timeScale.enable) && this._borderAddRemove();
-                this.model.enableRTL && this.element.removeClass("e-rtl");
-                if (!this.model.showOverflowButton && this.model.orientation == "vertical" && this.currentView() == "month") this._monthCellsRender();
-				this.element.find(".e-horizontalresheader").width((this._mediaQuery) ? "50px" : "100%");
-                this._renderScroller();
-                if (this.model.showAppointmentNavigator && this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && this.currentView() != "month" && (!this._isCustomMonthView()) && (!this._mediaQuery)) this._renderUpDownIcon();
-				if (this.model.orientation == "horizontal") this._horizontalRender();
-                this.model.enableRTL && this.element.addClass("e-rtl");
-                if (this._mediaQuery && this.model.cellWidth && this.currentView() == "day" && this._tempResource.length <= 1 && (parseInt(this.element.find(".e-headertr td").siblings("td:last-child").css("width")) > this.element.find(".e-vscroll").width())) {
-                    this.element.find(".e-headertr td").siblings("td:last-child").css("width", this.element.find(".e-vscroll").width() + "px");
-                }
-                if (this.model.orientation == "horizontal" && ej.scheduleFeatures.horizontal) {
-                    this._moveScroller();
-					this._renderHorizontalHeaderDays(this._culture);
-                    if (!this.model.timeScale.enable) {
-                        // this.element.find(".e-horizontaldaterender").css("border-left", "none");
-                        this.element.find(".e-headercells").removeClass("e-dateheaderselect");
-                    }
-					if (!ej.isNullOrUndefined(this.model.group)) { this._horizontalResIcon(); }
-					if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek)))
-						this.element.find(".e-headercells").parent().parent().parent().css("width",((this.element.width() * 10) / 100) * this._dateRender.length + "px");
-					this.element.find(".e-parentnodecategory").width((this._mediaQuery) ? "12px" : "20px");
-                }
-                this._renderHeaderDays();
+            if (this.currentView() == "agenda" && this.model.showHeaderBar) {
+                this.element.find("div.e-datedisplay")[0].innerHTML = this._getCurrentDateHeaderValue();
             }
-            else {
-                if (this.model.showHeaderBar) {
-                    var dateVal = this._getCurrentDateHeaderValue();
-                    this.element.find("div.e-datedisplay")[0].innerHTML = dateVal;
-                }
-            }
-			if (this.currentView() != "agenda") {
-                (this.model.workHours.highlight) ? this._highlightBusinessHours() : this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells");
-                this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
-            }
+            this._renderCommon('current');
             if (!ej.isNullOrUndefined(this.dataSource())) {
                 if (this.model.enableLoadOnDemand)
                     this._bindAppointmentsData(currentAction);
@@ -4077,33 +4021,20 @@
                     this._nextPrevButton(this._app);
             }
             this._renderBlockAppointments();
-            this._validateMinMaxDate();
             this._navView = false;
-            (this._dateRender.length > 60 || ($.isNumeric(this.element.find(".e-monthcells").height()) && (this.element.find(".e-monthcells").height() != $(this.element.find(".e-timecells")[3]).height()) && this.model.orientation == "vertical" && this.model.showOverflowButton)) ? this.element.find('td.e-timecells .e-timecelldivs').addClass('e-timedivcells') : "";
-            (this.model.orientation == "horizontal" && this._safariBrowser) && this.element.find(".e-workcells.e-dayend").width(this.element.find(".e-workcells.e-dayend").outerWidth() + 1);
-            if (this.currentView() != "agenda" && this.model.orientation == "horizontal" && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0))) {
-                var border = this.model.enableRTL ? 'border-right' : 'border-left';
-                this.element.find(".e-horizontaldaterender").css(border, '0px');
-                this.element.find(".e-workareadiv").parent().css(border, '0px');
-            }
-            if (ej.browserInfo().name == "msie" && ej.browserInfo().version < 9 && this.model.orientation == "vertical") {
-            this.element.find(".e-workleftindent").find("tr").last().find("td").addClass("e-lastcell");
-            this.element.find(".e-workcellstab").find("tr").last().find("td").addClass("e-lastcell");
-            }
-            (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("emptycell");
         },
 
         _renderHeaderDays: function () {
             this.dateRender = [];
             var dateList = this._getRenderDates();
             this.res1 = (!ej.isNullOrUndefined(this.model.group)) ? this.res1 : [0];
-			if (!this._resWorkWeek) {
-				for (var i = 0; i < this.res1.length; i++) {
-					for (var j = 0; j < dateList.length; j++) {
-						this.dateRender.push(new Date(dateList[j]));
-					}
-				}
-			}
+            if (!this._resWorkWeek) {
+                for (var i = 0; i < this.res1.length; i++) {
+                    for (var j = 0; j < dateList.length; j++) {
+                        this.dateRender.push(new Date(dateList[j]));
+                    }
+                }
+            }
             if (this.model.showHeaderBar) {
                 var dateVal = this._getCurrentDateHeaderValue();
                 this.element.find("div.e-datedisplay")[0].innerHTML = dateVal;
@@ -4114,27 +4045,27 @@
                 this.element.find(".e-currentdayhighlight").removeClass("e-currentdayhighlight");
                 if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
                     var curday, temp;
-					if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId)) {
-						var cols = [], columns = this._getUserDateheaderTemplate();
-						if ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
-							for (i = 0; i < this.res1.length; i++) { cols = $.merge(cols, columns); }
-						}
-						else cols = $.merge(cols, columns);
-						for (i = 0; i < this.dateRender.length; i++) { 
-							this.element.find(".e-headerdaydisplay")[i].innerHTML = cols[i].currentDay;
-							if (new Date(new Date(this.dateRender[i]).setHours(0,0,0,0)).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
-								$(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
-						}
-					}
-					else {
-						for (var i = 0; i < this.dateRender.length; i++) {
-						    curday = (this.currentView() === "day") ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(this.dateRender[i]).getDay()] : this._dayShortNames[new Date(this.dateRender[i]).getDay()] : this._dayShortNames[new Date(this.dateRender[i]).getDay()];
-							temp = this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? curday + " " + ej.format(new Date(this.dateRender[i]), "dd MMMM yyyy") : curday + " " + ej.format(new Date(this.dateRender[i]), "dd MMM yy") : curday + " " + new Date(this.dateRender[i]).getDate();
-							this.element.find(".e-headerdaydisplay")[i].innerHTML = temp;
-							if (new Date(new Date(this.dateRender[i]).setHours(0,0,0,0)).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
-								$(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
-						}
-					}
+                    if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId)) {
+                        var cols = [], columns = this._getUserDateheaderTemplate();
+                        if ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
+                            for (i = 0; i < this.res1.length; i++) { cols = $.merge(cols, columns); }
+                        }
+                        else cols = $.merge(cols, columns);
+                        for (i = 0; i < this.dateRender.length; i++) {
+                            this.element.find(".e-headerdaydisplay")[i].innerHTML = cols[i].currentDay;
+                            if (new Date(new Date(this.dateRender[i]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
+                                $(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
+                        }
+                    }
+                    else {
+                        for (var i = 0; i < this.dateRender.length; i++) {
+                            curday = (this.currentView() === "day") ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(this.dateRender[i]).getDay()] : this._dayShortNames[new Date(this.dateRender[i]).getDay()] : this._dayShortNames[new Date(this.dateRender[i]).getDay()];
+                            temp = this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? curday + " " + ej.format(new Date(this.dateRender[i]), "dd MMMM yyyy", this.model.locale) : curday + " " + ej.format(new Date(this.dateRender[i]), "dd MMM yy", this.model.locale) : curday + " " + new Date(this.dateRender[i]).getDate();
+                            this.element.find(".e-headerdaydisplay")[i].innerHTML = temp;
+                            if (new Date(new Date(this.dateRender[i]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
+                                $(this.element.find("td.e-headercells")[i]).addClass("e-currentdayhighlight");
+                        }
+                    }
                     if (!this._mediaQuery)
                         this.element.find(".e-alldaycells,.e-leftindent,.e-emptyalldaytd").css('height', "27px");
                     else {
@@ -4144,11 +4075,11 @@
                         else
                             this.element.find(".e-alldaycells").first().css("border-right", "none");
                     }
-					if (!ej.isNullOrUndefined(this.model.allDayCellsTemplateId) && this.model.timeScale.enable) {
-						var allDayHtml = this._getUserAllDayCellsTemplate();
-						for (a = 0; a < allDayHtml.length; a++) { this.element.find(".e-alldaycells")[a].innerHTML = allDayHtml[a]; }
-						this.element.find(".e-leftindent, .e-emptyalldaytd").height(this.element.find(".e-alldaycells").height());
-					}
+                    if (!ej.isNullOrUndefined(this.model.allDayCellsTemplateId) && this.model.timeScale.enable) {
+                        var allDayHtml = this._getUserAllDayCellsTemplate();
+                        for (a = 0; a < allDayHtml.length; a++) { this.element.find(".e-alldaycells")[a].innerHTML = allDayHtml[a]; }
+                        this.element.find(".e-leftindent, .e-emptyalldaytd").height(this.element.find(".e-alldaycells").height());
+                    }
                     this.element.find(".e-headercells").addClass("e-dateheaderselect");
                 }
                 else
@@ -4160,7 +4091,7 @@
 
         _renderMonthTimeCells: function () {
             var timeCellIndex = 0; var dateRender = this._dateRender, k = 0, resCount = !ej.isNullOrUndefined(this.model.group) ? this.res1.length * 7 : 7;
-            var findResource = ((this._tempResource.length!=0) && ej.scheduleFeatures.resources) ? true : false;
+            var findResource = ((this._tempResource.length != 0) && ej.scheduleFeatures.resources) ? true : false;
             if (findResource)
                 resCount = this._isCustomMonthView() && this._oneWeek ? this.res1.length * this._dateRender.length : this.res1.length * 7;
             else
@@ -4168,7 +4099,7 @@
             var res = findResource && this._isCustomMonthView() && this._oneWeek ? true : false;
             for (var i = 0; i < dateRender.length; i++) {
                 for (var j = k; j < resCount; j = res ? j + this._dateRender.length : j + 7) {
-                    $(this.element.find("div.e-monthheader"))[j].innerHTML = (ej.format(new Date(dateRender[i]), "dd")).toString();
+                    $(this.element.find("div.e-monthheader"))[j].innerHTML = (ej.format(new Date(dateRender[i]), "dd", this.model.locale)).toString();
                     if (this.currentView() !== "customview") {
                         if (new Date(dateRender[i]).getMonth() !== new Date(this.currentDate()).getMonth()) {
                             if (!this.model.showNextPrevMonth)
@@ -4179,7 +4110,7 @@
                         else
                             $(this.element.find("div.e-monthheader")[j]).removeClass("e-monthdateshighlight").closest(".e-monthcells").removeClass("e-othermonths").children().show();
                     }
-					if (new Date(dateRender[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
+                    if (new Date(dateRender[i]).getTime() == new Date(new Date().setHours(0, 0, 0, 0)).getTime())
                         !$(this.element.find("td.e-monthcells")[j]).hasClass("e-othermonths") && $(this.element.find("td.e-monthcells")[j]).addClass("e-currentdayhighlight");
                 }
                 k++;
@@ -4187,13 +4118,13 @@
                     k = resCount;
                     resCount = resCount + ((!ej.isNullOrUndefined(this.model.group) ? this.res1.length : 1) * 7);
                     if (this.model.showNextPrevMonth || this.currentView() == "customview") {
-                        start = ej.format(new Date(dateRender[i - 6]), "MMM dd");
-                        end = ej.format(new Date(dateRender[i]), "MMM dd");
+                        start = ej.format(new Date(dateRender[i - 6]), "MMM dd", this.model.locale);
+                        end = ej.format(new Date(dateRender[i]), "MMM dd", this.model.locale);
                     }
                     else {
                         tempDate = new Date(this.currentDate());
-                        start = (i == 6) ? ej.format(new Date(tempDate.getFullYear(), tempDate.getMonth(), 1), "MMM dd") : ej.format(new Date(dateRender[i - 6]), "MMM dd");
-                        end = (i == dateRender.length - 1) ? ej.format(new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0), "MMM dd") : ej.format(new Date(dateRender[i]), "MMM dd");
+                        start = (i == 6) ? ej.format(new Date(tempDate.getFullYear(), tempDate.getMonth(), 1), "MMM dd", this.model.locale) : ej.format(new Date(dateRender[i - 6]), "MMM dd", this.model.locale);
+                        end = (i == dateRender.length - 1) ? ej.format(new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0), "MMM dd", this.model.locale) : ej.format(new Date(dateRender[i]), "MMM dd", this.model.locale);
                     }
                     if (this.model.timeScale.enable) $(this.element.find(".e-timecelldivs"))[timeCellIndex].innerHTML = start + "- " + end;
                     timeCellIndex++;
@@ -4202,9 +4133,8 @@
             if (!this.model.showNextPrevMonth && this.currentView() == "month") {
                 this._refreshOtherMonthsBorder();
             }
-             this.element.find(".e-timecells").addClass("e-dateheaderselect");
-			this.element.find(".e-monthcells, .e-timecells").height(this.element.find(".e-draggableworkarea").height() / this.element.find(".e-draggableworkarea tr").length);
-            if (j != 6) this.element.find(".e-timecells").addClass("e-timecellpadding");
+            this.element.find(".e-timecells").addClass("e-dateheaderselect");
+            this.element.find(".e-monthcells, .e-timecells").outerHeight(this.model.cellHeight != "20px" ? parseInt(this.model.cellHeight) + 1 : parseInt(this.element.find(".e-draggableworkarea").height() / this.element.find(".e-draggableworkarea tr").length));
         },
 
         _refreshOtherMonthsBorder: function () {
@@ -4221,11 +4151,19 @@
             }
         },
 
+        _nextMonthDate: function (args) {
+            var date = new Date(this.currentDate());
+            if (date.setHours(0, 0, 0) == new Date(date.getFullYear(), date.getMonth() + 1, 0).setHours(0, 0, 0))
+                return (args == "navigateprevious") ? new Date(new Date(this.currentDate()).getFullYear(), new Date(this.currentDate()).getMonth(), 0) : new Date(new Date(this.currentDate()).getFullYear(), new Date(this.currentDate()).getMonth() + 2, 0);
+            else
+                return (args == "navigateprevious") ? new Date(date.getFullYear(), date.getMonth() - 1, date.getDate()) : new Date(date.getFullYear(), date.getMonth() + 1, date.getDate());
+        },
+
         _navigateClick: function (e, dateNavigate) {
             this._viewchange = true;
             var data, currentAction = dateNavigate;
             var oldDate = new Date(this.currentDate());
-            data = { currentView: this.currentView(), currentDate: new Date(this.currentDate()), target: e, requestType: "dateNavigate" };
+            data = { currentView: this.currentView(), currentDate: new Date(this.currentDate()), target: e };
             if (this._trigger("actionBegin", { data: data, requestType: "dateNavigate" }))
                 return false;
             if (!ej.isNullOrUndefined(e) && !ej.isNullOrUndefined(e.value)) {
@@ -4245,7 +4183,7 @@
                         this.currentDate(new Date(weekDate));
                     }
                     else
-                        this.currentDate((this.currentView() === "month" ? new Date(dat.setMonth(new Date(this.currentDate()).getMonth() - 1)) : new Date(dat.setDate(new Date(this.currentDate()).getDate() - day))));
+                        this.currentDate((this.currentView() === "month" ? this._nextMonthDate("navigateprevious") : new Date(dat.setDate(new Date(this.currentDate()).getDate() - day))));
                     this.element.find(".e-navigateprevious").attr("tabIndex", 0).focus();
                     currentAction = "Previous";
                 }
@@ -4257,7 +4195,7 @@
                         this.currentDate(new Date(weekDate));
                     }
                     else
-                        this.currentDate((this.currentView() === "month" ? new Date(dat.setMonth(new Date(this.currentDate()).getMonth() + 1)) : new Date(dat.setDate(new Date(this.currentDate()).getDate() + day))));
+                        this.currentDate((this.currentView() === "month" ? this._nextMonthDate("navigatenext") : new Date(dat.setDate(new Date(this.currentDate()).getDate() + day))));
                     this.element.find(".e-navigatenext").attr("tabIndex", 0).focus();
                     currentAction = "Next";
                 }
@@ -4282,6 +4220,11 @@
             }
             else {
                 this.model.timeScale.enable ? (!ej.isNullOrUndefined(this.model.workCellsTemplateId)) ? this._renderCurrentView(currentAction) : this._renderHeaderDays() : this._renderCurrentView(currentAction);
+                if (!ej.isNullOrUndefined(this.model.queryCellInfo)) {
+                    this._renderQueryCellInfo("renderHeaderAllDayTemplate");
+                    this._renderQueryCellInfo("renderContentAreaTemplate");
+                    this._renderQueryCellInfo("emptycell");
+                }
                 (!this._mediaQuery) && this.model.orientation == "vertical" && (this.model.timeScale.enable) && this._reRenderScroller();
                 if (!this.model.showOverflowButton && this.model.orientation == "horizontal") {
                     this._horizontalRender();
@@ -4296,25 +4239,29 @@
                     }
                 }
                 (this.model.workHours.highlight) ? this._highlightBusinessHours() : this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells");
+                this._businessHourScroller();
                 this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
                 this._renderBlockAppointments();
             }
             this._validateMinMaxDate();
-			if (!ej.isNullOrUndefined(this.oldDate) && this.oldDate!="" && this._setCurrentDate)
-			{
-			this.currentDate(new Date(this.oldDate));
-			this.oldDate="";
-			}
+            if (!ej.isNullOrUndefined(this.oldDate) && this.oldDate != "" && this._setCurrentDate) {
+                this.currentDate(new Date(this.oldDate));
+                this.oldDate = "";
+            }
             this._setCurrentDate = false;
             if (this._mediaQuery && !ej.isNullOrUndefined(e)) {
                 var value = ($(e.currentTarget).hasClass("e-navigateprevious")) ? this.element.width() : ($(e.currentTarget).hasClass("e-navigatenext") || (e.type == "select")) ? -this.element.width() : 0;
                 this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-vscroll,.e-emptyscrolltd").toggle();
-                this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-vscroll").css("margin-left", -value).css("margin-right", value).toggle().animate({ "margin-left": 0, "margin-right": 0 }, 500, (this.model.orientation == "vertical" && this.element.find(".e-vscroll").length == 1) ? $.proxy(this._animateScroll, this) : "");
+                if (!this.model.enableRTL)
+                    this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-vscroll").css({ marginLeft: -value, marginRight: value }).toggle().animate({ marginLeft: 0, marginRight: 0 }, 500, (this.model.orientation == "vertical" && this.element.find(".e-vscroll").length == 1) ? $.proxy(this._animateScroll, this) : "");
+                else
+                    this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-vscroll").css({ marginRight: -value, marginLeft: value }).toggle().animate({ marginLeft: 0, marginRight: 0 }, 500, (this.model.orientation == "vertical" && this.element.find(".e-vscroll").length == 1) ? $.proxy(this._animateScroll, this) : "");
             }
-            this._trigger("actionComplete", { data: data, requestType: "dateNavigate" });			
+            this._trigger("actionComplete", { data: data, requestType: "dateNavigate" });
         },
         _animateScroll: function () {
             this.element.find(".e-emptyscrolltd").toggle();
+            this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-vscroll").css({ marginRight: 0, marginLeft: 0 });
             if (this._browserInfo.name == "webkit" || this._browserInfo.name == "msie") {
                 highScrol = this.element.find('.e-businesshighlightworkcells').length != 0 ? this.element.find('.e-businesshighlightworkcells').first().parent()[0].rowIndex * $('.e-workcells').height() : 0;
                 $("#" + this._id + "_scroller").ejScroller({ scrollTop: highScrol + 1 });
@@ -4322,9 +4269,7 @@
             }
         },
         _validateMinMaxDate: function () {
-            this.element.find(".e-navigateprevious").removeClass("e-disable");
-            this.element.find(".e-navigatenext").removeClass("e-disable");
-            var currDate = new Date(this.currentDate());
+            this.element.find(".e-navigateprevious,.e-navigatenext").removeClass("e-disable");
             var renderDate = (this.model.orientation == "horizontal" && this.currentView() == "month") ? this.monthDays : this._dateRender;
             var firstWeekDate = new Date(renderDate[0]);
             var lastWeekDate = new Date(renderDate[renderDate.length - 1]);
@@ -4332,13 +4277,11 @@
                 firstWeekDate = new Date(firstWeekDate.setDate(firstWeekDate.getDate() - 1));
                 lastWeekDate = new Date(lastWeekDate.setDate(lastWeekDate.getDate() + 1));
             }
-            currDate = firstWeekDate;
-            if (currDate <= this.model.minDate)
+            if (firstWeekDate <= this.model.minDate)
                 this.element.find(".e-navigateprevious").addClass("e-disable");
             else
                 this.element.find(".e-navigateprevious").removeClass("e-disable");
-            currDate = lastWeekDate;
-            if (currDate >= this.model.maxDate)
+            if (lastWeekDate >= this.model.maxDate)
                 this.element.find(".e-navigatenext").addClass("e-disable");
             else
                 this.element.find(".e-navigatenext").removeClass("e-disable");
@@ -4363,37 +4306,39 @@
             var hasScrollbar = (typeof window.innerWidth === 'number') && window.innerWidth > document.documentElement.clientWidth;
             this._mediaQuery = (this._browserInfo.name == "msie" && parseInt(this._browserInfo.version, 10) <= 8) ? false : ((document.documentElement.clientWidth + (hasScrollbar ? 17 : 0) < 361 || ej.isMobile()) && this.model.isResponsive);
             (this._mediaQuery) ? this.element.addClass("e-scheduleresponsive") : this.element.removeClass("e-scheduleresponsive");
-            var scrollerObj = this.element.find(".e-scroller").data("ejScroller");
+            var scrollerObj = this.element.find('div#' + this._id + '_scroller').data("ejScroller");
             if (this.currentView() != "agenda") {
-                var scroll = this.element.find(".e-vscroll").width();
+                var scroll = (scrollerObj.isVScroll()) ? this.element.find('div#' + this._id + '_scroller').find(".e-vscroll").width() : 0;
                 this.element.find(".e-nextapp").css("left", (this.element.width() - scroll - 90) + "px");
                 this.model.enableRTL && this.element.find(".e-nextapp").css("left", -45 + "px");
                 this.model.enableRTL && this.element.find(".e-prevapp").css("left", (this.element.width() - this.element.find(".e-scrolltimecells").width() - 89) + "px");
-                var cols = this.currentView() == "workweek" ? this.model.workWeek.length : this.currentView() == "day" ? 1 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 7;
-                var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? (this.res1.length * cols) : cols;
-                var overallWidth = parseInt(this.model.cellWidth) * col;
-                var scrollWidth = (this.model.orientation === "vertical") ? ((hasScrollbar && this._mediaQuery) ? this.element.outerWidth() + 17 : this.element.outerWidth()) - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : this.element.find('.e-scrolltimecells').parent().outerWidth()) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
-                scrollerObj.model.width = scrollWidth - 2;
+                if (this.model.orientation == "horizontal" && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) {
+                    this.element.find(".resemptytd").width((this.element.find(".e-horizontalrestd").width() < 100) ? 5 : (this.element.find(".e-horizontalrestd").width() >= 100 && this.element.find(".e-horizontalrestd").width() <= 150) ? 10 : 25);
+                    this.element.find(".e-horizontalresheader").width((this._mediaQuery) ? "50px" : "100%");
+                    this.element.find(".e-parentnodecategory").width((this._mediaQuery) ? "12px" : "20px");
+                }
+                var scrollWidth = (this.model.orientation === "vertical") ? ((hasScrollbar && this._mediaQuery) ? this.element.outerWidth() + 17 : this.element.outerWidth()) - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : (this.element.find('.e-scrolltimecells').length > 0 ? this.element.find('.e-scrolltimecells').parent().outerWidth() : 0)) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
+                scrollerObj.model.width = parseInt(scrollWidth) - 2;
                 scrollerObj.model.height = this.scHeight - 1 - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top);
                 scrollerObj.refresh();
                 if (this.model.orientation == "vertical") {
-                    if (this.model.cellWidth && !this._mediaQuery) {
-                        this.element.find(".e-draggableworkarea").width((this.element.width() > ((parseInt(this.model.cellWidth) + 1) * col) + this.element.find(".e-scrolltimecells").parent().width() + (scrollerObj.isVScroll() ? 18 : 0)) ? ((parseInt(this.model.cellWidth) + 1) * col) - 1 : scrollWidth - 2 - (scrollerObj.isVScroll() ? 18 : 0));
-                    }
-					if (!this.model.timeScale.enable) {
-						this.element.find('.e-draggableworkarea').css("height", (this.model.cellHeight != "20px" ? parseInt(this.model.cellHeight) : (scrollerObj.model.height - 1 + "px")));
-						this.element.find('.e-draggableworkarea').height(!ej.isNullOrUndefined(this.element.find(".e-hscroll")) ? this.element.find(".e-draggableworkarea").height() - this.element.find(".e-hscroll").height() : this.element.find(".e-draggableworkarea").height());
-					}
-                    if (this._mediaQuery && this.res1.length > 1)
-                        this.element.find(".e-draggableworkarea").width((this.element.find(".e-draggableworkarea").width() * this.res1.length) - 1);
-                    this.element.find(".e-headrealldaytable").parent().width(this.element.find(".e-draggableworkarea").width());
-                    this.element.find(".e-datecommondiv").parent().width(this.element.width() - 2);
+                    this._renderHoriVerticalScroll();
+                    this.element.find(".e-datecommondiv").parent().width(parseInt(this.element.width()) - 2);
                     this.element.find(".e-headrealldaytable").css("left", -(this.element.find(".e-draggableworkarea").scrollLeft()) + "px");
-					this.element.find(".e-upicon, .e-downicon").children().width(this.element.find(".e-workcells").width());
-					this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-emptyscrolltd").css("margin-left", "0px");
+                    this.element.find(".e-upicon, .e-downicon").children().width(this.element.find(".e-workcells").width());
+                    this.element.find(".e-headeralldaydiv,.e-draggableworkarea,.e-emptyscrolltd").css("margin-left", "0px");
+                    this.element.find(".e-scrolltimecells").css("top", -(this.element.find(".e-draggableworkarea").scrollTop()) + "px");
                 }
-                else
-                    $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", -(scrollerObj.model.scrollLeft) + "px");
+                else {
+                    if (!this._isCustomMonthView() || this.currentView() != "month" || this.currentView() != "day" || !this.model.enableRTL || this.model.timeScale.enable) {
+                        this.element.find(".e-headrealldaytable").parent().width(this.element.find(".e-draggableworkarea").width());
+                        $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", -(this.element.find(".e-draggableworkarea").scrollLeft()) + "px");
+                        this._horizontalRender();
+                        if (!this.model.showOverflowButton) {
+                            this._renderAppointmentAll();
+                        }
+                    }
+                }
                 if (this.currentView() != "month" && !(this._isCustomMonthView()) && this.model.orientation == "vertical") {
                     if (this.model.enableRTL && (this.model.cellWidth || this.model.cellHeight != "20px"))
                         this._renderCurrentView("ScheduleResize");
@@ -4409,20 +4354,18 @@
                     }
                 }
                 else {
-                    if (this._isCustomMonthView() || this.currentView() == "month" || this.model.enableRTL)
-                    this._renderCurrentView("ScheduleResize");
+                    if (this._isCustomMonthView() || this.currentView() == "month" || this.currentView() == "day" || this.model.enableRTL || !this.model.timeScale.enable)
+                        this._renderCurrentView("ScheduleResize");
                 }
-                this.element.find(".e-headrealldaytable").parent().width(this.element.find(".e-draggableworkarea").width());
-                this.element.find(".e-scrolltimecells").css("top", -(this.element.find(".e-draggableworkarea").scrollTop()) + "px");
                 if (this.model.showCurrentTimeIndicator) this.element.find(".e-highlightcurrenttimeline").remove();
                 this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
-            }else {
-                scrollerObj.model.width = this.element.width() - 2;
+            } else {
+                scrollerObj.model.width = parseInt(this.element.width()) - 2;
                 scrollerObj.model.height = this.scHeight - 1 - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top);
                 scrollerObj.refresh();
                 var _scrollDiv = $('div#' + this._id + "_scroller");
                 this.element.find(".e-headrealldaytable").parent().width(this.element.find(".e-draggableworkarea").width());
-                this.element.find(".e-datecommondiv").parent().width(this.element.width() - 2);
+                this.element.find(".e-datecommondiv").parent().width(parseInt(this.element.width()) - 2);
                 _scrollDiv.ejScroller("isVScroll") ? (this.element.find(".e-emptyscrolltd").show() && this.element.find('.e-draggableworkarea').height(this.element.find('.e-draggableworkarea').height() + 1)) : this.element.find(".e-emptyscrolltd").hide();
             }
             ((this._mediaQuery || this.element.width() < 600) && !$("#" + this._id + "navDrawer").hasClass("e-scheduledrawer")) && this._renderNavigationDrawer();
@@ -4430,8 +4373,16 @@
             if (!flag && (this.element.width() < 600 && this.hTR.find(".e-mobileNavigation").length < 1 || this.element.width() > 600 && this.hTR.find("table.e-viewstable").length < 1)) {
                 this._reRenderHeaderBar();
                 this._on(this.element, "click", "#" + this._id + "navDrawerIcon", $.proxy(this._drawerOpen, this));
-            }         
+            }
             if (flag) {
+                if (this.model.orientation == "horizontal") {
+                    var renderDate = this._dateRender;
+                    for (var i = 0; i < renderDate.length; i++) {
+                        var curday = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? this._dayNames[new Date(renderDate[i]).getDay()].split("")[0] : (this.currentView() === "day") ? (ej.isNullOrUndefined(this._tempResource) && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(renderDate[i]).getDay()] : this._dayShortNames[new Date(renderDate[i]).getDay()] : this._dayShortNames[new Date(renderDate[i]).getDay()];
+                        var temp = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? curday + parseInt(ej.format(new Date(renderDate[i]), "dd", this.model.locale)) : (this.currentView() === "day") ? (ej.isNullOrUndefined(this._tempResource) && ej.isNullOrUndefined(this.model.group)) ? curday + " " + ej.format(new Date(renderDate[i]), "dd MMMM yyyy", this.model.locale) : curday + " " + ej.format(new Date(renderDate[i]), "dd MMM yy", this.model.locale) : curday + " " + new Date(renderDate[i]).getDate();
+                        if (this.element.find(".e-headerdaydisplay,.e-horizontalheaderdiv").length != 0) this.element.find(".e-headerdaydisplay,.e-horizontalheaderdiv")[i].innerHTML = temp;
+                    }
+                }
                 this.model.showAppointmentNavigator = flag && !this._mediaQuery;
                 if (!this.model.showAppointmentNavigator)
                     this.element.find(".e-prevapp,.e-nextapp").remove();
@@ -4445,14 +4396,10 @@
                 this.model.showQuickWindow = this._mediaQuery ? false : this._quickWindow;
                 (this.model.showQuickWindow && ej.isNullOrUndefined(this._quickAppointWindow)) && (this._renderQuickAppWindow() || this._renderQuickAppDetailsView());
                 $.isFunction($.validator) && this._setQuickValidation();
-                this._destorySubControls($("#" + this._id + "_AddEditForm"));
-                this._destorySubControls($("#" + this._id + "_RecurForm"));
-                $("#" + this._id + "AppointmentAddEditWindow_wrapper").remove();
+                this._refreshAppointmentWindow();
                 (!ej.isNullOrUndefined(this._alertWindow)) && this._alertWindow.ejDialog("close");
                 this._recurEditWindow.ejDialog("close");
                 this._recurEditWindow.ejDialog({ width: (this._mediaQuery) ? "90%" : 360 });
-                this._renderAppointmentWindow();
-                $.isFunction($.validator) && this._setValidation();
                 if (this._mediaQuery)
                     this._phoneChanges();
                 this._renderAppointmentAll();
@@ -4475,21 +4422,9 @@
                     this._off(this.element, "tap", ".e-appointment,.e-alldayappointment,div.e-monthappointment,.e-agendaappointment");
                 var scheduleResponsive = $("#" + this._id + "AppointmentAddEditWindow_wrapper,#" + this._id + "RecurrenceEdit_wrapper,#" + this._id + "navDrawer,#" + this._id + "alertWindow_wrapper");
                 (this._mediaQuery) ? scheduleResponsive.addClass("e-scheduleresponsive") : scheduleResponsive.removeClass("e-scheduleresponsive");
+                (this._mediaQuery && this.res1.length > 1) && this.element.addClass("e-resources");
             }
-            (this._mediaQuery || this.element.width() < 600) && this.element.find(".e-mobileNavigation").css("left", (this.model.enableRTL) ? 18 : this.element.outerWidth() - 36);
-			if (this.model.orientation == "horizontal") {
-				this.element.find(".resemptytd").width((this.element.find(".e-horizontalrestd").width() < 100) ? 5 : (this.element.find(".e-horizontalrestd").width() >= 100 && this.element.find(".e-horizontalrestd").width() <= 150) ? 10 : 25);
-				this.element.find(".e-horizontalresheader").width((this._mediaQuery) ? "50px" : "100%");
-				this._horizontalRender();
-				(this._mediaQuery) && this.refreshScroller();
-				this.element.find(".e-parentnodecategory").width((this._mediaQuery) ? "12px" : "20px");
-				var renderDate = this._dateRender;
-				for (var i = 0; i < renderDate.length; i++) {
-					var curday = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? this._dayNames[new Date(renderDate[i]).getDay()].split("")[0] : (this.currentView() === "day") ? (ej.isNullOrUndefined(this._tempResource) && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(renderDate[i]).getDay()] : this._dayShortNames[new Date(renderDate[i]).getDay()] : this._dayShortNames[new Date(renderDate[i]).getDay()];
-					var temp = (this._mediaQuery && (this.currentView() == "week" || this.currentView() == "workweek")) ? curday + parseInt(ej.format(new Date(renderDate[i]), "dd")) : (this.currentView() === "day") ? (ej.isNullOrUndefined(this._tempResource) && ej.isNullOrUndefined(this.model.group)) ? curday + " " + ej.format(new Date(renderDate[i]), "dd MMMM yyyy") : curday + " " + ej.format(new Date(renderDate[i]), "dd MMM yy") : curday + " " + new Date(renderDate[i]).getDate();
-					if (this.element.find(".e-headerdaydisplay,.e-horizontalheaderdiv").length != 0) this.element.find(".e-headerdaydisplay,.e-horizontalheaderdiv")[i].innerHTML = temp;
-				}
-			}
+            (this._mediaQuery || this.element.width() < 600) && this.element.find(".e-mobileNavigation").css(this.model.enableRTL ? "right" : "left", this.element.outerWidth() - 36);
         },
 
         _reRenderHeaderBar: function () {
@@ -4507,12 +4442,12 @@
                 this.monthcellTemp = $.templates(this._createTemplate(monthCellsTemplate(), "_MonthCells"));
                 this.timeCellTemplate = $.templates(this._createTemplate(timeCellsTemplate(), "_TimeCells"));
                 this.userTimeCellTemplate = $.templates(this._createTemplate(userTimeCellsTemplate(), "_userTimeCells"));
-                
+
                 this.headTemplate = $.templates(this._createTemplate(headerTemplate(), "_HeaderDate"));
                 this.alldayTemp = $.templates(this._createTemplate(alldayTemplate(), "_AlldayCells"));
                 this.leftIndent = $.templates(this._createTemplate(leftHeaderTemplate(), "_LeftIndentCells"));
             }
-            if (ej.scheduleFeatures.resources && (this._tempResource.length!=0))
+            if (ej.scheduleFeatures.resources && (this._tempResource.length != 0))
                 this._renderResourcesTemplate();
             this.agendaheadTemplate = $.templates(this._createTemplate(agendaHeaderTemplate(), "_HeaderDate"));
             this.agendacellTemp = $.templates(this._createTemplate(agendaCellsTemplate(), "_AgendaCells"));
@@ -4528,10 +4463,10 @@
 
         _setNewStartEndHours: function () {
             if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
-				if (this.model.orientation == "horizontal") {
-					this.aTR.children().remove();
-					this._renderHeaderAllDayTemplate();
-				}
+                if (this.model.orientation == "horizontal") {
+                    this.aTR.children().remove();
+                    this._renderHeaderAllDayTemplate();
+                }
                 this.wTR.children().remove();
                 this._renderContentAreaTemplate();
                 this._borderAddRemove();
@@ -4539,6 +4474,7 @@
                 this._renderScroller();
                 this.element.find(".e-ampmdisplay").height(this.element.find(".e-workcells").height());
                 (this.model.workHours.highlight) ? this._highlightBusinessHours() : this.element.find(".e-workcells").addClass("e-businesshighlightworkcells");
+                this._businessHourScroller();
                 if (this.model.showCurrentTimeIndicator) this.element.find(".e-highlightcurrenttimeline").remove();
                 this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
                 this._renderAppointmentAll();
@@ -4552,7 +4488,6 @@
         _renderInitSchedule: function () {
             this.element.addClass("e-scheduleouter");
             this._screenOrientation = window.orientation;
-            if (!this.model.timeScale.enable) { this.model.showCurrentTimeIndicator = false; }
             this._quickWindow = this.model.showQuickWindow;
             var hasScrollbar = (typeof window.innerWidth === 'number') && window.innerWidth > document.documentElement.clientWidth;
             this._mediaQuery = (this._browserInfo.name == "msie" && parseInt(this._browserInfo.version, 10) <= 8) ? false : ((document.documentElement.clientWidth + (hasScrollbar ? 17 : 0) < 361 || ej.isMobile()) && this.model.isResponsive);
@@ -4564,9 +4499,9 @@
             this.currentView(this.currentView().toLowerCase());
             this.model.views = (this.model.views.length == 0) ? this.currentView().toString().toLowerCase().split(",") : this.model.views.toString().toLowerCase().split(",");
             this.model.workWeek = (this.model.workWeek == "" || this.model.workWeek == null) ? this._dayNamesArray : this.model.workWeek;
-			this._resWorkWeek = (this.model.orientation == "vertical" && this.currentView() == "workweek" && (this._tempResource.length!=0) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]));
-			if(this.model.endHour > 24) this.model.endHour = 24;
-			if(this.model.startHour < 0)this.model.startHour = 0;
+            this._resWorkWeek = (this.model.orientation == "vertical" && this.currentView() == "workweek" && (this._tempResource.length != 0) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]));
+            if (this.model.endHour > 24) this.model.endHour = 24;
+            if (this.model.startHour < 0) this.model.startHour = 0;
             this._timeMode = (this.model.timeMode == null) ? (localizeAmPm.AM == null && localizeAmPm.PM == null) ? "24" : "12" : this.model.timeMode;
             if (this.model.timeMode == null) { this._pattern = culture.calendar.patterns; }
             else this._pattern.t = (this._timeMode == "12") ? "h:mm tt" : "HH:mm";
@@ -4594,85 +4529,26 @@
             this._renderHeaderAllDayTemplate();
             this._renderContentAreaTemplate();
             $scheduleDiv.append($scheduleTable.append($tBody.append(this.hTR).append(this.aTR).append(this.wTR)));
+            (this._mediaQuery && this.res1.length > 1) && this.element.addClass("e-resources");
             this._renderDialogs();
-            this.element.append($scheduleDiv);
             this._renderToolTip();
+            this.element.append($scheduleDiv);
             !this.model.showHeaderBar && this.element.find(".e-scheduleheader").hide();
             if (this.model.showHeaderBar) {
-                this.element.find(".e-commonviewbutton.e-" + this.currentView()).addClass("e-activeview");
+                this.hTR.find(".e-commonviewbutton.e-" + this.currentView()).addClass("e-activeview");
                 this.element.find("#" + this._id + "_navigator").ejDatePicker({ startDay: this._firstdayofweek, enableRTL: this.model.enableRTL, buttonText: this._getLocalizedLabels("Today"), select: $.proxy(this._onselect, this), locale: this.model.locale, cssClass: this.model.cssClass, minDate: this.model.minDate, maxDate: this.model.maxDate });
                 this.element.find("span.e-datewidget").css("display", "none");
             }
-            if (this.currentView() != "agenda") {
-                if (this.model.orientation == "vertical") {
-                    this._headerbarWidth(); (this.currentView() === "month" || (this._isCustomMonthView())) && this._renderMonthTimeCells();
-                    if (!this.model.timeScale.enable) {
-                        this.element.find(".e-headercells").first("td").css("border-left", "none");
-                        this.element.find(".e-workcellstab").find("tr").find("td:first-child").css("border-left", "none");
-                    }
-                    if (!this.model.showAllDayRow && this.model.cellWidth) {
-                        this.element.find(".e-workcellstab tr td:first-child").width(this.element.find(".e-headercells").width());
-                    }
-                }
-                this.model.enableRTL && this.element.addClass("e-rtl");
-                (this.model.timeScale.enable) && this._borderAddRemove();
-                this.model.enableRTL && this.element.removeClass("e-rtl");
-				this.model.orientation == "vertical" ? (this.currentView() !== "month" && !(this._isCustomMonthView())) ? this.element.find(".e-headercells").addClass("e-dateheaderselect") : "" : this.element.find(".e-headercells").addClass("e-dateheaderselect");
-                this.element.find(".e-schedulesettings").html(this._getLocalizedLabels("AllDay"));
-                if (this.model.orientation == "horizontal" && (this.currentView() == "month" || this._isCustomMonthView()) && this.element.find('.e-workcells').width() < this.element.find('.e-dateheadercell').width() && this.model.cellWidth == "")
-                    this.element.find('.e-workcells').width(this.element.find('.e-horizontmonthheaderdaytd').width());
-				this.element.find(".e-horizontalresheader").width((this._mediaQuery) ? "50px" : "100%");
-                this._renderScroller();
-                if (this.model.showAppointmentNavigator && this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && this.currentView() != "month" && (!this._isCustomMonthView()) && (!this._mediaQuery)) this._renderUpDownIcon();
-                if(this.model.orientation=="horizontal")this._horizontalRender();
-                if (!this.model.showOverflowButton && this.model.orientation == "vertical" && this.currentView() == "month") this._monthCellsRender();
-                if (this._mediaQuery && this.model.cellWidth && this.currentView() == "day" && this._tempResource.length <= 1 && (parseInt(this.element.find(".e-headertr td").siblings("td:last-child").css("width")) > this.element.find(".e-vscroll").width())) {
-                    this.element.find(".e-headertr td").siblings("td:last-child").css("width", this.element.find(".e-vscroll").width() + "px");
-                }
-                this.currentView() == "month" || (this._isCustomMonthView()) ? this.element.find(".e-monthcells, .e-timecells").height(this.element.find(".e-draggableworkarea").height() / this.element.find(".e-draggableworkarea tr").length) : this.element.find(".e-ampmdisplay").height($(this.element.find(".e-workcells")).height());
-                this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
-                this.model.enableRTL && this.element.addClass("e-rtl");
-                if (this.model.orientation == "horizontal" && ej.scheduleFeatures.horizontal) {
-                    this._moveScroller();
-                    if (!this.model.timeScale.enable) {
-                        //this.element.find(".e-horizontaldaterender").css("border-left", "none");
-                        this.element.find(".e-headercells").removeClass("e-dateheaderselect");
-                    }
-                    if (!ej.isNullOrUndefined(this.model.group) && this._tempResource.length != 0) {
-                        if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length != 0)
-                            this._horizontalResIcon();
-                    }
-					if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek)))
-						this.element.find(".e-headercells").parent().parent().parent().css("width",((this.element.width() * 10) / 100) * this._dateRender.length + "px"); 
-					this.element.find(".e-parentnodecategory").width((this._mediaQuery) ? "12px" : "20px");
-                }
-                (this.model.workHours.highlight) ? this._highlightBusinessHours() : this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells");
-                (this._dateRender.length > 60 || ($.isNumeric(this.element.find(".e-monthcells").height()) && (this.element.find(".e-monthcells").height() != $(this.element.find(".e-timecells")[3]).height()) && this.model.orientation == "vertical")) ? this.element.find('td.e-timecells .e-timecelldivs').addClass('e-timedivcells') : "";
-            }
-			if (!ej.isNullOrUndefined(this.model.allDayCellsTemplateId)) {
-				this.element.find(".e-leftindent, .e-emptyalldaytd").height(this.element.find(".e-alldaycells").height());
-			}
-            this._validateMinMaxDate();
             (this._mediaQuery || this.element.width() < 600) && this._renderNavigationDrawer();
             this._showContextMenu(this.model.contextMenuSettings.enable);
             this._renderAlertWindow();
             var scheduleResponsive = $("#" + this._id + "AppointmentAddEditWindow_wrapper,#" + this._id + "RecurrenceEdit_wrapper,#" + this._id + "navDrawer,#" + this._id + "alertWindow_wrapper");
             (this._mediaQuery) ? scheduleResponsive.addClass("e-scheduleresponsive") : scheduleResponsive.removeClass("e-scheduleresponsive");
-            (this.model.orientation == "horizontal" && this._safariBrowser) && this.element.find(".e-workcells.e-dayend").width(this.element.find(".e-workcells.e-dayend").outerWidth() + 1);
-            if (this.currentView() != "agenda" && this.model.orientation == "horizontal" && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0))) {
-                var border = this.model.enableRTL ? 'border-right' : 'border-left';
-                this.element.find(".e-horizontaldaterender").css(border, '0px');
-                this.element.find(".e-workareadiv").parent().css(border, '0px');
-            }
             if (this._mediaQuery)
                 this._phoneChanges();
-            if (this.model.enableRTL && ej.browserInfo().name == "webkit")
+            if (this.model.enableRTL && this._browserInfo.name == "webkit")
                 this._appointmentAddWindow.find(".e-chk-image").css("margin-right", "-13px");
-            if (ej.browserInfo().name == "msie" && ej.browserInfo().version < 9 && this.model.orientation == "vertical") {
-            this.element.find(".e-workleftindent").find("tr").last().find("td").addClass("e-lastcell");
-            this.element.find(".e-workcellstab").find("tr").last().find("td").addClass("e-lastcell");
-            }
-            (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("emptytd");
+            this._renderCommon('init');
         },
 
         _renderToolTip: function () {
@@ -4717,7 +4593,73 @@
             this._renderRecurEditWindow();
             this.model.showQuickWindow && (this._renderQuickAppWindow() || this._renderQuickAppDetailsView());
             $.isFunction($.validator) && this._setQuickValidation();
-           
+        },
+
+        _renderCommon: function (type) {
+            if (this.currentView() != "agenda") {
+                if (this.model.orientation == "vertical") {
+                    this._headerbarWidth();
+                    (type == 'init') && (this.currentView() === "month" || (this._isCustomMonthView())) && this._renderMonthTimeCells();
+                    if (!this.model.timeScale.enable) {
+                        this.element.find(".e-headercells").first("td").css("border-left", "none");
+                        this.element.find(".e-workcellstab").find("tr").find("td:first-child").css("border-left", "none");
+                    }
+                    if (!this.model.showAllDayRow && this.model.cellWidth) {
+                        this.element.find(".e-workcellstab tr td:first-child").width(this.element.find(".e-headercells").width());
+                    }
+                    this.element.find(".e-schedulesettings").html(this._getLocalizedLabels("AllDay"));
+                    this.element.find(".e-ampmdisplay").height(this.element.find(".e-workcells").height());
+                }
+                if (this.currentView() != "agenda" && this.model.orientation == "horizontal" && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0))) {
+                    var border = this.model.enableRTL ? 'border-right' : 'border-left';
+                    this.element.find(".e-horizontaldaterender").css(border, '0px');
+                    this.wTR.find(".e-workareadiv").parent().css(border, '0px');
+                }
+                this.model.enableRTL && this.element.addClass("e-rtl");
+                (this.model.timeScale.enable) && this._borderAddRemove();
+                this.model.enableRTL && this.element.removeClass("e-rtl");
+                this.model.orientation == "vertical" ? (this.currentView() !== "month" && !(this._isCustomMonthView())) ? this.element.find(".e-headercells").addClass("e-dateheaderselect") : "" : this.element.find(".e-headercells").addClass("e-dateheaderselect");
+                if (this.model.orientation == "horizontal" && (this.currentView() == "month" || this._isCustomMonthView()) && this.element.find('.e-workcells').width() < this.element.find('.e-dateheadercell').width() && this.model.cellWidth == "")
+                    this.element.find('.e-workcells').width(this.element.find('.e-horizontmonthheaderdaytd').width());
+                this.element.find(".e-horizontalresheader").width((this._mediaQuery) ? "50px" : "100%");
+                this._renderScroller();
+                if (this.model.showAppointmentNavigator && this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && this.currentView() != "month" && (!this._isCustomMonthView()) && (!this._mediaQuery)) this._renderUpDownIcon();
+                if (this.model.orientation == "horizontal")
+                    this._horizontalRender();
+                else {
+                    if (!this.model.showOverflowButton && this.currentView() == "month")
+                        this._monthCellsRender();
+                    else
+                        this.currentView() == "month" || (this._isCustomMonthView()) ? this.element.find(".e-monthcells, .e-timecells").outerHeight(this.model.cellHeight != "20px" ? parseInt(this.model.cellHeight) + 1 : parseInt(this.element.find(".e-draggableworkarea").height() / this.element.find(".e-draggableworkarea tr").length)) : this.element.find(".e-ampmdisplay").height(this.element.find(".e-workcells").height());
+                }
+                this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
+                this.model.enableRTL && this.element.addClass("e-rtl");
+                if (this.model.orientation == "horizontal" && ej.scheduleFeatures.horizontal) {
+                    this._moveScroller();
+                    if (!this.model.timeScale.enable)
+                        this.element.find(".e-headercells").removeClass("e-dateheaderselect");
+                    if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0)
+                        this._horizontalResIcon();
+                    if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek)))
+                        this.element.find(".e-headercells").parent().parent().parent().css("width", ((this.element.width() * 10) / 100) * this._dateRender.length + "px");
+                    this.element.find(".e-parentnodecategory").width((this._mediaQuery) ? "12px" : "20px");
+                }
+                else {
+                    if (!ej.isNullOrUndefined(this.model.allDayCellsTemplateId))
+                        this.element.find(".e-leftindent, .e-emptyalldaytd").height(this.element.find(".e-alldaycells").height());
+                }
+                (this.model.workHours.highlight) ? this._highlightBusinessHours() : this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells");
+                (type == 'current') && this._renderHeaderDays();
+                (this._dateRender.length > 60 || ($.isNumeric(this.element.find(".e-monthcells").height()) && (this.element.find(".e-monthcells").height() != $(this.element.find(".e-timecells")[3]).height()) && this.model.orientation == "vertical" && this.model.showOverflowButton)) ? this.element.find('td.e-timecells .e-timecelldivs').addClass('e-timedivcells') : "";
+                (this.model.orientation == "horizontal" && this._safariBrowser) && this.element.find(".e-workcells.e-dayend").width(this.element.find(".e-workcells.e-dayend").outerWidth() + 1);
+                if (this._browserInfo.name == "msie" && this._browserInfo.version < 9 && this.model.orientation == "vertical") {
+                    this.element.find(".e-workleftindent").find("tr").last().find("td").addClass("e-lastcell");
+                    this.element.find(".e-workcellstab").find("tr").last().find("td").addClass("e-lastcell");
+                }
+            }
+            this._validateMinMaxDate();
+            (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("emptycell");
+            this._businessHourScroller();
         },
         _resourceSegregate: function () {
             var resourceFields = ""; this._tempResource = []; this._grouping = [];
@@ -4767,11 +4709,10 @@
                     this.element.find(".e-workcellstab tr td:first-child").width(this.element.find(".e-headercells").first().width());
                 this._safariBrowser && (this.currentView() == "month" ? this.element.find(".e-monthleftindent").width(this.element.find(".e-monthempty").width() + 1) : this.element.find(".e-workleftindent").attr('style', "width:" + (this.element.find(".e-empty").width() + 1) + "px !important"));
             }
-			if (!ej.isNullOrUndefined(this.oldDate) && this.oldDate!="")
-			{
-			this.currentDate(new Date(this.oldDate));
-			this.oldDate="";
-			}
+            if (!ej.isNullOrUndefined(this.oldDate) && this.oldDate != "") {
+                this.currentDate(new Date(this.oldDate));
+                this.oldDate = "";
+            }
         },
         _phoneChanges: function () {
             this._appointmentAddWindow.ejDialog({
@@ -4800,21 +4741,16 @@
                 }
                 this._renderStart = !ej.isNullOrUndefined(startdate) ? new Date(startdate.getFullYear(), startdate.getMonth(), startdate.getDate()) : enddate;
                 this._renderEnd = !ej.isNullOrUndefined(enddate) ? new Date(enddate.getFullYear(), enddate.getMonth(), enddate.getDate()) : startdate;
-				this._renderDays = Math.round((this._renderEnd - this._renderStart) / 86400000) + 1;
-				this.oldDate=this.currentDate();
-                if(this._renderDate==true && !ej.isNullOrUndefined(this._renderDate))
-				this.currentDate(new Date(this._renderStart));
-				else
-				{
-				if (this._renderStart.getTime() > this.currentDate().getTime() || this._renderEnd.getTime() < this.currentDate().getTime()) {
-					this._renderStart = new Date(this.currentDate());
-					this._renderEnd = new Date(this._renderStart.getTime() + ((this._renderDays - 1) * 86400000));
-				}
+                this._renderDays = Math.round((this._renderEnd - this._renderStart) / 86400000) + 1;
+                this.oldDate = this.currentDate();
+                if (this._renderStart.getTime() > this.currentDate().getTime() || this._renderEnd.getTime() < this.currentDate().getTime()) {
+                    this._renderStart = new Date(this.currentDate());
+                    this._renderEnd = new Date(this._renderStart.getTime() + ((this._renderDays - 1) * 86400000));
+                }
                 else if ((this._renderStart.getTime() < this.currentDate().getTime()) && (this._renderEnd.getTime() > this.currentDate().getTime()))
                     this.currentDate(new Date(this._renderStart));
-				else
+                else
                     this.currentDate(new Date(this._renderStart));
-				}
                 if (this._renderDays > 7) {
                     var firstDay = this.model.orientation == "vertical" ? new Date(this._firstweekdate(this._renderStart)) : new Date(this._renderStart);
                     var endDay = new Date(this._renderEnd); var day = endDay.getDay();
@@ -4822,10 +4758,7 @@
                     endDay = this.model.orientation == "vertical" ? endDay : new Date(this._renderEnd);
                     this._numDays = Math.round((endDay - firstDay) / 86400000) + 1;
                 }
-				if(this._renderDate)
-				this._renderDate=false;
             }
-			
             return this;
         },
 
@@ -4839,53 +4772,53 @@
 
         _headerbarWidth: function () {
             var cols = this.currentView() == "workweek" ? this.model.workWeek.length : this.currentView() == "day" ? 1 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 7;
-            var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? (this.res1.length * cols) : cols;
+            var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? (this.res1.length * cols) : cols;
             var border = this.element.outerWidth() - (this.element.find('.e-draggableworkarea').offset().left - this.element.offset().left) < parseInt(this.model.cellWidth) * col ? 1 : 0;
             if (this._browserInfo.name == "webkit")
-                this.element.find(".e-headrealldaytable").width(this.model.cellWidth ? (parseInt(this.model.cellWidth) * col + (border ? 0 : col)) : "100%");
+                this.aTR.find(".e-headrealldaytable").width(this.model.cellWidth ? (parseInt(this.model.cellWidth) * col + (border ? 0 : col)) : "100%");
             else
-                this.element.find(".e-headrealldaytable").width(this.model.cellWidth ? (parseInt(this.model.cellWidth) * col) + col : "100%");
+                this.aTR.find(".e-headrealldaytable").width(this.model.cellWidth ? (parseInt(this.model.cellWidth) * col) + col : "100%");
         },
 
         _renderScroller: function () {
-            var _scrollDiv = $('div#' + this._id + "_scroller");
+            var _scrollDiv = this.element.find('div#' + this._id + '_scroller');
             var hghtdiff = this.scHeight - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top);
-            var proxy = this; var wdthdiff = (this.currentView() === "month") ? 0 : 4;
-            //var scrollWidth = (this.model.orientation === "vertical" && !this.model.enableRTL) ? this.element.outerWidth() - (this.element.find('.e-draggableworkarea').offset().left - this.element.offset().left) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : (this.model.enableRTL) ? (this._mediaQuery && this.currentView() == "month") ? this.element.width() : this.element.width() - this.element.find('.e-scrolltimecells').parent().width() : this.element.width();
-            var scrollWidth = (this.model.orientation === "vertical") ? this.element.width() - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : this.element.find('.e-scrolltimecells').parent().outerWidth()) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
+            var proxy = this;
+            var scrollWidth = (this.model.orientation === "vertical") ? this.element.width() - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : (this.element.find('.e-scrolltimecells').length > 0 ? this.element.find('.e-scrolltimecells').parent().outerWidth() : 0)) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() - 1 : this.element.width();
             _scrollDiv.ejScroller({
-                enableRTL: this.model.enableRTL, height: (hghtdiff - 1), width: scrollWidth - 2, cssClass: this.model.cssClass,
+                enableRTL: this.model.enableRTL, height: (hghtdiff - 1), width: parseInt(scrollWidth) - 2, cssClass: this.model.cssClass,
                 thumbStart: function (e) {
                     var target = $(e.originalEvent.target);
-                    if ((!proxy._mediaQuery) && target.hasClass("e-workcells") || target.parents(".e-appointment").hasClass("e-appointment") || target.parents(".e-monthappointment").hasClass("e-monthappointment") || target.hasClass("e-categorybar")) return false;
+                    if ((!proxy._mediaQuery) && target.closest(".e-workcells").hasClass("e-workcells") || target.closest(".e-appointment").hasClass("e-appointment") || target.closest(".e-monthappointment").hasClass("e-monthappointment") || target.closest(".e-categorybar").hasClass("e-categorybar")) return false;
                 },
                 scroll: function (e) {
-                    var scrollerObj = $('div#' + proxy._id + "_scroller").data("ejScroller");
+                    !ej.isNullOrUndefined(e.scrollTop) && (e.scrollTop = parseInt(e.scrollTop));
+                    var scrollerObj = proxy.element.find('div#' + proxy._id + "_scroller").data("ejScroller");
                     if ((scrollerObj.isVScroll()) || (scrollerObj.isHScroll())) {
-                        (proxy.model.orientation === "vertical") ? proxy.element.find(".e-scrolltimecells").css("top", (-e.scrollTop) + "px") : (proxy.currentView() !== "month" && !(proxy._isCustomMonthView())) ? $(proxy.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", (-e.scrollLeft) + "px") : proxy.element.find(".e-headerdays").css("left", (-e.scrollLeft) + "px");
+                        (proxy.model.orientation === "vertical") ? proxy.element.find(".e-scrolltimecells").css("top", (-e.scrollTop) + "px") : (proxy.model.timeScale.enable && proxy.currentView() !== "month" && !(proxy._isCustomMonthView())) ? $(proxy.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", (-e.scrollLeft) + "px") : proxy.element.find(".e-headerdays").css("left", (-e.scrollLeft) + "px");
                         if (proxy.element.find('.e-vhandle').length == 1)
                             proxy.element.find(".e-horires").css("top", (-e.scrollTop) + "px");
                         if (proxy.model.orientation == "vertical") {
-                            proxy.element.find(".e-headrealldaytable").css("left", (-e.scrollLeft) + "px");
+                            proxy.element.find(".e-headrealldaytable").css("left", (proxy.model.enableRTL) ? (e.scrollData.scrollable - e.scrollLeft) : (-e.scrollLeft) + "px");
                             var timeWidth = proxy.element.find(".e-scrolltimecells").width() - 3;
-                            proxy.element.find(".e-upicon, .e-downicon").css("left", -(e.scrollLeft-timeWidth) + "px"); 
+                            proxy.element.find(".e-upicon, .e-downicon").css("left", -(e.scrollLeft - timeWidth) + "px");
                             if (proxy._timeMode === "12" && (proxy.currentView() !== "month" && !(proxy._isCustomMonthView()))) {
                                 var top = (e.scrollTop / (proxy.element.find(".e-workcells").height() * proxy.model.timeScale.minorSlotCount));
-                                top = (Math.round(top) < top) ? Math.round(top) + 1 : Math.round(top);                               
+                                top = (Math.round(top) < top) ? Math.round(top) + 1 : Math.round(top);
                                 var localizeAmPm = ej.preferredCulture(proxy.model.locale).calendar;
                                 if (localizeAmPm.AM && localizeAmPm.PM) {
                                     proxy.element.find('.e-idAmpmstyle').each(function (i, val) {
-                                         if (i == (top) && $(val).text().trim()=="00")
+                                        if (i == (top) && $(val).text().trim() == "00")
                                             (parseInt($(val)[0].id) < 12) ? $(val).text(localizeAmPm.AM[0]) : $(val).text(localizeAmPm.PM[0]);
                                         else if (($(val).text() == localizeAmPm.AM[0] && i > 0) || ($(val).text() == localizeAmPm.PM[0] && parseInt($(val)[0].id) > 12))
                                             $(val).text("00");
                                     });
                                 }
                             }
-                            if (proxy.model.showAppointmentNavigator && proxy.model.orientation == "vertical" && proxy.element.find(".e-vscroll").length > 0 && proxy.currentView() != "month" && (!proxy._isCustomMonthView()) && (!proxy._mediaQuery)) {
-								proxy._renderUpDownIcon();
-								proxy._renderUpDownIconPosition();
-							}
+                            if (proxy.model.showAppointmentNavigator && proxy.model.orientation == "vertical" && scrollerObj.isVScroll() && proxy.currentView() != "month" && (!proxy._isCustomMonthView()) && (!proxy._mediaQuery)) {
+                                proxy._renderUpDownIcon();
+                                proxy._renderUpDownIconPosition();
+                            }
                         }
                         else if (ej.scheduleFeatures.horizontal && proxy.model.orientation == "horizontal")
                             proxy._horizontalScroll(e, proxy);
@@ -4897,10 +4830,8 @@
             });
             (!this._mediaQuery) && this._nextPrevAppointment(this.model.showAppointmentNavigator);
             this._renderHoriVerticalScroll();
-            //this.element.find(".e-vscroll").css("left", (this.model.enableRTL) ? 0 : this.element.outerWidth() - (_scrollDiv.ejScroller("isVScroll") ? 18 : 0));
-            this.element.find(".e-mobileNavigation").css("left", (this.model.enableRTL) ? (_scrollDiv.ejScroller("isVScroll") ? 18 : 0) : this.element.outerWidth() - 36);
+            this.element.find(".e-mobileNavigation").css(this.model.enableRTL ? "right" : "left", this.element.outerWidth() - 36);
             this._showScrollTd();
-
         },
 
         _showScrollTd: function () {
@@ -4916,67 +4847,75 @@
                 }
                 else {
                     this.element.find(".e-scheduleheader td").first().attr("colspan", "2");
-                    this.element.find(".e-workareadiv").parent().attr("colspan", "2");                    
+                    this.element.find(".e-workareadiv").parent().attr("colspan", "2");
                 }
             }
-            this.element.find(".e-vscroll").length > 0 ? this.element.find(".e-emptyscrolltd").addClass(border).attr('width', tdwidth).show() : this.element.find(".e-emptyscrolltd").removeClass(border).attr('width', "0px").hide();            
+            this.element.find(".e-vscroll").length > 0 ? this.element.find(".e-emptyscrolltd").addClass(border).attr('width', tdwidth).show() : this.element.find(".e-emptyscrolltd").removeClass(border).attr('width', "0px").hide();
         },
         _renderHoriVerticalScroll: function () {
-            var _scrollDiv = $('div#' + this._id + "_scroller");
-            var wdthdiff = (this.currentView() === "month") ? 0 : 4;
-            var scrollWidth = (this.model.orientation === "vertical") ? this.element.width() - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : this.element.find('.e-scrolltimecells').parent().outerWidth()) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
-            scrollWidth = scrollWidth - 1;
-            var hghtdiff = this.scHeight - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top);
-            var cols = this.currentView() == "workweek" ? this.model.workWeek.length : this.currentView() == "day" ? 1 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 7;
-            var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? (this.res1.length * cols) : cols;
+            var _scrollDiv = this.element.find('div#' + this._id + '_scroller');
+            var scrollWidth = (this.model.orientation === "vertical") ? this.element.width() - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : (this.element.find('.e-scrolltimecells').length > 0 ? this.element.find('.e-scrolltimecells').parent().outerWidth() : 0)) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
+            scrollWidth = parseInt(scrollWidth) - 1;
+            var hghtdiff = parseInt(this.scHeight) - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top);
+            var vScrollBarWidth = (_scrollDiv.ejScroller("isVScroll") ? 18 : 0), hScrollBarWidth = (_scrollDiv.ejScroller("isHScroll") ? 18 : 0);
             if (this.model.orientation == "vertical") {
+                if (this.currentView() != "month" && !this._isCustomMonthView() && this.model.timeScale.enable)
+                    if (vScrollBarWidth == 0)
+                        this.element.find(".e-workcells").height((hghtdiff / this.element.find('div.e-draggableworkarea tr').length) - 1);
+                    else
+                        this.element.find(".e-workcells").height(this.model.cellHeight != "20px" ? parseInt(this.model.cellHeight) : 20);
                 if (this.model.cellWidth || this.model.cellHeight != "20px") {
+                    var cols = this.currentView() == "workweek" ? this.model.workWeek.length : this.currentView() == "day" ? 1 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 7;
+                    var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? (this.res1.length * cols) : cols;
                     (this.currentView() == "day") && this.element.find(".e-headerdaydisplay").css("width", this.model.cellWidth);
-                    var rows = this._dateRender.length / 7;
                     var overallWidth = (parseInt(this.model.cellWidth) + 1) * col;
-                    var overallHeight = parseInt(this.model.cellHeight) * rows;
-                    var dragWidth = this.scWidth - this.element.find(".e-scrolltimecells").width() + wdthdiff;
-                    var dragHeight = hghtdiff;
-                    if (this.currentView() == "month" || (this._isCustomMonthView())) {
-                        this.element.find(".e-draggableworkarea").width((this.element.width() > overallWidth + this.element.find(".e-scrolltimecells").width() + 18) ? overallWidth - 1 : _scrollDiv.ejScroller("isVScroll") ? scrollWidth - 18 - 1 : scrollWidth - 1);
-                        (this.model.cellHeight != "20px") ? this.element.find(".e-draggableworkarea").height(dragHeight > overallHeight ? overallHeight : _scrollDiv.ejScroller("isHScroll") ? dragHeight - 18 - 1 : dragHeight - 1) : this.element.find(".e-draggableworkarea").height(_scrollDiv.ejScroller("isHScroll") ? dragHeight - 18 - 1 : dragHeight - 1);
-                    }
-                    else {
-                        this.element.find(".e-draggableworkarea").width((this.element.width() > overallWidth + this.element.find(".e-scrolltimecells").width() + (_scrollDiv.ejScroller("isVScroll") ? 18 : 0)) ? overallWidth - 1 : scrollWidth - 1 - (_scrollDiv.ejScroller("isVScroll") ? 18 : 0));
-                        if (!this.model.timeScale.enable)
-                            (this.model.cellHeight == "20px") ? this.element.find(".e-draggableworkarea").height((_scrollDiv.ejScroller("isHScroll")) ? dragHeight - 1 - (_scrollDiv.ejScroller("isHScroll") ? 18 : 0) : dragHeight - 1) : this.element.find(".e-draggableworkarea").height(parseInt(this.model.cellHeight));
-                    }
-                    (this.model.cellWidth) && this.element.find(".e-datecommondiv").parent().width(this.element.width() - 2);
+                    var overallHeight = parseInt(this.model.cellHeight) * (this.element.find('div.e-draggableworkarea tr').length);
+                    var timeScaleWidth = this.element.find(".e-scrolltimecells").length > 0 ? this.element.find(".e-scrolltimecells").width() : 0;
+                    this.element.find(".e-draggableworkarea").width((this.element.width() > overallWidth + timeScaleWidth + vScrollBarWidth) ? overallWidth - 1 : scrollWidth - 1 - vScrollBarWidth);
+                    (this.model.cellHeight == "20px") ? this.element.find(".e-draggableworkarea").height(hghtdiff - 1 - hScrollBarWidth) : this.element.find(".e-draggableworkarea").height(hghtdiff > overallHeight ? overallHeight : hghtdiff - 1 - hScrollBarWidth);
+                    (this.model.cellWidth) && this.element.find(".e-datecommondiv").parent().width(parseInt(this.element.width()) - 2);
                 }
                 else {
                     this.element.find(".e-draggableworkarea").height(hghtdiff - 1);
-                    if (!this.model.showOverflowButton)
-                        this._monthCellsRender();
+                    if (!this.model.showOverflowButton) this._monthCellsRender();
                     if (this.element.find(".e-vscroll").length > 0 && !this._mediaQuery)
                         this.element.find(".e-draggableworkarea").width(scrollWidth - 1 - (_scrollDiv.ejScroller("isVScroll") ? 18 : 0));
                     else if ((this.currentView() == "month" || (this._isCustomMonthView())) || !this.model.timeScale.enable) {
                         this.element.find(".e-draggableworkarea").width(scrollWidth - 1);
-                        this.element.find(".e-draggableworkarea").height(hghtdiff - 5);
                     }
                 }
-				if (this._mediaQuery && this.res1.length > 1)
+                if (this._mediaQuery && this.res1.length > 1)
                     this.element.find(".e-draggableworkarea").width(this.element.find(".e-draggableworkarea").width() * this.res1.length);
                 this.element.find(".e-headrealldaytable").parent().width(this.element.find(".e-draggableworkarea").width());
                 this.element.find(".e-scrolltimecells").height(this.element.find('.e-draggableworkarea').height());
             }
             else {
                 !(_scrollDiv.ejScroller("isHScroll")) ? this.element.find(".e-draggableworkarea").css("height", "100%") && this.element.find(".e-resfootertr").css("height", "0px") : "";
-                !(_scrollDiv.ejScroller("isVScroll")) ? this.element.find(".e-draggableworkarea").css("height", hghtdiff - 18 - 1) : "";
-
+                !(_scrollDiv.ejScroller("isVScroll")) ? this.element.find(".e-draggableworkarea").css("height", hghtdiff - 19) : "";
+                if (this._mediaQuery) {
+                    this.element.find(".e-horizontresdiv").height(_scrollDiv.height());
+                    this.element.find(".e-draggableworkarea").children().height("100%");
+                    this.element.find(".e-horires").height(this.element.find(".e-draggableworkarea").height());
+                    this.element.find(".e-horires").children().height("100%");
+                }
                 if (this.model.cellWidth || this.model.cellHeight != "20px") {
                     var count = $(this.element.find(".e-workcells")[0]).parent().find("td").length;
-                    !(_scrollDiv.ejScroller("isHScroll")) ? this.element.find(".e-draggableworkarea").width((parseInt(this.model.cellWidth)) * count) : "";
-                    (this.currentView() == "month" || (this._isCustomMonthView())) && this.element.find(".e-headerdays").children().css("width", (this.element.find(".e-draggableworkarea").children().width() + "px"));
+                    !(_scrollDiv.ejScroller("isHScroll")) ? this.element.find(".e-draggableworkarea").width((parseInt(this.model.cellWidth) * count) + count) : "";
+                    (this.currentView() == "month" || (this._isCustomMonthView()) || !this.model.timeScale.enable) && this.element.find(".e-headerdays").children().css("width", (this.element.find(".e-draggableworkarea").children().width() + "px")).css("table-layout","auto");
                     (this.model.cellHeight != "20px" && !this._tempResource) && this.element.find('.e-draggableworkarea').height(parseInt(this.model.cellHeight) - 1);
                 }
+                else if (this.currentView() == "month" || this._isCustomMonthView())
+                    this.element.find(".e-headerdays table tr td:first-child").width(this.element.find(".e-workcellstab tr td:first-child").width());
+                //Temp if scroll left issue fixed need to remove
+                this.currentView() == "day" && this.model.timeScale.enable && $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", -(this.element.find(".e-draggableworkarea").scrollLeft()) + "px");
                 this.element.find('.e-horizontaltabletimecell').width(this.element.find('.e-workcellstab').width());
-               
-               
+                if (this.model.timeScale.enable && !_scrollDiv.ejScroller("isHScroll") && this.currentView() != "month" && !this._isCustomMonthView()) {
+                    var width = Math.floor(this.element.find(".e-draggableworkarea").width() / $(this.element.find(".e-workcells")[0]).parent().find("td").length);
+                    this.element.find(".e-workcells").width(width);
+                    this.element.find(".e-horizontaltabletimecell").find("tr td").width(width);
+                    this.element.find(".e-horizontaltabletimecell").css("table-layout", "fixed").width(this.element.find('.e-draggableworkarea').width());
+                    _scrollDiv.ejScroller("refresh");
+                }
                 if (!this.model.timeScale.enable && this.currentView() != "month" && !this._isCustomMonthView()) {
                     if (!this.model.cellWidth && this._browserInfo.name != "webkit") {
                         this.element.find(".e-dateheadercell").width(this.element.find(".e-workcells").width());
@@ -4989,121 +4928,144 @@
                         this.element.find(".e-headerdays table tr td:not(:first-child)").find(".e-dateheadercell").width(this.element.find(".e-workcells").width() - 1);
                         this.element.find(".e-workcells").width(this.element.find(".e-workcells").width());
                     }
-                    else
-                        this.element.find(".e-headerdays").width(this.model.cellWidth);
                 }
             }
+            //if (this.model.timeScale.enable && this._isCustomMonthView()) this.element.find(".e-timecells").children().height(this.element.find(".e-workcells,.e-monthcells").height());
+        },
+
+        _getDayNameIndex: function (day) {
+            var dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            var cultureNames = [], index = this._firstdayofweek;
+            do {
+                if (index > 6) index = 0;
+                cultureNames.push(dayNames[index]);
+                index++;
+            } while (cultureNames.length < 7)
+            return cultureNames.indexOf(day.capitalizeFirstString());
         },
 
         _highlightBusinessHours: function () {
             if (this.currentView() == "agenda") return false;
-			var resource = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? ((!ej.isNullOrUndefined(this.model.group) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"])) || (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["start"]) || !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["end"]))) : false;
-			if (resource) {
-				this.element.find(".e-workcells, .e-monthcells").removeClass("e-businesshighlightworkcells e-monthcellhighlight");
-				var renderDates, startHour, endHour, resStartHour, resEndHour, noOfHours, startIndex, endIndex, tdLength, colCount, customDays, index, rowFirst, rowLast, dayCount = 0, dateCount = [];;
-				var target = this.element.find(".e-workcellstab tr");
-				var resources = (this.model.orientation == "horizontal" && this._grouping.length > 1) ? this._resourceSort() : this.res1;
-				if (this.model.orientation == "vertical") {
-					for (var i = 0; i < resources.length; i++) {
-						if (!ej.isNullOrUndefined(resources[i][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]]))
-							customDays = resources[i][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]];
-						else
-							customDays = this.model.workWeek;
-						if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) {
-							renderDates = this.dateRender;
-							if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["start"]) || !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["end"])) {
-								resStartHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["start"]];
-								resEndHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["end"]];
-								startHour = !ej.isNullOrUndefined(resStartHour) ? (resStartHour >= this.model.startHour) ? resStartHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour;
-								endHour = !ej.isNullOrUndefined(resEndHour) ? (resEndHour <= this.model.endHour) ? resEndHour : (this.model.workHours.end <= this.model.endHour) ? this.model.endHour : this.model.workHours.end : (this.model.workHours.end <= this.model.endHour) ? this.model.workHours.end : this.model.endHour;
-							}
-							else {
-								startHour = this.model.workHours.start >= this.model.startHour ? this.model.workHours.start - this.model.startHour : 0;
-								endHour = this.model.workHours.end <= this.model.endHour ? this.model.workHours.end - this.model.startHour : this.model.endHour - this.model.startHour;
-							}
-							noOfHours = this.model.endHour - this.model.startHour;
-							startIndex = Math.floor((target.length / noOfHours) * startHour) - (this.model.startHour * this.model.timeScale.minorSlotCount);
-							endIndex = Math.floor((target.length / noOfHours) * endHour) - (this.model.startHour * this.model.timeScale.minorSlotCount);
-							colCount = this.currentView() === "week" ? 7 : this.currentView() === "workweek" ? customDays.length : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 1;
-							for (var a = startIndex; a < endIndex; a++) {
-								for (var b = dayCount; b < (dayCount + colCount); b++) {
-									for (var c = 0; c < customDays.length; c++) {
-										if (this._dayNamesArray.indexOf(customDays[c]) == new Date(renderDates[b]).getDay()) {
-											$($(target[a]).children()[b]).addClass("e-businesshighlightworkcells");
-										}
-									}
-								}
-							}
-							dayCount += colCount;
-						}
-						else {
-							if (this._resWorkWeek) {
-								for (var a = 0; a < customDays.length; a++) {
-									index = this._dayFullNames.indexOf(customDays[a].capitalizeFirstString());
-									dateCount.push(this._renderDates[index]);
-								}
-								renderDates = dateCount;
-							}
-							else renderDates = (this.currentView() != "month" && !this._isCustomMonthView()) ? this.dateRender : this._dateRender;
-							colCount = (this._resWorkWeek) ? customDays.length : (this.currentView() == "day") ? 1 : 7;
-							rowFirst = (this.currentView() != "month" && !this._isCustomMonthView()) ? dayCount : (i * 7);
-							rowLast = (this.currentView() != "month" && !this._isCustomMonthView()) ? (dayCount + colCount) : ((i+1) * 7);
-							for (var a = 0; a < target.length; a++) {
-								for (var b = rowFirst; b < rowLast; b++) {
-									for (var c = 0; c < customDays.length; c++) {
-										if (this._dayNamesArray.indexOf(customDays[c]) == new Date(renderDates[b]).getDay()) {
-											!$($(target[a]).children()[b]).hasClass("e-othermonths") ? $($(target[a]).children()[b]).addClass("e-monthcellhighlight") : $($(target[a]).children()[b]).removeClass("e-monthcellhighlight");
-										}
-									}
-								}
-							}
-							dayCount += colCount;
-						}
-					}
-					(this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) && this._businessHourScroller();
-				}
-				else {
-					if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) {
-						renderDates = this._dateRender;
-						for (var i = 0; i < resources.length; i++) {
-							if (resources[i].classname != "e-parentnode") {
-								resStartHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["start"]];
-								resEndHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["end"]];
-								startHour = !ej.isNullOrUndefined(resStartHour) ? (resStartHour >= this.model.startHour) ? resStartHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour;
-								endHour = !ej.isNullOrUndefined(resEndHour) ? (resEndHour <= this.model.endHour) ? resEndHour : (this.model.workHours.end <= this.model.endHour) ? this.model.endHour : this.model.workHours.end : (this.model.workHours.end <= this.model.endHour) ? this.model.workHours.end : this.model.endHour;
-								noOfHours = this.model.endHour - this.model.startHour;
-								tdLength = $(target[i]).children().length / renderDates.length;
-								startIndex = Math.floor((tdLength / noOfHours) * startHour);
-								endIndex = Math.floor((tdLength / noOfHours) * endHour);
-								for (var a = 0; a < renderDates.length; a++) {
-									for (var b = 0; b < this.model.workWeek.length; b++) {
-										if (this._dayNamesArray.indexOf(this.model.workWeek[b]) == new Date(renderDates[a]).getDay()) {
-											for (var c = ((tdLength * a) + startIndex); c < ((tdLength * a) + endIndex); c++) {
-												$($(target[i]).children()[c]).addClass("e-businesshighlightworkcells");
-												if (this._grouping.length > 1) {
-													var resIndex = i;
-													var index = this._tempResource.length - 1;
-													do {
-														var resParent = new ej.DataManager(this._tempResource[index-1].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[index-1].resourceSettings["id"], ej.FilterOperators.equal, resources[resIndex][this._tempResource[this._tempResource.length-1].resourceSettings["groupId"]]));
-														if (!ej.isNullOrUndefined(resParent)) {
-															resIndex = resources.indexOf(resParent[0]);
-															$($(target[resIndex]).children()[c]).addClass("e-businesshighlightworkcells");
-														}
-														index -= 1;
-													} while(index > 0)
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-						this._businessHourScroller();
-					}
-					else
-						this._horizontalBusinessHighlight(null, null, null, null, null);
-				}
-			}
+            var resource = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? ((!ej.isNullOrUndefined(this.model.group) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"])) || (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["start"]) || !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["end"]))) : false;
+            if (resource) {
+                this.element.find(".e-workcells, .e-monthcells").removeClass("e-businesshighlightworkcells e-monthcellhighlight");
+                var renderDates, startHour, endHour, resStartHour, resEndHour, noOfHours, startIndex, endIndex, tdLength, colCount, customDays, dayIndex, index, rowFirst, rowLast, dayCount = 0, dateCount = [];;
+                var target = this.element.find(".e-workcellstab tr");
+                var resources = (this.model.orientation == "horizontal" && this._grouping.length > 1) ? this._resourceSort() : this.res1;
+                if (this.model.orientation == "vertical") {
+                    for (var i = 0; i < resources.length; i++) {
+                        if (!ej.isNullOrUndefined(resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]))
+                            customDays = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]];
+                        else
+                            customDays = this.model.workWeek;
+                        if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) {
+                            renderDates = this.dateRender;
+                            if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["start"]) || !ej.isNullOrUndefined(this._tempResource[this._tempResource.length - 1].resourceSettings["end"])) {
+                                resStartHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["start"]];
+                                resEndHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["end"]];
+                                startHour = !ej.isNullOrUndefined(resStartHour) ? (resStartHour >= this.model.startHour) ? resStartHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour;
+                                endHour = !ej.isNullOrUndefined(resEndHour) ? (resEndHour <= this.model.endHour) ? resEndHour : (this.model.workHours.end <= this.model.endHour) ? this.model.endHour : this.model.workHours.end : (this.model.workHours.end <= this.model.endHour) ? this.model.workHours.end : this.model.endHour;
+                            }
+                            else {
+                                startHour = this.model.workHours.start >= this.model.startHour ? this.model.workHours.start - this.model.startHour : 0;
+                                endHour = this.model.workHours.end <= this.model.endHour ? this.model.workHours.end - this.model.startHour : this.model.endHour - this.model.startHour;
+                            }
+                            noOfHours = this.model.endHour - this.model.startHour;
+                            startIndex = Math.floor((target.length / noOfHours) * startHour) - (this.model.startHour * this.model.timeScale.minorSlotCount);
+                            endIndex = Math.floor((target.length / noOfHours) * endHour) - (this.model.startHour * this.model.timeScale.minorSlotCount);
+                            colCount = this.currentView() === "week" ? 7 : this.currentView() === "workweek" ? customDays.length : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 1;
+                            for (var a = startIndex; a < endIndex; a++) {
+                                for (var b = dayCount; b < (dayCount + colCount) ; b++) {
+                                    for (var c = 0; c < customDays.length; c++) {
+                                        dayIndex = this._dayNamesArray.indexOf(customDays[c]);
+                                        if (dayIndex == -1) {
+                                            dayIndex = this._getDayNameIndex(customDays[c]);
+                                        }
+                                        if (dayIndex == new Date(renderDates[b]).getDay()) {
+                                            $($(target[a]).children()[b]).addClass("e-businesshighlightworkcells");
+                                        }
+                                    }
+                                }
+                            }
+                            dayCount += colCount;
+                        }
+                        else {
+                            if (this._resWorkWeek) {
+                                for (var a = 0; a < customDays.length; a++) {
+                                    index = this._dayFullNames.indexOf(customDays[a].capitalizeFirstString());
+                                    if (index == -1) {
+                                        index = this._getDayNameIndex(customDays[a]);
+                                    }
+                                    dateCount.push(this._renderDates[index]);
+                                }
+                                renderDates = dateCount;
+                            }
+                            else renderDates = (this.currentView() != "month" && !this._isCustomMonthView()) ? this.dateRender : this._dateRender;
+                            colCount = (this._resWorkWeek) ? customDays.length : (this.currentView() == "day") ? 1 : 7;
+                            rowFirst = (this.currentView() != "month" && !this._isCustomMonthView()) ? dayCount : (i * 7);
+                            rowLast = (this.currentView() != "month" && !this._isCustomMonthView()) ? (dayCount + colCount) : ((i + 1) * 7);
+                            for (var a = 0; a < target.length; a++) {
+                                for (var b = rowFirst; b < rowLast; b++) {
+                                    for (var c = 0; c < customDays.length; c++) {
+                                        dayIndex = this._dayNamesArray.indexOf(customDays[c]);
+                                        if (dayIndex == -1) {
+                                            dayIndex = this._getDayNameIndex(customDays[c]);
+                                        }
+                                        if (dayIndex == new Date(renderDates[b]).getDay()) {
+                                            !$($(target[a]).children()[b]).hasClass("e-othermonths") ? $($(target[a]).children()[b]).addClass("e-monthcellhighlight") : $($(target[a]).children()[b]).removeClass("e-monthcellhighlight");
+                                        }
+                                    }
+                                }
+                            }
+                            dayCount += colCount;
+                        }
+                    }
+                }
+                else {
+                    if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) {
+                        renderDates = this._dateRender;
+                        for (var i = 0; i < resources.length; i++) {
+                            if (resources[i].classname != "e-parentnode") {
+                                resStartHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["start"]];
+                                resEndHour = resources[i][this._tempResource[this._tempResource.length - 1].resourceSettings["end"]];
+                                startHour = !ej.isNullOrUndefined(resStartHour) ? (resStartHour >= this.model.startHour) ? resStartHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour : (this.model.workHours.start >= this.model.startHour) ? this.model.workHours.start : this.model.startHour;
+                                endHour = !ej.isNullOrUndefined(resEndHour) ? (resEndHour <= this.model.endHour) ? resEndHour : (this.model.workHours.end <= this.model.endHour) ? this.model.endHour : this.model.workHours.end : (this.model.workHours.end <= this.model.endHour) ? this.model.workHours.end : this.model.endHour;
+                                noOfHours = this.model.endHour - this.model.startHour;
+                                tdLength = $(target[i]).children().length / renderDates.length;
+                                startIndex = Math.floor((tdLength / noOfHours) * startHour);
+                                endIndex = Math.floor((tdLength / noOfHours) * endHour);
+                                for (var a = 0; a < renderDates.length; a++) {
+                                    for (var b = 0; b < this.model.workWeek.length; b++) {
+                                        dayIndex = this._dayNamesArray.indexOf(this.model.workWeek[b]);
+                                        if (dayIndex == -1) {
+                                            dayIndex = this._getDayNameIndex(this.model.workWeek[b]);
+                                        }
+                                        if (dayIndex == new Date(renderDates[a]).getDay()) {
+                                            for (var c = ((tdLength * a) + startIndex) ; c < ((tdLength * a) + endIndex) ; c++) {
+                                                $($(target[i]).children()[c]).addClass("e-businesshighlightworkcells");
+                                                if (this._grouping.length > 1) {
+                                                    var resIndex = i;
+                                                    var index = this._tempResource.length - 1;
+                                                    do {
+                                                        var resParent = new ej.DataManager(this._tempResource[index - 1].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[index - 1].resourceSettings["id"], ej.FilterOperators.equal, resources[resIndex][this._tempResource[this._tempResource.length - 1].resourceSettings["groupId"]]));
+                                                        if (!ej.isNullOrUndefined(resParent)) {
+                                                            resIndex = resources.indexOf(resParent[0]);
+                                                            $($(target[resIndex]).children()[c]).addClass("e-businesshighlightworkcells");
+                                                        }
+                                                        index -= 1;
+                                                    } while (index > 0)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                        this._horizontalBusinessHighlight(null, null, null, null, null);
+                }
+            }
             else if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) {
                 this.element.find(".e-workcells").removeClass("e-businesshighlightworkcells");
                 var renderDates = this.dateRender;
@@ -5111,18 +5073,17 @@
                 var b_startHour = this.model.workHours.start >= this.model.startHour ? this.model.workHours.start - this.model.startHour : 0;
                 var b_endHour = this.model.workHours.end <= this.model.endHour ? this.model.workHours.end - this.model.startHour : this.model.endHour - this.model.startHour;
                 var timeRowsCount = (60 / this.model.timeScale.majorSlot) * (this.model.timeScale.minorSlotCount);
-                this.res1 = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this.res1 : [0];
+                this.res1 = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this.res1 : [0];
                 var colCount = this.currentView() === "week" ? 7 * this.res1.length : this.currentView() === "workweek" ? this.model.workWeek.length * this.res1.length : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length * this.res1.length : 1 * this.res1.length;
                 if (this.model.orientation == "vertical") {
                     for (var i = (b_startHour * timeRowsCount) ; i < (b_endHour * timeRowsCount) ; i++) {
                         for (var j = 0; j < colCount; j++) {
-                            for(var k = 0; k < this.model.workWeek.length; k++) {
-                            if(this._dayNamesArray.indexOf(this.model.workWeek[k]) == new Date(renderDates[j]).getDay())
+                            for (var k = 0; k < this.model.workWeek.length; k++) {
+                                if (this._dayNamesArray.indexOf(this.model.workWeek[k]) == new Date(renderDates[j]).getDay())
                                     $(target[(i * colCount) + j]).addClass("e-businesshighlightworkcells");
                             }
                         }
                     }
-                    this._businessHourScroller();
                 }
                 else
                     this._horizontalBusinessHighlight(this._dateRender, b_startHour, b_endHour, timeRowsCount, target);
@@ -5146,7 +5107,7 @@
         },
 
         _onselect: function (e) {
-            this._navigateClick(e, "DateNavigation");            
+            this._navigateClick(e, "DateNavigation");
         },
 
         _renderHeaderBar: function (hTR) {
@@ -5162,6 +5123,7 @@
                 var buttonsDiv = ej.buildTag('div.e-viewsdiv');
                 hTR.append(hTD.append(ej.buildTag("div").css("width", "100%").append(commonDiv).append(buttonsDiv.append(this._renderViewNavigation(this.model.views)))));
             }
+            (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("renderHeaderBar", "", hTR);
         },
 
         _renderViewNavigation: function (views) {
@@ -5218,7 +5180,7 @@
                 this._navDrawer = false;
             }
         },
-       
+
         _slideMenuClick: function (e) {
             if (this._navDrawer) return false;
             this._scheduleDrawer.ejNavigationDrawer("close");
@@ -5252,7 +5214,7 @@
 
         _renderAlertWindow: function () {
             this._alertWindow = ej.buildTag('div.e-alertdialog#' + this._id + "alertWindow");
-            var $alertWindow = "<div><div class='e-alerttext'></div><div class='e-alertbtn'><button id='" + this._id + "alertok' type='button' class='e-alertbutton e-alertOk'>" + this._getLocalizedLabels("Ok") + "</button></div></div>";
+            var $alertWindow = "<div><div class='e-alerttext'></div><div class='e-alertbtn'><button id='" + this._id + "alertok' type='button' class='e-alertbutton e-alertOk e-buttonactive'>" + this._getLocalizedLabels("Ok") + "</button></div></div>";
             this._alertWindow.append($alertWindow);
             this.element.append(this._alertWindow);
             this._alertWindow.find(".e-alertbutton").ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "100px", click: $.proxy(this._alertClose, this), cssClass: this.model.cssClass });
@@ -5283,91 +5245,82 @@
         },
 
         _renderAppointmentWindow: function () {
+            this._appointmentAddWindow = ej.buildTag('div.e-scheduledialog#' + this._id + "AppointmentAddEditWindow");
+            var $appWindow = "<div class='e-appwindow e-windowmargin'><form id='" + this._id + "_AddEditForm'><table class='e-table' width='100%' cellpadding='7'><tbody>";
             if (this._mediaQuery) {
-                this._appointmentAddWindow = ej.buildTag('div.e-scheduledialog#' + this._id + "AppointmentAddEditWindow");
-                var $appWindow = "<div class='e-appwindow e-windowmargin'>" +
-                                "<form id='" + this._id + "_AddEditForm'><table class='e-table' width='100%' cellpadding='7'><tbody>";
-                $appWindow += "<tr><td colspan='3' class='e-leftfields e-textlabel'>" + this._getLocalizedLabels("AppointmentSubject") + ":</td></tr><tr><td colspan='3' class='e-rightfields'>" +
-                                  "<input id='" + this._id + "subject' tabIndex='0' class='subject e-inputtext' name='" + this._appointmentSettings["subject"] + "' type='text' /><input id='id' class='id' type='text' name='" + this._appointmentSettings["id"] + "' value='' style='display: none'/></td></tr>";
+                $appWindow += "<tr id='" + this._id + "subjectlabeltr'><td colspan='3' class='e-leftfields e-textlabel'>" + this._getLocalizedLabels("AppointmentSubject") + ":</td></tr><tr id='" + this._id + "subjecttr' class='" + this._id + "subjecttr'><td colspan='3' class='e-rightfields'>" +
+                              "<input id='" + this._id + "subject' tabIndex='0' class='subject e-inputtext' name='" + this._appointmentSettings["subject"] + "' type='text' /><input id='id' class='id' type='text' name='" + this._appointmentSettings["id"] + "' value='' style='display: none'/></td></tr>";
                 if (this.model.showLocationField) {
                     $appWindow += "<tr><td colspan='3' class='e-leftfields e-textlabel'>" + this._getLocalizedLabels("Location") + ":</td></tr><tr><td colspan='3' class='e-rightfields'>" +
                                       "<input id='" + this._id + "location' tabIndex='0' class='location e-inputtext' name='" + this._appointmentSettings["location"] + "' type='text' /></td></tr>";
                 }
-                $appWindow += "<tr><td class='e-textlabel' colspan='3'>" + this._getLocalizedLabels("StartTime") + ":</td></tr><tr><td width='37%'><input id='" + this._id + "startdate' class='startenddate' type='text' name='StartDate' value='' /></td><td width=31%'><input type='text' id='" + this._id + "starttime' class='startendtime' name='StartTime'/></td>" +
-                                  "<td width='31%'><input id='" + this._id + "startTimeZone' class='startutc'  name='" + this._appointmentSettings["startTimeZone"] + "' type='text' value=''/><div id='Timezoneliststr'></div></td></tr>";
-                $appWindow += "<tr><td class='e-textlabel' colspan='3'>" + this._getLocalizedLabels("EndTime") + ":</td></tr><tr><td><input id='" + this._id + "enddate' class='startenddate' type='text' name='EndDate' value='' /></td><td><input type=''text' id='" + this._id + "endtime' class='startendtime' name='EndTime'/></td>" +
-                                  "<td><input  id='" + this._id + "endTimeZone' class='endutc' name='" + this._appointmentSettings["endTimeZone"] + "' type='text' value=''/><div id='Timezonelistend'></div></td></tr>";
+                $appWindow += "<tr id='" + this._id + "_appStartTime'><td class='e-textlabel' colspan='3'>" + this._getLocalizedLabels("StartTime") + ":</td></tr><tr><td width='37%'><input id='" + this._id + "startdate' class='startenddate' type='text' name='StartDate' value='' /></td><td width=31%'><input type='text' id='" + this._id + "starttime' class='startendtime' name='StartTime'/></td>";
+                if (this.model.showTimeZoneFields) {
+                    $appWindow += "<td width='31%'><input id='" + this._id + "startTimeZone' class='startutc'  name='" + this._appointmentSettings["startTimeZone"] + "' type='text' value=''/><div id='Timezoneliststr'></div></td>";
+                }
+                $appWindow += "</tr>";
+                $appWindow += "<tr id='" + this._id + "_appEndTime'><td class='e-textlabel' colspan='3'>" + this._getLocalizedLabels("EndTime") + ":</td></tr><tr><td><input id='" + this._id + "enddate' class='startenddate' type='text' name='EndDate' value='' /></td><td><input type=''text' id='" + this._id + "endtime' class='startendtime' name='EndTime'/></td>";
+                if (this.model.showTimeZoneFields) {
+                    $appWindow += "<td><input  id='" + this._id + "endTimeZone' class='endutc' name='" + this._appointmentSettings["endTimeZone"] + "' type='text' value=''/><div id='Timezonelistend'></div></td>";
+                }
+                $appWindow += "</tr>";
                 if (this.model.prioritySettings.enable) {
                     $appWindow += "<tr><td class='e-leftfields e-textlabel' colspan='3'>" + this._getLocalizedLabels("Priority") + ":</td></tr><tr><td colspan='3' class='e-rightfields'>" + "<input id= '" + this._id + "priority' class='priority' type='text' name='" + this._appointmentSettings["priority"] + "' value=''/><div id='prioritylist'></div></td></tr>";
                 }
-                $appWindow += "<tr><td colspan='3'><table class='e-table' cellpadding='3'><tr><td><div class='e-allday e-checkboxmargin'><input id='" + this._id + "allday' tabIndex='0' class='allday' type='checkbox' name='" + this._appointmentSettings["allDay"] + "'/></div></td><td><div class='e-alldaytext'>" +
+                $appWindow += "<tr class='" + this._id + "parrow'><td class='" + this._id + "allDay' colspan='3'><table class='e-table' cellpadding='3'><tr><td><div class='e-allday e-checkboxmargin'><input id='" + this._id + "allday' tabIndex='0' class='allday' type='checkbox' name='" + this._appointmentSettings["allDay"] + "'/></div></td><td><div class='e-alldaytext'>" +
                                   "<label for='" + this._id + "allday'>" + this._getLocalizedLabels("AllDay") + "</label></div></td><td><div class='e-checkboxmargin e-recurrence'>" +
                                   "<input id='" + this._id + "recurrence' tabIndex='0' class='recurrence' type='checkbox' name='" + this._appointmentSettings["recurrence"] + "' value='recurrence'/></div></td><td><label class='e-repeatlbl' for='" + this._id + "recurrence'>" +
                                       this._getLocalizedLabels("Recurrence") + "</label></td></tr></table></td></tr>";
                 $appWindow += "<tr id='" + this._id + "summary' class='" + this._id + "summary' style='display:none'><td class='e-textlabel'><label>" + this._getLocalizedLabels("Summary") + ":</label></td></tr><tr class='" + this._id + "summary' style='display:none'><td colspan='4'><table><tr><td><label class='e-recurFinalRule'></label></td><td><div class='e-recuredit'><a class='e-recuredit' href='#'>" + this._getLocalizedLabels("Edit") + "</a><span class='e-icon e-edit_01 e-scheduleedit'></span></div></td></tr></table></td></tr>";
-                if (this.model.categorizeSettings.enable) {
+                if (this.model.categorizeSettings.enable)
                     $appWindow += "<tr id='" + this._id + "categorizetr'><td class='e-leftfields e-textlabel' colspan='3'>" + this._getLocalizedLabels("Categorize") + ":</td></tr><tr><td colspan='3' class='e-rightfields'>" + "<input id= '" + this._id + "categorize' name='" + this._appointmentSettings["categorize"] + "' class='e-categorizevalue' type='text' value=''/></td></tr>";
-                }
-                if ((this._tempResource.length!=0) && this._tempResource.length > 0 && ej.scheduleFeatures.resources)
+                if ((this._tempResource.length != 0) && this._tempResource.length > 0 && ej.scheduleFeatures.resources)
                     $appWindow = this._renderResourceElements($appWindow);
-                $appWindow += "<tr><td colspan='3'><b>Description:</b></td></tr><tr><td colspan='3'><textarea class='e-description e-inputtext' id='" + this._id + "description' name='" + this._appointmentSettings["description"] + "'></textarea></td></tr>";
+                $appWindow += "<tr><td colspan='3'><textarea class='e-description e-inputtext' id='" + this._id + "description' name='" + this._appointmentSettings["description"] + "'></textarea></td></tr>";
                 $appWindow += "</tbody></table></form>";
-                $appWindow += "<div class='e-floatright' style='width:100%'><table width='100%' class='e-table' cellpadding='5'><tr><td width='30%'><div class='e-btnmargin e-floatleft'><button id='mDelete' class='e-btndelete e-appdelete'>" + this._getLocalizedLabels("Delete") + "</button></div></td><td width='30%'><div class='e-btnmargin e-floatleft'><button id='done' class='e-btndone e-appsave'>" + this._getLocalizedLabels("Done") + "</button></div></td>" +
+                $appWindow += "<div class='e-floatright' style='width:100%'><table width='100%' class='e-table' cellpadding='5'><tr><td width='30%'><div class='e-btnmargin e-floatleft'><button id='mDelete' class='e-btndelete e-appdelete'>" + this._getLocalizedLabels("Delete") + "</button></div></td><td width='30%'><div class='e-btnmargin e-floatleft'><button id='done' class='e-btndone e-appsave e-buttonactive'>" + this._getLocalizedLabels("Done") + "</button></div></td>" +
                               "<td width='30%'><div class='e-btnmargin e-floatleft'><button id='cancel' class='e-appointcancel cancel'>" + this._getLocalizedLabels("Cancel") + "</button></div></td></tr></table></div></div>";
-                var value = ej.buildTag('div.e-recurEditor#' + this._id + 'recurrenceEditor').ejRecurrenceEditor({ selectedRecurrenceType: 1, frequencies: ["daily", "weekly", "monthly", "yearly", "everyweekday"], startDate: this.currentDate(), minDate: this.model.minDate, maxDate: this.model.maxDate, firstDayOfWeek: this.model.firstDayOfWeek, enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, dateFormat: this.model.dateFormat, locale: this.model.locale });
-                var recurWin = "<div class='e-floatright'><table class='e-table' cellpadding='5'><tr><td><div class='e-btnmargin e-floatleft'><button id='" + this._id + "donerecur' class='recurbutton'>" + this._getLocalizedLabels("Done") + "</button></div></td>" +
-                         "<td><div class='e-btnmargin e-floatleft'><button id='" + this._id + "cancelrecur' class='e-cancelrecur recurbutton'>" + this._getLocalizedLabels("Cancel") + "</button></div></td></tr></table></div>";
-                this._appointmentAddWindow.append($appWindow).append(value);
-                this._appointmentAddWindow.find('.e-recurEditor').css("display", "none");
-                this._appointmentAddWindow.find(".e-recurEditor").append(recurWin);
-                this._appointmentAddWindow.find('#' + this._id + 'donerecur').ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "100px", click: $.proxy(this._closeRecurence, this), cssClass: this.model.cssClass });
-                this._appointmentAddWindow.find('#' + this._id + 'cancelrecur').ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "100px", click: $.proxy(this._closeRecurence, this), cssClass: this.model.cssClass });
-
             }
             else {
-                this._appointmentAddWindow = ej.buildTag('div.e-scheduledialog#' + this._id + "AppointmentAddEditWindow");
-                var $appWindow = "<div class='e-appwindow e-windowmargin'>" +
-                                    "<form id='" + this._id + "_AddEditForm'><table class='e-table' width='100%' cellpadding='7'><tbody>";
                 $appWindow += "<tr  id='" + this._id + "subjecttr' class='" + this._id + "subjecttr'><td class='e-leftfields e-textlabel'>" + this._getLocalizedLabels("AppointmentSubject") + ":</td><td colspan='3' class='e-rightfields'>" +
                                  "<input id='" + this._id + "subject' tabIndex='0' class='subject e-inputtext' name='" + this._appointmentSettings["subject"] + "' type='text' /><input id='id' class='id' type='text' name='" + this._appointmentSettings["id"] + "' value='' style='display: none'/></td></tr>";
                 if (this.model.showLocationField) {
                     $appWindow += "<tr id='" + this._id + "showLocation' class='" + this._id + "showLocation'><td class='e-leftfields e-textlabel'>" + this._getLocalizedLabels("Location") + ":</td><td colspan='3' class='e-rightfields'>" +
                                      "<input id='" + this._id + "location' tabIndex='0' class='location e-inputtext' name='" + this._appointmentSettings["location"] + "' type='text' /></td></tr>";
                 }
-                $appWindow += "<tr><td class='e-textlabel'>" + this._getLocalizedLabels("StartTime") + ":</td><td width='25%'><input id='" + this._id + "startdate' class='startenddate' type='text' name='StartDate' value='' /></td><td width=22%'><input type='text' id='" + this._id + "starttime' class='startendtime' name='StartTime'/></td>" +
-                                  "<td width='28%'><input  id='" + this._id + "startTimeZone'  class='startutc'  name='" + this._appointmentSettings["startTimeZone"] + "' type='text' value=''/><div id='Timezoneliststr'></div></td></tr>";
-                $appWindow += "<tr><td class='e-textlabel'>" + this._getLocalizedLabels("EndTime") + ":</td><td><input id='" + this._id + "enddate' class='startenddate' type='text' name='EndDate' value='' /></td><td><input type=''text' id='" + this._id + "endtime' class='startendtime' name='EndTime'/></td>" +
-                                  "<td><input id='" + this._id + "endTimeZone'  class='endutc'  name='" + this._appointmentSettings["endTimeZone"] + "'  type='text' value=''/><div id='Timezonelistend'></div></td></tr>";
-                var win;
-                if (this.model.prioritySettings.enable) {
-                    win = "<td colspan='1' class='e-textlabel " + this._id + "priorityshow'>" + this._getLocalizedLabels("Priority") + ":</td><td colspan='1' class='" + this._id + "prioritylistshow'><input id='" + this._id + "priority' class='priority' type='text' name='" + this._appointmentSettings["priority"] + "' value='' /><div id='prioritylist'></div></td>";
+                $appWindow += "<tr id='" + this._id + "_appStartTime'><td class='e-textlabel'>" + this._getLocalizedLabels("StartTime") + ":</td><td width='25%'><input id='" + this._id + "startdate' class='startenddate' type='text' name='StartDate' value='' /></td><td width=22%'><input type='text' id='" + this._id + "starttime' class='startendtime' name='StartTime'/></td>";
+                if (this.model.showTimeZoneFields) {
+                    $appWindow += "<td width='28%'><input  id='" + this._id + "startTimeZone'  class='startutc'  name='" + this._appointmentSettings["startTimeZone"] + "' type='text' value=''/><div id='Timezoneliststr'></div></td>";
                 }
-                else {
-                    win = "<td style='display:none'></td>";
+                $appWindow += "</tr>";
+                $appWindow += "<tr id='" + this._id + "_appEndTime'><td class='e-textlabel'>" + this._getLocalizedLabels("EndTime") + ":</td><td><input id='" + this._id + "enddate' class='startenddate' type='text' name='EndDate' value='' /></td><td><input type=''text' id='" + this._id + "endtime' class='startendtime' name='EndTime'/></td>";
+                if (this.model.showTimeZoneFields) {
+                    $appWindow += "<td><input id='" + this._id + "endTimeZone'  class='endutc'  name='" + this._appointmentSettings["endTimeZone"] + "'  type='text' value=''/><div id='Timezonelistend'></div></td>";
                 }
+                $appWindow += "</tr>";
+                var win = this.model.prioritySettings.enable ? "<td colspan='1' class='e-textlabel " + this._id + "priorityshow'>" + this._getLocalizedLabels("Priority") + ":</td><td colspan='1' class='" + this._id + "prioritylistshow'><input id='" + this._id + "priority' class='priority' type='text' name='" + this._appointmentSettings["priority"] + "' value='' /><div id='prioritylist'></div></td>" : '';
                 $appWindow += "<tr class='" + this._id + "parrow'>" + win + "<td class='" + this._id + "allDay' colspan='4'><table class='e-table' cellpadding='3'><tr><td><div class='e-allday e-checkboxmargin'><input id='" + this._id + "allday' tabIndex='0' class='allday' type='checkbox' name='" + this._appointmentSettings["allDay"] + "'/></div></td><td><div class='e-alldaytext'>" +
                                  "<label for='" + this._id + "allday'>" + this._getLocalizedLabels("AllDay") + "</label></div></td><td><div class='e-checkboxmargin e-recurrence'>" +
                                   "<input id='" + this._id + "recurrence' tabIndex='0' class='recurrence' type='checkbox' name='" + this._appointmentSettings["recurrence"] + "' value='recurrence'/></div></td><td><label class='e-repeatlbl' for='" + this._id + "recurrence'>" +
                                   this._getLocalizedLabels("Recurrence") + "</label></td></tr></table></td></tr>";
                 $appWindow += "<tr id='" + this._id + "summary' class='" + this._id + "summary' style='display:none'><td class='e-textlabel'><label>" + this._getLocalizedLabels("Summary") + ":</label></td><td colspan='3'><table><tr><td><label class='e-recurFinalRule'></label></td><td><div class='e-recuredit'><a class='e-recuredit' href='#'>" + this._getLocalizedLabels("Edit") + "</a><span class='e-icon e-edit_01 e-scheduleedit'></span></div></td></tr></table></td></tr>";
-                if (this.model.categorizeSettings.enable) {
+                if (this.model.categorizeSettings.enable)
                     $appWindow += "<tr id='" + this._id + "categorizetr'><td class='e-leftfields e-textlabel'>" + this._getLocalizedLabels("Categorize") + ":</td><td colspan='3' class='e-rightfields'>" + "<input id= '" + this._id + "categorize' name='" + this._appointmentSettings["categorize"] + "' class='e-categorizevalue' type='text' value=''/></td></tr>";
-                }
-                if ((this._tempResource.length!=0) && this._tempResource.length > 0 && ej.scheduleFeatures.resources)
+                if ((this._tempResource.length != 0) && this._tempResource.length > 0 && ej.scheduleFeatures.resources)
                     $appWindow = this._renderResourceElements($appWindow);
                 $appWindow += "<tr><td colspan='4'><textarea class='e-description e-inputtext' id='" + this._id + "description' name='" + this._appointmentSettings["description"] + "'></textarea></td></tr>";
                 $appWindow += "</tbody></table></form>";
-                $appWindow += "<div class='e-floatright'><table class='e-table' cellpadding='5'><tr><td><div class='e-btnmargin e-floatleft'><button id='done' class='e-btndone e-appsave'>" + this._getLocalizedLabels("Done") + "</button></div></td>" +
+                $appWindow += "<div class='e-floatright'><table class='e-table' cellpadding='5'><tr><td><div class='e-btnmargin e-floatleft'><button id='done' class='e-btndone e-appsave e-buttonactive'>" + this._getLocalizedLabels("Done") + "</button></div></td>" +
                               "<td><div class='e-btnmargin e-floatleft'><button id='cancel' class='e-appointcancel cancel'>" + this._getLocalizedLabels("Cancel") + "</button></div></td></tr></table></div></div>";
-                var value = ej.buildTag('div.e-recurEditor#' + this._id + 'recurrenceEditor').ejRecurrenceEditor({ selectedRecurrenceType: 1, frequencies: ["daily", "weekly", "monthly", "yearly", "everyweekday"], startDate: this.currentDate(), minDate: this.model.minDate, maxDate: this.model.maxDate, firstDayOfWeek: this.model.firstDayOfWeek, enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, dateFormat: this.model.dateFormat, locale: this.model.locale });
-                var recurWin = "<div class='e-floatright'><table class='e-table' cellpadding='5'><tr><td><div class='e-btnmargin e-floatleft'><button id='" + this._id + "donerecur'  class='recurbutton'>" + this._getLocalizedLabels("Done") + "</button></div></td>" +
-                         "<td><div class='e-btnmargin e-floatleft'><button id='" + this._id + "cancelrecur' class='e-cancelrecur recurbutton'>" + this._getLocalizedLabels("Cancel") + "</button></div></td></tr></table></div>";
-                this._appointmentAddWindow.append($appWindow).append(value);
-                this._appointmentAddWindow.find(".e-recurEditor").append(recurWin);
-                this._appointmentAddWindow.find('#' + this._id + 'donerecur').ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "100px", click: $.proxy(this._closeRecurence, this), cssClass: this.model.cssClass });
-                this._appointmentAddWindow.find('#' + this._id + 'cancelrecur').ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "100px", click: $.proxy(this._closeRecurence, this), cssClass: this.model.cssClass });
-                this._appointmentAddWindow.find('.e-recurEditor').css("display", "none");
             }
+            var value = ej.buildTag('div.e-recurEditor#' + this._id + 'recurrenceEditor').ejRecurrenceEditor({ selectedRecurrenceType: 1, frequencies: ["daily", "weekly", "monthly", "yearly", "everyweekday"], startDate: this.currentDate(), minDate: this.model.minDate, maxDate: this.model.maxDate, firstDayOfWeek: this.model.firstDayOfWeek, enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, dateFormat: this.model.dateFormat, locale: this.model.locale });
+            var recurWin = "<div class='e-floatright'><table class='e-table' cellpadding='5'><tr><td><div class='e-btnmargin e-floatleft'><button id='" + this._id + "donerecur'  class='recurbutton e-buttonactive'>" + this._getLocalizedLabels("Done") + "</button></div></td>" +
+                     "<td><div class='e-btnmargin e-floatleft'><button id='" + this._id + "cancelrecur' class='e-cancelrecur recurbutton'>" + this._getLocalizedLabels("Cancel") + "</button></div></td></tr></table></div>";
+            this._appointmentAddWindow.append($appWindow).append(value);
+            this._appointmentAddWindow.find(".e-recurEditor").append(recurWin);
+            this._appointmentAddWindow.find('#' + this._id + 'donerecur').ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "100px", click: $.proxy(this._closeRecurence, this), cssClass: this.model.cssClass });
+            this._appointmentAddWindow.find('#' + this._id + 'cancelrecur').ejButton({ enableRTL: this.model.enableRTL, showRoundedCorner: true, width: "100px", click: $.proxy(this._closeRecurence, this), cssClass: this.model.cssClass });
+            this._appointmentAddWindow.find('.e-recurEditor').css("display", "none");
             this.element.append(this._appointmentAddWindow);
             this._renderControls();
             this._appointmentAddWindow.ejDialog({
@@ -5386,14 +5339,20 @@
             this._on(this._appointmentAddWindow, "click", "a.e-recuredit", $.proxy(this._editRecurrence, this));
             this._mediaQuery && this._appointmentAddWindow.ejDialog("refresh");
         },
-
+        _refreshAppointmentWindow: function () {
+            this._destorySubControls($("#" + this._id + "_AddEditForm"));
+            this._destorySubControls($("#" + this._id + "_RecurForm"));
+            $("#" + this._id + "AppointmentAddEditWindow_wrapper").remove();
+            this._renderAppointmentWindow();
+            $.isFunction($.validator) && this._setValidation();
+        },
         _renderQuickAppWindow: function () {
             this._quickAppointWindow = ej.buildTag('div.e-scheduledialog#' + this._id + "AppointmentQuickWindow");
             var $quickWin = "<div id='" + this._id + "_quickAppwindow' class='e-tableAppoint'>" +
                         "<table cellpadding='7' class='e-qappwindow'><tbody>";
             $quickWin += "<tr><td colspan='2'><div class='e-quickstartend'></div> <div title='" + this._getLocalizedLabels("Close") + "'class='e-icon e-scheduleclose e-schedclosemargin e-pointercursor'></div></td></tr><tr><td class='e-subjectlabel'>" + this._getLocalizedLabels("AppointmentSubject") + ":</td><td colspan='2' class='e-rightfields'>" +
                               "<form id='" + this._id + "_AddForm' onsubmit='return false;'><input id='" + this._id + "subject' class='subject e-inputtext' name='" + this._appointmentSettings["subject"] + "'  type='text' /></form></td></tr></tbody></table>";
-            $quickWin += "<div style='margin-top:5px; padding-bottom: 30px;'><div tabIndex='0' class='e-detailedapp e-detailedwindow'> " + this._getLocalizedLabels("Detailed") + " >></div><div style='margin-right:-3px;' class='e-floatright'><div class='e-quickAppDone'><button id='done' class='e-btndone qAppDone' style='font-size:12px !important;'>" + this._getLocalizedLabels("CreateAppointmentTitle") + "</button></div>" +
+            $quickWin += "<div style='margin-top:5px; padding-bottom: 30px;'><div tabIndex='0' class='e-detailedapp e-detailedwindow'> " + this._getLocalizedLabels("Detailed") + " >></div><div style='margin-right:-3px;' class='e-floatright'><div class='e-quickAppDone'><button id='done' class='e-btndone qAppDone e-buttonactive' style='font-size:12px !important;'>" + this._getLocalizedLabels("CreateAppointmentTitle") + "</button></div>" +
                               "</div></div></div>";
             this._quickAppointWindow.append($quickWin);
             this.element.append(this._quickAppointWindow);
@@ -5439,7 +5398,7 @@
                 enableResize: false,
                 allowDraggable: false, showHeader: false,
                 allowKeyboardNavigation: false,
-                 close: $.proxy(function () { this._processFocus(); }, this)
+                close: $.proxy(function () { this._processFocus(); }, this)
             });
             $("#" + this._id + "AppDetailsWindow_wrapper").addClass("e-scheduledialog e-schedulequickdialog").css("overflow", "visible").find("#" + this._id + "AppDetailsWindow").addClass("e-dialogouter");
         },
@@ -5451,7 +5410,7 @@
             if ($(e.target).hasClass("e-editevent")) {
                 if (templist[0][this._appointmentSettings["recurrence"]] == 1) {
                     this._parentId = templist[0]["ParentId"];
-                    this._currentAction = ej.Schedule.Actions.EditOcurrence;
+                    this._currentAction = ej.Schedule.Actions.EditOccurrence;
                     this._showAppointmentDetails(this._appUid, true);
                 }
                 else if (ej.isNullOrUndefined(templist[0][this._appointmentSettings["recurrence"]])) {
@@ -5481,7 +5440,6 @@
                     this._appUid = appoint.attr("guid");
                     if (this._mediaQuery) this._mAppId = this._appUid;
                     var _editApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
-                    this._recurId = _editApp[0][this._appointmentSettings["recurrenceId"]];
                     if (_editApp[0][this._appointmentSettings["recurrence"]] || !this.model.showDeleteConfirmationDialog)
                         this._deletingAppointment();
                     else
@@ -5489,7 +5447,6 @@
                 }
                 else {
                     var _editApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
-                    this._recurId = _editApp[0][this._appointmentSettings["recurrenceId"]];
                     if (_editApp[0][this._appointmentSettings["recurrence"]] || !this.model.showDeleteConfirmationDialog) {
                         this.model.showQuickWindow && this._quickAppDetailsWindow.ejDialog("isOpen") && this._quickAppDetailsWindow.ejDialog("close");
                         this._deletingAppointment();
@@ -5508,7 +5465,7 @@
                 if (!parentData[this._appointmentSettings["recurrence"]])
                     this._deleteApp((this._mediaQuery) ? ej.isNullOrUndefined(this._mAppId) ? this._appUid : this._mAppId : this._appUid);
                 else {
-                    this._parentId = parseInt(parentData["AppTaskId"]);
+                    this._parentId = parentData["ParentId"];
                     this._recurEditWindow.ejDialog("open");
                     this._recurEditWindow.focus();
                     this._deleteBeforeOpen();
@@ -5553,13 +5510,13 @@
             }
             else {
                 if (this._tempStart != "" || this._tempEnd != "") {
-                    var dayStTime = ej.format(new Date(new Date().setHours(0, 0, 0)), this._pattern.t);
-                    var dayEndTime = ej.format(new Date(new Date().setHours(23, 59, 59)), this._pattern.t);
+                    var dayStTime = ej.format(new Date(new Date().setHours(0, 0, 0)), this._pattern.t, this.model.locale);
+                    var dayEndTime = ej.format(new Date(new Date().setHours(23, 59, 59)), this._pattern.t, this.model.locale);
                     this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker({ value: this._tempStart });
                     this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker({ value: this._tempEnd });
                     if (((this._timeMode == "12") ? (this._tempStart == dayStTime && this._tempEnd == dayEndTime) : (this._tempStart == "00:00" && this._tempEnd == "23:59"))) {
-                        this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker({ value: ej.format(new Date("1/1/2000 " + this.model.workHours.start + ":00:00"), this._pattern.t) });
-                        this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker({ value: ej.format(new Date("1/1/2000 " + this.model.workHours.start + ":30:00"), this._pattern.t) });
+                        this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker({ value: ej.format(new Date("1/1/2000 " + this.model.workHours.start + ":00:00"), this._pattern.t, this.model.locale) });
+                        this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker({ value: ej.format(new Date("1/1/2000 " + this.model.workHours.start + ":30:00"), this._pattern.t, this.model.locale) });
                     }
                 }
                 this._appointmentAddWindow.find(".startendtime").ejTimePicker({ enabled: true });
@@ -5572,8 +5529,8 @@
         _renderRecurEditWindow: function () {
             this._recurEditWindow = ej.buildTag('div.e-scheduledialog#' + this._id + "RecurrenceEdit");
             var msgDiv = ej.buildTag('div.e-recureditmsg', this._getLocalizedLabels("RecurrenceEditMessage"));
-            var editOnly=this._getLocalizedLabels("RecurrenceEditOnly");
-            var editSeries=this._getLocalizedLabels("RecurrenceEditSeries");
+            var editOnly = this._getLocalizedLabels("RecurrenceEditOnly");
+            var editSeries = this._getLocalizedLabels("RecurrenceEditSeries");
             var btns = ej.buildTag('div.e-recureditbtns').append(ej.buildTag('button.e-editonly#' + this._id + "Editonly", editOnly, {}, { name: "recurrenceeditonly", value: editOnly })).append(ej.buildTag('button.e-editseries#' + this._id + "EditSeries", editSeries, {}, { name: "recurrenceeditseries", value: editSeries }));
             this._recurEditWindow.append(msgDiv).append(btns);
             btns.find('.e-editonly,.e-editseries').ejButton({ cssClass: this.model.cssClass, enableRTL: this.model.enableRTL, showRoundedCorner: true });
@@ -5614,43 +5571,45 @@
                 if (this._currentAction == ej.Schedule.Actions.Delete) {
                     var _newAddList = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid))[0];
                     if (_newAddList[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) {
-                       var Parid =  _newAddList[this._appointmentSettings["recurrenceId"]] == null ? _newAddList["ParentId"] : _newAddList[this._appointmentSettings["recurrenceId"]]
-                       var deleted = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, Parid));
-                       if (this.dataSource() instanceof ej.DataManager) {
-                           var promise = this._dataManager.remove(this._appointmentSettings["id"], _newAddList[this._appointmentSettings["id"]], this.model.appointmentSettings.query._fromTable);
-                       }
-                       else
-                           var promise = this._dataManager.remove("Guid", _newAddList["Guid"]);
+                        if (this._trigger("actionBegin", { id: this._appUid, requestType: "appointmentDelete", currentAction: ej.Schedule.Actions.DeleteOccurrence }))
+                            return false;
+                        var Parid = _newAddList[this._appointmentSettings["recurrenceId"]] == null ? _newAddList["ParentId"] : _newAddList[this._appointmentSettings["recurrenceId"]]
+                        var deleted = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, Parid));
+                        if (this._trigger("beforeAppointmentRemove ", { appointment: deleted, currentAction: ej.Schedule.Actions.DeleteOccurrence }))
+                            return false;
+                        if (this.dataSource() instanceof ej.DataManager)
+                            var promise = this._dataManager.remove(this._appointmentSettings["id"], _newAddList[this._appointmentSettings["id"]], this.model.appointmentSettings.query._fromTable);
+                        else
+                            var promise = this._dataManager.remove("Guid", _newAddList["Guid"]);
                         var proxy = this;
                         if ($.isFunction(promise.promise)) {
                             promise.done(function (e) {
-                                if (proxy._trigger("actionBegin", { id: proxy._appId, requestType: "appointmentDelete" }))
-                                    return false;
                                 proxy._processUrlBinding(e);
-                                proxy._trigger("beforeAppointmentRemove", { appointment: deleted });
-                                proxy._trigger("actionComplete", { appointment: deleted, requestType: "appointmentDelete" });
-                                proxy._trigger("appointmentRemoved", { appointment: deleted, requestType: "appointmentDeleted" });
+                                proxy._trigger("appointmentRemoved", { appointment: deleted, requestType: "appointmentDeleted", currentAction: ej.Schedule.Actions.DeleteOccurrence });
+                                proxy._trigger("actionComplete", { appointment: deleted, requestType: "appointmentDelete", currentAction: ej.Schedule.Actions.DeleteOccurrence });
                             });
                             promise.fail(function (e) { });
                         }
                         else {
-                            if (this._trigger("actionBegin", { id: this._appUid, requestType: "appointmentDelete" }))
-                                return false;
                             var deleteApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
                             new ej.DataManager(this._processed).saveChanges({ added: [], changed: [], deleted: deleteApp }, "Guid");
                             this._renderAppointmentAll();
-                            this._trigger("beforeAppointmentRemove ", { appointment: deleted });
-                            this._trigger("actionComplete", { appointment: deleted, requestType: "appointmentDelete" });
-                            this._trigger("appointmentRemoved", { appointment: deleted, requestType: "appointmentDeleted" });
+                            this._trigger("appointmentRemoved", { appointment: deleted, requestType: "appointmentDeleted", currentAction: ej.Schedule.Actions.DeleteOccurrence });
+                            this._trigger("actionComplete", { appointment: deleted, requestType: "appointmentDelete", currentAction: ej.Schedule.Actions.DeleteOccurrence });
                         }
                     }
                     else {
+                        if (this._trigger("actionBegin", { id: this._appId, requestType: "appointmentDelete", currentAction: ej.Schedule.Actions.DeleteOccurrence }))
+                            return false;
                         var Parid = _newAddList[this._appointmentSettings["recurrenceId"]] == null ? _newAddList["ParentId"] : _newAddList[this._appointmentSettings["recurrenceId"]]
                         var deleApp = this._deleteOcurrence(Parid, _newAddList[this._appointmentSettings["startTime"]]);
                         var temp = this._timeZoneAppointments(deleApp[0], "");
-                        if (this.dataSource() instanceof ej.DataManager) {
-                            var promise = this._dataManager.update(this._appointmentSettings["id"], temp, this.model.appointmentSettings.query._fromTable);
+                        if (this._trigger("beforeAppointmentRemove", { appointment: _newAddList, currentAction: ej.Schedule.Actions.DeleteOccurrence })) {
+                            this._recurEditWindow.ejDialog("close");
+                            return false;
                         }
+                        if (this.dataSource() instanceof ej.DataManager)
+                            var promise = this._dataManager.update(this._appointmentSettings["id"], temp, this.model.appointmentSettings.query._fromTable);
                         else
                             var promise = this._dataManager.update("AppTaskId", temp);
                         var updateTemp = (this._timeZoneAppointments(temp, "reverse"));
@@ -5658,23 +5617,14 @@
                         var proxy = this;
                         if (promise && $.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
                             promise.done(function (e) {
-                                if (proxy._trigger("actionBegin", { id: proxy._appId, requestType: "appointmentDelete" }))
-                                    return false;
                                 proxy._processUrlBinding(e);
-                                proxy._trigger("beforeAppointmentRemove", { appointment: _newAddList });
-                                proxy._trigger("appointmentRemoved", { appointment: _newAddList, requestType: "appointmentDeleted" });
-                                proxy._trigger("actionComplete", { appointment: _newAddList, requestType: "appointmentDelete" });
+                                proxy._trigger("appointmentRemoved", { appointment: _newAddList, requestType: "appointmentDeleted", currentAction: ej.Schedule.Actions.DeleteOccurrence });
+                                proxy._trigger("actionComplete", { appointment: _newAddList, requestType: "appointmentDelete", currentAction: ej.Schedule.Actions.DeleteOccurrence });
                             });
                             promise.fail(function (e) {
                             });
                         }
                         else {
-                            if (this._trigger("actionBegin", { id: this._appId, requestType: "appointmentDelete" }))
-                                return false;
-                            if (this._trigger("beforeAppointmentRemove", { appointment: _newAddList })) {
-                                this._recurEditWindow.ejDialog("close");
-                                return false;
-                            }
                             this._refreshCellsHeight();
                             if ((new Date(new Date(updateTemp[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(updateTemp[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) && (((updateTemp[this._appointmentSettings["endTime"]] - updateTemp[this._appointmentSettings["startTime"]]) / 3600000) < 24) && (updateTemp[this._appointmentSettings["allDay"]] !== true)) {
                                 var splitApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
@@ -5687,8 +5637,8 @@
                                 this._appUid = null;
                             }
                             this._renderAppointmentAll();
-                            this._trigger("appointmentDeleted", { appointment: _newAddList, requestType: "appointmentDeleted" });
-                            this._trigger("actionComplete", { appointment: _newAddList, requestType: "appointmentDelete" });
+                            this._trigger("appointmentRemoved", { appointment: _newAddList, requestType: "appointmentDeleted", currentAction: ej.Schedule.Actions.DeleteOccurrence });
+                            this._trigger("actionComplete", { appointment: _newAddList, requestType: "appointmentDelete", currentAction: ej.Schedule.Actions.DeleteOccurrence });
                         }
                     }
                     var appCount = this._appointmentCount();
@@ -5698,14 +5648,16 @@
                     }
                 }
                 else {
-                    this._currentAction = ej.Schedule.Actions.EditOcurrence;
+                    this._currentAction = ej.Schedule.Actions.EditOccurrence;
                     this._showAppointmentDetails(this._appUid, true);
                 }
             }
             else {
                 this._editOnlyClicked = false;
-                if (this._currentAction == ej.Schedule.Actions.Delete)
+                if (this._currentAction == ej.Schedule.Actions.Delete) {
+                    this._actionType = ej.Schedule.Actions.DeleteSeries;
                     this._deleteApp(this._appUid);
+                }
                 else {
                     this._currentAction = ej.Schedule.Actions.EditSeries;
                     this._showAppointmentDetails(this._parentId, false);
@@ -5738,6 +5690,20 @@
             }
         },
 
+        _resourceDaysReorder: function (days) {
+            var dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+            var cultureNames = [], resDays = [], oldOrder = [], newOrder = [], index = this._firstdayofweek;
+            do {
+                if (index > 6) index = 0;
+                cultureNames.push(dayNames[index]);
+                index++;
+            } while (cultureNames.length < 7)
+            for (var a = 0; a < days.length; a++) { resDays.push(days[a].toLowerCase()); }
+            for (var b = 0; b < resDays.length; b++) { if (cultureNames.indexOf(resDays[b]) != -1) oldOrder[cultureNames.indexOf(resDays[b])] = resDays[b]; }
+            for (var c = 0; c < oldOrder.length; c++) { if (!ej.isNullOrUndefined(oldOrder[c])) newOrder.push(oldOrder[c]); }
+            return newOrder;
+        },
+
         _getRenderDates: function () {
             this._dateRender = []; var firstDay, endDay, newDate, week = [], workweek = [], workweeks = [];
             if (this.currentView() === "week" || this.currentView() === "workweek") {
@@ -5748,94 +5714,77 @@
                         newDate.setDate(firstDay.getDate() + i);
                         this._dateRender.push(new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate()).getTime());
                     }
-					this._renderDates = $.extend(true, [], this._dateRender);
+                    this._renderDates = $.extend(true, [], this._dateRender);
                 }
-				
-				if (this._resWorkWeek) {
-					if (this._tempResource.length > 1) {
-						var resCollection = this._resourceSort();
-						var resource = [];
-						for (x = 0; x < resCollection.length; x++) {
-							var index = this._tempResource[this._tempResource.length-1].resourceSettings.dataSource.indexOf(resCollection[x]);
-							if (index != -1) resource.push(resCollection[x]);
-						}
-						this.res1 = resource;
-					}
-					else 
-						var resource = this._tempResource[this._tempResource.length-1].resourceSettings.dataSource;
-					this._resDateRender = [];
-					for (var a = 0; a < resource.length; a++) {
-						var resColl = resource[a][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]];
-						if (!ej.isNullOrUndefined(resColl)) {
-							for (var b = 0; b < resColl.length; b++) {
-								var index = this._dayFullNames.indexOf(resColl[b].capitalizeFirstString());
-								this._resDateRender.push(this._renderDates[index]);
-							}
-						}
-						else {
-							this._customDates = $.extend(true, [], this._dateRender);
-							this._customDates.splice(0,1);
-							this._customDates.splice((this._customDates.length-1),1);
-							$.merge(this._resDateRender, this._customDates);
-						}
-					}
-					this._dateRender = this._resDateRender;
-					this.dateRender = this._resDateRender;
-				}
-                else if ((this._firstdayofweek != 0 || this._firstdayofweek == 0) && this.currentView() == "workweek" && this.model.workWeek[0] == "monday" && this.model.workWeek[4] == "friday" && this.model.workWeek[5] != "saturday") {
-                    for (var i = 0; i < 7; i++) {
-                        newDate = new Date(this._dateRender[i]);
-                        if (newDate.getDay() == 0)
-                            this._dateRender.splice(i, 1);
-                        else if (newDate.getDay() == 6)
-                            this._dateRender.splice(i, 2);
-                    }
-                }
-                else if (this.currentView() == "workweek" && this.model.workWeek) {
-                    for (var i = 0, j = 0; i < this._dateRender.length; i++) {
-                        if (this.model.workWeek[j] == this._dayNamesArray[i]) {
-                            workweek.push(i);
-                            j++;
-                        }
-                    }
 
-                    if (this._firstdayofweek >= workweek[0]) {
-                        for (var k = 0; k < workweek.length; k++) {
-                            if (this._firstdayofweek <= workweek[k]) {
-                                var firstday = workweek[k];
-                                break;
+                if (this._resWorkWeek) {
+                    if (this._tempResource.length > 1) {
+                        var resCollection = this._resourceSort();
+                        var resource = [];
+                        for (x = 0; x < resCollection.length; x++) {
+                            var index = this._tempResource[this._tempResource.length - 1].resourceSettings.dataSource.indexOf(resCollection[x]);
+                            if (index != -1) resource.push(resCollection[x]);
+                        }
+                        this.res1 = resource;
+                    }
+                    else
+                        var resource = this._tempResource[this._tempResource.length - 1].resourceSettings.dataSource;
+                    var resDateRender = [];
+                    for (var a = 0; a < resource.length; a++) {
+                        var resColl = resource[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]];
+                        if (!ej.isNullOrUndefined(resColl)) {
+                            resColl = this._resourceDaysReorder(resColl);
+                            for (var b = 0; b < resColl.length; b++) {
+                                var index = this._dayFullNames.indexOf(resColl[b].capitalizeFirstString());
+                                if (index == -1) {
+                                    index = this._getDayNameIndex(resColl[b]);
+                                }
+                                resDateRender.push(this._renderDates[index]);
                             }
                         }
+                        else {
+                            var resCustomDates = $.extend(true, [], this._dateRender);
+                            resCustomDates = resCustomDates.filter(function (date) { return new Date(date).getDay() != 0 && new Date(date).getDay() != 6 });
+                            $.merge(resDateRender, resCustomDates);
+                        }
+                    }
+                    this.dateRender = this._dateRender = resDateRender;
+                }
+                else if (this.currentView() == "workweek") {
+                    if (this.model.workWeek[0] == "monday" && this.model.workWeek[4] == "friday" && ej.isNullOrUndefined(this.model.workWeek[5])) {
+                        this._dateRender = this._dateRender.filter(function (date) { return new Date(date).getDay() != 0 && new Date(date).getDay() != 6 });
                     }
                     else {
+                        var proxy = this;
+                        workweek = this.model.workWeek.map(function (day) { return proxy._dayNamesArray.indexOf(day) });
+
                         for (var k = 0; k < workweek.length; k++) {
-                            if (this._firstdayofweek > workweek[k]) {
-                                var firstday = workweek[k];
-                                break;
+                            if (this._firstdayofweek >= workweek[0]) {
+                                if (this._firstdayofweek <= workweek[k]) {
+                                    var firstday = workweek[k];
+                                    break;
+                                }
+                            }
+                            else {
+                                if (this._firstdayofweek > workweek[k]) {
+                                    var firstday = workweek[k];
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    for (var i = 0, j = 0; i < workweek.length; i++) {
-                        if (firstday <= workweek[i]) {
-                            workweeks[j] = workweek[i];
-                            j++;
+                        for (var i = 0, j = 0; i < workweek.length; i++) {
+                            if (firstday <= workweek[i]) {
+                                workweeks[j] = workweek[i];
+                                j++;
+                            }
                         }
+                        workweeks = $.merge(workweeks, workweek);
+                        var weekDays = (this._firstdayofweek != 0 && this._firstdayofweek <= firstday) ? workweeks : workweek;
+                        workweeks = $.grep(weekDays, function (el, index) { return index === $.inArray(el, weekDays); });
+                        var filterDate = this._dateRender.map(function (date) { if (workweek.indexOf(new Date(date).getDay()) != -1) return date });
+                        this._dateRender = filterDate.filter(function (date) { return date != undefined });
                     }
-                    workweeks = $.merge(workweeks, workweek);
-
-                    if (this._firstdayofweek != 0 && this._firstdayofweek <= firstday) workweeks = $.unique(workweeks);
-                    else
-                        workweeks = $.unique(workweek);
-
-                    for (var i = 0, j = 0; i < this._dateRender.length; i++) {
-                        if (workweeks[j] == new Date(this._dateRender[i]).getDay()) {
-                            week.push(this._dateRender[i]);
-                            j++;
-                        }
-                    }
-                    this._dateRender.length = 0;
-                    this._dateRender = $.merge(this._dateRender, week);
                 }
             }
             else if (this.currentView() === "month") {
@@ -5843,26 +5792,27 @@
             }
             else if (this.currentView() === "customview") {
                 if (!ej.isNullOrUndefined(this.model.renderDates)) {
-				if(this._setCurrentDate && this.model.orientation != "horizontal")
-				{
-				this.oldDate=this.currentDate();	
-				if ((this._renderStart.getTime() < this.currentDate().getTime()) && (this._renderEnd.getTime() > this.currentDate().getTime()))
-					this.currentDate(new Date(this._renderStart));				
-                else 
-				{   this._renderStart = new Date(this.currentDate());
-					this._renderEnd = new Date(this._renderStart.getTime() + ((this._renderDays - 1) * 86400000));
-				}                    			
-				}
-                var daysRender = this._renderDays <= 7 ? this._renderDays : this._numDays;
-                firstDay = this._renderDays <= 7 ? new Date(this.currentDate()) : this.model.orientation == "vertical" ? this._firstweekdate(this.currentDate()) : new Date(this.currentDate());
+                    if (this._setCurrentDate && this.model.orientation != "horizontal") {
+                        this.oldDate = this.currentDate();
+                        if ((this._renderStart.getTime() < this.currentDate().getTime()) && (this._renderEnd.getTime() > this.currentDate().getTime()))
+                            this.currentDate(new Date(this._renderStart));
+                        else {
+                            this._renderStart = new Date(this.currentDate());
+                            this._renderEnd = new Date(this._renderStart.getTime() + ((this._renderDays - 1) * 86400000));
+                        }
+                    }
+                    var daysRender = this._renderDays <= 7 ? this._renderDays : this._numDays;
+                    firstDay = this._renderDays <= 7 ? new Date(this.currentDate()) : this.model.orientation == "vertical" ? this._firstweekdate(this.currentDate()) : new Date(this.currentDate());
                     for (var i = 0; i < daysRender; i++) {
                         newDate = new Date(firstDay);
                         newDate.setDate(firstDay.getDate() + i);
                         this._dateRender.push(new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate()).getTime());
                     }
                 }
-                else
-                    this._dateRender = this._monthdates();
+                else {
+                    var monthDays = this._monthdates();
+                    this._dateRender = this.model.orientation == "vertical" ? monthDays : this.monthDays;
+                }
             }
             else {
                 this._dateRender.push(new Date(this.currentDate()).setHours(0, 0, 0, 0));
@@ -5873,47 +5823,47 @@
         _getCurrentDateHeaderValue: function () {
             var dateValue, value = (this._resWorkWeek) ? this._renderDates : this._dateRender;
             if (this.currentView() === "day")
-                dateValue = this._dayShortNames[new Date(value[0]).getDay()] + " " + new Date(value[0]).getDate() + " " + ej.format(new Date(value[0]), "MMM") + " " + new Date(value[0]).getFullYear();
+                dateValue = this._dayShortNames[new Date(value[0]).getDay()] + " " + new Date(value[0]).getDate() + " " + ej.format(new Date(value[0]), "MMM", this.model.locale) + " " + new Date(value[0]).getFullYear();
             else if (this.currentView() === "week" || this.currentView() === "workweek") {
                 if (new Date(value[0]).getYear() === new Date(value[value.length - 1]).getYear()) {
                     if (new Date(value[0]).getMonth() === new Date(value[value.length - 1]).getMonth()) {
-                        dateValue = ej.format(new Date(value[0]), "dd") + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy");
+                        dateValue = ej.format(new Date(value[0]), "dd", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy", this.model.locale);
                     }
                     else if (new Date(value[0]).getMonth() !== new Date(value[value.length - 1]).getMonth()) {
-                        dateValue = this.model.enableRTL ? ej.format(new Date(value[value.length - 1]), "MMM dd") + " - " + ej.format(new Date(value[0]), "dd MMM yyyy") :
-                               ej.format(new Date(value[0]), "dd MMM") + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy");
+                        dateValue = this.model.enableRTL ? ej.format(new Date(value[value.length - 1]), "MMM dd", this.model.locale) + " - " + ej.format(new Date(value[0]), "dd MMM yyyy", this.model.locale) :
+                               ej.format(new Date(value[0]), "dd MMM", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy", this.model.locale);
                     }
                 }
                 else {
-                    dateValue = ej.format(new Date(value[0]), "MMM dd yyyy") + " - " + ej.format(new Date(value[value.length - 1]), "MMM dd yyyy");
+                    dateValue = ej.format(new Date(value[0]), "MMM dd yyyy", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "MMM dd yyyy", this.model.locale);
                 }
             }
             else if (this.currentView() === "customview") {
                 if (value.length == 1)
-                    dateValue = this._dayShortNames[new Date(value[0]).getDay()] + " " + new Date(value[0]).getDate() + " " + ej.format(new Date(value[0]), "MMM") + " " + new Date(value[0]).getFullYear();
+                    dateValue = this._dayShortNames[new Date(value[0]).getDay()] + " " + new Date(value[0]).getDate() + " " + ej.format(new Date(value[0]), "MMM", this.model.locale) + " " + new Date(value[0]).getFullYear();
                 else if (value.length > 1 && value.length <= 7) {
                     if (new Date(value[0]).getYear() === new Date(value[value.length - 1]).getYear()) {
                         if (new Date(value[0]).getMonth() === new Date(value[value.length - 1]).getMonth()) {
-                            dateValue = ej.format(new Date(value[0]), "dd") + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy");
+                            dateValue = ej.format(new Date(value[0]), "dd", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy", this.model.locale);
                         }
                         else if (new Date(value[0]).getMonth() !== new Date(value[value.length - 1]).getMonth()) {
-                            dateValue = this.model.enableRTL ? ej.format(new Date(value[value.length - 1]), "MMM dd") + " - " + ej.format(new Date(value[0]), "dd MMM yyyy") :
-                                   ej.format(new Date(value[0]), "dd MMM") + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy");
+                            dateValue = this.model.enableRTL ? ej.format(new Date(value[value.length - 1]), "MMM dd", this.model.locale) + " - " + ej.format(new Date(value[0]), "dd MMM yyyy", this.model.locale) :
+                                   ej.format(new Date(value[0]), "dd MMM", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "dd MMM yyyy", this.model.locale);
                         }
                     }
                     else {
-                        dateValue = ej.format(new Date(value[0]), "MMM dd yyyy") + " - " + ej.format(new Date(value[value.length - 1]), "MMM dd yyyy");
+                        dateValue = ej.format(new Date(value[0]), "MMM dd yyyy", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "MMM dd yyyy", this.model.locale);
                     }
                 }
                 else {
                     if (new Date(value[0]).getFullYear() == new Date(value[value.length - 1]).getFullYear()) {
                         if (new Date(value[0]).getMonth() == new Date(value[value.length - 1]).getMonth())
-                            dateValue = ej.format(new Date(this.currentDate()), "MMM yyyy");
+                            dateValue = ej.format(new Date(this.currentDate()), "MMM yyyy", this.model.locale);
                         else
-                            dateValue = ej.format(new Date(value[0]), "MMM") + " - " + ej.format(new Date(value[value.length - 1]), "MMM yyyy");
+                            dateValue = ej.format(new Date(value[0]), "MMM", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "MMM yyyy", this.model.locale);
                     }
                     else {
-                        dateValue = ej.format(new Date(value[0]), "MMM yyyy") + " - " + ej.format(new Date(value[value.length - 1]), "MMM yyyy");
+                        dateValue = ej.format(new Date(value[0]), "MMM yyyy", this.model.locale) + " - " + ej.format(new Date(value[value.length - 1]), "MMM yyyy", this.model.locale);
                     }
                 }
             }
@@ -5922,18 +5872,18 @@
                 var days = this.model.agendaViewSettings.daysInAgenda > 0 ? this.model.agendaViewSettings.daysInAgenda - 1 : 0;
                 if (new Date(value).getYear() === new Date(new Date(value).setDate(value.getDate() + days)).getYear()) {
                     if (new Date(value).getMonth() === new Date(new Date(value).setDate(value.getDate() + days)).getMonth()) {
-                        dateValue = ej.format(new Date(value), "dd") + " - " + ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "dd MMM yyyy");
+                        dateValue = ej.format(new Date(value), "dd", this.model.locale) + " - " + ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "dd MMM yyyy", this.model.locale);
                     }
                     else if (new Date(value).getMonth() !== new Date(new Date(value).setDate(value.getDate() + days)).getMonth()) {
-                        dateValue = this.model.enableRTL ? ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "MMM dd") + " - " + ej.format(new Date(value), "dd MMM yyyy") :
-                               ej.format(new Date(value), "dd MMM") + " - " + ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "dd MMM yyyy");
+                        dateValue = this.model.enableRTL ? ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "MMM dd", this.model.locale) + " - " + ej.format(new Date(value), "dd MMM yyyy", this.model.locale) :
+                               ej.format(new Date(value), "dd MMM", this.model.locale) + " - " + ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "dd MMM yyyy", this.model.locale);
                     }
                 }
                 else
-                    dateValue = ej.format(new Date(value), "MMM dd yyyy") + " - " + ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "MMM dd yyyy");
+                    dateValue = ej.format(new Date(value), "MMM dd yyyy", this.model.locale) + " - " + ej.format(new Date(new Date(value).setDate(value.getDate() + days)), "MMM dd yyyy", this.model.locale);
             }
             else
-                dateValue = ej.format(new Date(this.currentDate()), "MMM yyyy");
+                dateValue = ej.format(new Date(this.currentDate()), "MMM yyyy", this.model.locale);
             return dateValue;
         },
 
@@ -5947,12 +5897,10 @@
                         firstdayofweek = new Date(this._dateRender[0]);
                 }
             }
-            else if (this._firstdayofweek != 0){
-				day = this._firstdayofweek - day;
-				var date = firstdayofweek.getDate() + day;
-				if(this._firstdayofweek != 6) new Date(firstdayofweek.setDate(date));
-				else new Date(firstdayofweek.setDate(date - 7));
-			}
+            else if (this._firstdayofweek != 0) {
+                var diff = ((firstdayofweek.getDay() - this._firstdayofweek) < 0) ? (7 + firstdayofweek.getDay() - this._firstdayofweek) : (firstdayofweek.getDay() - this._firstdayofweek);
+                firstdayofweek = new Date(firstdayofweek.setDate(firstdayofweek.getDate() - diff));
+            }
             return firstdayofweek;
         },
 
@@ -5961,44 +5909,44 @@
             var resCount = 1;
             cols = [];
             if (this.model.orientation == "vertical") {
-				this._isCustomMonthView();
-				if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek))) {
-					columns = this._getUserDateheaderTemplate();
-					if ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
-						var getCount = this._getMultipleResourceCellsCount(count);
-						resCount = getCount.resCount;
-						if((this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length==0)
-						resCount = 1;
-					}
-				}
-				else {
-					count = this._getColumnCount().length;
-					if ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
-						var getCount = this._getMultipleResourceCellsCount(count);
-						resCount = getCount.resCount;
-						if((this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length==0)
-						resCount = 1;
-					}
-					for (i = 0; i < count; i++) {
-					    curday = (this.currentView() === "month" || this.currentView() === "day" || (this._isCustomMonthView())) ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
-						headerCellClass = (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime()) ? "e-headerToday" : "";
-						temp = (this.currentView() === "month" || (this._isCustomMonthView())) ? { currentDay: curday, currentDateClass: "", cellToday: headerCellClass } : this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy"), currentDateClass: "", cellToday: headerCellClass } : { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMM yy"), currentDateClass: "", cellToday: headerCellClass } : { currentDay: curday + " " + new Date(this._dateRender[i]).getDate(), currentDateClass: new Date(this._dateRender[i]).getDate() === new Date(this.currentDate()).getDate() ? "e-activeview" : "", cellToday: headerCellClass };
-						columns.push(temp);
-						this._value.push(i);
-					}
-				}
-				if (this._resWorkWeek) {
-					cols = $.merge(cols, columns);
-					this.value = $.merge(this.value, this._value);
-				}
-				else {
-					for (var i = 0; i < resCount; i++) {
-						this.dateRender = $.merge(this.dateRender, this._dateRender);
-						cols = $.merge(cols, columns);
-						this.value = $.merge(this.value, this._value);
-					}
-				}
-			}
+                this._isCustomMonthView();
+                if (!ej.isNullOrUndefined(this.model.dateHeaderTemplateId) && (this.currentView() == "day" || this.currentView() == "week" || this.currentView() == "workweek" || (this.currentView() == "customview" && this._oneWeek))) {
+                    columns = this._getUserDateheaderTemplate();
+                    if ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
+                        var getCount = this._getMultipleResourceCellsCount(count);
+                        resCount = getCount.resCount;
+                        if ((this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length == 0)
+                            resCount = 1;
+                    }
+                }
+                else {
+                    count = this._getColumnCount().length;
+                    if ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
+                        var getCount = this._getMultipleResourceCellsCount(count);
+                        resCount = getCount.resCount;
+                        if ((this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length == 0)
+                            resCount = 1;
+                    }
+                    for (i = 0; i < count; i++) {
+                        curday = (this.currentView() === "month" || this.currentView() === "day" || (this._isCustomMonthView())) ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
+                        headerCellClass = (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime()) ? "e-headerToday" : "";
+                        temp = (this.currentView() === "month" || (this._isCustomMonthView())) ? { currentDay: curday, currentDateClass: "", cellToday: headerCellClass } : this.currentView() === "day" ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMMM yyyy", this.model.locale), currentDateClass: "", cellToday: headerCellClass } : { currentDay: curday + " " + ej.format(new Date(this._dateRender[i]), "dd MMM yy", this.model.locale), currentDateClass: "", cellToday: headerCellClass } : { currentDay: curday + " " + new Date(this._dateRender[i]).getDate(), currentDateClass: new Date(this._dateRender[i]).getDate() === new Date(this.currentDate()).getDate() ? "e-activeview" : "", cellToday: headerCellClass };
+                        columns.push(temp);
+                        this._value.push(i);
+                    }
+                }
+                if (this._resWorkWeek) {
+                    cols = $.merge(cols, columns);
+                    this.value = $.merge(this.value, this._value);
+                }
+                else {
+                    for (var i = 0; i < resCount; i++) {
+                        this.dateRender = $.merge(this.dateRender, this._dateRender);
+                        cols = $.merge(cols, columns);
+                        this.value = $.merge(this.value, this._value);
+                    }
+                }
+            }
             else
                 cols = this._getHorizontalheaderCellCount(this._culture);
             return cols;
@@ -6015,11 +5963,12 @@
         _renderHeaderAllDayTemplate: function () {
             if (this.currentView() != "agenda") {
                 if (ej.scheduleFeatures.horizontal && this.model.orientation == "horizontal") {
-                    if ((this._tempResource.length!=0) && ej.scheduleFeatures.resources)
+                    if ((this._tempResource.length != 0) && ej.scheduleFeatures.resources)
                         this._renderMultipleResourceHeaderTemplate(null, null);
                     this._renderHorizontalHeaderBar();
                 }
                 else {
+                    var headerScrollDiv = $(document.createElement('div')).addClass('e-headerscrolldiv');
                     var headerDiv = ej.buildTag('div.e-headeralldaydiv', "", {}, { height: "100%" }).css("position", "relative").css("overflow", "hidden");
                     var resCount = 0;
                     var table = ej.buildTag('table.e-table e-headrealldaytable', "", {}, { cellspacing: "0px", cellpadding: "0px", width: "100%" });
@@ -6027,17 +5976,16 @@
                     var headTR = ej.buildTag('tr.e-dateheader');
                     var cols = this._getHeaderAllDayCellsCount();
                     var html = this.headTemplate.render({ cols: cols, view: this.currentView(), colspan: 1 });
-                    if ((this._tempResource.length!=0) && ej.scheduleFeatures.resources) {
+                    if ((this._tempResource.length != 0) && ej.scheduleFeatures.resources) {
                         tbody = this._renderMultipleResourceHeaderTemplate(tbody, cols);
                         resCount = !ej.isNullOrUndefined(this.model.group) ? this._grouping.length : 0;
-                        if((this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length==0)
-						resCount = 0;
+                        if ((this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length == 0)
+                            resCount = 0;
                     }
                     var tempNavigate = ej.buildTag('div.e-navigate', "", {}, {});
                     var inner_table = ej.buildTag('table.e-table e-headertable', "", {}, { cellspacing: "0px", cellpadding: "0px" });
                     var tb = ej.buildTag('tbody');
                     var headT = ej.buildTag('tr.e-headertr');
-
                     headTrCount = (this.currentView() == "month") || (this._isCustomMonthView()) ? 1 : 2;
                     var rowCount = resCount + headTrCount; var rows = [];
                     for (var i = 0; i < rowCount; i++) {
@@ -6051,18 +5999,14 @@
                         new ej.DataManager(rows).remove("tdClass", "e-leftindent");
                     var leftIndentHtml = this.leftIndent.render({ trs: rows, cswidth: widths });
                     if (this.model.timeScale.enable)
-                        this.aTR.append(ej.buildTag('td').append(tempNavigate.append(inner_table.append(tb.append(headT.append(ej.buildTag('td.e-empty', "", {}, { width: (this._mediaQuery) ? (this.currentView() == "month" || (this._isCustomMonthView())) ? "0px" : "30px" : (this.currentView() == "month" || this._isCustomMonthView()) ? "50px" : "56px" }).addClass((this.currentView() == "month" || this._isCustomMonthView()) ? "e-monthempty" : "").append(leftIndentHtml)).append(ej.buildTag('td').append(headerDiv.append(table.append(tbody.append(headTR.append(html)))))).append(ej.buildTag('td.e-emptyscrolltd', "", {}, { width: (this.currentView() == "month" || this._isCustomMonthView()) ? "0px" : (this._mediaQuery) ? "0px" : "18px" })))))));
+                        this.aTR.append(ej.buildTag('td').append(tempNavigate.append(inner_table.append(tb.append(headT.append(ej.buildTag('td.e-empty', "", {}, { width: (this._mediaQuery) ? (this.currentView() == "month" || (this._isCustomMonthView())) ? "0px" : "30px" : (this.currentView() == "month" || this._isCustomMonthView()) ? "50px" : "56px" }).addClass((this.currentView() == "month" || this._isCustomMonthView()) ? "e-monthempty" : "").append(leftIndentHtml)).append(ej.buildTag('td').append(headerScrollDiv.append(headerDiv.append(table.append(tbody.append(headTR.append(html))))))).append(ej.buildTag('td.e-emptyscrolltd', "", {}, { width: (this.currentView() == "month" || this._isCustomMonthView()) ? "0px" : (this._mediaQuery) ? "0px" : "18px" })))))));
                     else
-                        this.aTR.append(ej.buildTag('td').append(tempNavigate.append(inner_table.append(tb.append(headT.append(ej.buildTag('td').append(headerDiv.append(table.append(tbody.append(headTR.append(html)))))).append(ej.buildTag('td.e-emptyscrolltd', "", {}, { width: (this.currentView() == "month" || this._isCustomMonthView()) ? "0px" : (this._mediaQuery) ? "0px" : "18px" })))))));
-                    
-					if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable) {
-                        if (this.model.showAllDayRow) {
-							var userTemplate = (!ej.isNullOrUndefined(this.model.allDayCellsTemplateId)) ? true : false;
-							if (userTemplate) { var allDayHtml = this._getUserAllDayCellsTemplate(); }
-                            var alldayTR = ej.buildTag('tr');
-                            var allHtml = this.alldayTemp.render({ cols: cols, colspan: 1, userTemp: userTemplate, userHtml: allDayHtml });
-                            tbody.append(alldayTR.append(allHtml));
-                        }
+                        this.aTR.append(ej.buildTag('td').append(tempNavigate.append(inner_table.append(tb.append(headT.append(ej.buildTag('td').append(headerScrollDiv.append(headerDiv.append(table.append(tbody.append(headTR.append(html))))))).append(ej.buildTag('td.e-emptyscrolltd', "", {}, { width: (this.currentView() == "month" || this._isCustomMonthView()) ? "0px" : (this._mediaQuery) ? "0px" : "18px" })))))));
+                    if (this.currentView() !== "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable && this.model.showAllDayRow) {
+                        var userTemplate = (!ej.isNullOrUndefined(this.model.allDayCellsTemplateId)) ? true : false;
+                        if (userTemplate) { var allDayHtml = this._getUserAllDayCellsTemplate(); }
+                        var allHtml = this.alldayTemp.render({ cols: cols, colspan: 1, userTemp: userTemplate, userHtml: allDayHtml });
+                        tbody.append(ej.buildTag('tr').append(allHtml));
                     }
                 }
             }
@@ -6071,6 +6015,7 @@
                 var inner_table = ej.buildTag('table.e-table e-headertable', "", {}, { cellspacing: "0px", cellpadding: "0px" });
                 var tb = ej.buildTag('tbody');
                 var headT = ej.buildTag('tr.e-headertr');
+                var headerScrollDiv = $(document.createElement('div')).addClass('e-headerscrolldiv');
                 var headerDiv = ej.buildTag('div.e-headeralldaydiv', "", {}, { height: "100%" }).css("position", "relative").css("overflow", "hidden");
                 var table = ej.buildTag('table.e-table e-headrealldaytable', "", {}, { cellspacing: "0px", cellpadding: "0px", width: "100%" });
                 var tbody = ej.buildTag('tbody tr');
@@ -6081,10 +6026,10 @@
                     var res = [];
                     for (var resLevel = 0; resLevel < this.render_Resources.length; resLevel++)
                         res.push({ headertext: "", className: "e-resourcecolumn" });
-                    (!ej.isNullOrUndefined(this.model.group) &&(this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0) && (cols = $.merge(res, cols));
+                    (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) && (cols = $.merge(res, cols));
                 }
                 var html = this.agendaheadTemplate.render({ cols: cols });
-                this.aTR.append(ej.buildTag('td').append(tempNavigate.append(inner_table.append(tb.append(headT.append(ej.buildTag('td').append(headerDiv.append(table.append(tbody.append(html))))).append(ej.buildTag('td.e-emptyscrolltd', "", {}, { width: "18px" })))))));
+                this.aTR.append(ej.buildTag('td').append(tempNavigate.append(inner_table.append(tb.append(headT.append(ej.buildTag('td').append(headerScrollDiv.append(headerDiv.append(table.append(tbody.append(html)))))).append(ej.buildTag('td.e-emptyscrolltd', "", {}, { width: "18px" })))))));
             }
             (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("renderHeaderAllDayTemplate");
         },
@@ -6099,7 +6044,7 @@
                 this._workCellIndex = _target.parent().index();
             }
             var renderDate = (this.model.orientation == "horizontal" && this.currentView() == "month") ? this.monthDays : (this.model.orientation == "vertical" || this.currentView() == "customview" && this._dateRender.length <= 7) ? (this._resWorkWeek) ? this._dateRender : this.dateRender : this._dateRender;
-			renderDate = this.model.orientation == "horizontal" && this.currentView() == "customview" && this._dateRender.length <= 7 ? this._dateRender : renderDate;
+            renderDate = this.model.orientation == "horizontal" && this.currentView() == "customview" && this._dateRender.length <= 7 ? this._dateRender : renderDate;
             var curDate = new Date(renderDate[this._cellIndex]);
             if ((this.model.minDate > curDate || this.model.maxDate < curDate)) { return false; }
             if (_target.hasClass("e-workcells") && (this.model.showTimeScale) && this.currentView() !== "month" && !(this._isCustomMonthView())) {
@@ -6114,7 +6059,7 @@
                 result = { startTime: new Date(this.cur_StartTime), endTime: this.cur_EndTime, currentDate: curDate, cellIndex: this._cellIndex, currentDate: curDate };
             }
             else {
-                result = { startTime: new Date(this.cur_StartTime), endTime: this.cur_EndTime, currentDate: curDate, cellIndex: this._cellIndex, currentDate: curDate, resources: (this._tempResource.length!=0) ? this._getResourceValue(_target, this._cellIndex) : null };
+                result = { startTime: new Date(this.cur_StartTime), endTime: this.cur_EndTime, currentDate: curDate, cellIndex: this._cellIndex, currentDate: curDate, resources: (this._tempResource.length != 0) ? this._getResourceValue(_target, this._cellIndex) : null };
             }
             return result;
         },
@@ -6145,27 +6090,27 @@
             var day = header.getDay() + 1;
             if (this._firstdayofweek)
                 header.setDate(header.getDate() - day + this._firstdayofweek);
-		    else
+            else
                 header.setDate(header.getDate() - day);
             if (header.getMonth() == new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getMonth())
                 header.setDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDate() - day + this._firstdayofweek - 7);
-				var strtDate=new Date( header.setDate(header.getDate() + 1));
-				var endDate=new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-				var dayDiff=Math.round((Math.abs(strtDate.getTime()- endDate.getTime())/(1000 * 60 * 60 * 24))+1);
-				if(dayDiff<=28)
-				rows = 4;
-				else if(dayDiff>28 && dayDiff <=35)
-				rows = 5;
-				else
-				rows = 6;
-				new Date( header.setDate(header.getDate() - 1));
+            var strtDate = new Date(header.setDate(header.getDate() + 1));
+            var endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            var dayDiff = Math.round((Math.abs(strtDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+            if (dayDiff <= 28)
+                rows = 4;
+            else if (dayDiff > 28 && dayDiff <= 35)
+                rows = 5;
+            else
+                rows = 6;
+            new Date(header.setDate(header.getDate() - 1));
             var dates = [];
-			this.monthDays=[];
+            this.monthDays = [];
             for (var row = 0; row < (rows * 7) ; row++) {
                 header.setDate(header.getDate() + 1);
-                dates.push(new Date(header.getFullYear(), header.getMonth(), header.getDate(), 0, 0, 0).getTime());				                                    
-                        if (new Date(this.currentDate()).getMonth() === new Date(dates[row]).getMonth())
-                            this.monthDays.push(dates[row]);
+                dates.push(new Date(header.getFullYear(), header.getMonth(), header.getDate(), 0, 0, 0).getTime());
+                if (new Date(this.currentDate()).getMonth() === new Date(dates[row]).getMonth())
+                    this.monthDays.push(dates[row]);
             }
             if (new Date(dates[0]).getDate() == new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDate()) {
                 dates = dates.splice(0, 35);
@@ -6186,21 +6131,21 @@
                 }
                 else {
                     if (!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId)) {
-                        startendTimes = this._getUserTimeCellsTemplate();                  
+                        startendTimes = this._getUserTimeCellsTemplate();
                     }
                     else {
                         var dateValue = new Date(new Date().setHours(0, 0, 0, 0));
-                        
-                        for (var i = this.model.startHour* 60; i < this.model.endHour * 60;) {                        
+
+                        for (var i = this.model.startHour * 60; i < this.model.endHour * 60;) {
                             if (this._timeMode === "12") {
                                 if (new Date(new Date(dateValue).setHours(this.model.endHour, 0, 0, 0)).getTime() > new Date(new Date(dateValue).setHours(0, i, 0, 0)).getTime()) {
-                                    timelist = (((i/60) === this.model.startHour || (i/60) === 12) && (localizeAmPm.AM && localizeAmPm.PM)) ? ej.format(new Date(new Date(dateValue).setHours(0, i, 0, 0)), "hh tt") : ej.format(new Date(new Date(dateValue).setHours(0, i, 0, 0)), "hh mm");
-                                    startendTimes.push({ time: timelist, id: (i/60) });
+                                    timelist = (((i / 60) === this.model.startHour || (i / 60) === 12) && (localizeAmPm.AM && localizeAmPm.PM)) ? ej.format(new Date(new Date(dateValue).setHours(0, i, 0, 0)), "hh tt", this.model.locale) : ej.format(new Date(new Date(dateValue).setHours(0, i, 0, 0)), "hh mm", this.model.locale);
+                                    startendTimes.push({ time: timelist, id: (i / 60) });
                                 }
                             }
                             else
                                 startendTimes.push({ time: new Date(new Date(dateValue).setHours(0, i, 0, 0)).toTimeString().slice(0, 5) + " 00" });
-                            i = i + this.model.timeScale.majorSlot;   
+                            i = i + this.model.timeScale.majorSlot;
                         }
                     }
                 }
@@ -6223,13 +6168,13 @@
                     var strEndTime = this._getStartEndTime();
                     var value = 0;
                     for (var i = 0; i < (this.model.timeScale.minorSlotCount * strEndTime.length) ; i++) {
-                         value = value + (this.model.timeScale.majorSlot /this.model.timeScale.minorSlotCount);
-                         if (value > (this.model.endHour-this.model.startHour)* 60) {
-                             workcells.push({ crow: i, cwidth: this.model.cellWidth, cheight: this.model.cellHeight });
-                             break;
-                         }
-                         else
-                             workcells.push({ crow: i, cwidth: this.model.cellWidth, cheight: this.model.cellHeight });
+                        value = value + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
+                        if (value > (this.model.endHour - this.model.startHour) * 60) {
+                            workcells.push({ crow: i, cwidth: this.model.cellWidth, cheight: this.model.cellHeight });
+                            break;
+                        }
+                        else
+                            workcells.push({ crow: i, cwidth: this.model.cellWidth, cheight: this.model.cellHeight });
                     }
                 }
             }
@@ -6249,32 +6194,25 @@
             var $contentTR = ej.buildTag('tr');
             var $WorkCellTD = ej.buildTag('td');
             var $scrollerbarDiv = ej.buildTag('div#' + this._id + "_scroller");
-            this.$WorkCellDiv = ej.buildTag('div').css('position', "relative").attr('class', 'e-draggableworkarea').css("height", "100%");
-            var userTemplateId = ((!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId) && !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId)) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId)) ? true : false;
-            var template = (!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId)) ? true : false;
+            this.$WorkCellDiv = ej.buildTag('div').attr('class', 'e-draggableworkarea').attr("width", "100%").attr("height", "100%");
             if (this.currentView() != "agenda") {
                 if (ej.scheduleFeatures.horizontal && this.model.orientation == "horizontal")
                     this._renderHorizontalContent($contentAreaDiv, $contentTable, $contentBody, $contentTR, $WorkCellTD, $scrollerbarDiv);
                 else {
-                    var timeCellClassName = this.currentView() == "month" || (this._isCustomMonthView()) ? "e-monthleftindent" : "e-workleftindent";
-                    this.$TimeCellTD = ej.buildTag('td', "", {}, {}).addClass(timeCellClassName);
-                    var colspan = [], index, columnValue = [],cols2=[];
-                    var cols = this.currentView() == "month" || (this._isCustomMonthView()) ? 7 : this._getRenderDates().length;
-                    var timeCellhtml;
+                    this.$TimeCellTD = ej.buildTag('td', "", {}, {}).addClass((this.currentView() == "month" || this._isCustomMonthView()) ? "e-monthleftindent" : "e-workleftindent");
+                    var timeCellhtml, workCellhtml;
                     var userTemplateId = ((!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId) && !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId)) || !ej.isNullOrUndefined(this.model.timeScale.minorSlotTemplateId)) ? true : false;
                     var template = (!ej.isNullOrUndefined(this.model.timeScale.majorSlotTemplateId)) ? true : false;
                     var viewclass = this.currentView() == "month" || (this._isCustomMonthView()) ? 1 : 0;
-                    var columnValueCount = this._timeSlotCount(userTemplateId,template);
-                    
-                    if ((userTemplateId ||template) && (this.currentView() != "month" && !(this._isCustomMonthView()))) {
+                    var columnValueCount = this._timeSlotCount(userTemplateId, template);
+                    if ((userTemplateId || template) && (this.currentView() != "month" && !(this._isCustomMonthView()))) {
                         columnValueCount.columnCount.pop();
                         timeCellhtml = this.userTimeCellTemplate.render({ timerows: this._getStartEndTime(), cols1: columnValueCount.columnCount, viewclass: viewclass, timeScale: this.model.timeScale.minorSlotCount, cheight: this.model.cellHeight, userTemplateId: userTemplateId, timeValue1: columnValueCount.timeValue1, template: template });
                     }
                     else
                         timeCellhtml = this.timeCellTemplate.render({ timerows: this._getStartEndTime(), cols1: columnValueCount.columnCount, viewclass: viewclass, timeScale: this.model.timeScale.minorSlotCount, userTemplateId: userTemplateId, template: template });
-                    var workCellhtml;
-					var userTemplate = (!ej.isNullOrUndefined(this.model.workCellsTemplateId)) ? true : false;
-					if (userTemplate) { var workHtml = this._getUserWorkCellsTemplate(); }
+                    var userTemplate = (!ej.isNullOrUndefined(this.model.workCellsTemplateId)) ? true : false;
+                    if (userTemplate) { var workHtml = this._getUserWorkCellsTemplate(); }
                     if (this.currentView() != "month" && !(this._isCustomMonthView()) && this.model.timeScale.enable)
                         workCellhtml = this.workcellTemp.render({ cellrows: this._getWorkCellsCount(), cols1: this.value, orientation: this.model.orientation, timeScale: this.model.timeScale.minorSlotCount, userTemplate: userTemplate, userHtml: workHtml });
                     else
@@ -6291,6 +6229,9 @@
         },
 
         _renderQueryCellInfo: function (method, record, temp) {
+            if (method == "renderHeaderBar") {
+                this._trigger("queryCellInfo", { element: temp, requestType: "headerBar" });
+            }
             if (method == "appointment") {
                 this._trigger("queryCellInfo", { appointment: record, element: temp, requestType: "appointment" });
             }
@@ -6302,16 +6243,14 @@
                 this._trigger("queryCellInfo", { element: $(emptytd[0]), requestType: "emptytd" });
             }
             if (method == "renderAgendaContent") {
-                // Header Content
                 var headerCells = this.aTR.find(".e-headercells");
                 for (var i = 0; i < headerCells.length; i++) {
                     this._trigger("queryCellInfo", { element: $(headerCells[i]), cellType: "agendaheadercells", requestType: "agendacells" });
                 }
-                // Work Area content
                 var dateColumn = this.element.find(".e-draggableworkarea").find(".e-datecolumn");
                 var timeColumn = this.element.find(".e-draggableworkarea").find(".e-timecolumn");
                 var eventColumn = this.element.find(".e-draggableworkarea").find(".e-eventcolumn");
-                if (this._tempResource.length!=0) {
+                if (this._tempResource.length != 0) {
                     var resourceColumn = this.element.find(".e-draggableworkarea").find(".e-resourcecolumn");
                     for (var i = 0; i < resourceColumn.length; i++) {
                         var result = this._getAgendaAppointment($(resourceColumn[i]));
@@ -6320,7 +6259,7 @@
                 }
                 for (var i = 0; i < dateColumn.length; i++) {
                     var result = this._getAgendaAppointment($(dateColumn[i]));
-                    this._trigger("queryCellInfo", { currentAppointmentDate: new Date(new Date(result[0][this._appointmentSettings['startTime']]).setHours(0,0,0)),appointments:result, element: $(dateColumn[i]), cellType: "agendadatecell", requestType: "agendacells" });
+                    this._trigger("queryCellInfo", { currentAppointmentDate: new Date(new Date(result[0][this._appointmentSettings['startTime']]).setHours(0, 0, 0)), appointments: result, element: $(dateColumn[i]), cellType: "agendadatecell", requestType: "agendacells" });
                 }
                 for (var i = 0; i < timeColumn.length; i++) {
                     var result = this._getAgendaAppointment($(timeColumn[i]));
@@ -6353,10 +6292,10 @@
                         var numberOfDates = headerCells.length / this.res1.length;
                         for (var i = 0; i < headerCells.length; i++) {
                             var k = Math.floor(i / numberOfDates);
-                            this._trigger("queryCellInfo", { resource: this.res1[k],currentDay: headerDates[i].currentDay, element: $(headerCells[i]), requestType: "headercells" });
+                            this._trigger("queryCellInfo", { resource: this.res1[k], currentDay: headerDates[i].currentDay, element: $(headerCells[i]), requestType: "headercells" });
                         }
                     }
-                    if ((this._tempResource.length!=0)) {
+                    if ((this._tempResource.length != 0)) {
                         var resource = [];
                         var resourceHeaderCells = this.aTR.find(".e-resourcecells");
                         var resourceHeaderDivCells = this.aTR.find(".e-resourceleftindentcells");
@@ -6406,7 +6345,7 @@
                         };
                         this._trigger("queryCellInfo", { cell: event, element: $(dateHeader[i]), requestType: "headerdate" });
                     }
-                    if ((this._tempResource.length!=0)) {
+                    if ((this._tempResource.length != 0)) {
                         var resourceGroupHeader = this.aTR.find(".e-horizontalheader");
                         for (var i = 0; i < resourceGroupHeader.length; i++) {
                             this._trigger("queryCellInfo", { element: $(resourceGroupHeader[i]), requestType: "resourcegroupheader" });
@@ -6457,7 +6396,7 @@
                 else {
                     var tdElements;
                     tdElements = !ej.isNullOrUndefined(this.$WorkCellDiv) ? this.$WorkCellDiv.find(".e-workcells") : null;
-                    if ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.$WorkCellDiv)) {
+                    if ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.$WorkCellDiv)) {
                         var resourceHeaderCells = this.$WorkCellDiv.find(".e-resourceheadercells");
                         var resource = this._resourceSort();
                         var resourceHeader = this.wTR.find('.e-horizontresheaderdiv');
@@ -6490,7 +6429,7 @@
             var value = 0, columnValue = [], cols2 = [];
             if ((!userTemplateId && !template) || (this.currentView() === "month" || (this._isCustomMonthView()))) {
                 var strTime = this._getStartEndTime();
-                var lenMinorSlot = this.model.orientation == "vertical" ? this.model.timeScale.minorSlotCount: this.model.timeScale.minorSlotCount - 1;
+                var lenMinorSlot = this.model.orientation == "vertical" ? this.model.timeScale.minorSlotCount : this.model.timeScale.minorSlotCount - 1;
                 for (var j = 0; j < strTime.length; j++) {
                     for (var i = 0; i < lenMinorSlot; i++) {
                         var value = value + (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
@@ -6548,11 +6487,11 @@
                 }
                 template = true;
             }
-            return { columnCount: columnCount, timeValue1: timeValue1 ,strTime:strTime};
+            return { columnCount: columnCount, timeValue1: timeValue1, strTime: strTime };
         },
         _renderAgendaContent: function () {
             this.element.find(".e-agendacellstab").remove();
-            var dateStart = new Date(new Date(this.currentDate()).setHours(0, 0, 0));
+            var dateStart = new Date(new Date(this.currentDate()).setHours(0, 0, 0, 0));
             var row = []; var col = []; this._app = [];
             var startTimeDisp, endTimeDisp, date, time, subject, colorDiv, resName, userAppTemplId, userTempHtml, userDateId, userDateHtml, userTimeId, userTimeHtml, userResourceId, userResourceHtml;
             if (!this.model.group) this.res1 = ["0"];
@@ -6561,12 +6500,13 @@
             for (var res = 0; res < this.res1.length; res++) {
                 var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(dateStart));
                 predicate = predicate["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(new Date(dateStart).setDate(dateStart.getDate() + count)).setHours(23, 59, 59)));
-                predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
+                predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
                 var appList = new ej.DataManager(this._processed).executeLocal(new ej.Query().where(predicate));
+                appList = this._appointmentSort(appList);
                 this._app = $.merge(this._app, appList);
                 if (appList.length > 0) {
                     var resGroup = [];
-                    if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources) {
+                    if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources) {
                         var resgroupid = this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["groupId"]];
                         var resLevels = this._resCollection;
                         for (var i = resLevels.length - 1; i > 0; i--) {
@@ -6576,7 +6516,7 @@
                         }
                         resGroup.reverse();
                     }
-                    var resChild = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? true : false;
+                    var resChild = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? true : false;
                     var resRowSpan = appList.length;
                     userResourceId = (this.model.resourceHeaderTemplateId) ? true : false;
                     userResourceHtml = userResourceId ? this._getResourceHeadTemplate(this.res1[res]) : "";
@@ -6588,20 +6528,20 @@
                     for (var day; day <= count; day++) {
                         var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(new Date(dateStart).setDate(dateStart.getDate() + day)));
                         predicate = predicate["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(new Date(dateStart).setDate(dateStart.getDate() + day)).setHours(23, 59, 59)));
-                        predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
+                        predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
                         var dailyapplist = new ej.DataManager(appList).executeLocal(new ej.Query().where(predicate));
                         if (dailyapplist.length > 0) {
                             row.push(row.length + 1);
                             var dayRowSpan = dailyapplist.length; var dayChild = true; var dayBorderBottom = false;
                             for (var i = 0; i < dailyapplist.length; i++) {
                                 if (i == dailyapplist.length - 1) dayBorderBottom = true;
-                                startTimeDisp = this._timeMode == "12" ? ej.format(dailyapplist[i][this._appointmentSettings["startTime"]], this._pattern.t) : ej.format(dailyapplist[i][this._appointmentSettings["startTime"]], "HH:mm");
-                                endTimeDisp = this._timeMode == "12" ? ej.format(dailyapplist[i][this._appointmentSettings["endTime"]], this._pattern.t) : ej.format(dailyapplist[i][this._appointmentSettings["endTime"]], "HH:mm");
-                                date = "<strong class='e-agendaday'>" + ej.format(new Date(dailyapplist[i][this._appointmentSettings['startTime']]), 'dd') + "</strong><span class='e-agendaweek'>" + ej.format(new Date(dailyapplist[i][this._appointmentSettings['startTime']]), 'dddd') + "</span><span class='e-agendamonth'>" + ej.format(new Date(dailyapplist[i][this._appointmentSettings['startTime']]), 'MMM, yyyy') + "</span>";
-                                time = (!ej.isNullOrUndefined(dailyapplist[i][this._appointmentSettings["allDay"]]) && $.parseJSON(dailyapplist[i][this._appointmentSettings["allDay"]])) ? "<div class='e-icon e-circle e-scheduleallday'></div>" + this._getLocalizedLabels("AllDay") : startTimeDisp + " - " + endTimeDisp;
-                                subject =(!ej.isNullOrUndefined(dailyapplist[i][this._appointmentSettings["recurrence"]]) && $.parseJSON(dailyapplist[i][this._appointmentSettings["recurrence"]])) ? dailyapplist[i][this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1 ? "<span class='e-icon e-schedulerepeatedit' title='" + repeatText + "'/>" + dailyapplist[i][this._appointmentSettings["subject"]] : "<span class='e-icon e-schedulerepeat' title='" + repeatText + "'/>" + dailyapplist[i][this._appointmentSettings["subject"]] : dailyapplist[i][this._appointmentSettings["subject"]];
-                                colorDiv = (this.model.categorizeSettings.enable && !ej.isNullOrUndefined(dailyapplist[i][this._appointmentSettings["categorize"]]) && dailyapplist[i][this._appointmentSettings["categorize"]] != "") ? this._getCategorizeColor(dailyapplist[i]) : ((this._tempResource.length!=0) && ej.scheduleFeatures.resources) ? this._getResourceColor(dailyapplist[i]) : { appointData: "", appointCustomcss: "", appointtextcolor: "" };
-                                resName = (!ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources && (this._tempResource.length != 0))? this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["text"]] : "";
+                                startTimeDisp = this._timeMode == "12" ? ej.format(dailyapplist[i][this._appointmentSettings["startTime"]], this._pattern.t, this.model.locale) : ej.format(dailyapplist[i][this._appointmentSettings["startTime"]], "HH:mm", this.model.locale);
+                                endTimeDisp = this._timeMode == "12" ? ej.format(dailyapplist[i][this._appointmentSettings["endTime"]], this._pattern.t, this.model.locale) : ej.format(dailyapplist[i][this._appointmentSettings["endTime"]], "HH:mm", this.model.locale);
+                                date = "<strong class='e-agendaday'>" + ej.format(new Date(dailyapplist[i][this._appointmentSettings['startTime']]), 'dd', this.model.locale) + "</strong><span class='e-agendaweek'>" + ej.format(new Date(dailyapplist[i][this._appointmentSettings['startTime']]), 'dddd', this.model.locale) + "</span><span class='e-agendamonth'>" + ej.format(new Date(dailyapplist[i][this._appointmentSettings['startTime']]), 'MMM, yyyy', this.model.locale) + "</span>";
+                                time = (!ej.isNullOrUndefined(dailyapplist[i][this._appointmentSettings["allDay"]]) && JSON.parse(dailyapplist[i][this._appointmentSettings["allDay"]])) ? "<div class='e-icon e-circle e-scheduleallday'></div>" + this._getLocalizedLabels("AllDay") : startTimeDisp + " - " + endTimeDisp;
+                                subject = (!ej.isNullOrUndefined(dailyapplist[i][this._appointmentSettings["recurrence"]]) && JSON.parse(dailyapplist[i][this._appointmentSettings["recurrence"]])) ? dailyapplist[i][this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1 ? "<span class='e-icon e-schedulerepeatedit' title='" + repeatText + "'/>" + dailyapplist[i][this._appointmentSettings["subject"]] : "<span class='e-icon e-schedulerepeat' title='" + repeatText + "'/>" + dailyapplist[i][this._appointmentSettings["subject"]] : dailyapplist[i][this._appointmentSettings["subject"]];
+                                colorDiv = (this.model.categorizeSettings.enable && !ej.isNullOrUndefined(dailyapplist[i][this._appointmentSettings["categorize"]]) && dailyapplist[i][this._appointmentSettings["categorize"]] != "") ? this._getCategorizeColor(dailyapplist[i]) : ((this._tempResource.length != 0) && ej.scheduleFeatures.resources) ? this._getResourceColor(dailyapplist[i]) : { appointData: "", appointCustomcss: "", appointtextcolor: "" };
+                                resName = (!ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources && (this._tempResource.length != 0)) ? this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["text"]] : "";
                                 userAppTemplId = (this.model.appointmentTemplateId) ? true : false;
                                 userTempHtml = userAppTemplId ? dailyapplist[i][this._appointmentSettings["recurrence"]] ? dailyapplist[i][this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1 ? "<span class='e-icon e-schedulerepeatedit' title='" + repeatText + "'/>" + this._getUserAppointmentTemplate(dailyapplist[i]) : "<span class='e-icon e-schedulerepeat' title='" + repeatText + "'/>" + this._getUserAppointmentTemplate(dailyapplist[i]) : this._getUserAppointmentTemplate(dailyapplist[i]) : "";
                                 userDateId = (this.model.agendaViewSettings.dateColumnTemplateId) ? true : false;
@@ -6632,7 +6572,7 @@
             var _scrollDiv = $('div#' + this._id + "_scroller");
             if (ej.isNullOrUndefined(_scrollDiv.data("ejScroller"))) {
                 _scrollDiv.ejScroller({
-                    enableRTL: this.model.enableRTL, height: this.scHeight - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top) - 1, width: this.element.width() - 2, cssClass: this.model.cssClass
+                    enableRTL: this.model.enableRTL, height: this.scHeight - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top) - 1, width: parseInt(this.element.width()) - 2, cssClass: this.model.cssClass
                 });
                 (!this._mediaQuery) && this._nextPrevAppointment(this.model.showAppointmentNavigator);
             }
@@ -6640,7 +6580,7 @@
             var border = this.model.enableRTL ? "e-borderright" : "e-borderleft";
             _scrollDiv.ejScroller("isVScroll") ? (this.element.find(".e-emptyscrolltd").addClass(border).show() && this.element.find('.e-draggableworkarea').height(this.element.find('.e-draggableworkarea').height() + 1)) : this.element.find(".e-emptyscrolltd").removeClass(border).hide();
             this.element.find(".e-vscroll").css("left", (this.model.enableRTL) ? 0 : this.element.outerWidth() - (_scrollDiv.ejScroller("isVScroll") ? 19 : 0));
-            this.element.find(".e-mobileNavigation").css("left", (this.model.enableRTL) ? (_scrollDiv.ejScroller("isVScroll") ? 18 : 0) : this.element.outerWidth() - 36);
+            this.element.find(".e-mobileNavigation").css(this.model.enableRTL ? "right" : "left", this.element.outerWidth() - 36);
             this.element.find(".e-headrealldaytable").parent().width(this.element.find(".e-draggableworkarea").width());
             (this.model.showAppointmentNavigator) && this._nextPrevButton(this._app);
             (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("renderAgendaContent");
@@ -6696,16 +6636,16 @@
 
         _initDataSource: function (currentAction) {
             var query = this._columnToSelect(this.model.appointmentSettings, currentAction);
-            var tempQuery=$.extend(true,[],query._params);			
-			this._true = this.model.isDST == true ? true : false; 
-			if (ej.isNullOrUndefined(this.model.timeZone) && this.model.isDST == false)
-             this._timeZoneOffset = new Date().getTimezoneOffset() - this._stdTimezoneOffset();
+            var tempQuery = $.extend(true, [], query._params);
+            this._true = this.model.isDST == true ? true : false;
+            if (ej.isNullOrUndefined(this.model.timeZone) && this.model.isDST == false)
+                this._timeZoneOffset = new Date().getTimezoneOffset() - this._stdTimezoneOffset();
             else
-             this._timeZoneOffset = 0;
-            query._params = [];			
-            var value=new Date(new Date(this.currentDate()).setHours(0,0,0));
-            var temp=new Date(value.getTime() + (-(this._timeZoneCalculate()) * 60000));
-            query.addParams("CurrentDate",temp).addParams("CurrentView", this.currentView()).addParams("CurrentAction", currentAction);            
+                this._timeZoneOffset = 0;
+            query._params = [];
+            var value = new Date(new Date(this.currentDate()).setHours(0, 0, 0));
+            var temp = new Date(value.getTime() + (-(this._timeZoneCalculate()) * 60000));
+            query.addParams("CurrentDate", temp).addParams("CurrentView", this.currentView()).addParams("CurrentAction", currentAction);
             for (var i = 0; i < tempQuery.length; i++) {
                 if (tempQuery[i].key != "CurrentDate" && tempQuery[i].key != "CurrentView" && tempQuery[i].key != "CurrentAction") {
                     query.addParams(tempQuery[i].key, tempQuery[i].value);
@@ -6713,8 +6653,8 @@
             }
             var proxy = this;
             var queryPromise = this.dataSource().executeQuery(query);
-            queryPromise.done(function (e) {        
-                 proxy._dataCount = e.result.length;
+            queryPromise.done(function (e) {
+                proxy._dataCount = e.result.length;
                 if (!ej.isNullOrUndefined(e.result.result)) {
                     proxy._dataCount = e.result.count + 1;
                     e.result = e.result.result;
@@ -6727,11 +6667,11 @@
                 if (proxy._app.length < 1 && proxy.model.showAppointmentNavigator)
                     proxy._nextPrevButton(proxy._app);
             });
-			if (ej.isNullOrUndefined(this._app) || this._app.length < 1) {
-				this._app = [];
-				if (this._app.length < 1 && this.model.showAppointmentNavigator)
+            if (ej.isNullOrUndefined(this._app) || this._app.length < 1) {
+                this._app = [];
+                if (this._app.length < 1 && this.model.showAppointmentNavigator)
                     this._nextPrevButton(this._app);
-			}
+            }
         },
 
         _bindCategorizeData: function () {
@@ -6848,10 +6788,9 @@
             return Math.max(new Date(new Date().getFullYear(), 0, 1).getTimezoneOffset(), new Date(new Date().getFullYear(), 6, 1).getTimezoneOffset());
         },
         _timeZoneCalculate: function (appointment) {
-            var utc, timezone, oldtimezone, hour, mins, modelutc, oldhour, oldmins, oldmodelutc, localutc = new Date().getTimezoneOffset();
-            if (ej.isNullOrUndefined(this.model.timeZone))
-                utc = (this.model.isDST == false) ? -localutc + this._timeZoneOffset : -localutc;
-            else {
+            var utc, timezone, oldtimezone, hour, mins, modelutc, oldhour, oldmins, oldmodelutc, localutc = (new Date().toString().indexOf("Daylight Time") != -1 && this.model.isDST == false) ? -(new Date().getTimezoneOffset()) - this._timeZoneOffset : -(new Date().getTimezoneOffset());
+            utc = localutc;
+            if (!ej.isNullOrUndefined(this.model.timeZone)) {
                 if (this.model.timeZone.indexOf(':') !== -1) {
                     if (ej.isNullOrUndefined(this.tzone)) this.tzone = this.model.timeZone;
                     timezone = this.model.timeZone.split(" ")[this.model.timeZone.split(" ").length - 1].split(":");
@@ -6878,34 +6817,37 @@
             return utc;
         },
         _timeZoneAppointments: function (appoint, app) {
-			var tempStartTime, tempEndTime, startUtc, endUtc, difference, startTime, endTime;
-            if (!appoint[this._appointmentSettings["allDay"]]) {
-                if (ej.isNullOrUndefined(this._dayLight)) {
-                    startUtc = appoint[this._appointmentSettings["startTimeZone"]];
-					endUtc = appoint[this._appointmentSettings["endTimeZone"]];
-					if (ej.isNullOrUndefined(endUtc) && !ej.isNullOrUndefined(startUtc)) appoint[this._appointmentSettings["endTimeZone"]] = endUtc = startUtc;
-					if (!ej.isNullOrUndefined(endUtc) && ej.isNullOrUndefined(startUtc)) appoint[this._appointmentSettings["startTimeZone"]] = startUtc = endUtc;
-					if (!ej.isNullOrUndefined(startUtc) && !ej.isNullOrUndefined(endUtc)) {
-						startUtc = startUtc.indexOf("UTC") != -1 ? parseInt(startUtc.split(" ")[1].split(":")[0]) * 60 + parseInt(startUtc.split(" ")[1].split(":")[1]) : parseInt(startUtc.split(":")[0]) * 60 + parseInt(startUtc.split(":")[1]);
-						endUtc = endUtc.indexOf("UTC") != -1 ? parseInt(endUtc.split(" ")[1].split(":")[0]) * 60 + parseInt(endUtc.split(" ")[1].split(":")[1]) : parseInt(endUtc.split(":")[0]) * 60 + parseInt(endUtc.split(':')[1]);
-					}
-                    difference = (ej.isNullOrUndefined(startUtc) && !$.isNumeric(startUtc)) ? this._timeZoneCalculate(appoint) : startUtc - this._timeZoneCalculate(appoint);
+            if (this.model.appointmentSettings.applyTimeOffset) {
+                var tempStartTime, tempEndTime, startUtc, endUtc, difference, startTime, endTime;
+                if (!appoint[this._appointmentSettings["allDay"]]) {
+                    if (ej.isNullOrUndefined(this._dayLight)) {
+                        startUtc = appoint[this._appointmentSettings["startTimeZone"]];
+                        endUtc = appoint[this._appointmentSettings["endTimeZone"]];
+                        if (ej.isNullOrUndefined(endUtc) && !ej.isNullOrUndefined(startUtc)) appoint[this._appointmentSettings["endTimeZone"]] = endUtc = startUtc;
+                        if (!ej.isNullOrUndefined(endUtc) && ej.isNullOrUndefined(startUtc)) appoint[this._appointmentSettings["startTimeZone"]] = startUtc = endUtc;
+                        if (!ej.isNullOrUndefined(startUtc) && !ej.isNullOrUndefined(endUtc)) {
+                            startUtc = startUtc.indexOf("UTC") != -1 ? parseInt(startUtc.split(" ")[1].split(":")[0]) * 60 + parseInt(startUtc.split(" ")[1].split(":")[1]) : parseInt(startUtc.split(":")[0]) * 60 + parseInt(startUtc.split(":")[1]);
+                            endUtc = endUtc.indexOf("UTC") != -1 ? parseInt(endUtc.split(" ")[1].split(":")[0]) * 60 + parseInt(endUtc.split(" ")[1].split(":")[1]) : parseInt(endUtc.split(":")[0]) * 60 + parseInt(endUtc.split(':')[1]);
+                        }
+                        difference = (ej.isNullOrUndefined(startUtc) && !$.isNumeric(startUtc)) ? this._timeZoneCalculate(appoint) : startUtc - this._timeZoneCalculate(appoint);
+                    }
+                    else difference = this._timeValue;
+                    difference = (app == "") ? -difference : difference;
+                    tempStartTime = new Date(appoint[this._appointmentSettings["startTime"]]);
+                    tempEndTime = new Date(appoint[this._appointmentSettings["endTime"]]);
+                    if (appoint[this._appointmentSettings["allDay"]] && (Math.round((new Date(appoint[this._appointmentSettings["endTime"]]) - new Date(appoint[this._appointmentSettings["startTime"]])) / 3600000) < 24))
+                        return appoint;
+                    else {
+                        appoint[this._appointmentSettings["startTime"]] = new Date(tempStartTime.setMinutes(tempStartTime.getMinutes() + difference));
+                        appoint[this._appointmentSettings["endTime"]] = new Date(tempEndTime.setMinutes(tempEndTime.getMinutes() + difference));
+                        return appoint;
+                    }
                 }
-                else difference = this._timeValue;
-                difference = (app == "") ? -difference : difference;
-                tempStartTime = new Date(appoint[this._appointmentSettings["startTime"]]);
-                tempEndTime = new Date(appoint[this._appointmentSettings["endTime"]]);
-                if (appoint[this._appointmentSettings["allDay"]] && (Math.round((new Date(appoint[this._appointmentSettings["endTime"]]) - new Date(appoint[this._appointmentSettings["startTime"]])) / 3600000) < 24))
-                    return appoint;
                 else {
-                    appoint[this._appointmentSettings["startTime"]] = new Date(tempStartTime.setMinutes(tempStartTime.getMinutes() + difference));
-                    appoint[this._appointmentSettings["endTime"]] = new Date(tempEndTime.setMinutes(tempEndTime.getMinutes() + difference));
-					return appoint;
+                    appoint[this._appointmentSettings["startTime"]] = new Date(appoint[this._appointmentSettings["startTime"]]);
+                    appoint[this._appointmentSettings["endTime"]] = new Date(appoint[this._appointmentSettings["endTime"]]);
                 }
-            }
-			else {
-                appoint[this._appointmentSettings["startTime"]] = new Date(appoint[this._appointmentSettings["startTime"]]);
-                appoint[this._appointmentSettings["endTime"]] = new Date(appoint[this._appointmentSettings["endTime"]]);                    
+                return appoint;
             }
             return appoint;
         },
@@ -6932,10 +6874,10 @@
                 //    maxAppTaskId = Math.max.apply(null, appTaskIds);
                 //}
                 this._maxId = (ej.isNullOrUndefined(appointments[0]) || ej.isNullOrUndefined(appointments[0].AppTaskId)) ? 1 : appointments[0].AppTaskId;
-                this.app = true;
-                var recurEndDate;
                 for (var app = 0; app < appointments.length; app++) {
-                    if (this._bindAppointments == true && !this._angular && !this._setmodelvalue && ej.isNullOrUndefined(this._enablePersist)) {
+                    appointments[app][this._appointmentSettings["startTime"]] = (new Date()).parseISO8601(appointments[app][this._appointmentSettings["startTime"]]);
+                    appointments[app][this._appointmentSettings["endTime"]] = (new Date()).parseISO8601(appointments[app][this._appointmentSettings["endTime"]]);
+                    if (this._bindAppointments == true && !this._angular && !this._setmodelvalue && this._applyTimeOffset && ej.isNullOrUndefined(this._enablePersist)) {
                         var appoint = this._timeZoneAppointments(appointments[app], "reverse");
                         this._appointmentProcessing(appoint);
                     }
@@ -6943,7 +6885,7 @@
                         this._appointmentProcessing(appointments[app]);
                 }
                 this._bindAppointments = false;
-				this._setmodelvalue = false;
+                this._setmodelvalue = false;
                 this._processed = this._sortAppById(this._processed);
                 return this._processed;
             }
@@ -6954,8 +6896,7 @@
                   .toString(16)
                   .substring(1);
             }
-            return guid() + guid() + '-' + guid() + '-' + guid() + '-' +
-              guid() + '-' + guid() + guid() + guid();
+            return guid() + guid() + '-' + guid() + '-' + guid() + '-' + guid() + '-' + guid() + guid() + guid();
         },
         _RecurrenceAppointment: function (appointment) {
             var day_start = new Date(appointment[this._appointmentSettings["startTime"]]);
@@ -6964,13 +6905,14 @@
             var hours = Math.floor((duration - (timeZone / 1000)) / 3600);
             var minutes = Math.floor((duration % 3600) / 60);
             var recurEdit = this._appointmentAddWindow.find(".e-recurrenceeditor").data("ejRecurrenceEditor");
-            recurEdit._rRule = {},_count = 0, this._filt = true, _lastDay = false;
+            recurEdit._rRule = {}, _count = 0, this._filt = true, _lastDay = false;
             appointment.AppTaskId = ej.isNullOrUndefined(appointment.AppTaskId) ? this._maxId : appointment.AppTaskId;
+            ej.isNullOrUndefined(appointment[this._appointmentSettings["id"]]) && (appointment[this._appointmentSettings["id"]] = appointment.AppTaskId);
             recurEdit.model.startDate = new Date(this.currentDate());
-            var collection = recurEdit.recurrenceDateGenerator(appointment[this._appointmentSettings["recurrenceRule"]], day_start);
+            var collection = recurEdit.recurrenceDateGenerator(appointment[this._appointmentSettings["recurrenceRule"]], day_start, appointment[this._appointmentSettings["recurrenceExDate"]]);
             var i = 0;
-            var minDateRange = this.currentView() == "agenda" ? new Date(new Date(this.currentDate()).setHours(0, 0, 0)) : this._dateRender[0];
-            var maxDateRang = this.currentView() == "agenda" ? new Date(new Date(new Date(this.currentDate()).setDate(minDateRange.getDate() + (this.model.agendaViewSettings.daysInAgenda > 0 ? this.model.agendaViewSettings.daysInAgenda - 1 : 0))).setHours(23, 59, 59)) : new Date(new Date(this._dateRender[this._dateRender.length - 1]).setHours(23, 59, 59));
+            //var minDateRange = this.currentView() == "agenda" ? new Date(new Date(this.currentDate()).setHours(0, 0, 0)) : this._dateRender[0];
+            //var maxDateRang = this.currentView() == "agenda" ? new Date(new Date(new Date(this.currentDate()).setDate(minDateRange.getDate() + (this.model.agendaViewSettings.daysInAgenda > 0 ? this.model.agendaViewSettings.daysInAgenda - 1 : 0))).setHours(23, 59, 59)) : new Date(new Date(this._dateRender[this._dateRender.length - 1]).setHours(23, 59, 59));
             //var newArray = collection.filter(function (name) {
             //    return name >= minDateRange && name <= maxDateRang;
             //});
@@ -6982,16 +6924,15 @@
                 var strTime = new Date(orgStrTime.getFullYear(), orgStrTime.getMonth(), orgStrTime.getDate(), new Date(appointment[this._appointmentSettings["startTime"]]).getHours(), new Date(appointment[this._appointmentSettings["startTime"]]).getMinutes(), 0);
                 var endTime = new Date(orgStrTime.getFullYear(), orgStrTime.getMonth(), orgStrTime.getDate(), new Date(appointment[this._appointmentSettings["startTime"]]).getHours() + hours, new Date(appointment[this._appointmentSettings["startTime"]]).getMinutes() + minutes, orgEndTime.getSeconds());
                 this._idChecking();
-                appointment[this._appointmentSettings["recurrenceId"]] = appointment.AppTaskId;
-                appointment["ParentId"] = appointment.AppTaskId;
-                appointment[this._appointmentSettings["recurrenceExDate"]] = appointment[this._appointmentSettings["recurrenceExDate"]] == null ? null : appointment[this._appointmentSettings["recurrenceExDate"]];
+                appointment[this._appointmentSettings["recurrenceId"]] = (appointment[this._appointmentSettings["recurrenceId"]] || appointment[this._appointmentSettings["id"]] || appointment.AppTaskId);
+                appointment["ParentId"] = appointment[this._appointmentSettings["recurrenceId"]];
                 if (!ej.isNullOrUndefined(recurEdit._rRule.exDate)) {
-                    if (recurEdit._rRule.exDate.indexOf(ej.format(new Date(orgStrTime), this._pattern.d)) == -1) {
-                        newAppointment = this._addAppData(appointment, this._maxId, strTime, endTime, appointment.AppTaskId);
+                    if (recurEdit._rRule.exDate.indexOf(ej.format(new Date(orgStrTime), this._pattern.d, this.model.locale)) == -1) {
+                        newAppointment = this._addAppData(appointment, this._maxId, strTime, endTime, appointment.ParentId);
                     }
                 }
                 else
-                    newAppointment = this._addAppData(appointment, this._maxId, strTime, endTime, appointment.AppTaskId);
+                    newAppointment = this._addAppData(appointment, this._maxId, strTime, endTime, appointment.ParentId);
 
                 if ((new Date(new Date(appointment[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(appointment[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) && (((appointment[this._appointmentSettings["endTime"]] - appointment[this._appointmentSettings["startTime"]]) / 3600000) < 24) && (appointment[this._appointmentSettings["allDay"]] !== true)) {
                     newAppointment.Guid = this._guidFormatGenerate();
@@ -7012,24 +6953,24 @@
             }
             this._filt = false;
         },
-        
-		_recurrenceAppSort: function (apps) {
-			var splitProcessed = [];
-			for (var a = 0; a < apps.length; a++) {
-				var obj = new ej.DataManager(apps).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, apps[a]["Guid"]));
-				if (obj.length > 1) {
-					var tempObj = $.extend(true,[],obj);
-					tempObj[0][this._appointmentSettings["endTime"]] = tempObj[tempObj.length - 1][this._appointmentSettings["endTime"]];
-					splitProcessed.push(tempObj[0]);
-					a++;
-				}
-				else
-					splitProcessed.push(apps[a]);
-			}
-			return splitProcessed;
-		},
-		_appointmentProcessing: function (appointment) {
-		    var recurEdit = this._appointmentAddWindow.find(".e-recurrenceeditor").data("ejRecurrenceEditor");
+
+        _recurrenceAppSort: function (apps) {
+            var splitProcessed = [];
+            for (var a = 0; a < apps.length; a++) {
+                var obj = new ej.DataManager(apps).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, apps[a]["Guid"]));
+                if (obj.length > 1) {
+                    var tempObj = $.extend(true, [], obj);
+                    tempObj[0][this._appointmentSettings["endTime"]] = tempObj[tempObj.length - 1][this._appointmentSettings["endTime"]];
+                    splitProcessed.push(tempObj[0]);
+                    a++;
+                }
+                else
+                    splitProcessed.push(apps[a]);
+            }
+            return splitProcessed;
+        },
+        _appointmentProcessing: function (appointment) {
+            var recurEdit = this._appointmentAddWindow.find(".e-recurrenceeditor").data("ejRecurrenceEditor");
             this._maxId = !ej.isNullOrUndefined(this._appMainId) ? parseInt(this._appMainId) + 1 : parseInt(this._maxId);
             var day_start = new Date(appointment[this._appointmentSettings["startTime"]]);
             var duration = ((new Date(appointment[this._appointmentSettings["endTime"]]) - new Date(appointment[this._appointmentSettings["startTime"]])) / 1000);
@@ -7041,59 +6982,47 @@
             (!ej.isNullOrUndefined(appointment[this._appointmentSettings["recurrence"]])) && (!ej.isNullOrUndefined(appointment[this._appointmentSettings["recurrenceRule"]])) && recurEdit.recurrenceRuleSplit(appointment[this._appointmentSettings["recurrenceRule"]], appointment[this._appointmentSettings["recurrenceExDate"]]);
             if (appointment[this._appointmentSettings["recurrence"]] == 1 && ej.isNullOrUndefined(recurEdit._rRule.recurEditId)) {
                 this._RecurrenceAppointment(appointment);
-              // this._maxId++;
             }
-
-            if ((new Date(new Date(appointment[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(appointment[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) && (((appointment[this._appointmentSettings["endTime"]] - appointment[this._appointmentSettings["startTime"]]) / 3600000) < 24) && (appointment[this._appointmentSettings["allDay"]] !== true) && ((appointment[this._appointmentSettings["recurrence"]] && !ej.isNullOrUndefined(recurEdit._rRule.recurEditId)) || !appointment[this._appointmentSettings["recurrence"]])) {         
-                appointment[this._appointmentSettings["recurrenceId"]] = appointment[this._appointmentSettings["recurrenceId"]] == null ? null : appointment[this._appointmentSettings["recurrenceId"]];
-                appointment[this._appointmentSettings["recurrenceExDate"]] = appointment[this._appointmentSettings["recurrenceExDate"]] == null ? null : appointment[this._appointmentSettings["recurrenceExDate"]];
-                this._appMainId= appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
-                ej.isNullOrUndefined(appointment.ParentId) && (appointment.ParentId = appointment.AppTaskId);
+            else if ((new Date(new Date(appointment[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(appointment[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) && (((appointment[this._appointmentSettings["endTime"]] - appointment[this._appointmentSettings["startTime"]]) / 3600000) < 24) && (appointment[this._appointmentSettings["allDay"]] !== true) && ((appointment[this._appointmentSettings["recurrence"]] && !ej.isNullOrUndefined(recurEdit._rRule.recurEditId)) || !appointment[this._appointmentSettings["recurrence"]])) {
+                this._appMainId = appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
+                ej.isNullOrUndefined(appointment[this._appointmentSettings["id"]]) && (appointment[this._appointmentSettings["id"]] = appointment.AppTaskId);
+                appointment.ParentId = (!ej.isNullOrUndefined(recurEdit._rRule.recurEditId) ? recurEdit._rRule.recurEditId : appointment[this._appointmentSettings["id"]]);
+                if (appointment[this._appointmentSettings["recurrence"]]) {
+                    appointment["ParentId"] = appointment[this._appointmentSettings["recurrenceId"]] = (appointment[this._appointmentSettings["recurrenceId"]] == null ? appointment["ParentId"] : appointment[this._appointmentSettings["recurrenceId"]]);
+                }
                 appointment.Guid = ej.isNullOrUndefined(appointment.Guid) ? this._guidFormatGenerate() : appointment.Guid;
                 this._maxId = appointment.AppTaskId;
-                this.app = false;
                 this._multipleDayApp(appointment, this._maxId, appointment[this._appointmentSettings["startTime"]], appointment[this._appointmentSettings["endTime"]]);
             }
-            else if ((((appointment[this._appointmentSettings["endTime"]] - appointment[this._appointmentSettings["startTime"]]) / 3600000) > 24)) {
-                if (((appointment[this._appointmentSettings["allDay"]] === true) || ((appointment[this._appointmentSettings["allDay"]] !== true) && ((appointment[this._appointmentSettings["endTime"]] - appointment[this._appointmentSettings["startTime"]]) / 3600000) > 24)) && appointment[this._appointmentSettings["recurrence"]] != 1) {
-                    this._filt = true;
-                    this._appMainId= appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
-                    ej.isNullOrUndefined(appointment.ParentId) && (appointment.ParentId = appointment.AppTaskId);
-                    appointment.Guid = ej.isNullOrUndefined(appointment.Guid) ? this._guidFormatGenerate() : appointment.Guid;
-                    this._maxId = appointment.AppTaskId;
-                    this.app = false;
-                    this._multipleSplit(appointment, this._maxId, appointment[this._appointmentSettings["startTime"]], appointment[this._appointmentSettings["endTime"]]);
+            else if ((((appointment[this._appointmentSettings["endTime"]] - appointment[this._appointmentSettings["startTime"]]) / 3600000) >= 24)) {
+                this._filt = true;
+                this._appMainId = appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
+                ej.isNullOrUndefined(appointment[this._appointmentSettings["id"]]) && (appointment[this._appointmentSettings["id"]] = appointment.AppTaskId);
+                appointment.ParentId = (!ej.isNullOrUndefined(recurEdit._rRule.recurEditId) ? recurEdit._rRule.recurEditId : appointment[this._appointmentSettings["id"]]);
+                if (appointment[this._appointmentSettings["recurrence"]]) {
+                    appointment["ParentId"] = appointment[this._appointmentSettings["recurrenceId"]] = (appointment[this._appointmentSettings["recurrenceId"]] == null ? appointment["ParentId"] : appointment[this._appointmentSettings["recurrenceId"]]);
                 }
-                else if (!ej.isNullOrUndefined(recurEdit._rRule.recurEditId)) {
-                    ej.isNullOrUndefined(appointment.ParentId) && (appointment.ParentId = recurEdit._rRule.recurEditId);
-                    this._appMainId= appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
-                    appointment.Guid = ej.isNullOrUndefined(appointment.Guid) ? this._guidFormatGenerate() : appointment.Guid;
-                    this._maxId = appointment.AppTaskId;
-                    this.app = false;
-                    this._multipleSplit(appointment, this._maxId, appointment[this._appointmentSettings["startTime"]], appointment[this._appointmentSettings["endTime"]]);
-                }
+                appointment.Guid = ej.isNullOrUndefined(appointment.Guid) ? this._guidFormatGenerate() : appointment.Guid;
+                this._maxId = appointment.AppTaskId;
+                this._multipleSplit(appointment, this._maxId, appointment[this._appointmentSettings["startTime"]], appointment[this._appointmentSettings["endTime"]]);
                 this._filt = false;
             }
             else if ((appointment[this._appointmentSettings["recurrence"]] == 0 || !ej.isNullOrUndefined(recurEdit._rRule.recurEditId))) {
-                this._appMainId=appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
-                ej.isNullOrUndefined(appointment.ParentId) && (appointment.ParentId = appointment.AppTaskId);
-                (!ej.isNullOrUndefined(recurEdit._rRule.recurEditId)) && (appointment.ParentId = recurEdit._rRule.recurEditId);
-                if (appointment[this._appointmentSettings["recurrence"]] != 0) {
-                    appointment[this._appointmentSettings["recurrenceId"]] = appointment[this._appointmentSettings["recurrenceId"]] == null ? appointment["ParentId"] : appointment[this._appointmentSettings["recurrenceId"]];
-                    appointment[this._appointmentSettings["recurrenceExDate"]] = appointment[this._appointmentSettings["recurrenceExDate"]] == null ? null : appointment[this._appointmentSettings["recurrenceExDate"]];
+                this._appMainId = appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
+                ej.isNullOrUndefined(appointment[this._appointmentSettings["id"]]) && (appointment[this._appointmentSettings["id"]] = appointment.AppTaskId);
+                appointment.ParentId = (!ej.isNullOrUndefined(recurEdit._rRule.recurEditId) ? recurEdit._rRule.recurEditId : appointment[this._appointmentSettings["id"]]);
+                if (appointment[this._appointmentSettings["recurrence"]]) {
+                    appointment["ParentId"] = appointment[this._appointmentSettings["recurrenceId"]] = (appointment[this._appointmentSettings["recurrenceId"]] == null ? appointment["ParentId"] : appointment[this._appointmentSettings["recurrenceId"]]);
                 }
                 appointment.Guid = ej.isNullOrUndefined(appointment.Guid) ? this._guidFormatGenerate() : appointment.Guid;
-                this.app = false;
                 this._processed.push(appointment);
             }
             else if (((appointment[this._appointmentSettings["recurrence"]] == undefined) || (appointment[this._appointmentSettings["allDay"]] == undefined)) && !appointment[this._appointmentSettings["recurrence"]]) {
-                this._appMainId= appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
-                ej.isNullOrUndefined(appointment.ParentId) && (appointment.ParentId = appointment.AppTaskId);
+                this._appMainId = appointment.AppTaskId = appointment.AppTaskId == null ? this._maxId : appointment.AppTaskId;
+                ej.isNullOrUndefined(appointment[this._appointmentSettings["id"]]) && (appointment[this._appointmentSettings["id"]] = appointment.AppTaskId);
+                appointment.ParentId = (appointment[this._appointmentSettings["id"]]);
                 appointment.Guid = ej.isNullOrUndefined(appointment.Guid) ? this._guidFormatGenerate() : appointment.Guid;
-                appointment.RecurrenceId = null;
-                appointment.recurrenceExDate = null;
-                appointment.Guid = ej.isNullOrUndefined(appointment.Guid) ? this._guidFormatGenerate() : appointment.Guid;
-                this.app = false;
+                appointment.RecurrenceId = appointment.recurrenceExDate = null;
                 this._processed.push(appointment);
             }
             this._appMainId = (ej.isNullOrUndefined(this._appMainId) || this._appMainId < this._maxId) ? this._maxId : this._appMainId;
@@ -7102,14 +7031,14 @@
             for (var i = 0; i < this._currentAppointmentData.length ; i++) {
                 var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, this._maxId);
                 var _editApp = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
-                if (_editApp.length == 0 || this.app == true) { this._maxId; this.app = false; break; }
+                if (_editApp.length == 0) { this._maxId; break; }
                 else
                     this._maxId++;
             }
             for (; ;) {
                 var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, this._maxId);
                 var _editApp = new ej.DataManager(this._processed).executeLocal(query);
-                if (_editApp.length == 0 || this.app == true) { this._maxId; this.app = false; break; }
+                if (_editApp.length == 0) { this._maxId; break; }
                 else
                     this._maxId++;
             }
@@ -7117,17 +7046,16 @@
         },
 
         _multipleDayApp: function (app, maxId, startTime, endTime) {
+            if (endTime.getHours() == 0 && endTime.getMinutes() == 0) endTime = new Date(endTime.getTime() - 1000);
             var dayStart = new Date(startTime);
             if ((this.model.orientation == "vertical") || (this.model.orientation == "horizontal") && (startTime < new Date(this._dateRender[0]) || endTime > new Date(new Date(this._dateRender[this._dateRender.length - 1]).setHours(29, 59, 59)))) {
                 var nextDay = new Date(new Date(startTime).getFullYear(), new Date(startTime).getMonth(), new Date(startTime).getDate());
                 var dayEnd = new Date(new Date(nextDay).setHours(new Date(nextDay).getHours() + 24));
-                dayEnd = new Date(new Date(dayEnd).setMinutes(new Date(dayEnd).getMinutes() - 1));
+                dayEnd = new Date(new Date(dayEnd).getTime() - 1000);
             }
             else
                 var dayEnd = new Date(endTime);
             while (dayStart >= new Date(startTime) && dayStart <= dayEnd && dayEnd <= new Date(endTime)) {
-                app[this._appointmentSettings["recurrenceId"]] = app[this._appointmentSettings["recurrenceId"]] == null ? null : app[this._appointmentSettings["recurrenceId"]];
-                app[this._appointmentSettings["recurrenceExDate"]] = app[this._appointmentSettings["recurrenceExDate"]] == null ? null : app[this._appointmentSettings["recurrenceExDate"]];
                 var appointment = this._addAppData(app, maxId, dayStart, dayEnd, app.ParentId);
                 this._processed.push(appointment);
                 dayStart = new Date(new Date(dayEnd).setMinutes(new Date(dayEnd).getMinutes() + 1));
@@ -7139,17 +7067,17 @@
         _multipleSplit: function (app, maxId, startTime, endTime) {
             startTime = new Date(startTime);
             if (this.currentView() == "workweek" && !this._resWorkWeek && $.inArray(new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate()).getTime(), this._dateRender) == -1) {
-				for (var i = 1; i < this._dateRender.length; i++) {
-					if ($.inArray(new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate()+i).getTime(), this._dateRender) >= 0) {
-						var index = $.inArray(new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate()+i).getTime(), this._dateRender);
-						startTime = new Date(this._dateRender[index]);
-					    break;
-					}
-				}
-				if (this.currentView() == "workweek" && !this._resWorkWeek && this.model.orientation == "horizontal" && $.inArray(new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate()).getTime(), this._dateRender) == -1) {
-					startTime = new Date(new Date(startTime).getFullYear(), new Date(startTime).getMonth(), new Date(startTime).getDate() + (7 - this._dateRender.length));
-				}
-			}
+                for (var i = 1; i < this._dateRender.length; i++) {
+                    if ($.inArray(new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate() + i).getTime(), this._dateRender) >= 0) {
+                        var index = $.inArray(new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate() + i).getTime(), this._dateRender);
+                        startTime = new Date(this._dateRender[index]);
+                        break;
+                    }
+                }
+                if (this.currentView() == "workweek" && !this._resWorkWeek && this.model.orientation == "horizontal" && $.inArray(new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate()).getTime(), this._dateRender) == -1) {
+                    startTime = new Date(new Date(startTime).getFullYear(), new Date(startTime).getMonth(), new Date(startTime).getDate() + (7 - this._dateRender.length));
+                }
+            }
             this.starttime = ((new Date(this._dateRender[0]) <= startTime) || this._filt == true) ? new Date(new Date(startTime).getFullYear(), new Date(startTime).getMonth(), new Date(startTime).getDate(), new Date(startTime).getHours(), new Date(startTime).getMinutes(), new Date(startTime).getSeconds()) : new Date(this._dateRender[0]);
             var end = new Date(new Date(endTime).getFullYear(), new Date(endTime).getMonth(), new Date(endTime).getDate(), 23, 59, 59);
             var next = 0;
@@ -7162,42 +7090,40 @@
                         differDate = new Date(day_start.getFullYear(), day_start.getMonth() + 1, 0).getDate() - (day_start.getDate());
                     else if (this.currentView() == "customview" && (this._renderDays <= 7 || this.model.orientation == "horizontal")) {
                         this.starttime = (new Date(new Date(day_start).getFullYear(), new Date(day_start).getMonth(), new Date(day_start).getDate()));
-						if (this._dateRender.indexOf(this.starttime.getTime()) != -1)
-							differDate = (this._dateRender.length - 1) - this._dateRender.indexOf(this.starttime.getTime());
-						else
-							differDate = (this.starttime.getTime() < new Date(this._dateRender[0]).getTime()) ? ((new Date(new Date(this._dateRender[0]).setDate(new Date(this._dateRender[0]).getDate() - 1)).getTime() - new Date(this.starttime).setHours(0,0,0,0)) / 3600000) / 24 : (this.starttime.getTime() > new Date(this._dateRender[this._dateRender.length - 1]).setHours(23,59,59)) ? this._dateRender.length - 1 : 0;
+                        if (this._dateRender.indexOf(this.starttime.getTime()) != -1)
+                            differDate = (this._dateRender.length - 1) - this._dateRender.indexOf(this.starttime.getTime());
+                        else
+                            differDate = (this.starttime.getTime() < new Date(this._dateRender[0]).getTime()) ? ((new Date(new Date(this._dateRender[0]).setDate(new Date(this._dateRender[0]).getDate() - 1)).getTime() - new Date(this.starttime).setHours(0, 0, 0, 0)) / 3600000) / 24 : (this.starttime.getTime() > new Date(this._dateRender[this._dateRender.length - 1]).setHours(23, 59, 59)) ? this._dateRender.length - 1 : 0;
                     }
                     else if (this.currentView() !== "day") {
                         if (!this.model.showNextPrevMonth && this.currentView() == "month" && new Date(new Date(this.currentDate()).getFullYear(), new Date(this.currentDate()).getMonth(), 1).getTime() != new Date(this.starttime.getFullYear(), this.starttime.getMonth(), 1).getTime())
                             differDate = new Date(day_start.getFullYear(), day_start.getMonth() + 1, 0).getDate() - (day_start.getDate());
                         else {
-							if (this.currentView() == "workweek" && !this._resWorkWeek) {
-								var curDate = new Date(this.starttime);
-								var fromDate = new Date(curDate.setDate(curDate.getDate() - (curDate.getDay() - this._firstdayofweek)));
-								var daysCount = (this._firstdayofweek == 0) ? this.model.workWeek.length : 6;
-								var toDate = new Date(fromDate.getTime() + (60 * 60 * 24 * 1000 * daysCount));
-								differDate = Math.abs(Math.ceil((toDate.getTime() - this.starttime.getTime()) / (60 * 60 * 1000 * 24)));
-								differDate = (differDate > 6) ? 6 : differDate;
-							}
-							else {
-								var index = this._dateRender.indexOf(new Date(day_start).setHours(0,0,0));
-								index = index < 0 ? 0 : index;
-								differDate = (this.currentView() == "month" || this._isCustomMonthView()) ? 6 - (index % 7) : Math.abs((this._dateRender.length - 1) - (day_start.getDay() - this._firstdayofweek));
-							}
-						}
-						if (this._firstdayofweek > day_start.getDay())
-							differDate = (6 - day_start.getDay())-(7 - this._firstdayofweek);
-					}
+                            if (this.currentView() == "workweek" && !this._resWorkWeek) {
+                                var curDate = new Date(this.starttime);
+                                var fromDate = new Date(curDate.setDate(curDate.getDate() - (curDate.getDay() - this._firstdayofweek)));
+                                var daysCount = (this._firstdayofweek == 0) ? this.model.workWeek.length : 6;
+                                var toDate = new Date(fromDate.getTime() + (60 * 60 * 24 * 1000 * daysCount));
+                                differDate = Math.abs(Math.ceil((toDate.getTime() - this.starttime.getTime()) / (60 * 60 * 1000 * 24)));
+                                differDate = (differDate > 6) ? 6 : differDate;
+                            }
+                            else {
+                                var index = this._dateRender.indexOf(new Date(day_start).setHours(0, 0, 0));
+                                index = index < 0 ? 0 : index;
+                                differDate = (this.currentView() == "month" || this._isCustomMonthView()) ? 6 - (day_start.getDay() - this._firstdayofweek) : Math.abs((this._dateRender.length - 1) - (day_start.getDay() - this._firstdayofweek));
+                            }
+                        }
+                        if (this._firstdayofweek > day_start.getDay())
+                            differDate = (6 - day_start.getDay()) - (7 - this._firstdayofweek);
+                    }
                 }
                 var nextDay = new Date(new Date(this.starttime).getFullYear(), new Date(this.starttime).getMonth(), new Date(this.starttime).getDate() + differDate);
-                var day_end = (new Date(nextDay).getDate() == new Date(end).getDate() && this.currentView() !== "month") ? new Date(new Date(nextDay).setHours(endTime.getHours(), endTime.getMinutes(),endTime.getSeconds())) : new Date(new Date(nextDay).setHours(23,59,59));
+                var day_end = (new Date(nextDay).getDate() == new Date(end).getDate() && this.currentView() !== "month") ? new Date(new Date(nextDay).setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds())) : new Date(new Date(nextDay).setHours(23, 59, 59));
                 if ((day_end >= new Date(endTime)) && this.currentView !== "day")
                     day_end = app[this._appointmentSettings["endTime"]];
                 if (!this.model.showNextPrevMonth && this.currentView() == "month" && new Date(this.starttime.getFullYear(), this.starttime.getMonth(), 1).getTime() != new Date(day_end.getFullYear(), day_end.getMonth(), 1).getTime())
                     day_end = new Date(this.starttime.getFullYear(), this.starttime.getMonth() + 1, 0, day_end.getHours(), day_end.getMinutes(), day_end.getSeconds());
-                app[this._appointmentSettings["recurrenceId"]] = app[this._appointmentSettings["recurrenceId"]] == null ? null : app[this._appointmentSettings["recurrenceId"]];
-                app[this._appointmentSettings["recurrenceExDate"]] = app[this._appointmentSettings["recurrenceExDate"]] == null ? null : app[this._appointmentSettings["recurrenceExDate"]];
-                appointment = ((((app[this._appointmentSettings["endTime"]] - app[this._appointmentSettings["startTime"]]) / 3600000) > 24) && app[this._appointmentSettings["recurrence"]] != 1) ? this._addAppData(app, maxId, day_start, day_end, app.AppTaskId) : this._addAppData(app, maxId, day_start, day_end, app["ParentId"]);
+                appointment = this._addAppData(app, maxId, day_start, day_end, app["ParentId"]);
                 this._processed.push(appointment);
                 this._maxId = maxId = this._idChecking();
                 next = (this.currentView() == "workweek" && this._firstdayofweek == 0) ? (7 - this.model.workWeek.length) + 1 : 1;
@@ -7212,33 +7138,31 @@
 
         _deleteOcurrence: function (appId, date) {
             var recurEdit = this._appointmentAddWindow.find(".e-recurrenceeditor").data("ejRecurrenceEditor");
-            var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, appId);
+            var query = new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, appId);
             var _editApp = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
-            if ((this._currentAction == "delete" || this._currentAction == "editOcurrence") && _editApp[0][this._appointmentSettings["endTime"]].getDay() > _editApp[0][this._appointmentSettings["startTime"]].getDay()) {
+            if ((this._currentAction == "delete" || this._currentAction == "editOccurrence") && _editApp[0][this._appointmentSettings["endTime"]].getDay() > _editApp[0][this._appointmentSettings["startTime"]].getDay()) {
                 var objDate = new ej.DataManager(this._processed).executeLocal(new ej.Query().where(this._appointmentSettings["startTime"], ej.FilterOperators.equal, date));
                 objDate = objDate.length == 0 ? this._objDate : objDate;
-                var objDate1 = objDate;
-                var objId = objDate[0]["AppTaskId"];
-                objDate = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, objId));
+                objDate = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, objDate[0]["AppTaskId"]));
             }
             if (!ej.isNullOrUndefined(_editApp) && !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceRule"]])) {
                 var _rRule = _editApp[0][this._appointmentSettings["recurrenceRule"]];
                 recurEdit.recurrenceRuleSplit(_rRule, _editApp[0][this._appointmentSettings["recurrenceExDate"]]);
                 if (ej.isNullOrUndefined(recurEdit._rRule.exDate)) {
-                    if ((this._currentAction == "delete" || this._currentAction == "editOcurrence") && _editApp[0][this._appointmentSettings["endTime"]].getDay() > _editApp[0][this._appointmentSettings["startTime"]].getDay()) {
+                    if ((this._currentAction == "delete" || this._currentAction == "editOccurrence") && _editApp[0][this._appointmentSettings["endTime"]].getDay() > _editApp[0][this._appointmentSettings["startTime"]].getDay()) {
                         if (objDate[0][this._appointmentSettings["startTime"]].getDay() == objDate[0][this._appointmentSettings["endTime"]].getDay()) {
                             date = objDate[0][this._appointmentSettings["startTime"]];
-                            _editApp[0][this._appointmentSettings["recurrenceRule"]] = _rRule + ";EXDATE=" + ej.format(date, this._pattern.d);
-                            _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d).toString() : ej.format(date, this._pattern.d).toString();
+                            _editApp[0][this._appointmentSettings["recurrenceRule"]] = _rRule + ";EXDATE=" + ej.format(date, this._pattern.d, this.model.locale);
+                            _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d, this.model.locale).toString() : ej.format(date, this._pattern.d, this.model.locale).toString();
                         }
                         else {
-                            _editApp[0][this._appointmentSettings["recurrenceRule"]] = _rRule + ";EXDATE=" + ej.format(date, this._pattern.d);
-                            _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d).toString() : ej.format(date, this._pattern.d).toString();
+                            _editApp[0][this._appointmentSettings["recurrenceRule"]] = _rRule + ";EXDATE=" + ej.format(date, this._pattern.d, this.model.locale);
+                            _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d, this.model.locale).toString() : ej.format(date, this._pattern.d, this.model.locale).toString();
                         }
                     }
                     else {
-                        _editApp[0][this._appointmentSettings["recurrenceRule"]] = _rRule + ";EXDATE=" + ej.format(date, this._pattern.d);
-                        _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d).toString() : ej.format(date, this._pattern.d).toString();
+                        _editApp[0][this._appointmentSettings["recurrenceRule"]] = _rRule + ";EXDATE=" + ej.format(date, this._pattern.d, this.model.locale);
+                        _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d, this.model.locale).toString() : ej.format(date, this._pattern.d, this.model.locale).toString();
                     }
                 }
                 else {
@@ -7249,21 +7173,21 @@
                             recurRule += ";";
                         var keyValuePair = _rules[i].replace(/ /g, '').split('=');
                         if (keyValuePair[0] == "EXDATE") {
-                            if ((this._currentAction == "delete" || this._currentAction == "editOcurrence") && _editApp[0][this._appointmentSettings["endTime"]].getDay() > _editApp[0][this._appointmentSettings["startTime"]].getDay()) {
+                            if ((this._currentAction == "delete" || this._currentAction == "editOccurrence") && _editApp[0][this._appointmentSettings["endTime"]].getDay() > _editApp[0][this._appointmentSettings["startTime"]].getDay()) {
                                 if (objDate[0][this._appointmentSettings["startTime"]].getDay() == objDate[0][this._appointmentSettings["endTime"]].getDay()) {
                                     date = objDate[0][this._appointmentSettings["startTime"]];
-                                    _rules[i] = _rules[i] + "," + ej.format(date, this._pattern.d);
+                                    _rules[i] = _rules[i] + "," + ej.format(date, this._pattern.d, this.model.locale);
                                 }
                                 else
-                                    _rules[i] = _rules[i] + "," + ej.format(date, this._pattern.d);
+                                    _rules[i] = _rules[i] + "," + ej.format(date, this._pattern.d, this.model.locale);
                             }
                             else
-                                _rules[i] = _rules[i] + "," + ej.format(date, this._pattern.d);
+                                _rules[i] = _rules[i] + "," + ej.format(date, this._pattern.d, this.model.locale);
                         }
                         recurRule += _rules[i];
                     }
                     _editApp[0][this._appointmentSettings["recurrenceRule"]] = recurRule;
-                    _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d).toString() : ej.format(date, this._pattern.d).toString();
+                    _editApp[0][this._appointmentSettings["recurrenceExDate"]] = !ej.isNullOrUndefined(_editApp[0][this._appointmentSettings["recurrenceExDate"]]) ? _editApp[0][this._appointmentSettings["recurrenceExDate"]] + "," + ej.format(date, this._pattern.d, this.model.locale).toString() : ej.format(date, this._pattern.d, this.model.locale).toString();
                 }
                 return _editApp;
             }
@@ -7304,12 +7228,22 @@
         _renderAppointments: function () {
             var dateCount = $.extend(true, [], this._dateRender);
             this._overflowFlag = false;
-            this._tempapp = []; this._app = []; this._filterData = []; this.day = 0; this._renderedApp = [],this._renderedAllDay=[];
+            this._tempapp = []; this._app = []; this._filterData = []; this._renderedApp = [], this._renderedAllDay = [];
             var level = 1; this.level = 0;
+            !this.model.showOverflowButton && (this.initialCellHeight = this.model.cellHeight != "20px" ? parseInt(this.model.cellHeight) : parseInt(this.element.find(".e-draggableworkarea").height() / this.element.find(".e-draggableworkarea tr").length));
             this.cellwidth = this.element.find(".e-workcells").width();
+            this.cellheight = this.element.find(".e-workcells").outerHeight();
+            if (this.model.orientation == "vertical" && this.model.showAllDayRow) {
+                if (!this._mediaQuery)
+                    this.element.find(".e-alldaycells,.e-leftindent,.e-emptyalldaytd").css('height', "27px");
+                else
+                    this.element.find(".e-alldaycells,.e-leftindent,.e-emptyalldaytd").attr('style', "height:40px !important");
+                this.element.find(".e-alldaycells").first().css(this.model.enableRTL ? 'border-right' : 'border-left', "none");
+            }
+            this._horiHeaderCollection = this._horiGroupCollection();
             this.leftPosition = 0;
             this._filtered = []; this._variable = [];
-            if (!this.model.group || (this._tempResource.length!=0 && this._tempResource[0].resourceSettings.dataSource.length==0)) this.res1 = ["0"];
+            if (!this.model.group || (this._tempResource.length != 0 && this._tempResource[0].resourceSettings.dataSource.length == 0)) this.res1 = ["0"];
             this.resIndex = 0;
             for (var res = 0; res < this.res1.length; res++) {
                 var day = 0, diff, count = dateCount.length;
@@ -7319,165 +7253,167 @@
                     diff = Math.floor((new Date(dateCount[dateCount.length - 1]) - new Date(this.model.maxDate)) / (1000 * 60 * 60 * 24));
                     count = dateCount.length - diff;
                 }
-				if (this._resWorkWeek) {
-					count = 0; day = 0; var temp = 0;
-					for (var a = 0; a < res + 1; a++) {
-						if (!ej.isNullOrUndefined(this.res1[a][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]])) {
-							count += this.res1[a][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]].length;
-							if (a == res) temp += this.res1[a][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]].length;
-						}
-						else {
-							count += this.model.workWeek.length;
-							if (a == res) temp += this.model.workWeek.length;
-						}
-						
-						if (a == res) {
-							day = count - temp;
-							break;
-						}
-					}
-				}
+                if (this._resWorkWeek) {
+                    count = 0; day = 0; var temp = 0;
+                    for (var a = 0; a < res + 1; a++) {
+                        if (!ej.isNullOrUndefined(this.res1[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]])) {
+                            count += this.res1[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
+                            if (a == res) temp += this.res1[a][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
+                        }
+                        else {
+                            count += this.model.workWeek.length;
+                            if (a == res) temp += this.model.workWeek.length;
+                        }
+
+                        if (a == res) {
+                            day = count - temp;
+                            break;
+                        }
+                    }
+                }
                 for (day; day < count; day++) {
                     this._getDayAppointments(day, res);
                 }
             }
-            this._overflowFlag && this._reRenderScroller();
-            this._overflowFlag = false;
-            this.model.orientation == "vertical" && this.model.showAllDayRow && this._renderAllDayAppointments();
+            (this._overflowFlag || this._allDayDrag) && this._reRenderScroller();
+            this._overflowFlag = this._allDayDrag = false;
+            //this.model.orientation == "vertical" && this.model.showAllDayRow && this._renderAllDayAppointments();            
         },
-		
-		_renderUpDownIcon: function () {
-			if (this.element.find(".e-upicon, .e-downicon").length == 0) {
-				var upIcon = downIcon = upIconHtml = downIconHtml = "";
-				for (a = 0; a < this.dateRender.length; a++) {
-				    upIcon = upIcon + "<td class='upicon_" + a + "' style='width:100%;height:100%;'><span class='e-icon e-arrow-sans-up e-appup'></span></td>";
-				    downIcon = downIcon + "<td class='downicon_" + a + "' style='width:100%;height:100%;'><span class='e-icon e-arrow-sans-down e-appdown'></span></td>";
-				}
-				upIconHtml = "<tr class='e-upicon' style='pointer-events:none;top:0px;'>" + upIcon + "</tr>";
-				downIconHtml = "<tr class='e-downicon' style='pointer-events:none;bottom:0px;'>" + downIcon + "</tr>";
-				$(upIconHtml).insertBefore($(this.element.find(".e-draggableworkarea").parent()));
-				$(downIconHtml).insertAfter($(this.element.find(".e-draggableworkarea").parent()));
-				if (this.model.enableRTL) this.element.find(".e-appup, .e-appdown").addClass("e-rtl");
-				this.element.find(".e-upicon, .e-downicon").width(this.element.find(".e-workcellstab").width());
-				this.element.find(".e-appup, .e-appdown").css("pointer-events","visible");
-				this.element.find(".e-upicon, .e-downicon").children().width(Math.floor(this.element.find(".e-workcellstab").width()/this.element.find(".e-upicon").children().length));
-				(this.model.enableRTL) ? this.element.find(".e-upicon, .e-downicon").children().css("float","right") : this.element.find(".e-upicon, .e-downicon").children().css("float","left");
-				this.element.find(".e-upicon, .e-downicon").children().css("visibility","hidden");
-			}
-		},
-		
-		_renderUpDownIconPosition: function () {
-			this.element.find(".e-upicon, .e-downicon").children().css("visibility","hidden");
-			if (this.element.find(".e-vscroll").length > 0) {
-				var scrollMax = !ej.isNullOrUndefined($("div#" + this._id + "_scroller").data("ejScroller")._scrollYdata) ? $("div#" + this._id + "_scroller").data("ejScroller")._scrollYdata.scrollable : this.element.height();
-				var curValue = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop();
-				var upValue = (curValue > scrollMax) ? scrollMax : curValue;
-				var downValue = upValue + this.element.find(".e-draggableworkarea").height();
-				var upIndex = parseInt(upValue / this.element.find(".e-workcells").outerHeight()) + 1;
-				var downIndex = parseInt(downValue / this.element.find(".e-workcells").outerHeight());
-				var upTrgt = this.element.find(".e-upicon");
-				var downTrgt = this.element.find(".e-downicon");
-				var upTime = ((this.model.startHour * 60) + upIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000);
-				var time = (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * 60 * 1000;
-				var downTime = (((this.model.startHour * 60) + downIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000)) + time;
-				var appointments = this._appointmentCount();
-				appointments = new ej.DataManager(appointments).executeLocal(new ej.Query().where(ej.Predicate(this._appointmentSettings["allDay"], ej.FilterOperators.contains, false)));
-				for (a = 0; a < this._dateRender.length; a++) {
-					var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(this._dateRender[a]))["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(this._dateRender[a]).setHours(23,59,59)));
-					var dayApps = new ej.DataManager(appointments).executeLocal(new ej.Query().where(predicate));
-					if (dayApps.length != 0) {
-						var upDate = new Date(new Date(this._dateRender[a]).setMilliseconds(upTime));
-						var upApps = new ej.DataManager(dayApps).executeLocal(new ej.Query().where(this._appointmentSettings["endTime"], ej.FilterOperators.lessThan, new Date(upDate)));
-						upApps = this._appointmentSort(upApps).reverse();
-						if (!ej.isNullOrUndefined(upTrgt) && upApps.length != 0) {
-						    if (this._grouping.length == 0) { $(upTrgt.children()[a]).css("visibility", "visible"); }
-						    else {
-						        for (b = 0; b < this.res1.length; b++) {
-						            var tempRes = new ej.DataManager(upApps).executeLocal(new ej.Query().where(this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1], ej.FilterOperators.equal, this.res1[b].id));
-						            if (tempRes.length != 0) { $(upTrgt.children()[a + b * this._dateRender.length]).css("visibility", "visible"); }
-						        }
-						    }
-						}
-						var downDate = new Date(new Date(this._dateRender[a]).setMilliseconds(downTime));
-						var downApps = new ej.DataManager(dayApps).executeLocal(new ej.Query().where(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThan, new Date(downDate)));
-						downApps = this._appointmentSort(downApps);
-						if (!ej.isNullOrUndefined(downTrgt) && downApps.length != 0) {
-						    if (this._grouping.length == 0) { $(downTrgt.children()[a]).css("visibility", "visible"); }
-							else {
-								for (c = 0; c < this.res1.length; c++) {
-									var tempRes1 = new ej.DataManager(downApps).executeLocal(new ej.Query().where(this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length-1], ej.FilterOperators.equal, this.res1[c].id));
-									if (tempRes1.length != 0) { $(downTrgt.children()[a+c*this._dateRender.length]).css("visibility","visible"); }
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		
-		_renderAppPosition: function (e) {
-			var choice = $(e.target).hasClass("e-appup") ? "e-appup" : "e-appdown";
-			var index = $(e.target).parent().index();
-			var appointments = this._appointmentCount();
-			switch (choice) {
-				case "e-appup":
-					var upValue = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop();
-					var upIndex = parseInt(upValue / this.element.find(".e-workcells").outerHeight()) + 1;
-					var upTrgt = this.element.find(".e-draggableworkarea").find("tr")[upIndex];
-					var time = ((this.model.startHour * 60) + upIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000);
-					var trgtDate = new Date(new Date(this.dateRender[index]).setMilliseconds(time));
-					var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(this.dateRender[index]))["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(trgtDate));
-					var upApps = new ej.DataManager(appointments).executeLocal(new ej.Query().where(predicate));
-					if (upApps.length != 0) {
-						var upTime = Math.abs(upApps[0][this._appointmentSettings["startTime"]] - trgtDate);
-						var appRowIndex = parseInt((time - upTime) / ((this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * (60 * 1000)));
-						var scrollTo = upValue - ((upIndex - appRowIndex) * this.element.find(".e-workcells").height());
-						$('div#' + this._id + "_scroller").ejScroller({ scrollTop: scrollTo });
-						this.element.find('.e-scrolltimecells').css('top', -(this.element.find('.e-draggableworkarea').scrollTop()) + 'px');
-					}
-					break;
-				case "e-appdown":
-					var downValue = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop() + $(this.element.find(".e-vscroll")[0]).height();
-					var downIndex = parseInt(downValue / this.element.find(".e-workcells").height());
-					var downTrgt = this.element.find(".e-draggableworkarea").find("tr")[downIndex];
-					var time = ((this.model.startHour * 60) + downIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000);
-					var trgtDate = new Date(new Date(this.dateRender[index]).setMilliseconds(time));
-					var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(trgtDate))["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(this.dateRender[index]).setHours(23,59,59)));
-					var downApps = new ej.DataManager(appointments).executeLocal(new ej.Query().where(predicate));
-					if (downApps.length != 0) {
-						var downTime = trgtDate.getTime() - downApps[0][this._appointmentSettings["endTime"]].getTime();
-						var appRowIndex = parseInt((time - downTime) / ((this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * (60 * 1000)));
-						var scrollTo = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop() + ((appRowIndex - downIndex) * this.element.find(".e-workcells").height()) + this.element.find("#Appointment_" + downApps[0]["AppTaskId"]).height();
-						$('div#' + this._id + "_scroller").ejScroller({ scrollTop: scrollTo });
-						this.element.find('.e-scrolltimecells').css('top', -(this.element.find('.e-draggableworkarea').scrollTop()) + 'px');
-					}
-					break;
-			}
-			this._renderUpDownIconPosition();
-			!ej.isNullOrUndefined(this.element.data("ejTooltip")) && this.element.ejTooltip('hide');
-		},
-		
-		_findAllDayApp: function (apps) {
-			if (apps[this._appointmentSettings["allDay"]] != true) {
-			    var tempCurrent = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("ParentId", ej.FilterOperators.equal, apps.ParentId));
-				var Value = (!ej.isNullOrUndefined(tempCurrent[0])) ? (((tempCurrent[0][this._appointmentSettings["endTime"]] - tempCurrent[0][this._appointmentSettings["startTime"]]) / 3600000) >= 24) ? true : false : false;
-				return Value;
+
+        _renderUpDownIcon: function () {
+            if (this.element.find(".e-upicon, .e-downicon").length == 0) {
+                var upIcon = downIcon = upIconHtml = downIconHtml = "";
+                var bottomVal = (this.element.find(".e-hscroll").length == 0) ? "0px" : this.element.find(".e-hscroll").outerHeight() + "px";
+                for (a = 0; a < this.dateRender.length; a++) {
+                    upIcon = upIcon + "<td class='upicon_" + a + "' style='width:100%;height:100%;'><span class='e-icon e-arrow-sans-up e-appup'></span></td>";
+                    downIcon = downIcon + "<td class='downicon_" + a + "' style='width:100%;height:100%;'><span class='e-icon e-arrow-sans-down e-appdown'></span></td>";
+                }
+                upIconHtml = "<tr class='e-upicon' style='pointer-events:none;top:0px;'>" + upIcon + "</tr>";
+                downIconHtml = "<tr class='e-downicon' style='pointer-events:none;bottom:" + bottomVal + ";'>" + downIcon + "</tr>";
+                $(upIconHtml).insertBefore($(this.element.find(".e-draggableworkarea").parent()));
+                $(downIconHtml).insertAfter($(this.element.find(".e-draggableworkarea").parent()));
+                if (this.model.enableRTL) this.element.find(".e-appup, .e-appdown").addClass("e-rtl");
+                this.element.find(".e-upicon, .e-downicon").width(this.element.find(".e-workcellstab").width());
+                this.element.find(".e-appup, .e-appdown").css("pointer-events", "visible");
+                this.element.find(".e-upicon, .e-downicon").children().width(Math.floor(this.element.find(".e-workcellstab").width() / this.element.find(".e-upicon").children().length));
+                (this.model.enableRTL) ? this.element.find(".e-upicon, .e-downicon").children().css("float", "right") : this.element.find(".e-upicon, .e-downicon").children().css("float", "left");
+                this.element.find(".e-upicon, .e-downicon").children().css("visibility", "hidden");
             }
         },
-		
+
+        _renderUpDownIconPosition: function () {
+            this.element.find(".e-upicon, .e-downicon").children().css("visibility", "hidden");
+            if (this.element.find(".e-vscroll").length > 0) {
+                var scrollMax = !ej.isNullOrUndefined($("div#" + this._id + "_scroller").data("ejScroller")._scrollYdata) ? $("div#" + this._id + "_scroller").data("ejScroller")._scrollYdata.scrollable : this.element.height();
+                var curValue = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop();
+                var upValue = (curValue > scrollMax) ? scrollMax : curValue;
+                var downValue = upValue + this.element.find(".e-draggableworkarea").height();
+                var upIndex = parseInt(upValue / this.element.find(".e-workcells").outerHeight()) + 1;
+                var downIndex = parseInt(downValue / this.element.find(".e-workcells").outerHeight());
+                var upTrgt = this.element.find(".e-upicon");
+                var downTrgt = this.element.find(".e-downicon");
+                var upTime = ((this.model.startHour * 60) + upIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000);
+                var time = (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * 60 * 1000;
+                var downTime = (((this.model.startHour * 60) + downIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000)) + time;
+                var appointments1 = this._appointmentCount();
+                var proxy = this;
+                appointments = appointments1.filter(function (app) { return ((app[proxy._appointmentSettings["endTime"]] - app[proxy._appointmentSettings["startTime"]]) / (1000 * 3600)) < 24; });
+                for (a = 0; a < this._dateRender.length; a++) {
+                    var endDateTime = (this.model.endHour < 24) ? new Date(new Date(this._dateRender[a]).setHours(this.model.endHour, 0, 0)) : new Date(new Date(this._dateRender[a]).setHours(23, 59, 59));
+                    var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(new Date(this._dateRender[a]).setHours(this.model.startHour, 0, 0)))["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(endDateTime));
+                    var dayApps = new ej.DataManager(appointments).executeLocal(new ej.Query().where(predicate));
+                    if (dayApps.length != 0) {
+                        var upDate = new Date(new Date(this._dateRender[a]).setMilliseconds(upTime));
+                        var upApps = new ej.DataManager(dayApps).executeLocal(new ej.Query().where(this._appointmentSettings["endTime"], ej.FilterOperators.lessThan, new Date(upDate)));
+                        upApps = this._appointmentSort(upApps).reverse();
+                        if (!ej.isNullOrUndefined(upTrgt) && upApps.length != 0) {
+                            if (this._grouping.length == 0) { $(upTrgt.children()[a]).css("visibility", "visible"); }
+                            else {
+                                for (b = 0; b < this.res1.length; b++) {
+                                    var tempRes = new ej.DataManager(upApps).executeLocal(new ej.Query().where(this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1], ej.FilterOperators.equal, this.res1[b].id));
+                                    if (tempRes.length != 0) { $(upTrgt.children()[a + b * this._dateRender.length]).css("visibility", "visible"); }
+                                }
+                            }
+                        }
+                        var downApps = new ej.DataManager(dayApps).executeLocal(new ej.Query().where(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThan, new Date(new Date(this._dateRender[a]).setMilliseconds(downTime))));
+                        downApps = this._appointmentSort(downApps);
+                        if (!ej.isNullOrUndefined(downTrgt) && downApps.length != 0) {
+                            if (this._grouping.length == 0) { $(downTrgt.children()[a]).css("visibility", "visible"); }
+                            else {
+                                for (c = 0; c < this.res1.length; c++) {
+                                    var tempRes1 = new ej.DataManager(downApps).executeLocal(new ej.Query().where(this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1], ej.FilterOperators.equal, this.res1[c].id));
+                                    if (tempRes1.length != 0) { $(downTrgt.children()[a + c * this._dateRender.length]).css("visibility", "visible"); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        _renderAppPosition: function (e) {
+            var choice = $(e.target).hasClass("e-appup") ? "e-appup" : "e-appdown";
+            var index = $(e.target).parent().index();
+            var appointments = this._appointmentCount();
+            switch (choice) {
+                case "e-appup":
+                    var upValue = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop();
+                    var upIndex = parseInt(upValue / this.element.find(".e-workcells").outerHeight()) + 1;
+                    var upTrgt = this.element.find(".e-draggableworkarea").find("tr")[upIndex];
+                    var time = ((this.model.startHour * 60) + upIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000);
+                    var trgtDate = new Date(new Date(this.dateRender[index]).setMilliseconds(time));
+                    var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(this.dateRender[index]))["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(trgtDate));
+                    var upApps = new ej.DataManager(appointments).executeLocal(new ej.Query().where(predicate));
+                    if (upApps.length != 0) {
+                        var upTime = Math.abs(upApps[0][this._appointmentSettings["startTime"]] - trgtDate);
+                        var appRowIndex = parseInt((time - upTime) / ((this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * (60 * 1000)));
+                        var scrollTo = upValue - ((upIndex - appRowIndex) * this.element.find(".e-workcells").height());
+                        $('div#' + this._id + "_scroller").ejScroller({ scrollTop: scrollTo });
+                        this.element.find('.e-scrolltimecells').css('top', -(this.element.find('.e-draggableworkarea').scrollTop()) + 'px');
+                    }
+                    break;
+                case "e-appdown":
+                    var downValue = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop() + $(this.element.find(".e-vscroll")[0]).height();
+                    var downIndex = parseInt(downValue / this.element.find(".e-workcells").height());
+                    var downTrgt = this.element.find(".e-draggableworkarea").find("tr")[downIndex];
+                    var time = ((this.model.startHour * 60) + downIndex * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (60 * 1000);
+                    var trgtDate = new Date(new Date(this.dateRender[index]).setMilliseconds(time));
+                    var predicate = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(trgtDate))["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(this.dateRender[index]).setHours(23, 59, 59)));
+                    var downApps = new ej.DataManager(appointments).executeLocal(new ej.Query().where(predicate));
+                    if (downApps.length != 0) {
+                        var downTime = trgtDate.getTime() - downApps[0][this._appointmentSettings["endTime"]].getTime();
+                        var appRowIndex = parseInt((time - downTime) / ((this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount) * (60 * 1000)));
+                        var scrollTo = $("div#" + this._id + "_scroller").data("ejScroller").scrollTop() + ((appRowIndex - downIndex) * this.element.find(".e-workcells").height()) + this.element.find("#Appointment_" + downApps[0]["AppTaskId"]).height();
+                        $('div#' + this._id + "_scroller").ejScroller({ scrollTop: scrollTo });
+                        this.element.find('.e-scrolltimecells').css('top', -(this.element.find('.e-draggableworkarea').scrollTop()) + 'px');
+                    }
+                    break;
+            }
+            this._renderUpDownIconPosition();
+            !ej.isNullOrUndefined(this.element.data("ejTooltip")) && this.element.ejTooltip('hide');
+        },
+
+        _findAllDayApp: function (apps) {
+            if (apps[this._appointmentSettings["allDay"]] != true) {
+                var tempCurrent = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("ParentId", ej.FilterOperators.equal, apps.ParentId));
+                var Value = (!ej.isNullOrUndefined(tempCurrent[0])) ? (((tempCurrent[0][this._appointmentSettings["endTime"]] - tempCurrent[0][this._appointmentSettings["startTime"]]) / 3600000) >= 24) ? true : false : false;
+                return Value;
+            }
+        },
+
         _getDayAppointments: function (day, res) {
             this._appList = [];
             var dateCount = this._dateRender, appointmentsList = this._processed;
-            var predicate2 = ej.Predicate(this._appointmentSettings["endTime"], ej.FilterOperators.greaterThanOrEqual, new Date(dateCount[day])).and(this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(dateCount[day]).setHours(23, 59, 59)));
-            var predicate1 = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(dateCount[day])).and(this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(dateCount[day]).setHours(23, 59, 59)));
+            var endDateTime = (this.model.endHour < 24) ? new Date(new Date(dateCount[day]).setHours(this.model.endHour, 0, 0)) : new Date(new Date(dateCount[day]).setHours(23, 59, 59));
+            var predicate2 = ej.Predicate(this._appointmentSettings["endTime"], ej.FilterOperators.greaterThanOrEqual, new Date(dateCount[day])).and(this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(endDateTime));
+            var predicate1 = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(dateCount[day])).and(this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(endDateTime));
             var predicate = predicate2["or"](predicate1);
-            predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
+            predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
             appointmentsList = new ej.DataManager(appointmentsList).executeLocal(new ej.Query().where(predicate));
             var renderedAlready = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(new Date(dateCount[day - 1]).setHours(24, 0, 0))).or(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(dateCount[day]));
             appointmentsList = new ej.DataManager(appointmentsList).executeLocal(new ej.Query().where(renderedAlready));
             this._appList = this._alldaySort(appointmentsList);
             appointmentsList = this._appointmentSort(appointmentsList);
-            if ((this._grouping.length == 0 && this._tempResource.length != 0) || (this._grouping.length == 0 && this._tempResource.length != 0 && this._tempResource[0].resourceSettings.dataSource.length == 0)) appointmentsList = this._sortAppById(appointmentsList);
             this._app = $.merge(this._app, appointmentsList);
             if (this.model.orientation == "vertical") {
                 for (var app = 0; app < appointmentsList.length; app++) {
@@ -7491,7 +7427,7 @@
                         var query = new ej.Query().where("Guid", ej.FilterOperators.equal, appointmentsList[app]["Guid"]);
                         var templist = new ej.DataManager(this._processed).executeLocal(query);
                         if (!allDayCheck) {
-							var Value = this._findAllDayApp(appointmentsList[app]);
+                            var Value = this._findAllDayApp(appointmentsList[app]);
                         }
                         if (Value || templist[0][this._appointmentSettings["allDay"]] && Math.round((new Date(templist[0][this._appointmentSettings["endTime"]]) - new Date(templist[0][this._appointmentSettings["startTime"]])) / 3600000) >= 24) {
                             this._setAllDayPos(appointmentsList[app], day, res);
@@ -7517,8 +7453,8 @@
         _utcValue: function (temp, getValue) {
             ej.preferredCulture(this.model.locale);
             getValue == "endUtc" ? this._appointmentAddWindow.find('.endutc').val(temp.text) : "";
-            var utcValue = new Date(ej.format(this._appointmentAddWindow.find("#" + this._id + "startdate").val(), this._datepattern()) + " " + ej.format(this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("model.value")));
-            var utcendValue = new Date(ej.format(this._appointmentAddWindow.find("#" + this._id + "enddate").val(), this._datepattern()) + " " + ej.format(this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("model.value")));
+            var utcValue = new Date(ej.format(this._appointmentAddWindow.find("#" + this._id + "startdate").val(), this._datepattern(), this.model.locale) + " " + ej.format(this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("model.value"), this.model.locale));
+            var utcendValue = new Date(ej.format(this._appointmentAddWindow.find("#" + this._id + "enddate").val(), this._datepattern(), this.model.locale) + " " + ej.format(this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("model.value"), this.model.locale));
             var startDateutc = new Date(utcValue);
             var EndDateutc = new Date(utcendValue);
             var utcEnd = getValue == "Appoint" ? this.endTimeAppoint : getValue == "endUtc" ? temp.value : this._appointmentAddWindow.find("#" + this._id + "endTimeZone").ejDropDownList("model.value");
@@ -7535,22 +7471,22 @@
                 var timeZoneValue = ej.isNullOrUndefined(this.model.timeZone) ? -new Date().getTimezoneOffset() + this._timeZoneOffset : this.model.timeZone.indexOf('UTC') != -1 ? ((parseInt(this.model.timeZone.split(" ")[1].split(":")[0]) * 60) + (parseInt(this.model.timeZone.split(" ")[1].split(":")[1]))) : ((parseInt(this.model.timeZone.split(":")[0]) * 60) + (parseInt(this.model.timeZone.split(":")[1])));
                 var timeZoneStart = (utcStart == timeZoneValue) ? 0 : timeZoneValue - utcStart;
                 timeZoneStart = new Date(dateNew.setMinutes(dateNew.getMinutes() - timeZoneStart));
-                var value2 = this._timeMode == "12" ? ej.format(new Date(timeZoneStart), this._pattern.t) : ej.format(new Date(timeZoneStart), "HH:mm");
-                this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker({ value: ej.format(new Date(timeZoneStart), this._datepattern()) });
+                var value2 = this._timeMode == "12" ? ej.format(new Date(timeZoneStart), this._pattern.t, this.model.locale) : ej.format(new Date(timeZoneStart), "HH:mm", this.model.locale);
+                this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker({ value: ej.format(new Date(timeZoneStart), this._datepattern(), this.model.locale) });
                 var timeZoneEnd = utcEnd - timeZoneValue;
                 this._appointmentAddWindow.find('#' + this._id + "starttime").ejTimePicker({ value: value2 });
             }
             utcendValue = (getValue == "endUtc" || getValue == "Appoint") ? new Date(startDateutc.setMinutes(startDateutc.getMinutes() + startendUtc)) : utcValue;
             utcendValue = getValue == "Appoint" ? new Date(endNew.setMinutes(endNew.getMinutes() + timeZoneEnd)) : utcendValue;
-            var different = this._timeMode == "12" ? ej.format(new Date(utcValue), this._pattern.t) : ej.format(new Date(utcValue), "HH:mm");
+            var different = this._timeMode == "12" ? ej.format(new Date(utcValue), this._pattern.t, this.model.locale) : ej.format(new Date(utcValue), "HH:mm", this.model.locale);
             if (getValue == "Appoint") {
-                value = this._timeMode == "12" ? ej.format(new Date(endNew), this._pattern.t) : ej.format(new Date(endNew), "HH:mm");
+                value = this._timeMode == "12" ? ej.format(new Date(endNew), this._pattern.t, this.model.locale) : ej.format(new Date(endNew), "HH:mm", this.model.locale);
             }
             else {
                 var endTimeValue = new Date(utcendValue.setMinutes(utcendValue.getMinutes() + 30));
-                var value = this._timeMode == "12" ? ej.format(new Date(endTimeValue), this._pattern.t) : ej.format(new Date(endTimeValue), "HH:mm");
+                var value = this._timeMode == "12" ? ej.format(new Date(endTimeValue), this._pattern.t, this.model.locale) : ej.format(new Date(endTimeValue), "HH:mm", this.model.locale);
             }
-            this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker({ value: ej.format(new Date(utcendValue), this._datepattern()) });
+            this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker({ value: ej.format(new Date(utcendValue), this._datepattern(), this.model.locale) });
             this._appointmentAddWindow.find('#' + this._id + "endtime").ejTimePicker({ value: value });
             this.startutcValue = 1;
         },
@@ -7569,8 +7505,12 @@
                 if (!ej.isNullOrUndefined(this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]))
                     resDates = this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]];
                 else resDates = this.model.workWeek;
+                resDates = this._resourceDaysReorder(resDates);
                 for (var a = 0; a < resDates.length; a++) {
                     index = this._dayFullNames.indexOf(resDates[a].capitalizeFirstString());
+                    if (index == -1) {
+                        index = this._getDayNameIndex(resDates[a]);
+                    }
                     dateCount.push(this._renderDates[index]);
                 }
             }
@@ -7580,17 +7520,14 @@
         },
 
         _renderApp: function (record, day, res) {
-            var cellHeight = this.element.find(".e-workcells").outerHeight();
+            var cellHeight = this.cellheight;
             var startHour = parseInt(this.model.startHour) < parseInt(this.model.endHour) ? parseInt(this.model.startHour) : 0;
             var endHour = parseInt(this.model.startHour) < parseInt(this.model.endHour) ? parseInt(this.model.endHour) : 24;
             var dateCount = this._getDateCount(res);
             var rStartTime = new Date(record[this._appointmentSettings["startTime"]]);
             var rEndTime = new Date(record[this._appointmentSettings["endTime"]]);
-            if ((new Date(rStartTime).getHours()) < startHour) {
-                var newStartTime = new Date(rStartTime);
-                newStartTime.setHours(startHour, rStartTime.getMinutes(), rStartTime.getSeconds());
-                rStartTime = new Date(newStartTime);
-            }
+            if ((new Date(rStartTime).getHours()) < startHour)
+                rStartTime = new Date(new Date(rStartTime).setHours(startHour, rStartTime.getMinutes(), rStartTime.getSeconds()));
             if (this.model.orientation == "vertical") {
                 var appWidth, appHeight;
                 var Index = parseInt((startTime * 60) / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
@@ -7598,83 +7535,77 @@
                     var startTime = ((new Date(rStartTime).getHours()) < startHour) ? (new Date(rStartTime).getHours() + (-new Date(rStartTime).getHours()) + (-new Date(rStartTime).getMinutes())) : (new Date(rStartTime).getHours() + (-startHour));
                     var endTime = ((new Date(rEndTime).getHours()) > endHour) ? (new Date(rEndTime).getHours() + (-new Date(rEndTime).getHours() + (endHour - startHour)) + (-new Date(rEndTime).getMinutes())) : (new Date(rEndTime).getHours() + (-startHour));
                     endTime = (new Date(rEndTime).getHours() == endHour) ? (new Date(endTime).getMinutes() + (-new Date(rEndTime).getMinutes())) : endTime;
-
                     if (endHour <= rEndTime.getHours()) {
                         var endDate = new Date(rEndTime.setHours(endHour, 00, 00));
                         appHeight = (parseFloat(((new Date(endDate).getHours() * 60) + (new Date(endDate).getMinutes())) - ((new Date(rStartTime).getHours() * 60) + (new Date(rStartTime).getMinutes()))) * ((cellHeight) * this.model.timeScale.minorSlotCount) / this.model.timeScale.majorSlot) - 2;
                     }
                     else {
-                        appHeight = ((parseFloat(new Date(new Date(rEndTime).getTime()) - new Date(new Date(rStartTime).getTime()))) / (60 * 1000) * (cellHeight * this.model.timeScale.minorSlotCount) / (this.model.timeScale.majorSlot)) - 1;
-						if (record[this._appointmentSettings["endTime"]].getTimezoneOffset() - record[this._appointmentSettings["startTime"]].getTimezoneOffset() != 0)
-							appHeight = appHeight - (cellHeight * this.model.timeScale.minorSlotCount);
-					}
+                        appHeight = ((parseFloat(new Date(new Date(rEndTime).getTime()) - new Date(new Date(rStartTime).getTime()))) / (60 * 1000) * (cellHeight * this.model.timeScale.minorSlotCount) / (this.model.timeScale.majorSlot)) - 2;
+                        if (record[this._appointmentSettings["endTime"]].getTimezoneOffset() - record[this._appointmentSettings["startTime"]].getTimezoneOffset() != 0)
+                            appHeight = appHeight - (cellHeight * this.model.timeScale.minorSlotCount);
+                    }
                     var topPosition = ((parseFloat((((new Date(rStartTime).getHours() * 60)) + new Date(rStartTime).getMinutes() + (new Date(rStartTime).getSeconds() / 60))) - parseInt((startTime * 60) / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - (this.model.startHour * 60)) * cellHeight * (this.model.timeScale.minorSlotCount / this.model.timeScale.majorSlot);
-
                     if (this.model.startHour <= new Date(rStartTime).getHours()) {
-                        var resValue = !ej.isNullOrUndefined(this.model.group) &&(this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]] : null;
+                        var resValue = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]] : null;
                         var overlapList = this._overlapApp(record["AppTaskId"], record[this._appointmentSettings["startTime"]], record[this._appointmentSettings["endTime"]], resValue);
-
                         var predicate = ej.Predicate(this._appointmentSettings["endTime"], ej.FilterOperators.greaterThan, record[this._appointmentSettings["startTime"]]).and(this._appointmentSettings["startTime"], ej.FilterOperators.lessThan, record[this._appointmentSettings["endTime"]]);
-                        predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
+                        predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
                         var appointmentsList = new ej.DataManager(overlapList).executeLocal(new ej.Query().where(predicate));
-					    var proxy = this;
-					    var index = -1;
-					    if (appointmentsList.length > 0) {
-					        var appLevelsInDay = $.map(appointmentsList, function (value, Index) {
-					            return [value.Index];
-					        });
-					        index = this._smallestMissingNumber(appLevelsInDay);
-					    }
-					    index = index == -1 ? 0 : index;
-					    record.Index = index;
-					    overlapList.push(record);
-					    if (overlapList.length != 1)
-					        ej.isNullOrUndefined(this._variable[index]) ? this._variable.push([record]) : this._variable[index].push(record);
-					    else {
-					        this._variable = [];
-					        this._variable.push([record]);
-					    }
-                        
-					    appWidth = ((((90 - (this._variable.length)) / (this._variable.length)))) + "%";
-						this.leftPosition = '0%';
-						for (var i = 0; i < this._variable.length; i++) {
-						    for (var j = 0; j < this._variable[i].length; j++) {
-						        var apps = this.element.find('[guid=' + this._variable[i][j]["Guid"] + ']');
-						        if (!ej.isNullOrUndefined(apps[0]) && this._variable[i][j]["Guid"] != record["Guid"]) {
-						            if (parseFloat(appWidth) <= parseFloat(apps[0].style.width)) {
-						                //apps[0].style.left = ((parseFloat(appWidth)) * parseInt(parseFloat(apps[0].style.left) / parseFloat(apps[0].style.width))) + '%';
-						                this.model.enableRTL ? apps[0].style.right = ((parseFloat(appWidth) + 1) * i) + '%' : apps[0].style.left = ((parseFloat(appWidth) + 1) * i) + '%';
-						                apps[0].style.width = ((parseFloat(appWidth))) + '%';
-						            }
-						            else {
-						                var apps1 = this.element.find('[guid=' + this._variable[ej.isNullOrUndefined(this._variable[i - 1]) ? i : i - 1][0]["Guid"] + ']');
-						                apps[0].style.width = apps1[0].style.width;
-						                //apps[0].style.left = ((parseFloat(apps[0].style.width)) * parseInt(parseFloat(apps[0].style.left) / parseFloat(apps[0].style.width))) + '%';
-						                this.model.enableRTL ? apps[0].style.right = ((parseFloat(apps[0].style.width) + 1) * i) + '%' : apps[0].style.left = ((parseFloat(apps[0].style.width) + 1) * i) + '%';
-						            }
-						        }
-						        else {
-						            appWidth = ej.isNullOrUndefined(this._variable[i - 1]) ? ((((90 - (this._variable.length)) / (this._variable.length)))) : parseFloat(this.element.find('[guid=' + this._variable[i - 1][0]["Guid"] + ']')[0].style.width);
-						            this.leftPosition = ((appWidth + 1) * index) + '%';
-						        }
-						    }
-						}
-					    appWidth = parseFloat(appWidth) + "%";
-					    this._renderedApp.push(record);
+                        var proxy = this;
+                        var index = -1;
+                        if (appointmentsList.length > 0) {
+                            var appLevelsInDay = $.map(appointmentsList, function (value, Index) { return [value.Index]; });
+                            index = this._smallestMissingNumber(appLevelsInDay);
+                        }
+                        index = index == -1 ? 0 : index;
+                        record.Index = index;
+                        overlapList.push(record);
+                        if (overlapList.length != 1)
+                            ej.isNullOrUndefined(this._variable[index]) ? this._variable.push([record]) : this._variable[index].push(record);
+                        else {
+                            this._variable = [];
+                            this._variable.push([record]);
+                        }
+
+                        appWidth = ((((90 - (this._variable.length)) / (this._variable.length)))) + "%";
+                        this.leftPosition = '0%';
+                        for (var i = 0; i < this._variable.length; i++) {
+                            for (var j = 0; j < this._variable[i].length; j++) {
+                                var apps = this.element.find('[guid=' + this._variable[i][j]["Guid"] + ']');
+                                if (!ej.isNullOrUndefined(apps[0]) && this._variable[i][j]["Guid"] != record["Guid"]) {
+                                    if (parseFloat(appWidth) <= parseFloat(apps[0].style.width)) {
+                                        //apps[0].style.left = ((parseFloat(appWidth)) * parseInt(parseFloat(apps[0].style.left) / parseFloat(apps[0].style.width))) + '%';
+                                        this.model.enableRTL ? apps[0].style.right = ((parseFloat(appWidth) + 1) * i) + '%' : apps[0].style.left = ((parseFloat(appWidth) + 1) * i) + '%';
+                                        apps[0].style.width = ((parseFloat(appWidth))) + '%';
+                                    }
+                                    else {
+                                        var apps1 = this.element.find('[guid=' + this._variable[ej.isNullOrUndefined(this._variable[i - 1]) ? i : i - 1][0]["Guid"] + ']');
+                                        apps[0].style.width = apps1[0].style.width;
+                                        //apps[0].style.left = ((parseFloat(apps[0].style.width)) * parseInt(parseFloat(apps[0].style.left) / parseFloat(apps[0].style.width))) + '%';
+                                        this.model.enableRTL ? apps[0].style.right = ((parseFloat(apps[0].style.width) + 1) * i) + '%' : apps[0].style.left = ((parseFloat(apps[0].style.width) + 1) * i) + '%';
+                                    }
+                                }
+                                else {
+                                    appWidth = ej.isNullOrUndefined(this._variable[i - 1]) ? ((((90 - (this._variable.length)) / (this._variable.length)))) : !ej.isNullOrUndefined(this.element.find('[guid=' + this._variable[i - 1][0]["Guid"] + ']')[0]) && parseFloat(this.element.find('[guid=' + this._variable[i - 1][0]["Guid"] + ']')[0].style.width);
+                                    this.leftPosition = ((appWidth + 1) * index) + '%';
+                                }
+                            }
+                        }
+                        appWidth = parseFloat(appWidth) + "%";
+                        this._renderedApp.push(record);
                         var colorAppointment = this._appointmentColor(record);
                         var userAppTemplId = (this.model.appointmentTemplateId) ? true : false;
                         var userTempHtml = this._getUserAppointmentTemplate(record);
-                        var startTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["startTime"]], this._pattern.t) : ej.format(record[this._appointmentSettings["startTime"]], "HH:mm");
-                        var endTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["endTime"]], this._pattern.t) : ej.format(record[this._appointmentSettings["endTime"]], "HH:mm");
-                        if(!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
+                        var startTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["startTime"]], this._pattern.t, this.model.locale) : ej.format(record[this._appointmentSettings["startTime"]], "HH:mm", this.model.locale);
+                        var endTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["endTime"]], this._pattern.t, this.model.locale) : ej.format(record[this._appointmentSettings["endTime"]], "HH:mm", this.model.locale);
+                        if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
                             var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
                         var indicationIcon = this._indicationApp(record);
-                        var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition, top: topPosition, appWidth: appWidth, userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-appointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, topInd: indicationIcon.leftIndication, bottomInd: indicationIcon.rightIndication }));
-                        (!ej.isNullOrUndefined(this.model.queryCellInfo)) &&  this._renderQueryCellInfo("appointment", record, timeCellhtml);
-                        if (this._resWorkWeek)
-							$(this.element.find("div.e-appointwrapper")[((startTime * this.model.timeScale.minorSlotCount) * this.element.find(".e-headercells").length) + day]).append(timeCellhtml);
-						else
-							$(this.element.find("div.e-appointwrapper")[parseInt((startTime * 60) / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * dateCount.length * this.res1.length + day + (dateCount.length * res)]).append(timeCellhtml);
+                        var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition, top: topPosition, appWidth: appWidth, userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-appointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, topInd: indicationIcon.leftIndication, bottomInd: indicationIcon.rightIndication, resId: (!ej.isNullOrUndefined(this._appointmentSettings["resourceFields"])) ? record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1]] : "" }));
+                        (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("appointment", record, timeCellhtml);
+                        var index = this._resWorkWeek ? ((startTime * this.model.timeScale.minorSlotCount) * this.element.find(".e-headercells").length) + day : parseInt((startTime * 60) / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * dateCount.length * this.res1.length + day + (dateCount.length * res);
+                        var celltd = $(this.element.find("td.e-workcells")[index]);
+                        celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(timeCellhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(timeCellhtml));
                     }
                 }
             }
@@ -7709,139 +7640,139 @@
             }
             return startendTimes;
         },
-		
-		_getUserAllDayCellsTemplate: function () {
-			var dateRender = [], minutes = 0, date, userTemp, userHtml;
-			userTemp = $.templates($(this.model.allDayCellsTemplateId).html());
-			for (a = 0; a < this.res1.length; a++) {
-				for (b = 0; b < this._dateRender.length; b++) {
-					date = new Date(new Date(this._dateRender[b]).setHours(this.model.startHour, minutes, 0));
-					userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: this.res1[a], timescale: this.model.timeScale.enable });
-					dateRender.push(userHtml.trim());
-				}
-			}
-			return dateRender;
-		},
-		
-		_getUserDateheaderTemplate: function () {
-		    var colCount = [], userTemp, userDate, curday, headerCellClass, temp;
-			userTemp = $.templates($(this.model.dateHeaderTemplateId).html());
-			for (i = 0; i < this._dateRender.length; i++) {
-				userDate = userTemp.render(object = { date: new Date(this._dateRender[i]) });
-				curday = (this.currentView() === "month" || this.currentView() === "day" || (this._isCustomMonthView())) ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
-				headerCellClass = (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime()) ? "e-headerToday" : "";
-				temp = (this.currentView() === "month" || (this._isCustomMonthView())) ? { currentDay: curday, currentDateClass: "", cellToday: headerCellClass } : { currentDay: userDate, currentDateClass: new Date(this._dateRender[i]).getDate() === new Date(this.currentDate()).getDate() ? "e-activeview" : "", cellToday: headerCellClass };
-				colCount.push(temp);
-				this._value.push(i);
-            }
-			return colCount;
-		},
 
-		_getUserWorkCellsTemplate: function () {
-			var date, dateRender = [], dateRender1 = [], userTemp, userHtml, minutes = 0, tdCount = this.model.timeScale.minorSlotCount;
-			userTemp = $.templates($(this.model.workCellsTemplateId).html());
-			this._isCustomMonthView();
-			if (this.model.orientation == "vertical") {
-				if (this.currentView() != "month" || (this.currentView() == "customview" && this._oneWeek)) {
-					for (a = 0; a < ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)); a++) {
-						dateRender = [];
-						for (b = 0; b < this.res1.length; b++) {
-							for (c = 0; c < this._dateRender.length; c++) {
-								date = new Date(new Date(this._dateRender[c]).setHours(this.model.startHour, minutes, 0));
-								userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: this.res1[b], timescale: this.model.timeScale.enable });
-								dateRender.push(userHtml.trim());
-							}
-						}
-						minutes = minutes + (this.model.timeScale.majorSlot / tdCount);
-						dateRender1.push(dateRender);
-					}
-				}
-				else {
-					var i = 0;
-					for (a = 0; a < this._dateRender.length / 7; a++) {
-						dateRender = [];
-						for (b = 0; b < this.res1.length; b++) {
-							i = a * 7;
-							for (c = 0; c < 7; c++) {
-								date = new Date(new Date(this._dateRender[i]).setHours(this.model.startHour, minutes, 0));
-								userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: this.res1[b], timescale: this.model.timeScale.enable });
-								dateRender.push(userHtml.trim());
-								i++;
-							}
-						}
-						dateRender1.push(dateRender);
-					}
-				}
-			}
-			else {
-				var userHtml1, timeRender = [], tempRender = [], time = [], rCollection = this._tempResource.length == 0 ? this.res1 : this._resourceSort();
-				if (this.model.timeScale.enable && this.currentView() != "month" || (this.currentView() == "customview" && this._oneWeek)) {
-					for (a = 0; a < rCollection.length; a++) {
-						dateRender = []; tempRender = []; time = [];
-						for (b = 0; b < this._dateRender.length; b++) {
-							minutes = 0;
-							for (c = 0; c < ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)); c++) {
-								for (d = 0; d < tdCount; d++) {
-									date = new Date(new Date(this._dateRender[b]).setHours(this.model.startHour, minutes, 0));
-									if (d == 0) {
-										userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: rCollection[a], timescale: this.model.timeScale.enable });
-										dateRender.push(userHtml.trim());
-									}
-									else {
-										userHtml1 = userTemp.render(object = { date: date, view: this.currentView(), resource: rCollection[a], timescale: this.model.timeScale.enable });
-										timeRender.push(userHtml1.trim());
-										if (timeRender.length == tdCount-1) {
-											time.push(timeRender);
-											timeRender = [];
-										}
-									}
-									minutes = minutes + (this.model.timeScale.majorSlot / tdCount);
-								}
-							}
-						}
-						var temp = $.extend(true,[],dateRender);
-						var temp1 = $.extend(true,[],time);
-						tempRender.push(temp, temp1);
-						dateRender1.push(tempRender);
-					}
-				}
-				else {
-					var monthDates = (!this.model.timeScale.enable && this.currentView() != "month" || (this.currentView() == "customview" && this._oneWeek)) ? this._dateRender : this._horizontalMonthDates();
-					for (a = 0; a < rCollection.length; a++) {
-						dateRender = [];
-						for (b = 0; b < monthDates.length; b++) {
-							date = new Date(new Date(monthDates[b]).setHours(this.model.startHour, minutes, 0));
-							userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: rCollection[a], timescale: this.model.timeScale.enable });
-							dateRender.push(userHtml.trim());
-						}
-						dateRender1.push(dateRender);
-					}
-				}
-			}
-			return dateRender1;
-		},
-		
+        _getUserAllDayCellsTemplate: function () {
+            var dateRender = [], minutes = 0, date, userTemp, userHtml;
+            userTemp = $.templates($(this.model.allDayCellsTemplateId).html());
+            for (a = 0; a < this.res1.length; a++) {
+                for (b = 0; b < this._dateRender.length; b++) {
+                    date = new Date(new Date(this._dateRender[b]).setHours(this.model.startHour, minutes, 0));
+                    userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: this.res1[a], timescale: this.model.timeScale.enable });
+                    dateRender.push(userHtml.trim());
+                }
+            }
+            return dateRender;
+        },
+
+        _getUserDateheaderTemplate: function () {
+            var colCount = [], userTemp, userDate, curday, headerCellClass, temp;
+            userTemp = $.templates($(this.model.dateHeaderTemplateId).html());
+            for (i = 0; i < this._dateRender.length; i++) {
+                userDate = userTemp.render(object = { date: new Date(this._dateRender[i]) });
+                curday = (this.currentView() === "month" || this.currentView() === "day" || (this._isCustomMonthView())) ? (this._tempResource.length == 0 && ej.isNullOrUndefined(this.model.group)) ? this._dayFullNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()] : this._dayShortNames[new Date(this._dateRender[i]).getDay()];
+                headerCellClass = (new Date(new Date(this._dateRender[i]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date().setHours(0, 0, 0, 0)).getTime()) ? "e-headerToday" : "";
+                temp = (this.currentView() === "month" || (this._isCustomMonthView())) ? { currentDay: curday, currentDateClass: "", cellToday: headerCellClass } : { currentDay: userDate, currentDateClass: new Date(this._dateRender[i]).getDate() === new Date(this.currentDate()).getDate() ? "e-activeview" : "", cellToday: headerCellClass };
+                colCount.push(temp);
+                this._value.push(i);
+            }
+            return colCount;
+        },
+
+        _getUserWorkCellsTemplate: function () {
+            var date, dateRender = [], dateRender1 = [], userTemp, userHtml, minutes = 0, tdCount = this.model.timeScale.minorSlotCount;
+            userTemp = $.templates($(this.model.workCellsTemplateId).html());
+            this._isCustomMonthView();
+            if (this.model.orientation == "vertical") {
+                if (this.currentView() != "month" && !this._isCustomMonthView()) {
+                    for (a = 0; a < ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)) ; a++) {
+                        dateRender = [];
+                        for (b = 0; b < this.res1.length; b++) {
+                            for (c = 0; c < this._dateRender.length; c++) {
+                                date = new Date(new Date(this._dateRender[c]).setHours(this.model.startHour, minutes, 0));
+                                userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: this.res1[b], timescale: this.model.timeScale.enable });
+                                dateRender.push(userHtml.trim());
+                            }
+                        }
+                        minutes = minutes + (this.model.timeScale.majorSlot / tdCount);
+                        dateRender1.push(dateRender);
+                    }
+                }
+                else {
+                    var i = 0;
+                    for (a = 0; a < this._dateRender.length / 7; a++) {
+                        dateRender = [];
+                        for (b = 0; b < this.res1.length; b++) {
+                            i = a * 7;
+                            for (c = 0; c < 7; c++) {
+                                date = new Date(new Date(this._dateRender[i]).setHours(this.model.startHour, minutes, 0));
+                                userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: this.res1[b], timescale: this.model.timeScale.enable });
+                                dateRender.push(userHtml.trim());
+                                i++;
+                            }
+                        }
+                        dateRender1.push(dateRender);
+                    }
+                }
+            }
+            else {
+                var userHtml1, timeRender = [], tempRender = [], time = [], rCollection = this._tempResource.length == 0 ? this.res1 : this._resourceSort();
+                if (this.model.timeScale.enable && this.currentView() != "month" && !this._isCustomMonthView()) {
+                    for (a = 0; a < rCollection.length; a++) {
+                        dateRender = []; tempRender = []; time = [];
+                        for (b = 0; b < this._dateRender.length; b++) {
+                            minutes = 0;
+                            for (c = 0; c < ((this.model.endHour - this.model.startHour) * (60 / this.model.timeScale.majorSlot)) ; c++) {
+                                for (d = 0; d < tdCount; d++) {
+                                    date = new Date(new Date(this._dateRender[b]).setHours(this.model.startHour, minutes, 0));
+                                    if (d == 0) {
+                                        userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: rCollection[a], timescale: this.model.timeScale.enable });
+                                        dateRender.push(userHtml.trim());
+                                    }
+                                    else {
+                                        userHtml1 = userTemp.render(object = { date: date, view: this.currentView(), resource: rCollection[a], timescale: this.model.timeScale.enable });
+                                        timeRender.push(userHtml1.trim());
+                                        if (timeRender.length == tdCount - 1) {
+                                            time.push(timeRender);
+                                            timeRender = [];
+                                        }
+                                    }
+                                    minutes = minutes + (this.model.timeScale.majorSlot / tdCount);
+                                }
+                            }
+                        }
+                        var temp = $.extend(true, [], dateRender);
+                        var temp1 = $.extend(true, [], time);
+                        tempRender.push(temp, temp1);
+                        dateRender1.push(tempRender);
+                    }
+                }
+                else {
+                    var monthDates = (!this.model.timeScale.enable && this.currentView() != "month" || (this.currentView() == "customview" && this._oneWeek)) ? this._dateRender : this._horizontalMonthDates();
+                    for (a = 0; a < rCollection.length; a++) {
+                        dateRender = [];
+                        for (b = 0; b < monthDates.length; b++) {
+                            date = new Date(new Date(monthDates[b]).setHours(this.model.startHour, minutes, 0));
+                            userHtml = userTemp.render(object = { date: date, view: this.currentView(), resource: rCollection[a], timescale: this.model.timeScale.enable });
+                            dateRender.push(userHtml.trim());
+                        }
+                        dateRender1.push(dateRender);
+                    }
+                }
+            }
+            return dateRender1;
+        },
+
         _overlapApp: function (id, appStartTime, appEndTime, resValue) {
-            this.overlapList = []; this.app = []; this.appointmentsList = [];
+            this.overlapList = []; app = []; this.appointmentsList = [];
             this._appList = this._appointmentSort(this._renderedApp);
             if (this.model.orientation == "vertical") {
 
                 var predicate = ej.Predicate(this._appointmentSettings["endTime"], ej.FilterOperators.greaterThan, new Date(appStartTime)).and(this._appointmentSettings["startTime"], ej.FilterOperators.lessThan, new Date(appEndTime));
-                predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, resValue) : predicate;
+                predicate = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, resValue) : predicate;
                 this.appointmentsList = new ej.DataManager(this._appList).executeLocal(new ej.Query().where(predicate));
 
                 for (var i = 0; i < this.appointmentsList.length; i++) {
                     var predicate1 = ej.Predicate(this._appointmentSettings["endTime"], ej.FilterOperators.greaterThanOrEqual, new Date(this.appointmentsList[i][this._appointmentSettings["startTime"]])).and(this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(this.appointmentsList[i][this._appointmentSettings["endTime"]]));
-                    predicate1 = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, resValue) : predicate1;
+                    predicate1 = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, resValue) : predicate1;
                     var appList = new ej.DataManager(this._appList).executeLocal(new ej.Query().where(predicate1));
                     var collection = $(appList).not(this.appointmentsList);
-                    if (collection.length != 0) this.app = $.merge(this.app, collection);
+                    if (collection.length != 0) app = $.merge(app, collection);
                 }
-                this.overlapList = $.merge(this.appointmentsList, this.app);
+                this.overlapList = $.merge(this.appointmentsList, app);
             }
             else if (this.model.orientation == "horizontal" && ej.scheduleFeatures.horizontal) {
                 for (var i = 0; i < this._appList.length; i++) {
-                    if (ej.scheduleFeatures.resources && (this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group)) {
+                    if (ej.scheduleFeatures.resources && (this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group)) {
                         if ((new Date(this._appList[i][this._appointmentSettings["endTime"]]) > new Date(appStartTime)) && (new Date(this._appList[i][this._appointmentSettings["startTime"]]) <= new Date(appEndTime))
                             && (this._appList[i][this._tempResource[this._tempResource.length - 1]["field"]] == resValue)
                             && (new Date(new Date(this._appList[i][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() === new Date(new Date(appStartTime).setHours(0, 0, 0, 0)).getTime())) {
@@ -7878,15 +7809,13 @@
                         var isBigApp = (((appointments[i][this._appointmentSettings["endTime"]] - appointments[i][this._appointmentSettings["startTime"]]) / 3600000) >= 24);
                         var allDayCheck = appointments[i][this._appointmentSettings["allDay"]];
                         if (((((new Date(new Date(dateRender[day]).setHours(0, 0, 0, 0)).getTime() == (new Date(new Date(appointments[i][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime())) &&
-                                  allDayCheck) || isBigApp) && (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group)?(appointments[i][this._tempResource[this._tempResource.length - 1]["field"]] == resValue):true))) {
+                                  allDayCheck) || isBigApp) && (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) ? (appointments[i][this._tempResource[this._tempResource.length - 1]["field"]] == resValue) : true))) {
                             filterData.push(appointments[i]);
                         }
                     }
                 }
                 else if (this.model.orientation == "horizontal" && ej.scheduleFeatures.horizontal)
                     filterData = this._getHorizontalOverlapCount(appointments, dateRender, day, record, resValue);
-                //filterData.push(record);
-                var proxy = this;
                 filterData = this._sortAppById(filterData);
                 filterData = this._appointmentSort(filterData);
                 var index = -1;
@@ -7913,13 +7842,11 @@
         },
         _setAllDayPos: function (record, day, res) {
             this.overlapList = [];
-            var level = (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this._getOverlapCount(record, day, this._dateRender, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : this._getOverlapCount(record, day, this._dateRender, null);
+            var level = (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this._getOverlapCount(record, day, this._dateRender, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : this._getOverlapCount(record, day, this._dateRender, null);
             var start = record[this._appointmentSettings["startTime"]];
             var end = record[this._appointmentSettings["endTime"]];
-
             if (new Date(start) <= new Date(end)) {
-                var dateRender = this._dateRender;
-                var appWidth, left = 0, top = 16, appHeight = 19;
+                var dateRender = this._dateRender, appWidth, left = 0, top = 16, appHeight = 19;
                 if (this.level <= level) {
                     var cellHeight = (level + 1) * (appHeight) + 27;
                     if (!this._mediaQuery)
@@ -7929,80 +7856,79 @@
                         this.element.find(".e-alldaycells").first().css(this.model.enableRTL ? 'border-right' : 'border-left', "none");
                     }
                 }
-                this._reRenderScroller();
+                this._overflowFlag = true;
                 if (this.model.showAppointmentNavigator && this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && this.currentView() != "month" && (!this._isCustomMonthView()) && (!this._mediaQuery)) {
-					this._renderUpDownIcon();
-					this.element.find(".e-upicon, .e-downicon").width(this.element.find(".e-workcellstab").width());
-					this.element.find(".e-appup, .e-appdown").css("pointer-events","visible");
-					this.element.find(".e-upicon, .e-downicon").children().width(Math.floor(this.element.find(".e-workcellstab").width()/this.element.find(".e-upicon").children().length));
-					this._renderUpDownIconPosition();
-				}
-				if (this._resWorkWeek) {
-					var index, resDates, dateCount = [];
-					if (!ej.isNullOrUndefined(this.res1[res][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]]))
-						resDates = this.res1[res][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]];
-					else
-						resDates = this.model.workWeek;
-					
-					for (var a = 0; a < resDates.length; a++) {
-						index = this._dayFullNames.indexOf(resDates[a].capitalizeFirstString());
-						dateCount.push(this._renderDates[index]);
-					}
-					dateRender = dateCount;
-				}
+                    this._renderUpDownIcon();
+                    this.element.find(".e-upicon, .e-downicon").width(this.element.find(".e-workcellstab").width());
+                    this.element.find(".e-appup, .e-appdown").css("pointer-events", "visible");
+                    this.element.find(".e-upicon, .e-downicon").children().width(Math.floor(this.element.find(".e-workcellstab").width() / this.element.find(".e-upicon").children().length));
+                    this._renderUpDownIconPosition();
+                }
+                if (this._resWorkWeek) {
+                    var index, resDates, dateCount = [];
+                    if (!ej.isNullOrUndefined(this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]))
+                        resDates = this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]];
+                    else
+                        resDates = this.model.workWeek;
+                    for (var a = 0; a < resDates.length; a++) {
+                        index = this._dayFullNames.indexOf(resDates[a].capitalizeFirstString());
+                        if (index == -1) {
+                            index = this._getDayNameIndex(resDates[a]);
+                        }
+                        dateCount.push(this._renderDates[index]);
+                    }
+                    dateRender = dateCount;
+                }
                 var r_start = new Date(dateRender[0]);
                 var r_end = new Date(dateRender[dateRender.length - 1]);
                 r_end.setHours(23, 59, 59);
                 end = new Date(end) > new Date(r_end) ? r_end : end;
-				if (this.currentView() == "workweek" && $.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime(), this._dateRender) == -1) {
-					for (var i = 1; i < this._dateRender.length; i++) {
-						if ($.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate()-i).getTime(), this._dateRender) > 0) {
-							var index = $.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate()-i).getTime(), this._dateRender);
-							end = new Date(new Date(this._dateRender[index]).setHours(record[this._appointmentSettings["endTime"]].getHours(), record[this._appointmentSettings["endTime"]].getMinutes(), record[this._appointmentSettings["endTime"]].getSeconds()));
-						    break;
-						}
-					}
-				}
-				this._renderedAllDay.push(record);
+                if (this.currentView() == "workweek" && $.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime(), this._dateRender) == -1) {
+                    for (var i = 1; i < this._dateRender.length; i++) {
+                        if ($.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate() - i).getTime(), this._dateRender) > 0) {
+                            var index = $.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate() - i).getTime(), this._dateRender);
+                            end = new Date(new Date(this._dateRender[index]).setHours(record[this._appointmentSettings["endTime"]].getHours(), record[this._appointmentSettings["endTime"]].getMinutes(), record[this._appointmentSettings["endTime"]].getSeconds()));
+                            break;
+                        }
+                    }
+                }
+                this._renderedAllDay.push(record);
                 var diffInDays, noOfDays = Math.ceil((new Date(start) - new Date(r_start)) / (1000 * 3600) / 24);
-				if (this._resWorkWeek || this.currentView() == "workweek")
-					diffInDays = $.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime(), dateRender) - ($.inArray(new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime(), dateRender)) + 1;
+                if (this._resWorkWeek || this.currentView() == "workweek")
+                    diffInDays = $.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime(), dateRender) - ($.inArray(new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime(), dateRender)) + 1;
                 else if (this.currentView() == "week" || this.currentView() == "day" || this.currentView() == "customview" && parseFloat((end - start) / 3600000) <= 24)
-                    diffInDays = (start.getHours() == 0 && end.getHours() == 0) ? Math.ceil(((new Date(end) - new Date(start)) / (1000 * 3600)) / 24) : Math.ceil(((new Date(end).setHours(23, 59, 59) - new Date(start).setHours(0, 0, 0)) / (1000 * 3600)) / 24);
+                    diffInDays = (end.getHours() == 0 && end.getMinutes() == 0) ? Math.ceil(((new Date(end) - new Date(start)) / (1000 * 3600)) / 24) : Math.ceil(((new Date(end).setHours(23, 59, 59) - new Date(start).setHours(0, 0, 0)) / (1000 * 3600)) / 24);
                 else
                     diffInDays = $.inArray(new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime(), this._dateRender) - ($.inArray(new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime(), this._dateRender)) + 1;
-                
-				if (diffInDays <= 0) diffInDays = 1;
+
+                if (diffInDays <= 0) diffInDays = 1;
                 var cellWidth = this.element.find(".e-alldaycells").width();
                 var daysCount = this.currentView() === "week" ? 7 : this.currentView() === "workweek" ? this.model.workWeek.length : (this.currentView() == "customview" && this._renderDays <= 7) ? this._renderDays : 1;
-                var alldayTr = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this._grouping.length : 0;
+                var alldayTr = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this._grouping.length : 0;
                 var start_time = (new Date(new Date(start).getFullYear(), new Date(start).getMonth(), new Date(start).getDate()));
                 var tdIndex = this.currentView() === "day" ? 0 : this.currentView() === "workweek" && this._firstdayofweek == 0 && this.model.workWeek[0] == "Monday" && this.model.workWeek[4] == "Friday" ? new Date(start).getDay() - 1 : this._firstdayofweek || this.model.workWeek.length > 0 || (this.currentView() == "customview" && (this._renderDays <= 7 || this.model.orientation == "horizontal")) ? this._dateRender.indexOf(start_time.getTime()) : new Date(start).getDay();
-				if (this._resWorkWeek)
-					left = (this.model.enableRTL) ? this.element.find(".e-headrealldaytable").width() - this.element.find(".e-alldaycells")[day].offsetLeft - this.element.find(".e-alldaycells").width() : this.element.find(".e-alldaycells")[day].offsetLeft;
+                if (this._resWorkWeek)
+                    left = (this.model.enableRTL) ? this.element.find(".e-headrealldaytable").width() - this.element.find(".e-alldaycells")[day].offsetLeft - this.element.find(".e-alldaycells").width() : this.element.find(".e-alldaycells")[day].offsetLeft;
                 else if (!ej.isNullOrUndefined(this.element.find(".e-alldaycells")[tdIndex + (res * daysCount)]))
                     left = (this.model.enableRTL) ? this.element.find(".e-headrealldaytable").width() - this.element.find(".e-alldaycells")[tdIndex + (res * daysCount)].offsetLeft - this.element.find(".e-alldaycells").width() : this.element.find(".e-alldaycells")[tdIndex + (res * daysCount)].offsetLeft;
                 appWidth = ((diffInDays * cellWidth) + diffInDays) - 2;
-                top = (level * top) + (3 * (level + 1)) + this.element.find(".e-headercells").height() + 1 + (alldayTr * this.element.find(".e-headerbar").first().height());
+                top = (level * top) + (3 * (level + 1)) + this.element.find(".e-headercells").height() + 1 + ((alldayTr != 0) ? (alldayTr * this.element.find(".e-headerbar").first().height()) : alldayTr);
 
                 var colorAppointment = this._appointmentColor(record);
                 var userAppTemplId = (this.model.appointmentTemplateId) ? true : false;
-                var userTempHtml = this._getUserAppointmentTemplate(record);
-
-                var startTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["startTime"]], this._pattern.t) : ej.format(record[this._appointmentSettings["startTime"]], "HH:mm");
-                var endTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["endTime"]], this._pattern.t) : ej.format(record[this._appointmentSettings["endTime"]], "HH:mm");
+                var userTempHtml = userAppTemplId && this._getUserAppointmentTemplate(record);
+                var startTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["startTime"]], this._pattern.t, this.model.locale) : ej.format(record[this._appointmentSettings["startTime"]], "HH:mm", this.model.locale);
+                var endTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["endTime"]], this._pattern.t, this.model.locale) : ej.format(record[this._appointmentSettings["endTime"]], "HH:mm", this.model.locale);
                 if (record[this._appointmentSettings["recurrence"]]) var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
                 var indicationIcon = this._indicationApp(record);
-                var alldayCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), top: top, appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, appWidth: appWidth + "px", allday: true, left: left + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-alldayappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication }));
+                var alldayCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), top: top, appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, appWidth: appWidth + "px", allday: true, left: left + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-alldayappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, orientation: this.model.orientation, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication, resId: (!ej.isNullOrUndefined(this._appointmentSettings["resourceFields"])) ? record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1]] : "" }));
                 (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("appointment", record, alldayCellhtml);
                 this.element.find(".e-headrealldaytable").append(alldayCellhtml);
             }
             this._alldayLevel = false;
             this.level = this.level < level ? level : this.level;
             if (record[this._appointmentSettings["recurrence"]] != 1) {
-                var id = (record.ParentId == undefined) ? record["AppTaskId"] : record.ParentId;
-                var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, parseInt(id));
-                var templist = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
+                var templist = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, record.ParentId));
                 if ((new Date(record[this._appointmentSettings["endTime"]])) < (templist[0][this._appointmentSettings["endTime"]]))
                     if (this.model.enableRTL)
                         this.element.find('[guid=' + record["Guid"] + ']').children('.e-lefthandle').remove();
@@ -8018,14 +7944,16 @@
                 if (indicationIcon.rightIndication)
                     this.model.enableRTL ? this.element.find('[guid=' + record.Guid + ']').find(".e-apptime,.e-apptext").css("margin-right", "13px") : this.element.find('[guid=' + record.Guid + ']').find(".e-schedulemouseclose").css("margin-right", "11px");
             }
-
         },
         _indicationApp: function (record) {
-            var indication = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, record["ParentId"]))[0];
+            var indication = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, record["ParentId"]))[0];
+            if (indication[this._appointmentSettings["endTime"]].getHours() == 0 && indication[this._appointmentSettings["endTime"]].getMinutes() == 0) {
+                indication = $.extend(true, [], indication);
+                indication[this._appointmentSettings["endTime"]] = new Date(indication[this._appointmentSettings["endTime"]].getTime() - 1000);
+            }
             var rightIndication, leftIndication, startCheck, endCheck, dateRender;
-            dateRender = this.currentView() == "day" ? [new Date(this.dateRender[0]).getTime()] : this._dateRender;
+            dateRender = this.currentView() == "day" ? [new Date(this._dateRender[0]).getTime()] : this._dateRender;
             var splitapp = (this.currentView() == "month" && (new Date(new Date(indication[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(indication[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) && (((indication[this._appointmentSettings["endTime"]] - indication[this._appointmentSettings["startTime"]]) / 3600000) < 24));
-
             startCheck = $.inArray(new Date(new Date(record[this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime(), dateRender);
             endCheck = $.inArray(new Date(new Date(record[this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime(), dateRender);
             if (!record[this._appointmentSettings["recurrence"]]) {
@@ -8038,33 +7966,36 @@
                 var recurIndication = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, record["Guid"]));
                 if (recurIndication.length > 1) {
                     var recur = this._sortAppById(recurIndication);
-                    if (((recur[0][this._appointmentSettings["startTime"]] < record[this._appointmentSettings["startTime"]]) || startCheck == -1) &&!splitapp)
+                    if (((recur[0][this._appointmentSettings["startTime"]] < record[this._appointmentSettings["startTime"]]) || startCheck == -1) && !splitapp)
                         this.model.enableRTL ? rightIndication = true : leftIndication = true;
-                    if (((recur[1][this._appointmentSettings["endTime"]] > record[this._appointmentSettings["endTime"]]) || endCheck == -1)&&!splitapp)
+                    if (((recur[recur.length - 1][this._appointmentSettings["endTime"]] > record[this._appointmentSettings["endTime"]]) || endCheck == -1) && !splitapp)
                         this.model.enableRTL ? leftIndication = true : rightIndication = true;
                 }
             }
-            return { leftIndication: leftIndication, rightIndication: rightIndication};
+            return { leftIndication: leftIndication, rightIndication: rightIndication };
         },
         _reRenderScroller: function () {
             var dialogObj = this._appointmentAddWindow.data("ejDialog");
             dialogObj.option("enableAnimation", false);
             dialogObj.close();
-            var _scrollDiv = $('div#' + this._id + "_scroller");
-            var scrollerObj = this.element.find(".e-scroller").data("ejScroller");
-            var scrollWidth = (this.model.orientation === "vertical") ? (this.element.outerWidth()) - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : this.element.find('.e-scrolltimecells').parent().outerWidth()) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
-            scrollerObj.model.width = scrollWidth - 2;
+            var _scrollDiv = this.element.find('div#' + this._id + '_scroller');
+            var scrollerObj = _scrollDiv.data("ejScroller");
+            var scrollWidth = (this.model.orientation === "vertical") ? parseInt(this.element.width()) - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : (this.element.find('.e-scrolltimecells').length > 0 ? this.element.find('.e-scrolltimecells').parent().outerWidth() : 0)) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? parseInt(this.element.width()) - parseInt(this.element.find(".e-resourceheadertable").width()) : parseInt(this.element.width());
+            scrollerObj.model.width = parseInt(scrollWidth) - 2;
             scrollerObj.model.height = this.scHeight - 1 - (this.wTR.find('.e-draggableworkarea').offset().top - this.element.offset().top);
             scrollerObj.refresh();
             if (this.model.cellWidth != "") {
                 var cols = this.currentView() == "workweek" ? this.model.workWeek.length : this.currentView() == "day" ? 1 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 7;
-                var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? (this.res1.length * cols) : cols;
-                if (this.model.orientation == "horizontal") col = col + $(this.element.find(".e-workcells")[0]).parent().find("td").length;
-                this.wTR.find(".e-draggableworkarea").width((this.element.width() > ((parseInt(this.model.cellWidth) + 1) * col) + this.wTR.find(".e-scrolltimecells").parent().width() + (_scrollDiv.ejScroller("isVScroll") ? 18 : 0)) ? ((parseInt(this.model.cellWidth) + 1) * col) - 1 : scrollWidth - 2 - (_scrollDiv.ejScroller("isVScroll") ? 18 : 0));
+                var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? (this.res1.length * cols) : cols;
+                if (this.model.orientation == "horizontal") col = col + this.element.find(".e-workcellstab").find("tr:first").children().length;
+                var timeScaleWidth = this.wTR.find(".e-scrolltimecells").length > 0 ? this.wTR.find(".e-scrolltimecells").width() : 0;
+                this.wTR.find(".e-draggableworkarea").width((this.element.width() > ((parseInt(this.model.cellWidth) + 1) * col) + timeScaleWidth + (_scrollDiv.ejScroller("isVScroll") ? 18 : 0)) ? ((parseInt(this.model.cellWidth) + 1) * col) - 1 : scrollWidth - 2 - (_scrollDiv.ejScroller("isVScroll") ? 18 : 0));
                 this.aTR.find(".e-headeralldaydiv").width(this.wTR.find(".e-draggableworkarea").width());
             }
-			if (this._mediaQuery && this.res1.length > 1)
-			    this.element.find(".e-draggableworkarea").width(this.element.find(".e-draggableworkarea").width() * this.res1.length);
+            if (this.model.orientation == "vertical" && (!_scrollDiv.ejScroller("isVScroll")) && this.currentView() != "month" && !this._isCustomMonthView() && this.model.timeScale.enable)
+                this.element.find(".e-workcells").height(scrollerObj.model.height / (this.element.find('div.e-draggableworkarea tr').length));
+            if (this.model.orientation == "vertical" && this._mediaQuery && this.res1.length > 1)
+                this.element.find(".e-draggableworkarea").width(this.element.find(".e-draggableworkarea").width() * this.res1.length);
             this.aTR.find(".e-headeralldaydiv").width(this.wTR.find(".e-draggableworkarea").width());
             this.wTR.find(".e-scrolltimecells").css("top", -(this.wTR.find(".e-draggableworkarea").scrollTop()) + "px");
             (this._mediaQuery) && this._appointmentAddWindow.ejDialog("close");
@@ -8076,23 +8007,32 @@
         },
         _appointmentSort: function (appointments) {
             var proxy = this;
-            if(this.currentView()!="day"){
-            appointments.sort(function (a, b) {
-                var d1 = a[proxy._appointmentSettings["endTime"]] - a[proxy._appointmentSettings["startTime"]];
-                var d2 = b[proxy._appointmentSettings["endTime"]] - b[proxy._appointmentSettings["startTime"]];
-                var date1 = new Date(a[proxy._appointmentSettings["startTime"]]);
-                var date2 = new Date(b[proxy._appointmentSettings["startTime"]]);
-                var date3 = new Date(a[proxy._appointmentSettings["endTime"]]);
-                var date4 = new Date(b[proxy._appointmentSettings["endTime"]]);
-                var d3 = a[proxy._appointmentSettings["startTime"]];
-                var d4 = b[proxy._appointmentSettings["startTime"]];
-                if (date1 == date2 && date3 == date4)
+            if (this.currentView() == "agenda") {
+                appointments.sort(function (a, b) {
+                    var d1 = a[proxy._appointmentSettings["startTime"]];
+                    var d2 = b[proxy._appointmentSettings["startTime"]];
+                    var d3 = a[proxy._appointmentSettings["endTime"]];
+                    var d4 = b[proxy._appointmentSettings["endTime"]];
+                    return d1.getTime() - d2.getTime() || d3.getTime() - d4.getTime();
+                });
+            }
+            else if (this.currentView() != "day") {
+                appointments.sort(function (a, b) {
+                    var d1 = a[proxy._appointmentSettings["endTime"]] - a[proxy._appointmentSettings["startTime"]];
+                    var d2 = b[proxy._appointmentSettings["endTime"]] - b[proxy._appointmentSettings["startTime"]];
+                    var date1 = new Date(a[proxy._appointmentSettings["startTime"]]);
+                    var date2 = new Date(b[proxy._appointmentSettings["startTime"]]);
+                    var date3 = new Date(a[proxy._appointmentSettings["endTime"]]);
+                    var date4 = new Date(b[proxy._appointmentSettings["endTime"]]);
+                    var d3 = a[proxy._appointmentSettings["startTime"]];
+                    var d4 = b[proxy._appointmentSettings["startTime"]];
+                    if (date1 == date2 && date3 == date4)
                         return d3 - d4 || a.Guid.localeCompare(b.Guid);
-                else if (date1 - date2 == 0)
-                    return d2 - d1 || d3 - d4 || a.Guid.localeCompare(b.Guid);
-                else
-                    return d3 - d4 || a.Guid.localeCompare(b.Guid);
-            });
+                    else if (date1 - date2 == 0)
+                        return d2 - d1 || d3 - d4 || a.Guid.localeCompare(b.Guid);
+                    else
+                        return d3 - d4 || a.Guid.localeCompare(b.Guid);
+                });
             }
             else {
                 appointments.sort(function (a, b) {
@@ -8106,9 +8046,9 @@
             return appointments;
         },
         _alldaySort: function (appointments) {
-            var proxy = this, value = [];
+            var value = [];
             for (var i = 0; i < appointments.length; i++) {
-                if (((new Date(appointments[i][proxy._appointmentSettings["endTime"]]) - new Date(appointments[i][proxy._appointmentSettings["startTime"]])) / 3600000) < 24 && !appointments[i][proxy._appointmentSettings["allDay"]])
+                if (((new Date(appointments[i][this._appointmentSettings["endTime"]]) - new Date(appointments[i][this._appointmentSettings["startTime"]])) / 3600000) < 24 && !appointments[i][this._appointmentSettings["allDay"]])
                     value.push(appointments[i]);
             }
             return value;
@@ -8125,7 +8065,8 @@
 
         _renderMonthAppointment: function () {
             this.filterData = []; var filtered = []; this._app = []; this._renderedApp = [];
-            var renderDate = (this.model.orientation == "vertical") ? this._dateRender : this.monthDays;
+            !this.model.showOverflowButton && (this.initialCellHeight = this.model.cellHeight != "20px" ? parseInt(this.model.cellHeight) : parseInt(this.element.find(".e-draggableworkarea").height() / this.element.find(".e-draggableworkarea tr").length));
+            var renderDate = (this.model.orientation == "vertical") ? (this.currentView() == "month" && !this.model.showNextPrevMonth ? this.monthDays : this._dateRender) : this.monthDays;
             var appointments = this._processed;
             appointments = this._sortAppById(appointments);
             appointments = this._appointmentSort(appointments);
@@ -8133,8 +8074,8 @@
             predicate = predicate["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(renderDate[renderDate.length - 1]).setHours(23, 59, 59)));
             this._appointmentsList = new ej.DataManager(appointments).executeLocal(new ej.Query().where(predicate));
             appointments = this._appointmentsList;
-
-            if (!this.model.group || (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length==0) this.res1 = ["0"];
+            renderDate = (this.model.orientation == "vertical") ? this._dateRender : this.monthDays;
+            if (!this.model.group || (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length == 0) this.res1 = ["0"];
             for (var res = 0; res < this.res1.length; res++) {
                 var day = 0, diff, count = renderDate.length;
                 if (new Date(renderDate[0]) < this.model.minDate)
@@ -8144,10 +8085,9 @@
                     count = renderDate.length - diff;
                 }
                 for (day; day < count ; day++) {
-                    this.filterData = [];
                     var predicate12 = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(renderDate[day]));
                     predicate12 = predicate12["and"](this._appointmentSettings["startTime"], ej.FilterOperators.lessThanOrEqual, new Date(new Date(renderDate[day]).setHours(23, 59, 59)));
-                    predicate12 = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
+                    predicate12 = !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources ? predicate["and"](this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim(), ej.FilterOperators.equal, this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["id"]]) : predicate;
                     appointments = new ej.DataManager(this._appointmentsList).executeLocal(new ej.Query().where(predicate12));
                     var renderedAlready = ej.Predicate(this._appointmentSettings["startTime"], ej.FilterOperators.greaterThanOrEqual, new Date(renderDate[day]));
                     appointments = new ej.DataManager(appointments).executeLocal(new ej.Query().where(renderedAlready));
@@ -8155,23 +8095,14 @@
                     this._app = $.merge(this._app, appointments);
                     for (var app = 0; app < appointments.length; app++) {
                         if (this.model.orientation == "horizontal" && !ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
-                            var resAvail = new ej.DataManager(this._tempResource[this._tempResource.length - 1].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length - 1].resourceSettings.groupId, ej.FilterOperators.equal, parseInt(appointments[app][this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2]])));
+                            var resAvail = new ej.DataManager(this._tempResource[this._tempResource.length - 1].resourceSettings.dataSource).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length - 1].resourceSettings.groupId, ej.FilterOperators.equal, appointments[app][this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 2]]));
                         else var resAvail = this.res1;
                         if (resAvail.length != 0) {
-                            if ((appointments[app][this._appointmentSettings["allDay"]] == true) || (((new Date(appointments[app][this._appointmentSettings["endTime"]]) - new Date(appointments[app][this._appointmentSettings["startTime"]])) / 3600000) > 24)) {
-                                if ((new Date(new Date(renderDate[day]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime()) &&
-                    (new Date(new Date(renderDate[day]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) &&
-                    (new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())) {
-                                    this._renderAppointmentMonth(appointments[app], day, res);
-                                    filtered.push(appointments[app]);
-                                }
-                            } else {
-                                if ((new Date(new Date(renderDate[day]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime()) &&
-         (new Date(new Date(renderDate[day]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) &&
-         (new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())) {
-                                    this._renderAppointmentMonth(appointments[app], day, res);
-                                    filtered.push(appointments[app]);
-                                }
+                            if ((new Date(new Date(renderDate[day]).setHours(0, 0, 0, 0)).getTime() == new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime()) &&
+                                (new Date(new Date(renderDate[day]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) &&
+                                (new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())) {
+                                this._renderAppointmentMonth(appointments[app], day, res);
+                                filtered.push(appointments[app]);
                             }
                         }
                     }
@@ -8223,12 +8154,12 @@
                 var len = dateRender.length;
                 var data = [];
                 for (var app = 0; app < appointments.length; app++) {
-                    if (((ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) &&(this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0) ?(appointments[app][this._tempResource[this._tempResource.length - 1]["field"]] == resValue):true) &&
+                    if (((ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) ? (appointments[app][this._tempResource[this._tempResource.length - 1]["field"]] == resValue) : true) &&
                             (new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(dateRender[day]).setHours(0, 0, 0, 0)).getTime()) &&
                             (new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime() >= new Date(new Date(dateRender[day]).setHours(0, 0, 0, 0)).getTime()) &&
                             (new Date(new Date(appointments[app][this._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointments[app][this._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())) {
-                            data.push(appointments[app]);
-                        }
+                        data.push(appointments[app]);
+                    }
                 }
                 this.overlapList = data;
                 data = this._sortAppById(data);
@@ -8241,7 +8172,7 @@
                         return [value.Index];
                     });
                     index = this._smallestMissingNumber(appLevelsInDay);
-                }      
+                }
                 index = index == -1 ? 0 : index;
                 record.Index = index;
 
@@ -8254,16 +8185,16 @@
             $.each(recurLocale, function (key, value) {
                 ej.RecurrenceEditor.Locale[proxy.model.locale][key] = proxy._getLocalizedLabels(key);
             });
-             //ej.RecurrenceEditor.Locale[this.model.locale] = $.extend(true, {}, recurLocale);
+            //ej.RecurrenceEditor.Locale[this.model.locale] = $.extend(true, {}, recurLocale);
         },
         _renderAppointmentMonth: function (record, day, res) {
             var renderDate = (this.model.orientation == "vertical") ? this._dateRender : this.monthDays;
+            var renderCells = (this.model.orientation == "vertical") ? "td.e-monthcells" : "td.e-workcells";
             var appointments = this._renderedApp;
-            var overlapCount = (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) &&  (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0) ? this._getIndex(day, record, renderDate, appointments, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : this._getIndex(day, record, renderDate, appointments, null);
+            var overlapCount = (ej.scheduleFeatures.resources && !ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) ? this._getIndex(day, record, renderDate, appointments, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : this._getIndex(day, record, renderDate, appointments, null);
             var startTime = new Date(record[this._appointmentSettings["startTime"]]);
             var endTime = new Date(record[this._appointmentSettings["endTime"]]);
             var appWidth, topPosition = 0;
-            var categorybarwidth = this.element.find(".e-parentnode").width();
             this.leftPosition = 0;
             this.CellWidth = this.model.orientation == "vertical" ? this.element.find(".e-monthcells").width() : this.element.find(".e-workcells").width();
             this.CellHeight = this.model.orientation == "vertical" ? this.element.find(".e-monthcells").height() : this.element.find(".e-workcells").height();
@@ -8276,7 +8207,7 @@
             if (!this.model.timeScale.enable && this._oneWeek)
                 maxDays = 7 - renderDate.indexOf(start.getTime());
             var diffInDays = (start.getHours() == 0 && end.getHours() == 0) ? Math.ceil(((new Date(end) - new Date(start)) / (1000 * 3600)) / 24) : Math.ceil(((new Date(end).setHours(23, 59, 59) - new Date(start).setHours(0, 0, 0)) / (1000 * 3600)) / 24);
-			if (end.getTimezoneOffset() - start.getTimezoneOffset() != 0) diffInDays -= 1;
+            if (end.getTimezoneOffset() - start.getTimezoneOffset() != 0) diffInDays -= 1;
             if (startTime <= endTime) {
                 if (this.model.orientation == "vertical") {
                     diffInDays = diffInDays >= maxDays ? maxDays : diffInDays;
@@ -8284,131 +8215,144 @@
                     appWidth = (diffInDays * this.CellWidth) - ((this.CellWidth * 5) / 100);
                 }
                 else {
-                    appWidth = !this.model.timeScale.enable || this.currentView() == "month" || this._isCustomMonthView() ? (diffInDays * this.CellWidth) + 1 : (this.CellWidth * diffInDays) - parseInt((this.CellWidth * 10) / 100);
+                    appWidth = !this.model.timeScale.enable || this.currentView() == "month" || this._isCustomMonthView() ? (this.model.cellWidth != "") ? ((diffInDays * this.CellWidth) + diffInDays) : (diffInDays * this.CellWidth) : (this.CellWidth * diffInDays) - parseInt((this.CellWidth * 10) / 100);
                 }
-                var resIndex = ((this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0&& !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) ? this._findResourceIndex(this.res1, this._tempResource[this._tempResource.length - 1].resourceSettings.id, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : 0;
-                if ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources)
+                var resIndex = ((this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) ? this._findResourceIndex(this.res1, this._tempResource[this._tempResource.length - 1].resourceSettings.id, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) : 0;
+                if ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources)
                     var cellId = this.model.orientation == "vertical" ? this.currentView() == "day" ? resIndex + 1 : this.currentView() == "workweek" || this._isCustomMonthView() && this._oneWeek ? (resIndex * (this._dateRender.length)) + (day + 1) : this.currentView() == "workweek" ? (resIndex * (this._dateRender.length) + (new Date(startTime).getDay() + 1)) + ((rowPosition - 1) * (this.res1.length * this._dateRender.length)) : this._firstdayofweek == 0 ? (resIndex * (7) + (new Date(startTime).getDay() + 1)) + ((rowPosition - 1) * (this.res1.length * 7)) : (this.model.orientation == "vertical" && this._firstdayofweek != 0) ? ((resIndex * (7) + (new Date(startTime).getDay() + 1)) + ((rowPosition - 1) * (this.res1.length * 7)) - this._firstdayofweek) : day + 1 : day + 1;
                 else
                     var cellId = this.model.orientation == "vertical" && this._isCustomMonthView() && !this._oneWeek ? (resIndex * (7) + (new Date(startTime).getDay() + 1)) + ((rowPosition - 1) * (this.res1.length * 7)) : day + 1;
                 if (this.model.orientation == "vertical" && this._firstdayofweek != 0 && new Date(startTime).getDay() < this._firstdayofweek)
                     var cellId = (resIndex * (7) + (new Date(startTime).getDay() + 1)) + ((rowPosition - 1) * (this.res1.length * 7)) - this._firstdayofweek + 7;
+                if (this.model.orientation == "horizontal" && this.model.cellWidth == "" && diffInDays > 1 && !this.model.enableRTL) {
+                    var startLeft = $(this.element.find(".e-workcellstab tr:first").find("td.e-workcells")[cellId - 1]).offset().left;
+                    var endElement = $(this.element.find(".e-workcellstab tr:first").find("td.e-workcells")[cellId - 2 + diffInDays]);
+                    var endLeft = endElement.offset().left + endElement.width();
+                    appWidth = endLeft - startLeft;
+                }
                 var tempAppWidth = appWidth - 1;
                 var userAppTemplId = (this.model.appointmentTemplateId) ? true : false;
                 var userTempHtml = this._getUserAppointmentTemplate(record);
-                var appHeight = (!this.model.appointmentTemplateId) ? 19 : ($(userTempHtml).css('height') == "100%" ? (this.CellHeight - this.element.find('.e-monthheader').height() - 15) : $(userTempHtml).css('height') == "0px" ? this.element.find(".e-monthappointment").height() : $(userTempHtml).height());
+                var monthHeader = (this.element.find('.e-monthheader').length != 0) ? this.element.find('.e-monthheader').height() : 0;
+                var appHeight = (!this.model.appointmentTemplateId) ? 19 : ($(userTempHtml).css('height') == "100%" ? (!this.model.showOverflowButton ? this.initialCellHeight : (this.CellHeight - monthHeader - 15)) : $(userTempHtml).css('height') == "0px" ? this.element.find(".e-monthappointment").height() : $(userTempHtml).height());
                 appWidth = (!this.model.appointmentTemplateId) ? appWidth : ($(userTempHtml).css('width') == "100%" || $(userTempHtml).css('width') == "0px" ? appWidth : $(userTempHtml).width());
                 topPosition = (overlapCount * appHeight);
                 this.leftPosition = 0;
-                if ((this._tempResource.length!=0)) {
+                if ((this._tempResource.length != 0)) {
                     var newResCollection = this._resCollection;
-					var newResCollection1 = this._horiGroupCollection();
-				}
-				if (this.model.orientation == "vertical")
-					var groupIndex = (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1) ? this._findResourceIndex(newResCollection[0].dataSource, newResCollection[0].id, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 2].trim()]) + 1 : 0;
+                    var newResCollection1 = this._horiGroupCollection();
+                }
+                if (this.model.orientation == "vertical")
+                    var groupIndex = (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1) ? this._findResourceIndex(newResCollection[0].dataSource, newResCollection[0].id, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 2].trim()]) + 1 : 0;
                 else
-					var groupIndex = (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1) ? this._findResourceIndex(newResCollection1, this._tempResource[this._tempResource.length-2].resourceSettings["id"], record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 2].trim()]) + 1 : 0;
-				var resValue = (!ej.isNullOrUndefined(this.model.group)&& (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0) ? this._findResourceIndex(this.res1, this._tempResource[this._tempResource.length - 1].resourceSettings.id, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) + 1 : 1;
+                    var groupIndex = (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1) ? this._findResourceIndex(newResCollection1, this._tempResource[this._tempResource.length - 2].resourceSettings["id"], record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 2].trim()]) + 1 : 0;
+                var resValue = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0) ? this._findResourceIndex(this.res1, this._tempResource[this._tempResource.length - 1].resourceSettings.id, record[this._appointmentSettings.resourceFields.toString().split(',')[this._tempResource.length - 1].trim()]) + 1 : 1;
                 var colorAppointment = this._appointmentColor(record);
-                var colCount = parseInt(this.CellWidth / (this.CellWidth <= appWidth ? this.CellWidth : (appWidth + (this.element.find(".e-monthappointment").outerWidth(true) - this.element.find(".e-monthappointment").width()))));
-                var rowCount = parseInt((this.CellHeight - this.element.find('.e-monthheader').height() - 10) / (this.element.find(".e-monthappointment").length > 0 ? this.element.find(".e-monthappointment").outerHeight(true) : appHeight));
-                this.CellHeight = $(this.element.find("div.e-appointwrapper")[cellId - 1]).closest("tr").find(".e-monthcells").outerHeight();
+                var monthCal = this.element.find(".e-monthappointment").length != 0 ? this.element.find(".e-monthappointment").outerWidth(true) - this.element.find(".e-monthappointment").width() : 0;
+                var colCount = parseInt(this.CellWidth / (this.CellWidth <= appWidth ? this.CellWidth : (appWidth + monthCal)));
+                var rowCount = parseInt((this.CellHeight - monthHeader - 10) / (this.element.find(".e-monthappointment").length > 0 ? this.element.find(".e-monthappointment").outerHeight(true) : appHeight));
                 if (this.model.orientation == "horizontal") {
                     this.CellHeight = $(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find(".e-workcells").height();
                 }
+                else
+                    this.CellHeight = $(this.element.find("td.e-monthcells")[cellId - 1]).closest("tr").find(".e-monthcells").outerHeight();
                 var indicationIcon = this._indicationApp(record);
-                var startTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["startTime"]], this._pattern.t) : ej.format(record[this._appointmentSettings["startTime"]], "HH:mm");
-                var endTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["endTime"]], this._pattern.t) : ej.format(record[this._appointmentSettings["endTime"]], "HH:mm");
-                if (userAppTemplId && $(userTempHtml).css('height') != "0px" && this.model.orientation!="horizontal" ? ((overlapCount + 1) <= (colCount * rowCount)) : (this.CellHeight > this.element.find('.e-monthheader').height() + ((overlapCount + 1) * appHeight) + 10)) {
+                var startTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["startTime"]], this._pattern.t, this.model.locale) : ej.format(record[this._appointmentSettings["startTime"]], "HH:mm", this.model.locale);
+                var endTimeDisp = this._timeMode == "12" ? ej.format(record[this._appointmentSettings["endTime"]], this._pattern.t, this.model.locale) : ej.format(record[this._appointmentSettings["endTime"]], "HH:mm", this.model.locale);
+                if (this.model.showOverflowButton && userAppTemplId && $(userTempHtml).css('height') != "0px" && this.model.orientation != "horizontal" ? ((overlapCount + 1) <= (colCount * rowCount)) : (this.CellHeight > monthHeader + ((overlapCount + 1) * appHeight) + 10)) {
                     if (appWidth < tempAppWidth)
                         userAppTemplId && $(this.element.find(".e-appointwrapper")[cellId - 1]).attr('style', "height:" + (parseInt(overlapCount / colCount) + 1) * appHeight + "px !important;width:" + this.CellWidth + "px !important;position:absolute !important;");
-                    else
-                        userAppTemplId && $(this.element.find(".e-appointwrapper")[cellId - 1]);
-                    if (topPosition > 1) topPosition=(overlapCount*appHeight);
+                    if (topPosition > 1) topPosition = (overlapCount * appHeight);
                     if (this.leftPosition > 1) this.leftPosition -= 1;
-                    if(!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
-                        var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;                  
-                    var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-monthappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication }));
+                    if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
+                        var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
+                    var timeCellhtml = $(this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-monthappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, priority: this.model.prioritySettings.enable ? record[this._appointmentSettings["priority"]] : '', enablePriority: this.model.prioritySettings["template"], priorityTemplate: this.model.prioritySettings["template"] ? this._priorityTemplate(record) : record[this._appointmentSettings['priority']], uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication, resId: (!ej.isNullOrUndefined(this._appointmentSettings["resourceFields"])) ? record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1]] : "" }));
                     (!ej.isNullOrUndefined(this.model.queryCellInfo)) && this._renderQueryCellInfo("appointment", record, timeCellhtml);
-                    if (this.model.orientation == "vertical")
-                        $(this.element.find("div.e-appointwrapper")[cellId - 1]).append(timeCellhtml);
+                    if (this.model.orientation == "vertical") {
+                        var celltd = $(this.element.find("td.e-monthcells")[cellId - 1]);
+                        celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(timeCellhtml) : celltd.find(".e-monthheader").after($("<div class='e-appointwrapper'></div>").append(timeCellhtml));
+                    }
                     else if (this.model.orientation == "horizontal" && ej.scheduleFeatures.horizontal) {
-                        $($(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find("div.e-appointwrapper")[cellId - 1]).append(timeCellhtml);
-						if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
-							this._renderAppointmentCategory(newResCollection1,groupIndex,cellId-1,record,appWidth,this.leftPosition);
+                        var celltd = $($(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find("td.e-workcells")[cellId - 1]);
+                        celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(timeCellhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(timeCellhtml));
+                        if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
+                            this._renderAppointmentCategory(newResCollection1, groupIndex, cellId - 1, record, appWidth, this.leftPosition);
                     }
                     timeCellhtml = "";
                 }
                 else {
-                    if ($("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + (cellId - 1)).length != 0) {
-						$("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + (cellId - 1)).remove();
-					}
+                    if ($("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy", this.model.locale) + "_" + (resValue + groupIndex - 1) + "_" + (cellId - 1)).length != 0) {
+                        $("#" + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy", this.model.locale) + "_" + (resValue + groupIndex - 1) + "_" + (cellId - 1)).remove();
+                    }
                     if (this.model.showOverflowButton) {
                         var count = cellId - 1;
                         var DateString = new Date(record[this._appointmentSettings["startTime"]]).getTime();
                         var endDay = Math.round(((record[this._appointmentSettings["endTime"]] - record[this._appointmentSettings["startTime"]]) / 3600000) / 24);
                         var i = count;
-						var appCount = overlapCount + 1;
+                        var appCount = overlapCount + 1;
                         do {
-							if (this.model.orientation == "vertical")
-								$(this.element.find("div.e-appointwrapper")[i]).append('<div id="' + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + (i) + '" class="e-icon e-arrowhead-down e-appsoverflow" cellinfo="' + this._dateRender[day] + '" appcount="' + appCount + '"></div>');
-							else
-								$($(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find("div.e-appointwrapper")[i]).append('<div id="' + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy") + "_" + (resValue + groupIndex - 1) + "_" + (i) + '" class="e-icon e-arrowhead-down e-appsoverflow" cellinfo="' + this._horizontalMonthDates()[day] + '" appcount="' + appCount + '"></div>');
+                            var celltd = this.model.orientation == "vertical" ? $(this.element.find("td.e-monthcells")[i]) : $($(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find("td.e-workcells")[i]);
+                            var overflowhtml = '<div id="' + this._id + "_" + ej.format(new Date(record[this._appointmentSettings["startTime"]]), "MM_dd_yyyy", this.model.locale) + "_" + (resValue + groupIndex - 1) + "_" + (i) + '" class="e-icon e-arrowhead-down e-appsoverflow" cellinfo="' + renderDate[day] + '" appcount="' + appCount + '"></div>';
+                            celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(overflowhtml) : celltd.find(".e-monthheader").after($("<div class='e-appointwrapper'></div>").append(overflowhtml));
                             DateString = DateString + (60 * 60 * 24 * 1000);
                             i++;
                         }
                         while (i < endDay + count);
-						if (this.model.orientation == "horizontal" && !ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
-							this._renderAppointmentCategory(newResCollection1,groupIndex,cellId-1,record,appWidth,this.leftPosition);
+                        if (this.model.orientation == "horizontal" && !ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
+                            this._renderAppointmentCategory(newResCollection1, groupIndex, cellId - 1, record, appWidth, this.leftPosition);
                     }
                     else {
-						if (this.model.orientation == "vertical") {
-							if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
-								var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
-							topPosition = (overlapCount * appHeight);
-							var timecellindex = $(this.element.find("div.e-appointwrapper")[cellId - 1]).closest("tr").index();
-							var timeCellhtml = this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-monthappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon });
-							$(this.element.find("div.e-appointwrapper")[cellId - 1]).closest("tr").find(".e-monthcells").css('height', this.CellHeight + appHeight - 1 + "px");
-							$(this.element.find(".e-timecells")[timecellindex]).css('height', this.CellHeight + appHeight - 1 + "px");
-							$(this.element.find("div.e-appointwrapper")[cellId - 1]).append(timeCellhtml);
-							this._reRenderScroller();
-						}
-						else {
-							topPosition = (overlapCount * appHeight);
-							$(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find(".e-workcells").css('height', this.CellHeight + appHeight - 1 + "px");
-							$(this.element.find(".e-resourceheadertable tr")[resValue + groupIndex - 1]).find(".e-childnode").css('height', this.CellHeight + appHeight - 1 + "px");
-							if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
-								var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
-							var timeCellhtml = this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-monthappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication });
-							this._reRenderScroller();
-							$($(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find("div.e-appointwrapper")[cellId - 1]).append(timeCellhtml);
-							if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
-								this._renderAppointmentCategory(newResCollection1,groupIndex,cellId-1,record,appWidth,this.leftPosition);
-						}
+                        if (this.model.orientation == "vertical") {
+                            if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
+                                var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
+                            topPosition = (overlapCount * appHeight);
+                            var timecellindex = $(this.element.find("td.e-monthcells")[cellId - 1]).closest("tr").index();
+                            var timeCellhtml = this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-monthappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, resId: (!ej.isNullOrUndefined(this._appointmentSettings["resourceFields"])) ? record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1]] : "" });
+                            var cellHeight = this.element.find("td.e-monthcells").eq(cellId - 1).parent().children().outerHeight();
+                            this.CellHeight = (cellHeight > ((appHeight * (overlapCount + 1)) + monthHeader)) ? cellHeight : (cellHeight + (appHeight - 1));
+                            $(this.element.find("td.e-monthcells")[cellId - 1]).closest("tr").find(".e-monthcells").css('height', this.CellHeight+ "px");
+                            $(this.element.find(".e-timecells")[timecellindex]).css('height', this.CellHeight + "px");
+                            var celltd = $(this.element.find("td.e-monthcells")[cellId - 1]);
+                            celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(timeCellhtml) : celltd.find(".e-monthheader").after($("<div class='e-appointwrapper'></div>").append(timeCellhtml));
+                            this._reRenderScroller();
+                        }
+                        else {
+                            topPosition = (overlapCount * appHeight);
+                            if ((this.CellHeight - 10) < (appHeight * (overlapCount + 1))) {
+                                $(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find(".e-workcells").css('height', this.CellHeight + appHeight + "px");
+                                $(this.element.find(".e-resourceheadertable tr")[resValue + groupIndex - 1]).find(".e-childnode").css('height', this.CellHeight + appHeight + "px");
+                            }
+                            if (!ej.isNullOrUndefined(record[this._appointmentSettings["recurrenceRule"]]))
+                                var recEditIcon = record[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1;
+                            var timeCellhtml = this.appTemplate.render({ id: record["AppTaskId"], appResize: this.model.enableAppointmentResize, currentview: this.currentView(), appHeight: appHeight, rtl: this.model.enableRTL, subject: record[this._appointmentSettings["subject"]], startTime: startTimeDisp, endTime: endTimeDisp, left: this.leftPosition + "px", top: topPosition, appWidth: appWidth + "px", userAppTemplId: userAppTemplId, userTemplate: userTempHtml, appClass: "e-monthappointment", appointData: colorAppointment.appointColor.appointData, appointCustomcss: colorAppointment.appointColor.appointCustomcss, appointtextcolor: colorAppointment.appointColor.appointtextcolor, value: colorAppointment.value, multiDiv: colorAppointment.multiDiv, uid: record.Guid, recurrence: record[this._appointmentSettings["recurrence"]], recurrenceEdit: recEditIcon, leftInd: indicationIcon.leftIndication, rightInd: indicationIcon.rightIndication, resId: (!ej.isNullOrUndefined(this._appointmentSettings["resourceFields"])) ? record[this._appointmentSettings["resourceFields"].split(",")[this._appointmentSettings["resourceFields"].split(",").length - 1]] : "" });
+                            this._reRenderScroller();
+                            var celltd = $($(this.element.find(".e-workcellstab tr")[resValue + groupIndex - 1]).find("td.e-workcells")[cellId - 1]);
+                            celltd.find("div.e-appointwrapper").length > 0 ? celltd.find("div.e-appointwrapper").append(timeCellhtml) : celltd.prepend($("<div class='e-appointwrapper'></div>").append(timeCellhtml));
+                            if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1)
+                                this._renderAppointmentCategory(newResCollection1, groupIndex, cellId - 1, record, appWidth, this.leftPosition);
+                        }
                     }
-                    topPosition = this.CellHeight - (this.element.find('.e-monthheader').height() + (this.element.find('.e-appsoverflow').height()) - 2);
+                    topPosition = this.CellHeight - (monthHeader + (this.element.find('.e-appsoverflow').height()) - 2);
                     this.element.find(".e-icon.e-appsoverflow").css(this.model.enableRTL ? "right" : "left", (this.CellWidth + this.leftPosition - 25) + "px").css("top", topPosition + "px");
                 }
             }
             if (!record[this._appointmentSettings["recurrence"]]) {
-                var id = (record.ParentId == undefined) ? record["AppTaskId"] : record.ParentId;
-                var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, id);
-                var templist = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
+                var templist = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, record.ParentId));
                 var tempMultiApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, record.Guid));
                 if ((new Date(record[this._appointmentSettings["endTime"]])) < (templist[0][this._appointmentSettings["endTime"]])) {
                     if (this.model.enableRTL)
-                        $(this.element.find("div.e-appointwrapper")[cellId - 1]).find('[guid='+ templist[0]["Guid"]+']').children(".e-lefthandle").remove();
-                    else $(this.element.find("div.e-appointwrapper")[cellId - 1]).find('[guid=' + templist[0]["Guid"] + ']').children(".e-righthandle").remove();
+                        $(this.element.find(renderCells)[cellId - 1]).find('[guid=' + templist[0]["Guid"] + ']').children(".e-lefthandle").remove();
+                    else $(this.element.find(renderCells)[cellId - 1]).find('[guid=' + templist[0]["Guid"] + ']').children(".e-righthandle").remove();
                 }
                 if ((new Date(record[this._appointmentSettings["startTime"]])) > (templist[0][this._appointmentSettings["startTime"]])) {
                     if (this.model.enableRTL)
-                        $(this.element.find("div.e-appointwrapper")[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-righthandle").remove();
-					else $(this.element.find("div.e-appointwrapper")[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-lefthandle").remove();
+                        $(this.element.find(renderCells)[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-righthandle").remove();
+                    else $(this.element.find(renderCells)[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-lefthandle").remove();
                 }
             }
             if (!ej.isNullOrUndefined(tempMultiApp) && tempMultiApp > 1) {
-                $(this.element.find("div.e-appointwrapper")[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-lefthandle").remove();
-                $(this.element.find("div.e-appointwrapper")[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-righthandle").remove();
+                $(this.element.find(renderCells)[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-lefthandle").remove();
+                $(this.element.find(renderCells)[cellId - 1]).find('[guid=' + record["Guid"] + ']').children(".e-righthandle").remove();
             }
             if (!ej.isNullOrUndefined(indicationIcon)) {
                 if (indicationIcon.leftIndication)
@@ -8416,23 +8360,24 @@
                 if (indicationIcon.rightIndication)
                     this.model.enableRTL ? this.element.find('[guid=' + record.Guid + ']').find(".e-apptime,.e-apptext").css("margin-right", "13px") : this.element.find('[guid=' + record.Guid + ']').find(".e-schedulemouseclose").css("margin-right", "11px");
             }
-    
+
         },
 
         _quickWindowClose: function () {
             this._quickAppointWindow.find(".e-error").remove();
             this._quickAppointWindow.ejDialog("close");
+            this._scrollerPosition();
             this._processFocus();
         },
 
         _appointmentWindow: function (e) {
             this.model.showQuickWindow && this._quickAppointWindow.ejDialog("close");
             var startTime, endTime, _target = !ej.isNullOrUndefined(e.target) ? $(e.target) : $(e);
-            if (!ej.isNullOrUndefined(this.model.workCellsTemplateId) || !ej.isNullOrUndefined(this.model.allDayCellsTemplateId)) 
-                _target = _target.closest(".e-workcells, .e-alldaycells, .e-monthcells");
+            if (this.currentView() != "agenda" && !_target.hasClass("e-detailedapp") && (!ej.isNullOrUndefined(this.model.workCellsTemplateId) || !ej.isNullOrUndefined(this.model.allDayCellsTemplateId)))
+                _target = !ej.isNullOrUndefined($(e.target).closest(".e-appointment,.e-monthappointment")) ? $(e.target).closest(".e-appointment,.e-monthappointment") : _target.closest(".e-workcells, .e-alldaycells, .e-monthcells");
             if (_target.hasClass("e-blocktimeappointment") || _target.closest(".e-blocktimeappointment").length > 0)
                 return false;
-			if (_target.hasClass("e-appup") || _target.hasClass("e-appdown")) return false;
+            if (_target.hasClass("e-appup") || _target.hasClass("e-appdown")) return false;
             var customFlag = (_target.hasClass("e-workcells") || _target.hasClass("e-alldaycells") || _target.hasClass("e-monthcells") || this._cellClick || _target.hasClass("e-detailedapp")) && !_target.hasClass("e-resourceheadercells") && !_target.hasClass("e-schedulemouseclose") && !_target.hasClass("e-appointinnertext") && !_target.hasClass("e-apptext") && !_target.hasClass("e-apptime");
             var eventFlag = (this.model.appointmentWindowOpen != null || this.model.cellDoubleClick != null) || (!ej.isNullOrUndefined(this.model.serverEvents) && ((this.model.serverEvents.indexOf("appointmentWindowOpen") != -1) || (this.model.serverEvents.indexOf("cellDoubleClick") != -1)));
             var event = { startTime: new Date(this.cur_StartTime), endTime: this.cur_EndTime, target: e, resources: (eventFlag && customFlag && (this._tempResource.length != 0)) ? this._getResourceValue(_target) : null };
@@ -8446,25 +8391,25 @@
                 var renderDate = (this.model.orientation == "horizontal" && this.currentView() == "month") ? this.monthDays : this.model.orientation == "vertical" ? this.dateRender : this._dateRender;
                 var curDate = new Date(renderDate[index]);
                 if ((this.model.minDate > curDate || this.model.maxDate < curDate)) { return false; }
-               
-                    startTime = new Date(this.cur_StartTime);
-                    endTime = new Date(this.cur_EndTime);
-                    if (!ej.isNullOrUndefined(this.model.appointmentWindowOpen) || (!ej.isNullOrUndefined(this.model.serverEvents) && (this.model.serverEvents.indexOf("appointmentWindowOpen") != -1)))
-                        if (this._trigger("appointmentWindowOpen", event))
-                            return false;
+
+                startTime = new Date(this.cur_StartTime);
+                endTime = new Date(this.cur_EndTime);
+                if (!ej.isNullOrUndefined(this.model.appointmentWindowOpen) || (!ej.isNullOrUndefined(this.model.serverEvents) && (this.model.serverEvents.indexOf("appointmentWindowOpen") != -1)))
+                    if (this._trigger("appointmentWindowOpen", event))
+                        return false;
                 this._appointmentAddWindow.find("#" + this._id + "subject").val(this.model.showQuickWindow ? this._quickAppointWindow.find(".subject").val() : "");
                 this._appointmentAddWindow.find("#" + this._id + "location").val(this.model.showQuickWindow ? this._quickAppointWindow.find(".location").val() : "");
-                this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", { value: ej.format(new Date(startTime), this._datepattern()) });
-                this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", { value: ej.format(new Date(endTime), this._datepattern()) });
-                this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(new Date(startTime), this._pattern.t));
-                this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(new Date(endTime), this._pattern.t));
+                this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", { value: ej.format(new Date(startTime), this._datepattern(), this.model.locale) });
+                this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", { value: ej.format(new Date(endTime), this._datepattern(), this.model.locale) });
+                this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(new Date(startTime), this._pattern.t, this.model.locale));
+                this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(new Date(endTime), this._pattern.t, this.model.locale));
                 this._appointmentAddWindow.find("#" + this._id + "priority").ejDropDownList("option", "value", this.model.prioritySettings.dataSource[0][this.model.prioritySettings["value"]]);
                 ($(e.currentTarget).hasClass("e-alldaycells") || this.currentView() == "month" || (this._isCustomMonthView())) && this._appointmentAddWindow.find(".allday").ejCheckBox({ checked: true });
                 this._timeZoneCollection(null);
                 this._tempStart = this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value");
                 this._tempEnd = this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value");
                 this._alldayCheck();
-                if (ej.scheduleFeatures.resources && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0)
+                if (ej.scheduleFeatures.resources && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0)
                     this._renderResourceData(_target, this._cellIndex);
                 if (!this.model.readOnly) {
                     this._appointmentAddWindow.find(".e-appsave ,#" + this._id + "donerecur").ejButton("enable", true);
@@ -8482,19 +8427,15 @@
                     if (target.length > 0 && !ej.isNullOrUndefined(target[0].id)) {
                         this._currentAction = ej.Schedule.Actions.Save;
                         this._appUid = target.attr('guid');
-                        var query = new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid);
-                        var templist = new ej.DataManager(this._processed).executeLocal(query);
+                        var templist = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
                         if (templist[0][this._appointmentSettings["recurrence"]] == 1) {
                             this._parentId = templist[0]["ParentId"];
                             this._recurEditWindow.ejDialog("open");
                             this._recurEditWindow.focus();
                             this._deleteBeforeOpen();
                         }
-                        else {
-                            var query = new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid);
-                            var temp = new ej.DataManager(this._processed).executeLocal(query);
+                        else
                             this._showAppointmentDetails(this._appUid, true);
-                        }
                         this.model.showQuickWindow && this._quickAppDetailsWindow.ejDialog("close");
                     }
                     this._editKey = false;
@@ -8512,20 +8453,23 @@
         _showAppointmentDetails: function (appId, editOcurrence) {
             var recurEdit = this._appointmentAddWindow.find(".e-recurrenceeditor").data("ejRecurrenceEditor");
             this._appUid = ej.isNullOrUndefined(this._appUid) ? appId : this._appUid;
-			this._currentAction = (ej.isNullOrUndefined(this._currentAction) || this._currentAction == "") ? ej.Schedule.Actions.Save : this._currentAction;
-            var query = editOcurrence == true ? new ej.Query().where("Guid", ej.FilterOperators.equal, appId) : new ej.Query().where("AppTaskId", ej.FilterOperators.equal, appId);
+            this._currentAction = (ej.isNullOrUndefined(this._currentAction) || this._currentAction == "") ? ej.Schedule.Actions.Save : this._currentAction;
+            var query = editOcurrence == true ? new ej.Query().where("Guid", ej.FilterOperators.equal, appId) : new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, appId);
             var list = editOcurrence == true ? this._processed : this._currentAppointmentData;
             var templist = this._sortAppById(new ej.DataManager(list).executeLocal(query));
-			templist[0][this._appointmentSettings["endTime"]] = templist[templist.length - 1][this._appointmentSettings["endTime"]];
+            var data = { appointment: templist[0], edit: editOcurrence };
+            if (this._trigger("appointmentWindowOpen", data))
+                return false;
+            templist[0][this._appointmentSettings["endTime"]] = templist[templist.length - 1][this._appointmentSettings["endTime"]];
             this._appointmentAddWindow.find('.subject').val(templist[0][this._appointmentSettings["subject"]]);
             this._appointmentAddWindow.find('.location').val(templist[0][this._appointmentSettings["location"]]);
             this._appointmentAddWindow.find('.id').val(templist[0]["AppTaskId"]);
             this._appointmentAddWindow.find('.e-description').val(templist[0][this._appointmentSettings["description"]] ? templist[0][this._appointmentSettings["description"]] : "");
             var temp = templist[0];
-                this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value", ej.format(temp[this._appointmentSettings["startTime"]], this._datepattern()));
-                this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value", ej.format(temp[this._appointmentSettings["endTime"]], this._datepattern()));
-                this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(temp[this._appointmentSettings["startTime"]], this._pattern.t));
-                this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(temp[this._appointmentSettings["endTime"]], this._pattern.t));
+            this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value", ej.format(temp[this._appointmentSettings["startTime"]], this._datepattern(), this.model.locale));
+            this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value", ej.format(temp[this._appointmentSettings["endTime"]], this._datepattern(), this.model.locale));
+            this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(temp[this._appointmentSettings["startTime"]], this._pattern.t, this.model.locale));
+            this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(temp[this._appointmentSettings["endTime"]], this._pattern.t, this.model.locale));
             if (this.model.prioritySettings.enable) {
                 if (!ej.isNullOrUndefined(temp[this._appointmentSettings["priority"]])) {
                     this._appointmentAddWindow.find("#" + this._id + "priority").ejDropDownList("option", { value: templist[0][this._appointmentSettings["priority"]] });
@@ -8535,8 +8479,8 @@
                 }
             }
             this._timeZoneCollection(temp);
-                this._tempStart = this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value");
-                this._tempEnd = this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value");
+            this._tempStart = this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value");
+            this._tempEnd = this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value");
 
             templist[0][this._appointmentSettings["allDay"]] == 1 && (this._appointmentAddWindow.find(".allday ").ejCheckBox({ checked: true }));
             if (templist[0][this._appointmentSettings["recurrence"]] == 1) {
@@ -8546,11 +8490,11 @@
                     this._appointmentAddWindow.find(".recurrence").ejCheckBox({ checked: true, enabled: false });
                     this._appointmentAddWindow.find(".e-repeatlbl").addClass('e-disable');
                     this._appointmentAddWindow.find("." + this._id + "summary").css("display", "none");
-                    this._appointmentAddWindow.find(".e-recurFinalRule").html("");                    
+                    this._appointmentAddWindow.find(".e-recurFinalRule").html("");
                 }
                 else {
                     recurEdit.recurrenceRuleSplit(templist[0][this._appointmentSettings["recurrenceRule"]], temp[this._appointmentSettings["recurrenceExDate"]]);
-                    this._appointmentAddWindow.find(".recurstartdate").ejDatePicker({ value: ej.format(temp[this._appointmentSettings["startTime"]], this._datepattern()) });
+                    this._appointmentAddWindow.find(".recurstartdate").ejDatePicker({ value: ej.format(temp[this._appointmentSettings["startTime"]], this._datepattern(), this.model.locale) });
                     this._appointmentAddWindow.find("." + this._id + "summary").css("display", "table-row");
                     this._appointmentAddWindow.find(".e-recurFinalRule").html(recurEdit.showRecurrenceSummary(appId));
                     this._appointmentAddWindow.find(".recurrence").ejCheckBox({ checked: true });
@@ -8560,11 +8504,8 @@
             if (this.model.categorizeSettings.enable && !ej.isNullOrUndefined(temp[this._appointmentSettings["categorize"]])) {
                 this._showCategorizeDetails(temp);
             }
-            if ((this._tempResource.length!=0) && ej.scheduleFeatures.resources)
+            if ((this._tempResource.length != 0) && ej.scheduleFeatures.resources)
                 this._showMultipleResourceDetails(temp);
-            var data = { appointment: templist[0], edit: editOcurrence };
-            if (this._trigger("appointmentWindowOpen", data))
-                return false;
             this._alldayCheck();
             var enableDisable = (this.model.readOnly) ? "disable" : "enable";
             this._appointmentAddWindow.find(".e-appsave,#" + this._id + "donerecur").ejButton(enableDisable, true);
@@ -8572,13 +8513,13 @@
             this._appointmentAddWindow.ejDialog("open");
             (!this._mediaQuery) && this._appointmentAddWindow.find(".subject").focus();
         },
-           
+
         _recurDateChange: function (args) {
             this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value", args);
             if (this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value") < this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value"))
                 this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value", args);
-			else if (args !=this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value"))
-				this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value", args);
+            else if (args != this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value"))
+                this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value", args);
         },
 
         _cancel: function () {
@@ -8675,7 +8616,7 @@
                 }
             }
         },
-        _endTimeChange: function(e){
+        _endTimeChange: function (e) {
             var obj = this._appointmentAddWindow.find("#" + this._id + "endtime").data("ejTimePicker");
             if (ej.isNullOrUndefined(e.value)) {
                 obj.option("value", new Date(this.cur_EndTime));
@@ -8692,13 +8633,11 @@
             control.find('.startenddate').ejDatePicker({ buttonText: this._getLocalizedLabels("Today"), startDay: this._firstdayofweek, enableRTL: this.model.enableRTL, width: '100%', value: this.currentDate(), locale: this.model.locale, dateFormat: this.model.dateFormat, cssClass: this.model.cssClass, minDate: this.model.minDate, maxDate: this.model.maxDate });
             control.find("#" + this._id + "starttime").ejTimePicker({ enableRTL: this.model.enableRTL, width: "100%", value: this.currentDate(), locale: this.model.locale, change: $.proxy(this._timeChange, this), cssClass: this.model.cssClass, interval: 30, timeFormat: (this._timeMode == "12") ? this._pattern.t : "HH:mm" });
             control.find("#" + this._id + "endtime").ejTimePicker({ enableRTL: this.model.enableRTL, width: "100%", value: this.currentDate(), locale: this.model.locale, change: $.proxy(this._endTimeChange, this), cssClass: this.model.cssClass, interval: 30, timeFormat: (this._timeMode == "12") ? this._pattern.t : "HH:mm" });
-
-            control.find("#" + this._id + "startTimeZone").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: this.model.timeZoneCollection.dataSource, fields: { text: "text", id: "id", value: "value" }, width: "100%", select: $.proxy(this._startUtc, this), cssClass: this.model.cssClass });
-            control.find("#" + this._id + "endTimeZone").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: this.model.timeZoneCollection.dataSource, fields: { text: "text", id: "id", value: "value" }, width: "100%", select: $.proxy(this._endUtc, this), cssClass: this.model.cssClass });
-            if (this.model.prioritySettings.enable && !(this.model.prioritySettings.dataSource instanceof ej.DataManager)) {
+            control.find("#" + this._id + "startTimeZone").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: this.model.timeZoneCollection.dataSource, fields: { text: this.model.timeZoneCollection["text"], id: this.model.timeZoneCollection["id"], value: this.model.timeZoneCollection["value"] }, width: "100%", select: $.proxy(this._startUtc, this), cssClass: this.model.cssClass });
+            control.find("#" + this._id + "endTimeZone").ejDropDownList({ enableRTL: this.model.enableRTL, dataSource: this.model.timeZoneCollection.dataSource, fields: { text: this.model.timeZoneCollection["text"], id: this.model.timeZoneCollection["id"], value: this.model.timeZoneCollection["value"] }, width: "100%", select: $.proxy(this._endUtc, this), cssClass: this.model.cssClass });
+            if (this.model.prioritySettings.enable && !(this.model.prioritySettings.dataSource instanceof ej.DataManager))
                 this._renderPriorityItems(control);
-            }
-            if ((this._tempResource.length!=0) && ej.scheduleFeatures.resources)
+            if ((this._tempResource.length != 0) && ej.scheduleFeatures.resources)
                 this._renderAppWindowResources(control);
             if (this.model.categorizeSettings.enable && !(this.model.categorizeSettings.dataSource instanceof ej.DataManager))
                 this._renderCategoryItems(control);
@@ -8748,7 +8687,7 @@
                 return false;
         },
         _appointmentColor: function (record) {
-            var appointColor = (this.model.categorizeSettings.enable && !ej.isNullOrUndefined(record[this._appointmentSettings["categorize"]]) && record[this._appointmentSettings["categorize"]] != "") ? this._getCategorizeColor(record) : ((this._tempResource.length!=0) && ej.scheduleFeatures.resources) ? this._getResourceColor(record) : { appointData: "", appointCustomcss: "", appointtextcolor: "" };
+            var appointColor = (this.model.categorizeSettings.enable && !ej.isNullOrUndefined(record[this._appointmentSettings["categorize"]]) && record[this._appointmentSettings["categorize"]] != "") ? this._getCategorizeColor(record) : ((this._tempResource.length != 0) && ej.scheduleFeatures.resources) ? this._getResourceColor(record) : { appointData: "", appointCustomcss: "", appointtextcolor: "" };
 
             if (this.model.categorizeSettings.enable && this.model.categorizeSettings.allowMultiple && !ej.isNullOrUndefined(record[this._appointmentSettings["categorize"]])) {
                 var categorizeItems = record[this._appointmentSettings["categorize"]].split(",");
@@ -8758,7 +8697,7 @@
             }
             if (!ej.isNullOrUndefined(multiDiv) && appointColor.appointData.length > 0 && this.model.categorizeSettings.allowMultiple)
                 return { appointColor: appointColor, value: value, multiDiv: multiDiv };
-            else if (appointColor.appointData.length > 0 && !this.model.categorizeSettings.allowMultiple || (this._tempResource.length!=0) && ej.scheduleFeatures.resources)
+            else if (appointColor.appointData.length > 0 && !this.model.categorizeSettings.allowMultiple || (this._tempResource.length != 0) && ej.scheduleFeatures.resources)
                 return { appointColor: appointColor };
             else {
                 appointData = "", appointCustomcss = "", appointtextcolor = "", value = "";
@@ -8785,9 +8724,9 @@
             return template;
         },
 
-        _getResCategorySaveData: function (categorizeVal, autoVal, obj, maxId, temp, starttime, endtime) {
-            var args = [], newAppointment, data, prevdata,tempSource =[];
-            newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), maxId);
+        _getResCategorySaveData: function (categorizeVal, autoVal, obj, maxId, parId, starttime, endtime) {
+            var args = [], newAppointment, data, prevdata, tempSource = [];
+            newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
             if (categorizeVal.length > 0 && !ej.isNullOrUndefined(categorizeVal[0][0])) {
                 var categorizeItemsLength = categorizeVal[categorizeVal.length - 1].length - 1; var idValue = "";
                 for (var i = 0; i <= categorizeItemsLength; i++) {
@@ -8810,18 +8749,18 @@
                 var newResCollection = this._getResourceCollection();
                 if (autoVal[autoVal.length - 1].length > 0) {
                     for (var j = 0; j < autoVal[autoVal.length - 1].length; j++) {
-                        newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), maxId);
-                        newAppointment[this._appointmentSettings["recurrenceId"]] = obj[this._appointmentSettings["recurrenceId"]] == null ? null : obj[this._appointmentSettings["recurrenceId"]];
+                        newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
+                        if (categorizeVal.length > 0)
                         newAppointment[this._appointmentSettings["categorize"]] = categorizeVar;
 
                         if (autoVal[autoVal.length - 1].length > 1) {
-						    obj.Guid = this._guidFormatGenerate();
-                            obj["AppTaskId"] = maxId;
+                            obj.Guid = this._guidFormatGenerate();
                             maxId++;
+                            var templist = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, maxId));
+                            maxId = (templist.length == 0) ? maxId : this._sortAppById(this._processed)[this._processed.length - 1]["AppTaskId"] + 1;
+                            obj[this._appointmentSettings["id"]] = parId = maxId;
+                            if (this._currentAction == ej.Schedule.Actions.EditSeries) obj[this._appointmentSettings["recurrenceId"]] = maxId;
                         }
-                        var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, maxId);
-                        var templist = new ej.DataManager(this._processed).executeLocal(query);
-                        maxId = (templist.length == 0) ? maxId : this._processed[this._processed.length - 1]["AppTaskId"] + 1;
                         newAppointment[resources[resources.length - 1].trim()] = autoVal[resources.length - 1][j][newResCollection[newResCollection.length - 1]["id"]];
 
                         var id = autoVal[resources.length - 1][j][newResCollection[newResCollection.length - 1]["id"]];
@@ -8834,15 +8773,15 @@
                             appointGroupId = prevdata.executeLocal(query1);
                             id = appointGroupId[0][newResCollection[i - 1].id];
                             newAppointment[resources[i - 1]] = id;
-
                         }
-                        if (this._currentAction == ej.Schedule.Actions.EditOcurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
+                        if (this._currentAction == ej.Schedule.Actions.EditOccurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
                         args.push(newAppointment);
                     }
                 }
                 else {
                     var resources = this._appointmentSettings.resourceFields.toString().split(',');
-                    newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), maxId);
+                    newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
+                    if (categorizeVal.length > 0)
                     newAppointment[this._appointmentSettings["categorize"]] = categorizeVar;
                     if (resources.length > 1) {
                         for (i = 0; i < resources.length; i++) {
@@ -8851,13 +8790,13 @@
                     }
                     else
                         newAppointment[resources[resources.length - 1].trim()] = this._tempResource[0].resourceSettings.dataSource[0].id;
-                    if (this._currentAction == ej.Schedule.Actions.EditOcurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
+                    if (this._currentAction == ej.Schedule.Actions.EditOccurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
                     args.push(newAppointment);
                 }
             }
 
             if (autoVal.length == 0 && categorizeVal.length > 0) {
-                if (this._currentAction == ej.Schedule.Actions.EditOcurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
+                if (this._currentAction == ej.Schedule.Actions.EditOccurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
                 args.push(newAppointment);
             }
             return args;
@@ -8876,19 +8815,23 @@
             var rawTimezone = (this.model.timeZone == null) ? this._timezoneStringValue() : this.model.timeZone;
             var value1 = temp !== null ? ej.isNullOrUndefined(this.startTimeAppoint) ? rawTimezone : this.startTimeAppoint : rawTimezone;
             var addUTC = (value1.indexOf("UTC") != 0) ? "UTC " + value1 : value1;
-			var zeroValue = (addUTC.split(" ")[1].split(":")[0].length != 3) ? ((addUTC.split(" ")[1].split(":")[0][0] == "+") ? "+0" + addUTC.split(" ")[1].split(":")[0].split("+")[1] + ":" + addUTC.split(" ")[1].split(":")[1] : "-0" + addUTC.split(" ")[1].split(":")[0].split("-")[1] + ":" + addUTC.split(" ")[1].split(":")[1]) : addUTC;
-			var timeZoneValue = (zeroValue.indexOf("UTC") != 0) ? "UTC " + zeroValue : zeroValue;
-            var value = !ej.isNullOrUndefined(this._findResourceIndex(this.model.timeZoneCollection.dataSource, "value", timeZoneValue)) ? this._findResourceIndex(this.model.timeZoneCollection.dataSource, "value", timeZoneValue) : "add";
+            var zeroValue = (addUTC.split(" ")[1].split(":")[0].length != 3) ? ((addUTC.split(" ")[1].split(":")[0][0] == "+") ? "+0" + addUTC.split(" ")[1].split(":")[0].split("+")[1] + ":" + addUTC.split(" ")[1].split(":")[1] : "-0" + addUTC.split(" ")[1].split(":")[0].split("-")[1] + ":" + addUTC.split(" ")[1].split(":")[1]) : addUTC;
+            var timeZoneValue = (zeroValue.indexOf("UTC") != 0) ? "UTC " + zeroValue : zeroValue;
+            var value = !ej.isNullOrUndefined(this._findResourceIndex(this.model.timeZoneCollection.dataSource, this.model.timeZoneCollection["value"], timeZoneValue)) ? this._findResourceIndex(this.model.timeZoneCollection.dataSource, this.model.timeZoneCollection["value"], timeZoneValue) : "add";
             if (!ej.isNullOrUndefined(temp) && !ej.isNullOrUndefined(this.startTimeAppoint) && !ej.isNullOrUndefined(this.endTimeAppoint)) {
                 this._appointmentAddWindow.find("#" + this._id + "startTimeZone").ejDropDownList("option", { value: (!ej.isNullOrUndefined(temp) && this.startTimeAppoint) ? this.startTimeAppoint : this.model.timeZoneCollection.dataSource[value][this.model.timeZoneCollection["value"]] });
                 this._appointmentAddWindow.find("#" + this._id + "endTimeZone").ejDropDownList("option", { value: (!ej.isNullOrUndefined(temp) && this.endTimeAppoint) ? this.endTimeAppoint : this.model.timeZoneCollection.dataSource[value][this.model.timeZoneCollection["value"]] });
             }
-			if (value !== "add") {
+            if (value !== "add") {
                 this._appointmentAddWindow.find("#" + this._id + "startTimeZone").ejDropDownList("option", { text: this.model.timeZoneCollection.dataSource[value][this.model.timeZoneCollection["text"]], value: this.model.timeZoneCollection.dataSource[value][this.model.timeZoneCollection["value"]] });
                 this._appointmentAddWindow.find("#" + this._id + "endTimeZone").ejDropDownList("option", { text: this.model.timeZoneCollection.dataSource[value][this.model.timeZoneCollection["text"]], value: this.model.timeZoneCollection.dataSource[value][this.model.timeZoneCollection["value"]] });
             }
             if (value == "add") {
-                this.model.timeZoneCollection.dataSource.push({ text: timeZoneValue, id: (this.model.timeZoneCollection.dataSource.length + 1).toString(), value: timeZoneValue });
+                var addDataSoure = {};
+                addDataSoure[this.model.timeZoneCollection["text"]] = timeZoneValue;
+                addDataSoure[this.model.timeZoneCollection["id"]] = (this.model.timeZoneCollection.dataSource.length + 1).toString();
+                addDataSoure[this.model.timeZoneCollection["value"]] = timeZoneValue;
+                this.model.timeZoneCollection.dataSource.push(addDataSoure);
                 this._appointmentAddWindow.find("#" + this._id + "startTimeZone").ejDropDownList({ dataSource: this.model.timeZoneCollection.dataSource });
                 this._appointmentAddWindow.find("#" + this._id + "endTimeZone").ejDropDownList({ dataSource: this.model.timeZoneCollection.dataSource });
                 temp != null ? this._timeZoneCollection(temp) : this._timeZoneCollection(null);
@@ -8916,9 +8859,9 @@
 
         _renderCategorizeTemplate: function () {
             var Text = this.model.enableRTL ? 'margin-right:30px;margin-top:-18px' : 'float:left';
-          var Color = this.model.enableRTL ? 'float:none': 'float:left';
+            var Color = this.model.enableRTL ? 'float:none' : 'float:left';
             if (!ej.isNullOrUndefined(this.model.categorizeSettings)) {
-                this._categorizeTemplate = "<div class='e-categorizeTemplate' style='height:15px;margin-right:5px;margin-top:3px;"+ Color +";width:15px;background-color: ${" + this.model.categorizeSettings["color"] + "}'></div><div style= "+Text+">${" + this.model.categorizeSettings["text"] + "}</div>";
+                this._categorizeTemplate = "<div class='e-categorizeTemplate' style='height:15px;margin-right:5px;margin-top:3px;" + Color + ";width:15px;background-color: ${" + this.model.categorizeSettings["color"] + "}'></div><div style= " + Text + ">${" + this.model.categorizeSettings["text"] + "}</div>";
             }
         },
 
@@ -8967,56 +8910,37 @@
         _businessHourScroller: function () {
             if (this.currentView() == "agenda") return false;
             var highScrol = 0;
-            if (this.model.orientation == "vertical") {
-                highScrol = this.element.find('.e-businesshighlightworkcells').length != 0 && this.model.workHours.highlight == true ? this.element.find('.e-businesshighlightworkcells').first().parent()[0].rowIndex * this.element.find('.e-workcells').height() : 0;
+            if (this.model.orientation == "vertical" && this.model.timeScale.enable && this.currentView() != "month" && !this._isCustomMonthView()) {
+                highScrol = (this.element.find('.e-businesshighlightworkcells').length != 0 && this.model.workHours.highlight) ? this.element.find('.e-businesshighlightworkcells').first().parent().index() * this.element.find('.e-workcells').height() : 0;
                 $('div#' + this._id + "_scroller").ejScroller({ scrollTop: highScrol });
                 this.element.find('.e-scrolltimecells').css('top', -(this.element.find('.e-draggableworkarea').scrollTop()) + 'px');
             }
             else if (this.model.orientation == "horizontal" && this.model.timeScale.enable) {
-                if (this.element.find('.e-businesshighlightworkcells').length != 0 && this.model.workHours.highlight == true && this.currentView() != "month") {
+                if (this.element.find('.e-businesshighlightworkcells').length != 0 && this.model.workHours.highlight && this.currentView() != "month") {
+                    highScrol = this.element.find('.e-businesshighlightworkcells')[0].offsetLeft;
                     if (this.currentView() === "week" || this.currentView() === "workweek" || (this.currentView() === "customview" && this._renderDays <= 7)) {
                         var currentDateIndex = this.element.find('.e-activeview.e-horizontalheaderdiv').parent().index();
                         if (!ej.isNullOrUndefined(currentDateIndex) && currentDateIndex >= 0) {
-                            this.currentView() == "customview" ? this.currentDate(new Date(this._dateRender[0])) : this.currentDate(new Date(this._getRenderDates()[currentDateIndex]));
-                            dateRender = new Date(this._getRenderDates()[currentDateIndex]).getDay();
+                            this.currentView() == "customview" ? this.currentDate(new Date(this._dateRender[0])) : this.currentDate(new Date(this._dateRender[currentDateIndex]));
                             highScrol = this.element.find(".e-workcells")[currentDateIndex * ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot))].offsetLeft;
+                            if ([0, 6].indexOf(new Date(this._dateRender[currentDateIndex]).getDay()) == -1 && this.currentView() != "customview") {
+                                if (this.model.enableRTL)
+                                    highScrol -= (this.model.workHours.start * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot) * this.element.find(".e-workcells").width());
+                                else
+                                    highScrol += (this.model.workHours.start * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot) * this.element.find(".e-workcells").width()) - this.element.find(".e-workcells").width();
+                            }
                         }
-                        if (this.currentView() === "week" && [0, 6].indexOf(dateRender) == -1 || (this.currentView() === "workweek"))
-                            if (this.model.enableRTL)
-                                highScrol = (highScrol + this.element.find('.e-workcells').width()) - this.model.workHours.start * this.model.timeScale.minorSlotCount *(60 / this.model.timeScale.majorSlot) * this.element.find(".e-workcells").width();
-                            else
-                                highScrol = this.model.workHours.start* this.model.timeScale.minorSlotCount *(60 / this.model.timeScale.majorSlot) * this.element.find(".e-workcells").width() + (highScrol - this.element.find('.e-workcells').width());
                     }
-                    else {
-                        highScrol = this.element.find('.e-businesshighlightworkcells')[0].offsetLeft;
-                    }
-
                 }
-                else {
-                    highScrol = (this.element.find('.e-activeview.e-horizontalheaderdiv').parent().index() != -1) ? this.element.find(".e-workcells")[(this.element.find('.e-activeview.e-horizontalheaderdiv').parent().index()) * ((this.model.endHour - this.model.startHour) * 2)] : 0;                  
-                }
-                if (this.model.enableRTL) {
-                    highScrol = this.element.find(".e-workcells")[0].offsetLeft - highScrol;
-                    $('div#' + this._id + "_scroller").ejScroller({ scrollLeft: highScrol });
-                    var maxLeft = this.element.find(".e-workcells")[0].offsetLeft + this.element.find(".e-workcells").width() - this.element.find('.e-draggableworkarea').width();
-                    highScrol = highScrol >= maxLeft ? maxLeft : highScrol;
-                    $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", highScrol + "px");
-                }
-                else {
-                    $('div#' + this._id + "_scroller").ejScroller({ scrollLeft: highScrol });
-                    $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", (-this.element.find('.e-draggableworkarea').scrollLeft()) + "px");
-                }
+                else
+                    highScrol = (this.element.find('.e-activeview.e-horizontalheaderdiv').parent().index() != -1) ? this.element.find(".e-workcells")[(this.element.find('.e-activeview.e-horizontalheaderdiv').parent().index()) * ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount)].offsetLeft : 0;
+                var leftValue = (this.model.enableRTL) ? this.element.find(".e-workcells")[0].offsetLeft - highScrol : highScrol;
+                this.element.find('div#' + this._id + "_scroller").ejScroller({ scrollLeft: leftValue });
             }
         },
 
         _minToHour: function (mins) {
-            var hours = parseInt(mins / 60);
-            var mins = mins % 60;
-            var obj = {
-                "h": hours,
-                "m": mins
-            };
-            return obj;
+            return { "h": parseInt(mins / 60), "m": mins % 60 };
         },
 
         _onclose: function (args) {
@@ -9052,7 +8976,7 @@
             });
             appointmentTable += "</table>";
             var ownerTextName = "";
-            if ((this._tempResource.length!=0)) {
+            if ((this._tempResource.length != 0)) {
                 if (!ej.isNullOrUndefined(templist[this._tempResource[this._tempResource.length - 1].field])) {
                     var s = proxy._appointmentSettings.resourceFields.split(',');
                     $.each(this._tempResource[this._tempResource.length - 1].resourceSettings.dataSource, function (i, val) {
@@ -9085,76 +9009,80 @@
                 var start = this._timeFormat(this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value")).split(':');
                 appStart = new Date(this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value").setHours(parseInt(start[0], 10), parseInt(start[1], 10)));
             }
-            if (((appEnd - appStart) / (1000 * 3600) / 24 < 14)) {
-                var day_start = !ej.isNullOrUndefined(sTime) ? sTime : this._appointmentAddWindow.find("#recurstartdate").ejDatePicker("option", "value");
-                var _interval = recurEdit._rRule.interval;
-                if (!ej.isNullOrUndefined(recurEdit._rRule.until)) {
-                    recurEndDate = new Date(recurEdit._rRule.until);
-                    recurEndDate.setDate(recurEndDate.getDate() + 1);
-                } else if (!ej.isNullOrUndefined(recurEdit._rRule.count))
-                    switch (recurEdit._rRule.freq) {
-                        case "DAILY":
-                            recurEndDate = new Date(new Date(day_start).setDate(day_start.getDate() + recurEdit._rRule.count * (_interval)));
-                            break;
-                        case "WEEKLY":
-                            var byDay = recurEdit._rRule.weekDays.split(",");
-                            var dayCount = day_start.getDate() + (((recurEdit._rRule.count / byDay.length) * 7)) * (_interval);
-                            recurEndDate = new Date(new Date(day_start).setDate(Math.round(dayCount) < dayCount ? dayCount + 1 : dayCount));
-                            break;
-                        case "MONTHLY":
-                            recurEndDate = new Date(new Date(day_start).setMonth(day_start.getMonth() + recurEdit._rRule.count * (_interval)));
-                            break;
-                        case "YEARLY":
-                            recurEndDate = new Date(new Date(day_start).setFullYear(day_start.getFullYear() + recurEdit._rRule.count * (_interval)));
-                            break;
-                    }
-                else {
-                    recurEndDate = new Date(new Date(this.currentDate()).setDate(day_start.getDate() + 42 * (_interval)));
+            var day_start = !ej.isNullOrUndefined(sTime) ? sTime : this._appointmentAddWindow.find(".recurstartdate").ejDatePicker("option", "value");
+            var _interval = recurEdit._rRule.interval;
+            if (!ej.isNullOrUndefined(recurEdit._rRule.until)) {
+                recurEndDate = new Date(recurEdit._rRule.until);
+                recurEndDate.setDate(recurEndDate.getDate() + 1);
+            } else if (!ej.isNullOrUndefined(recurEdit._rRule.count))
+                switch (recurEdit._rRule.freq) {
+                    case "DAILY":
+                        recurEndDate = new Date(new Date(day_start).setDate(day_start.getDate() + recurEdit._rRule.count * (_interval)));
+                        break;
+                    case "WEEKLY":
+                        var byDay = recurEdit._rRule.weekDays.split(",");
+                        var dayCount = day_start.getDate() + (((recurEdit._rRule.count / byDay.length) * 7)) * (_interval);
+                        recurEndDate = new Date(new Date(day_start).setDate(Math.round(dayCount) < dayCount ? dayCount + 1 : dayCount));
+                        break;
+                    case "MONTHLY":
+                        recurEndDate = new Date(new Date(day_start).setMonth(day_start.getMonth() + recurEdit._rRule.count * (_interval)));
+                        break;
+                    case "YEARLY":
+                        recurEndDate = new Date(new Date(day_start).setFullYear(day_start.getFullYear() + recurEdit._rRule.count * (_interval)));
+                        break;
                 }
-                if (((recurEndDate - day_start) / (1000 * 3600) / 24) < ((recurEdit._rRule.freq == "DAILY") ? 2 : (recurEdit._rRule.freq == "WEEKLY") ? 7 : 1)) {
-                    return true;
-                } else {
-                    switch (recurEdit._rRule.freq) {
-                        case "DAILY":
-                            var count = recurEdit._rRule.interval;
-                            if ((appEnd - appStart) / (1000 * 3600) > parseInt(count) * 24)
+            else {
+                recurEndDate = new Date(new Date(this.currentDate()).setDate(day_start.getDate() + 42 * (_interval)));
+            }
+            if (((recurEndDate - day_start) / (1000 * 3600) / 24) < ((recurEdit._rRule.freq == "DAILY") ? 2 : (recurEdit._rRule.freq == "WEEKLY") ? 7 : 1)) {
+                return true;
+            } else {
+                switch (recurEdit._rRule.freq) {
+                    case "DAILY":
+                        var count = recurEdit._rRule.interval;
+                        if ((appEnd - appStart) / (1000 * 3600) > parseInt(count) * 24)
+                            return false;
+                        else
+                            return true;
+                        break;
+                    case "WEEKLY":
+                        if (rule.split(";")[1].split("=")[0] == "INTERVAL") {
+                            var types = recurEdit._rRule.weekDays.split(",");
+                            var obj = { "SU": 0, "MO": 1, "TU": 2, "WE": 3, "TH": 4, "FR": 5, "SA": 6 };
+                            var temp = [], tempDiff = [];
+                            for (var i = 0; i < types.length * (parseInt(recurEdit._rRule.interval) + 1) ; i++) {
+                                temp[i] = (types.length > i) ? obj[types[i]] : temp[i - types.length] + (7 * parseInt(recurEdit._rRule.interval));
+                            }
+                            var tempvalue = temp.sort(function (a, b) { return a - b });
+                            for (var i = 1; i < tempvalue.length; i++) {
+                                tempDiff.push(tempvalue[i] - tempvalue[i - 1]);
+                            }
+                            if ((appEnd - appStart) / (1000 * 3600) > Math.min.apply(Math, tempDiff) * 24) {
+                                return false;
+                            } else
+                                return true;
+                        } else {
+                            if ((appEnd - appStart) / (1000 * 3600) > 24)
                                 return false;
                             else
                                 return true;
-                            break;
-                        case "WEEKLY":
-                            if (rule.split(";")[1].split("=")[0] == "INTERVAL") {
-                                var types = recurEdit._rRule.weekDays.split(",");
-                                var obj = { "SU": 0, "MO": 1, "TU": 2, "WE": 3, "TH": 4, "FR": 5, "SA": 6 };
-                                var temp = [], tempDiff = [];
-                                for (var i = 0; i < types.length * (parseInt(recurEdit._rRule.interval) + 1) ; i++) {
-                                    temp[i] = (types.length > i) ? obj[types[i]] : temp[i - types.length] + (7 * parseInt(recurEdit._rRule.interval));
-                                }
-                               var tempvalue = temp.sort(function (a,b){return a-b});
-                                for (var i = 1; i < tempvalue.length; i++) {
-                                    tempDiff.push(tempvalue[i] - tempvalue[i - 1]);
-                                }
-                                if ((appEnd - appStart) / (1000 * 3600) > Math.min.apply(Math, tempDiff) * 24) {
-                                    return false;
-                                } else
-                                    return true;
-                            } else {
-                                if ((appEnd - appStart) / (1000 * 3600) > 24)
-                                    return false;
-                                else
-                                    return true;
-                            }
-                            break;
-                        case "MONTHLY":
+                        }
+                        break;
+                    case "MONTHLY":
+                        if (appEnd.getTime() > new Date(appStart).setMonth(appStart.getMonth() + parseInt(recurEdit._rRule.interval)))
+                            return false;
+                        else
                             return true;
-                            break;
-                        case "YEARLY":
+                        break;
+                    case "YEARLY":
+                        if (appEnd.getTime() > new Date(appStart).setFullYear(appStart.getFullYear() + parseInt(recurEdit._rRule.interval)))
+                            return false;
+                        else
                             return true;
-                            break;
-                    }
+                        break;
                 }
-            } else
-                return false;
+            }
+            return true;
         },
 
         _saveAppointment: function () {
@@ -9185,9 +9113,7 @@
                 var argsValue, obj = {};
                 maxId = !ej.isNullOrUndefined(this._appMainId) ? this._appMainId + 1 : 1;
                 if (this.model.enableLoadOnDemand) maxId = this._dataCount;
-                obj[this._appointmentSettings["id"]] = maxId;
-                obj["AppTaskId"] = maxId;
-                obj["ParentId"] = maxId;
+                obj[this._appointmentSettings["id"]] = obj["AppTaskId"] = obj["ParentId"] = maxId;
                 obj[this._appointmentSettings["subject"]] = this._quickAppointWindow.find('.subject').val();
                 obj[this._appointmentSettings["startTime"]] = new Date(this.cur_StartTime);
                 obj[this._appointmentSettings["endTime"]] = new Date(this.cur_EndTime);
@@ -9195,12 +9121,12 @@
                     obj[this._appointmentSettings["allDay"]] = true;
                 else
                     obj[this._appointmentSettings["allDay"]] = false;
-				if (!obj[this._appointmentSettings["allDay"]]) {
-					obj[this._appointmentSettings["startTimeZone"]] = this.model.timeZone == null ? ("UTC " + this._timezoneStringValue()) : this.model.timeZone;
-					obj[this._appointmentSettings["endTimeZone"]] = this.model.timeZone == null ? ("UTC " + this._timezoneStringValue()) : this.model.timeZone;
-				}
+                if (this.model.appointmentSettings.applyTimeOffset && !obj[this._appointmentSettings["allDay"]]) {
+                    obj[this._appointmentSettings["startTimeZone"]] = this.model.timeZone == null ? ("UTC " + this._timezoneStringValue()) : this.model.timeZone;
+                    obj[this._appointmentSettings["endTimeZone"]] = this.model.timeZone == null ? ("UTC " + this._timezoneStringValue()) : this.model.timeZone;
+                }
                 obj[this._appointmentSettings["recurrence"]] = false;
-                if ((!ej.isNullOrUndefined(this.model.group) || (this._tempResource.length!=0) && ej.scheduleFeatures.resources) && ((this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0))
+                if ((!ej.isNullOrUndefined(this.model.group) || (this._tempResource.length != 0) && ej.scheduleFeatures.resources) && ((this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0))
                     obj = this._getResourceFields(obj);
                 ("null" in obj) && delete obj[null];
                 var avail = this._checkAvailability(obj);
@@ -9232,14 +9158,14 @@
                 }
                 else {
                     this._processed.push(args.appointment);
-                    this._appMainId = obj["AppTaskId"] + 1;
-                    this._renderSingleApp(obj, args.appointment);
+                    this._renderSingleApp();
                     this._appMainId = this._sortAppById(this._processed)[this._processed.length - 1]["AppTaskId"];
                     this._trigger("appointmentCreated", { appointment: args.appointment, requestType: "appointmentSaved" });
                     this._trigger("actionComplete", { data: args.appointment, requestType: "appointmentSave" });
                 }
                 this._cellClick = false;
                 this._quickAppointWindow.ejDialog("close");
+                this._scrollerPosition();
             }
             else {
                 if ($.isFunction($.validator) && !$("#" + this._id + "_AddEditForm").validate().form())
@@ -9248,13 +9174,11 @@
                 obj = {};
                 temp = {};
                 var tempApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
-                maxId = (this._currentAction == ej.Schedule.Actions.Add || this._currentAction == ej.Schedule.Actions.EditOcurrence) ? (this.model.enableLoadOnDemand ? this._dataCount + 1 : (!ej.isNullOrUndefined(this._appMainId) ? this._appMainId + 1 : parseInt(this._appId))) : tempApp[0]["AppTaskId"];         
+                maxId = (this._currentAction == ej.Schedule.Actions.Add || this._currentAction == ej.Schedule.Actions.EditOccurrence) ? (this.model.enableLoadOnDemand ? this._dataCount + 1 : (!ej.isNullOrUndefined(this._appMainId) ? this._appMainId + 1 : parseInt(this._appId))) : tempApp[0]["AppTaskId"];
                 formelement = $("#" + this._id + "AppointmentAddEditWindow").find("#" + this._id + "_AddEditForm").get(0); var autoVal = []; var categorizeVal = [];
                 for (var index = 0; index < formelement.length; index++) {
                     var columnName = formelement[index].name, $element = $(formelement[index]);
                     if (columnName != undefined) {
-                        //if (this._appointmentSettings["startTimeZone"] == null && this._appointmentSettings["endTimeZone"] == null && columnName == "")
-                          //  ((columnName = formelement[index].id.replace(this._id, "")));
                         var value = formelement[index].value;
                         if ((columnName != "" && obj[columnName] == null)) {
                             if (columnName == this._appointmentSettings["id"])
@@ -9291,6 +9215,10 @@
                         }
                     }
                 }
+                if (!this.model.showTimeZoneFields) {
+                    obj[this._appointmentSettings["startTimeZone"]] = this.model.timeZone == null ? ("UTC " + this._timezoneStringValue()) : this.model.timeZone;
+                    obj[this._appointmentSettings["endTimeZone"]] = this.model.timeZone == null ? ("UTC " + this._timezoneStringValue()) : this.model.timeZone;
+                }
                 if (this.model.categorizeSettings.enable == true && this.model.categorizeSettings.allowMultiple != true) {
                     var dataSet = this.model.categorizeSettings;
                     categorizeDataIndex = this._findResourceIndex(dataSet.dataSource, this.model.categorizeSettings["text"], obj[this._appointmentSettings["categorize"]]);
@@ -9300,7 +9228,7 @@
                 ("null" in obj) && delete obj[null];
 
                 var starttime = this._timeFormat((this._startSlotChange || ej.isNullOrUndefined(this.cur_StartTime)) ? temp.StartTime : new Date(this.cur_StartTime).toTimeString()).split(":");
-                var endtime = this._timeFormat((this._endSlotChange || ej.isNullOrUndefined(this.cur_EndTime))? temp.EndTime : new Date(this.cur_EndTime).toTimeString()).split(":");
+                var endtime = this._timeFormat((this._endSlotChange || ej.isNullOrUndefined(this.cur_EndTime)) ? temp.EndTime : new Date(this.cur_EndTime).toTimeString()).split(":");
 
                 obj[this._appointmentSettings["startTime"]] = new Date(temp.StartDate.setHours(parseInt(starttime[0], 10), parseInt(starttime[1], 10)));
                 obj[this._appointmentSettings["endTime"]] = new Date(temp.EndDate.setHours(parseInt(endtime[0], 10), parseInt(endtime[1], 10)));
@@ -9308,17 +9236,18 @@
                 this._publicMethodSave = true;
                 var value = this._timeZoneSavingAppoint(obj, temp);
                 obj = value.obj;
+                var currentAction = this._currentAction == "save" ? "edit" : this._currentAction;
                 var query = new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid);
                 var _editApps = new ej.DataManager(this._processed).executeLocal(query);
-                if (obj[this._appointmentSettings["recurrenceRule"]] != "" && !ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && this.model.enableRecurrenceValidation && (this._currentAction == "editSeries" || this._currentAction == "editOcurrence" || this._currentAction == "save")) {
-                    if (this._currentAction == "editOcurrence" || this._currentAction == "save") {
+                if (obj[this._appointmentSettings["recurrenceRule"]] != "" && !ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && this.model.enableRecurrenceValidation && (this._currentAction == "editSeries" || this._currentAction == "editOccurrence" || this._currentAction == "save")) {
+                    if (this._currentAction == "editOccurrence") {
                         var _appList = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid))[0];
                         var Parid = _appList[this._appointmentSettings["recurrenceId"]] == null ? _appList["ParentId"] : _appList[this._appointmentSettings["recurrenceId"]];
                         var MapValue = _appList[this._appointmentSettings["recurrenceId"]] == null ? "ParentId" : this._appointmentSettings["recurrenceId"];
                         var recurColl = new ej.DataManager(this._processed).executeLocal(new ej.Query().where(MapValue, ej.FilterOperators.equal, Parid));
-						var twoDayApps = (((obj[this._appointmentSettings["endTime"]] - obj[this._appointmentSettings["startTime"]]) / 3600000) < 24 && obj[this._appointmentSettings["endTime"]].getDate() != obj[this._appointmentSettings["startTime"]].getDate());
+                        var twoDayApps = (((obj[this._appointmentSettings["endTime"]] - obj[this._appointmentSettings["startTime"]]) / 3600000) < 24 && obj[this._appointmentSettings["endTime"]].getDate() != obj[this._appointmentSettings["startTime"]].getDate());
                         if (twoDayApps) { recurColl = this._recurrenceAppSort(recurColl); }
-						var recurColl = this._appointmentRecurrenceSort(recurColl);
+                        var recurColl = this._appointmentRecurrenceSort(recurColl);
                         var index = this._recuCollectionIndex(recurColl, _appList);
                         var model = this._appointmentSettings;
                         if (((index == 0) ? (!ej.isNullOrUndefined(recurColl[index + 1]) ? !(new Date(new Date(recurColl[index + 1][model["startTime"]]).setHours(0, 0, 0, 0)).getTime() > new Date(new Date(obj[model["endTime"]]).setHours(0, 0, 0, 0)).getTime()) : false) : (index == recurColl.length - 1) ? !(new Date(new Date(recurColl[index - 1][model["endTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(obj[model["startTime"]]).setHours(0, 0, 0, 0)).getTime()) : !((new Date(new Date(recurColl[index - 1][model["endTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(obj[model["startTime"]]).setHours(0, 0, 0, 0)).getTime()) && (new Date(new Date(recurColl[index + 1][model["startTime"]]).setHours(0, 0, 0, 0)).getTime() > new Date(new Date(obj[model["endTime"]]).setHours(0, 0, 0, 0)).getTime())))) {
@@ -9333,42 +9262,33 @@
                         }
                     }
                 }
-                if (this._currentAction == ej.Schedule.Actions.EditOcurrence) {
+                if (this._currentAction == ej.Schedule.Actions.EditOccurrence) {
                     this._objDate = _editApps;
                     var MapValue = this._objDate[0][this._appointmentSettings["recurrenceId"]] == null ? "ParentId" : this._appointmentSettings["recurrenceId"];
                     var _editApp = this._deleteOcurrence(this._objDate[0][MapValue], new Date(_editApps[0][this._appointmentSettings["startTime"]]));
-                    var deleteApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
-                    new ej.DataManager(this._processed).saveChanges({ added: [], changed: [], deleted: deleteApp }, "Guid");
-                        obj[this._appointmentSettings["recurrence"]] = 1;
-                        obj[this._appointmentSettings["recurrenceRule"]] = _editApp[0][this._appointmentSettings["recurrenceRule"]] + ";RECUREDITID=" + _editApp[0]["AppTaskId"];
-                        obj[this._appointmentSettings["recurrenceId"]] = _editApp[0][this._appointmentSettings["recurrenceId"]];
-                        obj["Guid"] = this._appUid;
-                        obj[this._appointmentSettings["recurrenceExDate"]] = _editApp[0][this._appointmentSettings["recurrenceExDate"]];
-                }
-                else if (this._currentAction == ej.Schedule.Actions.EditSeries) {
-                    var Parid = _editApps[0][this._appointmentSettings["recurrenceId"]] == null ? _editApps[0]["ParentId"] : _editApps[0][this._appointmentSettings["recurrenceId"]];
-                    var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, Parid);
-                    var _editApp = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
-                    obj["AppTaskId"] = _editApp[0]["AppTaskId"];
-                    obj[this._appointmentSettings["id"]] = _editApp[0][this._appointmentSettings["id"]];
-                    maxId = _editApp[0]["AppTaskId"];
+                    obj[this._appointmentSettings["recurrence"]] = 1;
+                    obj[this._appointmentSettings["recurrenceRule"]] = _editApp[0][this._appointmentSettings["recurrenceRule"]] + ";RECUREDITID=" + _editApp[0]["ParentId"];
                     obj[this._appointmentSettings["recurrenceId"]] = _editApp[0][this._appointmentSettings["recurrenceId"]];
                     obj["Guid"] = this._appUid;
                     obj[this._appointmentSettings["recurrenceExDate"]] = _editApp[0][this._appointmentSettings["recurrenceExDate"]];
-                    strDate = _editApp[0][this._appointmentSettings["startTime"]];
-                    //this._appointmentAddWindow.find('.e-until').ejDatePicker({ value: new Date(strDate.setDate(strDate.getDate() + 7 * 10)) });
+                }
+                else if (this._currentAction == ej.Schedule.Actions.EditSeries) {
+                    var Parid = _editApps[0][this._appointmentSettings["recurrenceId"]] == null ? _editApps[0]["ParentId"] : _editApps[0][this._appointmentSettings["recurrenceId"]];
+                    var _editApp = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, Parid));
+                    obj["AppTaskId"] = _editApp[0]["AppTaskId"];
+                    obj[this._appointmentSettings["id"]] = _editApp[0][this._appointmentSettings["id"]];
+                    obj["Guid"] = this._appUid;
+                    maxId = _editApp[0]["AppTaskId"];
+                    obj[this._appointmentSettings["recurrenceId"]] = _editApp[0][this._appointmentSettings["recurrenceId"]];
+                    obj[this._appointmentSettings["recurrenceExDate"]] = null;
                     obj[this._appointmentSettings["recurrenceRule"]] = (ej.isNullOrUndefined(recurEdit._recRule) || recurEdit._recRule == "") ? _editApp[0][this._appointmentSettings["recurrenceRule"]] : recurEdit._recRule;
-
                 }
                 if (this._currentAction != ej.Schedule.Actions.Add) {
                     obj["Guid"] = _editApps[0]["Guid"];
                     obj["AppTaskId"] = _editApps[0]["AppTaskId"];
                     obj[this._appointmentSettings["id"]] = (this._currentAction != ej.Schedule.Actions.EditSeries) ? _editApps[0][this._appointmentSettings["id"]] : obj[this._appointmentSettings["id"]];
-                    if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit" })) {
-                        this._appointmentAddWindow.ejDialog("close");
-                        return false;
-                    }
-                    if (this._trigger("beforeAppointmentChange", { appointment: obj })) {
+                    var editedApp = $.extend(editedApp, obj);
+					if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit", currentAction: currentAction })) {
                         this._appointmentAddWindow.ejDialog("close");
                         return false;
                     }
@@ -9378,35 +9298,47 @@
                     if (this._trigger("actionBegin", { data: obj, requestType: "appointmentSave" })) {
                         this._appointmentAddWindow.ejDialog("close");
                         return false;
-                    }                   
+                    }
                 }
                 var args = [], newAppointment;
                 (this._startTimezone != this._endTimezone) ? obj[this._appointmentSettings["endTime"]] = value.cloneEnddiffer : "";
-                if (!ej.isNullOrUndefined(this.model.categorizeSettings) && categorizeVal.length > 0 && !ej.isNullOrUndefined(categorizeVal[0][0]) || (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources)
-                    args = this._getResCategorySaveData(categorizeVal, autoVal, obj, maxId, temp, starttime, endtime);
+                parId = this._currentAction == ej.Schedule.Actions.Add ? maxId : _editApps[0]["ParentId"];
+                if (!ej.isNullOrUndefined(this.model.categorizeSettings) && categorizeVal.length > 0 && !ej.isNullOrUndefined(categorizeVal[0][0]) || (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources)
+                    args = this._getResCategorySaveData(categorizeVal, autoVal, obj, maxId, parId, starttime, endtime);
                 else {
-                    var parId = this._currentAction == ej.Schedule.Actions.EditOcurrence || (!ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && obj[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) ? this._parentId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : maxId;
-                    this._maxId = ((((new Date(obj[this._appointmentSettings["endTime"]]) - new Date(obj[this._appointmentSettings["startTime"]])) / 3600000) > 24) && this._currentAction != ej.Schedule.Actions.EditOcurrence && (obj[this._appointmentSettings["allDay"]] == true)) ? parId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : this._appMainId + 1;
-                    this._maxId = (((new Date(obj[this._appointmentSettings["endTime"]]) - new Date(obj[this._appointmentSettings["startTime"]])) / 3600000) > 24) && (!ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && obj[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) && (this._currentAction == ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : this._maxId;
-
-                    this._maxId = (this._currentAction == ej.Schedule.Actions.EditSeries) ? parId : this._maxId;
-                    newAppointment = this._addAppData(obj, this._maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
-                    if (this._currentAction == ej.Schedule.Actions.EditOcurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
+                    newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
+                    if (this._currentAction == ej.Schedule.Actions.EditOccurrence) newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
                     args.push(newAppointment);
                 }
-				 if (this._currentAction == ej.Schedule.Actions.Add) {
-				 if (this._trigger("beforeAppointmentCreate", { appointment: args })) {
+                if (this._currentAction == ej.Schedule.Actions.Add) {
+                    if (this._trigger("beforeAppointmentCreate", { appointment: args, currentAction: currentAction })) {
                         this._appointmentAddWindow.ejDialog("close");
                         return false;
                     }
-					}
-				 var avail = this._checkAvailability(args[0]);
-				 if (args[this._appointmentSettings["startTime"]] > args[this._appointmentSettings["endTime"]] || avail.length > 0) {
-				     this._showBlockAlert && this._alertBlockError();
-				     return false;
-				 }
-                if (this._currentAction == ej.Schedule.Actions.Add || this._currentAction == ej.Schedule.Actions.EditOcurrence) {
-                    this._maxId = maxId;
+                }
+				if (this._currentAction != ej.Schedule.Actions.Add) {
+                    if(this._currentAction !=ej.Schedule.Actions.EditOccurrence){
+                var _newApp = new ej.DataManager(args).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.notEqual, editedApp[this._appointmentSettings["id"]]));
+                var _editedApp = new ej.DataManager(args).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, editedApp[this._appointmentSettings["id"]]));
+            }
+            else{
+                for(var i=0;i<args.length;i++){
+                    var _editedApp = new ej.DataManager(args).executeLocal(new ej.Query().where("ParentId", ej.FilterOperators.equal, editedApp[this._appointmentSettings["id"]]));
+                    var _newApp = new ej.DataManager(args).executeLocal(new ej.Query().where("ParentId", ej.FilterOperators.notEqual, editedApp[this._appointmentSettings["id"]]));
+                }
+            }
+            _batch = ({ added: _newApp, changed: _editedApp});
+            if (this._trigger("beforeAppointmentChange", { appointment: _batch, currentAction: currentAction })) {
+                this._appointmentAddWindow.ejDialog("close");
+                return false;
+            }
+        }
+                var avail = this._checkAvailability(args[0]);
+                if (args[this._appointmentSettings["startTime"]] > args[this._appointmentSettings["endTime"]] || avail.length > 0) {
+                    this._showBlockAlert && this._alertBlockError();
+                    return false;
+                }
+                if (this._currentAction == ej.Schedule.Actions.Add || this._currentAction == ej.Schedule.Actions.EditOccurrence) {
                     var proxy = this, promise, temp = [];
                     for (var a = 0; a < args.length; a++) {
                         var startTimezone1 = args[a][this._appointmentSettings["startTimeZone"]];
@@ -9414,17 +9346,15 @@
                         new ej.DataManager(this._currentAppointmentData).update("AppTaskId", args[a]);
                     }
                     var _editApp = [];
-                    if (this._currentAction == ej.Schedule.Actions.EditOcurrence) {
-                        var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, this._parentId);
-                        var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
+                    if (this._currentAction == ej.Schedule.Actions.EditOccurrence) {
+                        var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, this._parentId));
                         new ej.DataManager(this._currentAppointmentData).update("AppTaskId", _App[0]);
                         _editApp.push(this._timeZoneAppointments(_App[0], ""));
                     }
                     else
                         _editApp = [];
-                    if (this.dataSource() instanceof ej.DataManager) {
+                    if (this.dataSource() instanceof ej.DataManager)
                         promise = this._dataManager.saveChanges({ added: temp, changed: _editApp, deleted: [] }, this._appointmentSettings["id"], this.model.appointmentSettings.query._fromTable);
-                    }
                     else
                         promise = this._dataManager.saveChanges({ added: temp, changed: _editApp, deleted: [] }, "AppTaskId");
                     var updateTempNew = [];
@@ -9457,15 +9387,14 @@
                     var newApp = [], editedApp = [], deleted = [];
                     for (var i = 0; i < args.length; i++) {
                         var GId = this._currentAction == ej.Schedule.Actions.Save ? args[i]["Guid"] : args[i][this._appointmentSettings["recurrenceId"]];
-                        var idName = this._currentAction == ej.Schedule.Actions.Save ? "Guid" :  this._appointmentSettings["recurrenceId"];
-                        query = new ej.Query().where(idName, ej.FilterOperators.equal, GId);
-                        _editApp = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
+                        var idName = this._currentAction == ej.Schedule.Actions.Save ? "Guid" : this._appointmentSettings["recurrenceId"];
+                        _editApp = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(idName, ej.FilterOperators.equal, GId));
                         (!ej.isNullOrUndefined(_editApp) && _editApp.length > 0) ? editedApp.push(args[i]) : newApp.push(args[i]);
                     }
                     if (this._currentAction == ej.Schedule.Actions.EditSeries) {
                         var query, dele;
                         for (var i = 0; i < editedApp.length; i++) {
-                            query = ej.Query().where(ej.Predicate(this._appointmentSettings["recurrenceRule"], ej.FilterOperators.contains, "RECUREDITID=" + args[i].ParentId, true));
+                            query = ej.Query().where(ej.Predicate(this._appointmentSettings["recurrenceRule"], ej.FilterOperators.contains, "RECUREDITID=" + args[i][this._appointmentSettings["recurrenceId"]], true));
                             dele = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
                             deleted = deleted.concat(dele);
                             this._appointmentAddWindow.find('.recurbutton').click();
@@ -9474,35 +9403,28 @@
                         }
                     }
                     var proxy = this, promise, newTemp = [], editTemp = [];
-                    for (var a = 0; a < newApp.length; a++) {
+                    for (var a = 0; a < newApp.length; a++)
                         newTemp.push(this._timeZoneAppointments(newApp[a], ""));
-                    }
-                    for (var b = 0; b < editedApp.length; b++) {
+                    for (var b = 0; b < editedApp.length; b++)
                         editTemp.push(this._timeZoneAppointments(editedApp[b], ""));
-                    }
-                    if (this.dataSource() instanceof ej.DataManager) {
+
+                    if (this.dataSource() instanceof ej.DataManager)
                         var promise = this._dataManager.saveChanges({ added: newTemp, changed: editTemp, deleted: deleted }, this._appointmentSettings["id"], this.model.appointmentSettings.query._fromTable);
-                    }
                     else
-                        var promise = this._dataManager.saveChanges({ added: newTemp, changed: editTemp, deleted: deleted },"AppTaskId");
-                    var updateTempNew;
-                    for (var c = 0; c < newTemp.length; c++) {
-                        updateTempNew = this._timeZoneAppointments(newTemp[c], "reverse");
-                        new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTempNew);
-                    }
-                    var updateTemp;
-                    for (var d = 0; d < editTemp.length; d++) {
-                        updateTemp = this._timeZoneAppointments(editTemp[d], "reverse");
-                        new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTemp);
-                    }
+                        var promise = this._dataManager.saveChanges({ added: newTemp, changed: editTemp, deleted: deleted }, "AppTaskId");
+
+                    for (var c = 0; c < newTemp.length; c++)
+                        new ej.DataManager(this._currentAppointmentData).update("AppTaskId", this._timeZoneAppointments(newTemp[c], "reverse"));
+                    for (var d = 0; d < editTemp.length; d++)
+                        new ej.DataManager(this._currentAppointmentData).update("AppTaskId", this._timeZoneAppointments(editTemp[d], "reverse"));
+
                     if (editedApp.length > 0) {
                         var proxy = this;
                         if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
                             promise.done(function (e) {
                                 proxy._processUrlBinding(e);
-                                proxy._appMainId = proxy._processed.length > 0 ? proxy._sortAppById(proxy._processed)[proxy._processed.length - 1]["AppTaskId"] : proxy._appMainId;
-                                proxy._trigger("appointmentChanged", { appointment: editedApp[0], requestType: "appointmentChanged" });
-                                proxy._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit" });
+                                proxy._trigger("appointmentChanged", { appointment: editedApp[0], requestType: "appointmentChanged", currentAction: currentAction });
+                                proxy._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit", currentAction: currentAction });
                             });
                             promise.fail(function (e) {
                             });
@@ -9510,18 +9432,17 @@
                         else {
                             this._dataProcessing(this._currentAppointmentData);
                             this._renderAppointmentAll();
-                            this._appMainId = this._processed.length > 0 ? this._sortAppById(this._processed)[this._processed.length - 1]["AppTaskId"] : this._appMainId
-                            this._trigger("appointmentChanged", { appointment: editedApp[0], requestType: "appointmentChanged" });
-                            this._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit" });
+                            this._trigger("appointmentChanged", { appointment: editedApp[0], requestType: "appointmentChanged", currentAction: currentAction });
+                            this._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit", currentAction: currentAction });
                         }
                     }
                 }
+                this._clearFields();
+                this._appointmentAddWindow.ejDialog("close");
             }
-            this._clearFields();
-            this._appointmentAddWindow.ejDialog("close");
             if (this.element.find('div.e-draggableworkarea tr').find('td').hasClass("e-selectedCell"))
                 this._processFocus();
-            if (this.model.orientation == "horizontal"  && this.currentView() != "agenda" && (this.element.find(".e-draggableworkarea").offset().top > this.element.find(".e-workcellstab").offset().top)) {
+            if (this.model.orientation == "horizontal" && this.currentView() != "agenda" && (this.element.find(".e-draggableworkarea").offset().top > this.element.find(".e-workcellstab").offset().top)) {
                 var restop = this.element.find(".e-draggableworkarea").offset().top - this.element.find(".e-workcellstab").offset().top;
                 this.element.find(".e-horires").css("top", -restop + "px");
             }
@@ -9536,41 +9457,44 @@
         },
 
         _timeZoneSavingAppoint: function (obj, temp) {
-            this._startTimezone = obj[this._appointmentSettings["startTimeZone"]];
-            this._endTimezone = obj[this._appointmentSettings["endTimeZone"]];
-            if (!ej.isNullOrUndefined(this._startTimezone) && this._startTimezone != "") {
-                var utc = this._startTimezone.indexOf("UTC") != -1 ? this._startTimezone.split(" ")[1].split(":") : this._startTimezone.split(":");
-                var hour = parseInt(utc[0]);
-                var minutes = parseInt(utc[1]);
-                var calcualtevalue = (hour * 60) + minutes;
-                if (this.model.timeZone == null) {
-                    var localtime = new Date().getTimezoneOffset() - this._timeZoneOffset;
-                    var local = this._minToHour(localtime + calcualtevalue);
+            if (this.model.appointmentSettings.applyTimeOffset) {
+                this._startTimezone = obj[this._appointmentSettings["startTimeZone"]];
+                this._endTimezone = obj[this._appointmentSettings["endTimeZone"]];
+                if (!ej.isNullOrUndefined(this._startTimezone) && this._startTimezone != "") {
+                    var utc = this._startTimezone.indexOf("UTC") != -1 ? this._startTimezone.split(" ")[1].split(":") : this._startTimezone.split(":");
+                    var hour = parseInt(utc[0]);
+                    var minutes = parseInt(utc[1]);
+                    var calcualtevalue = (hour * 60) + minutes;
+                    if (this.model.timeZone == null) {
+                        var localtime = new Date().getTimezoneOffset() - this._timeZoneOffset;
+                        var local = this._minToHour(localtime + calcualtevalue);
+                    }
+                    else {
+                        var timezone = this.model.timeZone.indexOf("UTC") != -1 ? this.model.timeZone.split(" ")[1].split(":") : this.model.timeZone.split(":");
+                        var local = this._minToHour(calcualtevalue);
+                        local.h = local.h - (parseInt(timezone[0]));
+                        local.m = local.m - (parseInt(timezone[1]));
+                    }
+                    new Date(obj[this._appointmentSettings["startTime"]].setHours(obj[this._appointmentSettings["startTime"]].getHours() - local.h, obj[this._appointmentSettings["startTime"]].getMinutes() - local.m));
+                    if (this._startTimezone != this._endTimezone && this._publicMethodSave) {
+                        this.startutcValue = null;
+                        this.tempValue = null;
+                        var utc1 = this._endTimezone.indexOf("UTC") != -1 ? this._endTimezone.split(" ")[1].split(":") : this._endTimezone.split(":");
+                        var hour1 = parseInt(utc1[0]);
+                        var minutes1 = parseInt(utc1[1]);
+                        var calculateend = (hour1 * 60) + minutes1;
+                        var newcalcualtevalue = calcualtevalue - calculateend;
+                        var tempStart = new Date(temp.StartDate);
+                        var CloneStart = new Date(obj[this._appointmentSettings["startTime"]]);
+                        var cloneEnd = new Date(temp.EndDate);
+                        duration = new Date(cloneEnd.setMinutes(cloneEnd.getMinutes() + newcalcualtevalue));
+                        duration = new Date(duration.setMinutes(duration.getMinutes() - ((local.h * 60) + local.m)));
+                        var cloneEnddiffer = duration;
+                    }
+                    else
+                        new Date(obj[this._appointmentSettings["endTime"]].setHours(obj[this._appointmentSettings["endTime"]].getHours() - (local.h), obj[this._appointmentSettings["endTime"]].getMinutes() - local.m));
                 }
-                else {
-                    var timezone = this.model.timeZone.indexOf("UTC") != -1 ? this.model.timeZone.split(" ")[1].split(":") : this.model.timeZone.split(":");
-                    var local = this._minToHour(calcualtevalue);
-                    local.h = local.h - (parseInt(timezone[0]));
-                    local.m = local.m - (parseInt(timezone[1]));
-                }
-                new Date(obj[this._appointmentSettings["startTime"]].setHours(obj[this._appointmentSettings["startTime"]].getHours() - local.h, obj[this._appointmentSettings["startTime"]].getMinutes() - local.m));
-                if (this._startTimezone != this._endTimezone && this._publicMethodSave) {
-                    this.startutcValue = null;
-                    this.tempValue = null;
-                    var utc1 = this._endTimezone.indexOf("UTC") != -1 ? this._endTimezone.split(" ")[1].split(":") : this._endTimezone.split(":");
-                    var hour1 = parseInt(utc1[0]);
-                    var minutes1 = parseInt(utc1[1]);
-                    var calculateend = (hour1 * 60) + minutes1;
-                    var newcalcualtevalue = calcualtevalue - calculateend;
-                    var tempStart = new Date(temp.StartDate);
-                    var CloneStart = new Date(obj[this._appointmentSettings["startTime"]]);
-                    var cloneEnd = new Date(temp.EndDate);
-                    duration = new Date(cloneEnd.setMinutes(cloneEnd.getMinutes() + newcalcualtevalue));
-                    duration = new Date(duration.setMinutes(duration.getMinutes() - ((local.h * 60) + local.m)));
-                    var cloneEnddiffer = duration;
-                }
-                else
-                    new Date(obj[this._appointmentSettings["endTime"]].setHours(obj[this._appointmentSettings["endTime"]].getHours() - (local.h), obj[this._appointmentSettings["endTime"]].getMinutes() - local.m));
+                return { obj: obj, cloneEnddiffer: cloneEnddiffer };
             }
             return { obj: obj, cloneEnddiffer: cloneEnddiffer };
         },
@@ -9584,43 +9508,43 @@
             this.element.find(".e-alldayappointment").remove();
             var appoints = this._appointmentSort(this._processed);
             if (!this.model.group) this.res1 = ["0"];
-			if (this._resWorkWeek) {
-				var count = 0, resDay = 0;
-				for (var res = 0; res < this.res1.length; res++) {
-					if (!ej.isNullOrUndefined(this.res1[res][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]]))
-						count += this.res1[res][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]].length;
-					else
-						count += this.model.workWeek.length;
-					for (resDay; resDay < count; resDay++) {
-						for (var i = 0; i < appoints.length; i++) {
-							this._getMultipleResourceAlldayApp(renderDate, resDay, res, i);
-							!ej.isNullOrUndefined(this.allDayCount[0]) ? allDayCount.push(this.allDayCount[0]) : "";
-							this._app = this._filtered;
-						}
-					}
-				}
-			}
-			else {
-				for (var res = 0; res < this.res1.length; res++) {
-					for (var day = 0; day < renderDate.length; day++) {
-						for (var i = 0; i < appoints.length; i++) {
-							if ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
-								this._getMultipleResourceAlldayApp(renderDate, day, res, i);
-								!ej.isNullOrUndefined(this.allDayCount[0]) ? allDayCount.push(this.allDayCount[0]) : "";
-							}
-							else {
-								var isMultipleDay = this._findAllDayApp(appoints[i]);
-								if ((ej.format(new Date(renderDate[day]), this._pattern.d) == ej.format(new Date(appoints[i][this._appointmentSettings["startTime"]]), this._pattern.d)) && (appoints[i][this._appointmentSettings["allDay"]] === true || isMultipleDay)) {
-									this._setAllDayPos(appoints[i], day, res);
-									this._filtered.push(appoints[i]);
-									allDayCount.push(i);
-								}
-							}
-							this._app = this._filtered;
-						}
-					}
-				}
-			}
+            if (this._resWorkWeek) {
+                var count = 0, resDay = 0;
+                for (var res = 0; res < this.res1.length; res++) {
+                    if (!ej.isNullOrUndefined(this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]))
+                        count += this.res1[res][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]].length;
+                    else
+                        count += this.model.workWeek.length;
+                    for (resDay; resDay < count; resDay++) {
+                        for (var i = 0; i < appoints.length; i++) {
+                            this._getMultipleResourceAlldayApp(renderDate, resDay, res, i);
+                            !ej.isNullOrUndefined(this.allDayCount[0]) ? allDayCount.push(this.allDayCount[0]) : "";
+                            this._app = this._filtered;
+                        }
+                    }
+                }
+            }
+            else {
+                for (var res = 0; res < this.res1.length; res++) {
+                    for (var day = 0; day < renderDate.length; day++) {
+                        for (var i = 0; i < appoints.length; i++) {
+                            if ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) {
+                                this._getMultipleResourceAlldayApp(renderDate, day, res, i);
+                                !ej.isNullOrUndefined(this.allDayCount[0]) ? allDayCount.push(this.allDayCount[0]) : "";
+                            }
+                            else {
+                                var isMultipleDay = this._findAllDayApp(appoints[i]);
+                                if ((ej.format(new Date(renderDate[day]), this._pattern.d, this.model.locale) == ej.format(new Date(appoints[i][this._appointmentSettings["startTime"]]), this._pattern.d, this.model.locale)) && (appoints[i][this._appointmentSettings["allDay"]] === true || isMultipleDay)) {
+                                    this._setAllDayPos(appoints[i], day, res);
+                                    this._filtered.push(appoints[i]);
+                                    allDayCount.push(i);
+                                }
+                            }
+                            this._app = this._filtered;
+                        }
+                    }
+                }
+            }
             this.allDayLevel = allDayCount.length;
             if (allDayCount.length == 0 && this.level == 0) {
                 if (!this._mediaQuery)
@@ -9632,7 +9556,7 @@
             this._reRenderScroller();
         },
 
-        _renderSingleApp: function (obj, args) {
+        _renderSingleApp: function () {
             this.element.find(".e-prevapp,.e-nextapp").css("display", "none");
             this._dataProcessing(this._currentAppointmentData);
             this._renderAppointmentAll();
@@ -9643,10 +9567,10 @@
             var minutes = Number(time.match(/:(\d+)/)[1]);
             if (!ej.isNullOrUndefined(time.split(" ")[1])) {
                 var AMPM = time.match(/\s(.*)$/)[1];
-				if (!ej.isNullOrUndefined(this._culture.calendar.AM) && !ej.isNullOrUndefined(this._culture.calendar.PM)) {
-					if (AMPM == this._culture.calendar.PM[0] && hours < 12) hours = hours + 12;
-					if (AMPM == this._culture.calendar.AM[0] && hours == 12) hours = hours - 12;
-				}
+                if (!ej.isNullOrUndefined(this._culture.calendar.AM) && !ej.isNullOrUndefined(this._culture.calendar.PM)) {
+                    if (AMPM == this._culture.calendar.PM[0] && hours < 12) hours = hours + 12;
+                    if (AMPM == this._culture.calendar.AM[0] && hours == 12) hours = hours - 12;
+                }
             }
             var sHours = hours.toString();
             var sMinutes = minutes.toString();
@@ -9730,7 +9654,7 @@
             else {
                 this.element.focus();
                 this.element.find("td.e-selectedCell").attr("tabIndex", 0).focus();
-				this._appointmentAddWindow.ejDialog("isOpened") && this._appointmentAddWindow.find(".subject").focus();
+                this._appointmentAddWindow.ejDialog("isOpened") && this._appointmentAddWindow.find(".subject").focus();
             }
         },
 
@@ -9741,8 +9665,8 @@
             this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value", new Date());
             this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value", new Date());
             this._appointmentAddWindow.find('.startendtime').ejTimePicker({ enabled: true });
-            this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(new Date(), this._pattern.t));
-            this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(new Date(), this._pattern.t));
+            this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(new Date(), this._pattern.t, this.model.locale));
+            this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(new Date(), this._pattern.t, this.model.locale));
             this._appointmentAddWindow.find(".recurrence,.weekdays").ejCheckBox({ checked: false, enabled: true });
             this._appointmentAddWindow.find(".e-repeatlbl").removeClass('e-disable');
             this._appointmentAddWindow.find(".allday").ejCheckBox({ checked: false });
@@ -9766,13 +9690,14 @@
 
         _deleteApp: function (id) {
             var level = this.level;
-            var args, deleted;
-            if (this._trigger("actionBegin", { id: id, requestType: "appointmentDelete" }))
+            var args, deleted, currentAction;
+            var currentAction = this._actionType == ej.Schedule.Actions.DeleteSeries ? ej.Schedule.Actions.DeleteSeries : ej.Schedule.Actions.Delete;
+            if (this._trigger("actionBegin", { id: id, requestType: "appointmentDelete", currentAction: currentAction }))
                 return false;
             var removeItem = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, id));
             if (removeItem.length == 0) return false;
             args = { appointment: removeItem[0] };
-            if (this._trigger("beforeAppointmentRemove", args))
+            if (this._trigger("beforeAppointmentRemove", { appointment: removeItem[0], currentAction: currentAction }))
                 return false;
             var parentObj = this._getAppointmentByParentId(id);
             if (removeItem[0][this._appointmentSettings["recurrence"]]) {
@@ -9780,17 +9705,16 @@
                 var MapValue = removeItem[0][this._appointmentSettings["recurrenceId"]] == null ? "ParentId" : this._appointmentSettings["recurrenceId"];
                 var query = new ej.Query().where(MapValue, ej.FilterOperators.equal, Parid);
                 deleted = ej.DataManager(this._currentAppointmentData).executeLocal(query);
-                if(this.dataSource() instanceof ej.DataManager)
+                if (this.dataSource() instanceof ej.DataManager)
                     var promise = this._dataManager.saveChanges({ added: [], changed: [], deleted: deleted }, this._appointmentSettings["id"], this.model.appointmentSettings.query._fromTable);
                 else
-                    var promise = this._dataManager.saveChanges({ added: [], changed: [], deleted: deleted },"AppTaskId");
+                    var promise = this._dataManager.saveChanges({ added: [], changed: [], deleted: deleted }, "AppTaskId");
             }
             else {
-                var p_id = removeItem.length == 0 ? id : parentObj["AppTaskId"];
                 if (this.dataSource() instanceof ej.DataManager)
                     var promise = this._dataManager.remove("Id", parentObj[this._appointmentSettings["id"]], this.model.appointmentSettings.query._fromTable);
                 else
-                    var promise = this._dataManager.remove("AppTaskId", p_id);
+                    var promise = this._dataManager.remove("AppTaskId", parentObj["AppTaskId"]);
 
             }
             this._refreshCellsHeight();
@@ -9799,8 +9723,8 @@
                 if ($.isFunction(promise.promise)) {
                     promise.done(function (e) {
                         proxy._processUrlBinding(e);
-                        proxy._trigger("appointmentRemoved", { appointment: parentObj, requestType: "appointmentDeleted" });
-                        proxy._trigger("actionComplete", { data: parentObj, requestType: "appointmentDelete" });
+                        proxy._trigger("appointmentRemoved", { appointment: parentObj, requestType: "appointmentDeleted", currentAction: currentAction });
+                        proxy._trigger("actionComplete", { data: parentObj, requestType: "appointmentDelete", currentAction: currentAction });
                     });
                     promise.fail(function (e) {
                     });
@@ -9811,8 +9735,6 @@
                         if (this._currentAppointmentData.length > 0)
                             if (this.model.timeScale.enable) {
                                 if ((parentObj[this._appointmentSettings["recurrence"]]) || isBigApp || (((new Date(parentObj[this._appointmentSettings["endTime"]]) - new Date(parentObj[this._appointmentSettings["startTime"]])) / 3600000) > 24)) {
-                                    var removeItemValue = !parentObj[this._appointmentSettings["recurrence"]] ? removeItem[0]["AppTaskId"] : removeItem[0][this._appointmentSettings["recurrenceId"]] == null ? removeItem[0]["ParentId"] : removeItem[0][this._appointmentSettings["recurrenceId"]];
-                                    new ej.DataManager(this._currentAppointmentData).remove("AppTaskId", parentObj["AppTaskId"])
                                     this._dataProcessing(this._currentAppointmentData);
                                     this._renderAppointmentAll();
                                 }
@@ -9842,8 +9764,8 @@
                         new ej.DataManager(this._processed).saveChanges({ added: [], changed: [], deleted: deleteApp }, "Guid");
                         this._renderAgendaContent();
                     }
-                    this._trigger("appointmentRemoved", { appointment: parentObj, requestType: "appointmentDeleted" });
-                    this._trigger("actionComplete", { data: parentObj, requestType: "appointmentDelete" });
+                    this._trigger("appointmentRemoved", { appointment: parentObj, requestType: "appointmentDeleted", currentAction: currentAction });
+                    this._trigger("actionComplete", { data: parentObj, requestType: "appointmentDelete", currentAction: currentAction });
                     if (this.model.timeScale.enable && ((((args.appointment[this._appointmentSettings["endTime"]] - args.appointment[this._appointmentSettings["startTime"]]) / 3600000) > 24) || args.appointment[this._appointmentSettings["allDay"]]) && this.currentView() != "month" && !(this._isCustomMonthView()) && this.currentView() != "agenda" && (level == 0)) {
                         if (!this._mediaQuery)
                             this.element.find(".e-alldaycells,.e-leftindent,.e-emptyalldaytd").css('height', "27px");
@@ -9851,7 +9773,7 @@
                             this.element.find(".e-alldaycells,.e-leftindent,.e-emptyalldaytd").attr('style', "height:40px !important");
                         this.element.find(".e-alldaycells").first().css(this.model.enableRTL ? 'border-right' : 'border-left', "none");
                         this._reRenderScroller();
-                    }                    
+                    }
                 }
             }
             var appCount = this._appointmentCount();
@@ -9864,6 +9786,7 @@
                 this.element.find(".e-horires").css("top", -restop + "px");
             }
             this._appUid = null;
+            this._actionType = "";
         },
 
         _appointmentCount: function () {
@@ -9888,11 +9811,12 @@
         },
 
         _appointmentResizeStart: function (e) {
+            this._tooltipEvents("disable");
             if (this.model.enableAppointmentResize) {
                 this._appointdata = $(e.target).parent();
                 var appUid = $(e.target).parent().attr("guid");
                 var app = this._sortAppById(new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, appUid)));
-                var data ={ element: $(e.target).parent(),appointment: app[0]};
+                var data = { element: $(e.target).parent(), appointment: app[0] };
                 if (this._trigger("actionBegin", { data: data, requestType: "appointmentResize" }))
                     return false;
                 if (this._trigger("resizeStart", data))
@@ -9918,8 +9842,8 @@
                 }
                 this._curElmt = $(e.target).parent();
                 this.element.find(".e-workcells").removeClass("e-selectedCell,e-mousehover");
-                $(document).bind(ej.eventType.mouseMove, $.proxy(this._appointmentResizing, this));
-                $(document).bind(ej.eventType.mouseUp, $.proxy(this._appointmentResizeStop, this));
+                $(document).on(ej.eventType.mouseMove, $.proxy(this._appointmentResizing, this));
+                $(document).on(ej.eventType.mouseUp, $.proxy(this._appointmentResizeStop, this));
                 if ($(e.target).hasClass("e-rowcursor") || $(e.target).hasClass("e-columncursor"))
                     return false;
             }
@@ -9941,16 +9865,16 @@
                 else if (this._rightResizing || this._leftResizing) {
                     if (this.model.orientation != "horizontal") {
                         if (this.currentView() === "month" || this._isCustomMonthView()) {
-                            this._appointmentResizeHeight(appointDiv, -(this.element.find(".e-monthheader").height()),"e-monthcells");
+                            this._appointmentResizeHeight(appointDiv, -(this.element.find(".e-monthheader").height()), "e-monthcells");
                         }
                         else {
-                            if(!this.model.timeScale.enable) {
-                               appointDiv.css("height", this.element.find(".e-monthcells").height()-2);
-							}
-							else {
-								 appointDiv.css("top", (this.element.find(".e-headerarearow").height() - this.element.find(".e-alldaycells").height() - 2));
-								 appointDiv.css("height", this.element.find(".e-alldaycells").height()-2);
-							}
+                            if (!this.model.timeScale.enable) {
+                                appointDiv.css("height", this.element.find(".e-monthcells").height() - 2);
+                            }
+                            else {
+                                appointDiv.css("top", (this.element.find(".e-headerarearow").height() - this.element.find(".e-alldaycells").height() - 2));
+                                appointDiv.css("height", this.element.find(".e-alldaycells").height() - 2);
+                            }
                         }
                     }
                     else {
@@ -9961,8 +9885,6 @@
             appointDiv = $(e.target).hasClass("e-appointment") || $(e.target).hasClass("e-monthappointment") || $(e.target).hasClass("e-workcells") || $(e.target).hasClass("e-monthcells") || $(e.target).hasClass("e-alldayappointment") || $(e.target).hasClass("e-alldaycells") ? $(e.target) : $(e.target).parents(".e-appointment,.e-alldayappointment,.e-monthappointment");
             var cellHeight = this.element.find(".e-workcells").height();
             var appointcellCount = ($(appointDiv[0]).height() / cellHeight);
-            if (this._trigger("resize", data))
-                return false;
             if (this._topResizing) {
                 if (appointcellCount > 0 && !$(e.target).hasClass("e-alldaycells") && !$(e.target).hasClass("e-apptext")) {
                     this._curElmt.height(this.appoint_height + this.resize - e.pageY + 3);
@@ -9993,18 +9915,19 @@
                 }
             }
             (this._curElmt.hasClass("e-appointment")) && this._appointmentCurrentTimeUpdate();
+            this._trigger("resize", data);
         },
 
         _appointmentResizeHeight: function (appointDiv, topHeight, classname) {
-            if (!this.model.showOverflowButton) var element = document.elementsFromPoint(appointDiv.offset().left, appointDiv.offset().top);
-            var target = (!this.model.showOverflowButton) ? $.grep(element, function (value) { if ($(value).hasClass(classname)) { return value; } }) :  this.element.find("."+classname) ;
-            appointDiv.css("top", topHeight).css("height", $(target).height() - 2);
+            if (appointDiv.length > 0) {
+                var target = (this.model.showOverflowButton) ? this.element.find("." + classname) : appointDiv.closest("td");
+                appointDiv.css("top", topHeight).css("height", $(target).height() - 2);
+            }
         },
         _appointmentCurrentTimeUpdate: function () {
             var appointment = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, parseInt(this._curElmt.attr("id").split("_")[1])))[0];
-            var appoint = JSON.parse(JSON.stringify(appointment));
-            var newStartTime = new Date(appoint[this._appointmentSettings["startTime"]]), newEndTime = new Date(appoint[this._appointmentSettings["endTime"]]);
-            var cellHeight = this.element.find(".e-workcells").height();
+            var newStartTime = new Date(appointment[this._appointmentSettings["startTime"]]), newEndTime = new Date(appointment[this._appointmentSettings["endTime"]]);
+            var cellHeight = this.element.find(".e-workcells").outerHeight();
             var timesoltduration = parseInt(this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount);
             if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
                 var dragArea = this.element.find(".e-draggableworkarea");
@@ -10015,14 +9938,14 @@
                 var resizeMaxTop = (topPos - (cellHeight / this.model.timeScale.minorSlotCount)) < resizeMax ? topPos : resizeMax - resizeElmntHeight;
             }
             if (this._topResizing) {
-                var newTopTime = resizeMaxTop * this.model.timeScale.majorSlot / ((this.model.timeScale.minorSlotCount) * (cellHeight + 1));
+                var newTopTime = resizeMaxTop * this.model.timeScale.majorSlot / ((this.model.timeScale.minorSlotCount) * (cellHeight));
                 newStartTime.setHours(parseInt(this.model.startHour) + parseInt(newTopTime / 60));
                 newStartTime.setMinutes(parseInt(newTopTime % 60));
                 (timesoltduration >= 10) ? newStartTime.setMinutes(Math.round(newStartTime.getMinutes() / 10.0) * 10) : newStartTime.setMinutes((newStartTime.getMinutes() / 10.0) * 10);
             }
             else if (this._bottomResizing) {
                 var newcellCount = ($(this._curElmt[0]).outerHeight() / cellHeight);
-                var newTopTime = (resizeMaxTop + (newcellCount * cellHeight)) * this.model.timeScale.majorSlot / ((this.model.timeScale.minorSlotCount) * (cellHeight + 1));
+                var newTopTime = (resizeMaxTop + (newcellCount * cellHeight)) * this.model.timeScale.majorSlot / ((this.model.timeScale.minorSlotCount) * (cellHeight));
                 newEndTime.setHours(parseInt(this.model.startHour) + parseInt(newTopTime / 60));
                 newEndTime.setMinutes(newTopTime % 60);
                 (timesoltduration >= 10) ? newEndTime.setMinutes((Math.round(newEndTime.getMinutes() / 10.0) * 10)) : newEndTime.setMinutes(((newEndTime.getMinutes() / 10.0) * 10));
@@ -10070,25 +9993,25 @@
                 (timesoltduration >= 10) ? newStartTime.setMinutes(Math.round(newStartTime.getMinutes() / 10.0) * 10) : newStartTime.setMinutes((newStartTime.getMinutes() / 10.0) * 10);
                 if (newStartTime < new Date(this._dateRender[0]))
                     newStartTime = new Date(this._dateRender[0]);
-                if (this.model.endHour - this.model.startHour !== 24) {
-                    var drag = (dragArea.scrollLeft() == 0) ? dragArea.offset().left : dragArea.scrollLeft() - dragArea.offset().left;
-                    var offsetLeft = (((this._curElmt.offset().left + drag)) / this.element.find(".e-workcells").width()) - 1;
-                    var cellIndex = parseInt(parseInt(offsetLeft) / ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)));
-                    var maxNewStartTime = new Date(this._dateRender[cellIndex]);
-                    var indTime = (offsetLeft % ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)));
-                    var hrsTime = ((this.model.startHour) + (indTime / (this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)))) - 0.2;
-                    maxNewStartTime.setHours(hrsTime);
-                    maxNewStartTime.setMinutes((hrsTime * 60) % 60);
-                    newStartTime = new Date(maxNewStartTime);
-                }
+                //if (this.model.endHour - this.model.startHour !== 24) {
+                //    var drag = (dragArea.scrollLeft() == 0) ? dragArea.offset().left : dragArea.scrollLeft() - dragArea.offset().left;
+                //    var offsetLeft = (((this._curElmt.offset().left + drag)) / this.element.find(".e-workcells").width()) - 1;
+                //    var cellIndex = parseInt(parseInt(offsetLeft) / ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)));
+                //    var maxNewStartTime = new Date(this._dateRender[cellIndex]);
+                //    var indTime = (offsetLeft % ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)));
+                //    var hrsTime = ((this.model.startHour) + (indTime / (this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)))) - 0.2;
+                //    maxNewStartTime.setHours(hrsTime);
+                //    maxNewStartTime.setMinutes((hrsTime * 60) % 60);
+                //    newStartTime = new Date(maxNewStartTime);
+                //}
             }
             if (this.model.enableRTL) {
-                this._curElmt.find(".e-apptext").html(ej.format(new Date(newStartTime), this._pattern.t)).css("font-size", "12px").css("white-space", "normal");
-                this._curElmt.find(".e-apptime").html(ej.format(new Date(newEndTime), this._pattern.t)).css("font-size", "12px").css("white-space", "normal").css("float", "left").css("margin-top", (this._curElmt.height() - (this._curElmt.find(".e-apptime").height() + this._curElmt.find(".e-apptext").height())) + "px");
+                this._curElmt.find(".e-apptext").html(ej.format(new Date(newStartTime), (this._timeMode == "12") ? this._pattern.t : "HH:mm", this.model.locale)).css("font-size", "12px").css("white-space", "normal");
+                this._curElmt.find(".e-apptime").html(ej.format(new Date(newEndTime), (this._timeMode == "12") ? this._pattern.t : "HH:mm", this.model.locale)).css("font-size", "12px").css("white-space", "normal").css("float", "left").css("margin-top", (this._curElmt.height() - (this._curElmt.find(".e-apptime").height() + this._curElmt.find(".e-apptext").height())) + "px");
             }
             else {
-                this._curElmt.find(".e-apptext").html(ej.format(new Date(newStartTime), this._pattern.t)).css("font-size", "12px").css("white-space", "normal");
-                this._curElmt.find(".e-apptime").html(ej.format(new Date(newEndTime), this._pattern.t)).css("font-size", "12px").css("white-space", "normal").css("float", "right").css("margin-top", (this._curElmt.height() - (this._curElmt.find(".e-apptime").height() + this._curElmt.find(".e-apptext").height())) + "px");
+                this._curElmt.find(".e-apptext").html(ej.format(new Date(newStartTime), (this._timeMode == "12") ? this._pattern.t : "HH:mm", this.model.locale)).css("font-size", "12px").css("white-space", "normal");
+                this._curElmt.find(".e-apptime").html(ej.format(new Date(newEndTime), (this._timeMode == "12") ? this._pattern.t : "HH:mm", this.model.locale)).css("font-size", "12px").css("white-space", "normal").css("float", "right").css("margin-top", (this._curElmt.height() - (this._curElmt.find(".e-apptime").height() + this._curElmt.find(".e-apptext").height())) + "px");
             }
             this._resizeNewStartTime = newStartTime;
             this._resizeNewEndTime = newEndTime;
@@ -10099,9 +10022,12 @@
             var EndTime = this._leftResizing ? End : Start;
 
             if (this._resWorkWeek) {
-                var element = this._leftResizing ? document.elementsFromPoint(appointDiv.offset().left, appointDiv.offset().top) : document.elementsFromPoint((appointDiv.offset().left + appointDiv.width()), appointDiv.offset().top);
-                var target = $.grep(element, function (value) { if ($(value).hasClass("e-alldaycells")) { return value; } });
+                var eleOffset = appointDiv.offset();
+                this.element.find(".e-appointment,.e-monthappointment").css("pointer-events", "none");
+                var element = this._leftResizing ? document.elementFromPoint((eleOffset.left - $(document).scrollLeft()), (eleOffset.top - $(document).scrollTop())) : document.elementFromPoint((eleOffset.left + appointDiv.width() - $(document).scrollLeft()), (eleOffset.top - $(document).scrollTop()));
+                var target = $.grep(element, function (value) { if ($(value).closest("td").hasClass("e-alldaycells")) { return value; } });
                 var trgtIndex = $(target[0]).index();
+                this.element.find(".e-appointment,.e-monthappointment").css("pointer-events", "visible");
             }
             else var trgtIndex = this._leftResizing ? index * noOfDays : (index == this.res1.length - 1) ? ((index + 1) * noOfDays - 1) : (index + 1) * noOfDays;
 
@@ -10148,28 +10074,38 @@
                 if (this._resWorkWeek) {
                     var resDates = $.extend(true, [], this._dateRender);
                     resDates.reverse();
-                    var element = this._rightResizing ? document.elementsFromPoint(appointDiv.offset().left, appointDiv.offset().top) : document.elementsFromPoint((appointDiv.offset().left + appointDiv.width()), appointDiv.offset().top);
-                    var target = $.grep(element, function (value) { if ($(value).hasClass("e-alldaycells")) { return value; } });
-                    var trgtIndex = ($(".e-alldaycells").length - 1) - $(target[0]).index();
+                    var eleOffset = appointDiv.offset();
+                    this.element.find(".e-appointment,.e-monthappointment").css("pointer-events", "none");
+                    var element = this._rightResizing ? document.elementFromPoint((eleOffset.left - $(document).scrollLeft()), (eleOffset.top - $(document).scrollTop())) : document.elementFromPoint((eleOffset.left + appointDiv.width() - $(document).scrollLeft()), (eleOffset.top - $(document).scrollTop()));
+                    var target = $.grep(element, function (value) { if ($(value).closest("td").hasClass("e-alldaycells")) { return value; } });
+                    var trgtIndex = (this.element.find(".e-alldaycells").length - 1) - $(target[0]).index();
+                    this.element.find(".e-appointment,.e-monthappointment").css("pointer-events", "visible");
                     newEndTime = new Date(resDates[trgtIndex]);
                     newEndTime.setHours(new Date(EndTime).getHours(), new Date(EndTime).getMinutes(), new Date(EndTime).getSeconds());
                 }
                 else {
                     var diffWidth = $(appointDiv[0]).width() - this.appoint_width;
-                    var diffDays = Math.round(diffWidth / (this.element.find(".e-alldaycells").width()));
-                    newEndTime = this._rightResizing ? new Date(EndTime) : new Date(StartTime);
+                    var diffDays = Math.round($(appointDiv[0]).width() / this.element.find(".e-alldaycells").width()) - 1;
+                    newEndTime = this._rightResizing ? new Date(End) : new Date(StartTime);
                     this._rightResizing ? newEndTime.setDate(new Date(newEndTime).getDate() - diffDays) : newEndTime.setDate(new Date(newEndTime).getDate() + diffDays);
-                    newEndTime.setHours(new Date(EndTime).getHours(), new Date(EndTime).getMinutes());
+                    newEndTime.setHours(new Date(EndTime).getHours(), new Date(EndTime).getMinutes(), new Date(EndTime).getSeconds());
+                    if (newEndTime > new Date(new Date(this._dateRender[this._dateRender.length - 1]).setHours(new Date(EndTime).getHours(), new Date(EndTime).getMinutes(), new Date(EndTime).getSeconds()))) {
+                        newEndTime = new Date(new Date(this._dateRender[this._dateRender.length - 1]).setHours(new Date(EndTime).getHours(), new Date(EndTime).getMinutes(), new Date(EndTime).getSeconds()));
+                    }
+                    else if (newEndTime < new Date(new Date(this._dateRender[this._dateRender.length - 1]).setHours(new Date(EndTime).getHours(), new Date(EndTime).getMinutes(), new Date(EndTime).getSeconds()))) {
+                        newEndTime = new Date(new Date(this._dateRender[0]).setHours(new Date(EndTime).getHours(), new Date(EndTime).getMinutes(), new Date(EndTime).getSeconds()));
+                    }
                 }
-            }                              
+            }
             return (!this.model.enableRTL) ? newStartTime : newEndTime;
         },
         _appointmentResizeStop: function (e) {
+            this._tooltipEvents("enable");
             try {
                 var dragArea = this.element.find(".e-draggableworkarea");
                 this.resizeStart = false;
-                $(document).unbind(ej.eventType.mouseMove, $.proxy(this._appointmentResizing, this));
-                $(document).unbind(ej.eventType.mouseUp, $.proxy(this._appointmentResizeStop, this));
+                $(document).off(ej.eventType.mouseMove, $.proxy(this._appointmentResizing, this));
+                $(document).off(ej.eventType.mouseUp, $.proxy(this._appointmentResizeStop, this));
                 var model = this._appointmentSettings;
                 var workcell = this.element.find(".e-workcellstab");
                 var scheduleHeight = workcell.find("tr").length * this.element.find(".e-workcells").height();
@@ -10182,15 +10118,15 @@
                 var appoint = ((tempApp[0][model["recurrence"]] && tempApp[0][model["recurrenceRule"]].toString().indexOf("RECUREDITID") == -1)) ? this._getAppointmentByParentId(this._appUid) : (tempApp[0][model["recurrence"]] ? tempApp[0] : this._getAppointmentByParentId(this._appUid));
                 var noOfDays = this.currentView() === "week" || this.currentView() === "month" || this._isCustomMonthView() ? 7 : this.currentView() === "workweek" && this.model.workWeek.length > 0 ? this.model.workWeek.length : 1;
                 noOfDays = (this.currentView() == "customview" && this._renderDays <= 7) ? this._renderDays : noOfDays;
-				if (this._resWorkWeek) {
-					var resDates;
-					var resObj = new ej.DataManager(this.res1).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length-1].resourceSettings["id"], ej.FilterOperators.equal, tempApp[0][this._appointmentSettings.resourceFields.split(",")[this._appointmentSettings.resourceFields.split(",").length-1]]));
-					if (!ej.isNullOrUndefined(resObj[0][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]]))
-						resDates = resObj[0][this._tempResource[this._tempResource.length-1].resourceSettings["workWeek"]];
-					else
-						resDates = this.model.workWeek;
-					noOfDays = resDates.length;
-				}
+                if (this._resWorkWeek) {
+                    var resDates;
+                    var resObj = new ej.DataManager(this.res1).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length - 1].resourceSettings["id"], ej.FilterOperators.equal, tempApp[0][this._appointmentSettings.resourceFields.split(",")[this._appointmentSettings.resourceFields.split(",").length - 1]]));
+                    if (!ej.isNullOrUndefined(resObj[0][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]]))
+                        resDates = resObj[0][this._tempResource[this._tempResource.length - 1].resourceSettings["workWeek"]];
+                    else
+                        resDates = this.model.workWeek;
+                    noOfDays = resDates.length;
+                }
                 if (appoint != null || appoint !== undefined) {
                     var bigApps = appoint[this._appointmentSettings["startTime"]].getDate() < new Date(appoint[this._appointmentSettings["endTime"]]).getDate() ? true : false;
                     var newStartTime = new Date(appoint[this._appointmentSettings["startTime"]]);
@@ -10209,15 +10145,16 @@
                     var EndTime = appoint[this._appointmentSettings["endTime"]];
                     var resizeElmntHeight = $(appointDiv[0]).outerHeight();
 
+                    var cellHeight = this.element.find(".e-workcells").outerHeight();
                     if (this.currentView() !== "month" && !(this._isCustomMonthView())) {
                         var appTop = $(appointDiv[0]).offset().top;
-                        var cellHeight = this.element.find(".e-workcells").height();
                         var resizeMax = dragArea.height() + dragArea.scrollTop();
                         var topPos = appTop - dragArea.offset().top + dragArea.scrollTop();
                         var resizeMaxTop = (topPos - (cellHeight / this.model.timeScale.minorSlotCount)) < resizeMax ? topPos : resizeMax - resizeElmntHeight;
                     }
+                    resizeMaxTop = ej.isNullOrUndefined(resizeMaxTop) ? 0 : resizeMaxTop;
                     var cellCount = ($(appointDiv[0]).outerHeight() / cellHeight);
-                    var cellDiff = (resizeMaxTop + (cellCount * cellHeight)) * this.model.timeScale.majorSlot / ((this.model.timeScale.minorSlotCount) * (cellHeight + 1)) / 30;
+                    var cellDiff = (resizeMaxTop + (cellCount * cellHeight)) * this.model.timeScale.majorSlot / ((this.model.timeScale.minorSlotCount) * (cellHeight)) / 30;
                     var difHeight = resizeElmntHeight - parseInt(cellDiff);
                     var apptotheight = resizeMaxTop + difHeight;
                     if (this._topResizing) {
@@ -10280,7 +10217,7 @@
                             }
                             else {
                                 newStartTime = this._resizeNewStartTime;
-							}
+                            }
                         }
                         this._leftResizing = false;
                     }
@@ -10326,13 +10263,17 @@
                     if (newStartTime.getTime() == tempApp[0][model["startTime"]].getTime() && newEndTime.getTime() == tempApp[0][model["endTime"]].getTime()) {
                         if (this.element.find("#cloneElement").length > 0) {
                             var height = (this.element.find(".e-monthappointment").length > 1) ? this.element.find("#cloneElement").outerHeight() : this.element.find("#cloneElement").height();
-                            this._curElmt.removeClass("e-draggableAppointment e-scheduleAppGlassy").css({ 'width': this.element.find("#cloneElement").width(), 'height': height, 'top': this.element.find("#cloneElement").css('top'), 'left': this.element.find("#cloneElement").css('left') });
-                            this._curElmt.find(".e-apptext").replaceWith(this.element.find("#cloneElement").find(".e-apptext")).removeAttr("style");
-                            this._curElmt.find(".e-apptime").html(this.element.find("#cloneElement").find(".e-apptime").text()).removeAttr("style");
+                            if (this.model.enableRTL)
+                                this._curElmt.removeClass("e-draggableAppointment e-scheduleAppGlassy").css({ 'width': this.element.find("#cloneElement").width(), 'height': height, 'top': this.element.find("#cloneElement").css('top'), 'right': this.element.find("#cloneElement").css('right') });
+                            else
+                                this._curElmt.removeClass("e-draggableAppointment e-scheduleAppGlassy").css({ 'width': this.element.find("#cloneElement").width(), 'height': height, 'top': this.element.find("#cloneElement").css('top'), 'left': this.element.find("#cloneElement").css('left') });
+                            this._curElmt.find(".e-apptext").replaceWith(this.element.find("#cloneElement").find(".e-apptext")).prop("style", false);
+                            this._curElmt.find(".e-apptime").html(this.element.find("#cloneElement").find(".e-apptime").text()).prop("style", false);
+                            this._curElmt.css("width", this.element.find("#cloneElement")[0].style.width);
+                            if (this._curElmt.hasClass("e-alldayappointment")) this._curElmt.height(19);
                             this.element.find("#cloneElement").remove();
                             $(appointDiv[0]).find('.e-schedulemouseclosetemp').addClass('e-schedulemouseclose e-icon').removeClass('e-schedulemouseclosetemp');
                         }
-                        this._trigger("resizeStop", { appointment: tempApp[0], target: e });
                         return false;
                     }
                     (this.element.find("#cloneElement").length > 0) && this.element.find('#cloneElement').remove();
@@ -10376,8 +10317,7 @@
                                     var Parid = _newAddList[model["recurrenceId"]] == null ? _newAddList["ParentId"] : _newAddList[model["recurrenceId"]];
                                     this._deleteOcurrence(Parid, new Date(_appList[model["startTime"]]));
                                     _newAddList[model["recurrenceRule"]] = tempApp[0][model["recurrenceRule"]] + ";RECUREDITID=" + _newAddList["ParentId"];
-                                    _newAddList["AppTaskId"] = maxId;
-                                    _newAddList[model["id"]] = _newAddList["AppTaskId"];
+                                    _newAddList[model["id"]] = _newAddList["AppTaskId"] = maxId;
                                     reverse = false;
                                 }
                             }
@@ -10385,7 +10325,7 @@
                             var temp = [], _editApp = [];
                             temp.push(this._timeZoneAppointments(args.data, ""));
                             var parid = _newAddList[this._appointmentSettings["recurrenceId"]] == null ? _newAddList["ParentId"] : _newAddList[this._appointmentSettings["recurrenceId"]];
-                            var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, parid));
+                            var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, parid));
                             _editApp.push(this._timeZoneAppointments(_App[0], ""));
                             var promise;
                             if (this.dataSource() instanceof ej.DataManager)
@@ -10505,7 +10445,7 @@
                 var $dragableElements = this.element.find(".e-appointment");
                 $dragableElements.ejDraggable({
                     handle: ".e-appointment",
-                    dragArea: (proxy.model.appointmentDragArea == "") ? proxy.element.find("div.e-draggableworkarea", (".e-headrealldaytable tr")[(!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this._grouping.length + 1 : 1]) : $(proxy.model.appointmentDragArea),
+                    dragArea: (proxy.model.appointmentDragArea == "") ? proxy.element.find("div.e-draggableworkarea", (".e-headrealldaytable tr")[(!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this._grouping.length + 1 : 1]) : $(proxy.model.appointmentDragArea),
                     cursorAt: (proxy.model.appointmentDragArea == "") ? { top: 0, left: 0 } : { top: -40, left: -40 },
                     dragStart: function (args) {
                         proxy._dragStart(args);
@@ -10546,7 +10486,7 @@
                 $dragableElements.ejDraggable({
                     handle: ".e-monthappointment",
                     dragArea: (proxy.model.appointmentDragArea == "") ? proxy.element.find("div.e-draggableworkarea") : $(proxy.model.appointmentDragArea),
-                    cursorAt: (proxy.model.appointmentDragArea == "")? { top: 0, left: 0 } : { top: -20, left: 10 },
+                    cursorAt: (proxy.model.appointmentDragArea == "") ? { top: 0, left: 0 } : { top: -20, left: 10 },
                     dragStart: function (args) {
                         proxy._dragStart(args);
                     },
@@ -10565,7 +10505,7 @@
             }
         },
         _appointElement: function (appointdiv, proxy) {
-            var _cloneWidth = (proxy.model.orientation == "vertical" && appointdiv.hasClass("e-appointment") && this.currentView() != "day") ? appointdiv.closest('td').width() * 0.85 : appointdiv.width();            
+            var _cloneWidth = (proxy.model.orientation == "vertical" && appointdiv.hasClass("e-appointment")) ? appointdiv.closest('td').width() * 0.85 : appointdiv.width();
             appointdiv.find('.e-schedulemouseclose').removeClass('e-schedulemouseclose e-icon');
             appointdiv.find('.e-tophandle').removeClass('e-tophandle e-appointresizer-top e-icon e-nsexpand');
             appointdiv.find('.e-bottomhandle').removeClass('e-bottomhandle e-appointresizer-bottom e-icon e-nsexpand');
@@ -10576,9 +10516,10 @@
             return (proxy.model.appointmentDragArea == "") ? appointdiv.addClass("e-draggableAppointment e-scheduleAppGlassy").removeClass("e-schedulemouseclose e-tophandle e-bottomhandle").css("width", _cloneWidth + "px").appendTo(proxy.element) : appointdiv.addClass("e-draggableAppointment e-scheduleAppGlassy").removeClass("e-schedulemouseclose e-tophandle e-bottomhandle").css("width", _cloneWidth + "px").appendTo($(document.body));
         },
         _dragStart: function (args) {
+            this._tooltipEvents("disable");
             if ($(args.element[0]).hasClass("e-appointment") || $(args.element[0]).hasClass("e-monthappointment") || $(args.element[0]).hasClass("e-alldayappointment")) {
                 var target = args.element;
-                var model = this._appointmentSettings,appoint;
+                var model = this._appointmentSettings, appoint;
                 this._appUid = $(args.element[0]).attr("guid");
                 var tempApp = this._sortAppById(new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid)));
                 if (tempApp.length > 1) {
@@ -10589,11 +10530,13 @@
                 var data = { target: target, appointment: appoint };
                 if (this._trigger("actionBegin", { data: data, requestType: "appointmentDrag" })) {
                     args.cancel = true;
+                    ($(document.body).find(".e-scheduleAppGlassy").length > 0) && $(document.body).find(".e-scheduleAppGlassy").remove();
                     this._renderAppointmentAll();
                     return false;
                 }
                 if (this._trigger("dragStart", data)) {
                     args.cancel = true;
+                    ($(document.body).find(".e-scheduleAppGlassy").length > 0) && $(document.body).find(".e-scheduleAppGlassy").remove();
                     this._renderAppointmentAll();
                     return false;
                 }
@@ -10608,38 +10551,39 @@
             var data = { target: $target };
             !ej.isNullOrUndefined(this.element.data("ejTooltip")) && this.element.ejTooltip('hide');
             this.element.find(".e-workcells").removeClass("e-selectedCell").removeClass("e-mousehover");
-            ((this.currentView() != "month" && !this._isCustomMonthView()) && ($(args.element[0]).hasClass("e-appointment") || args.target.classList[0] == "e-workcells")) && this._dragAppointmentCurrentTime(args);
+            ((this.currentView() != "month" && !this._isCustomMonthView()) && ($(args.element[0]).hasClass("e-appointment") || args.target.className.indexOf('e-workcells') > -1)) && this._dragAppointmentCurrentTime(args);
             this._trigger("drag", data);
-			if (this.model.orientation == "horizontal" && this._tempResource.length != 0 && this._grouping.length != 0) {
-				args.element.css("pointer-events","none");
-				if (this.model.group.resources.length > 1) {
-					var tempTrgt = document.elementFromPoint(args.element.offset().left, args.element.offset().top);
-					var trgtIndex = $(tempTrgt).closest(".e-workcells").parent().index();
-					var trgtElement = $(this.element.find(".e-resourceheadertable tr")[trgtIndex]).children();
-					if (trgtElement.hasClass("e-parentnode")) {
-						if ($(trgtElement.children()[0]).hasClass("e-resourceexpand")) {
-							$(trgtElement.children()[0]).removeClass("e-resourceexpand").addClass("e-resourcecollapse");
-							var grpIndex = parseInt($(trgtElement.children()[0]).attr("id").split("_")[0]);
-							var resColl = new ej.DataManager(this.res1).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length-1].resourceSettings["groupId"], ej.FilterOperators.equal, grpIndex));
-							for (var a = 0; a < resColl.length; a++) {
-								var newIndex = trgtIndex + a + 1;
-								if ($(this.element.find(".e-resourceheadertable tr")[newIndex]).is(":hidden")) {
-									$(this.element.find(".e-resourceheadertable tr")[newIndex]).toggle();
-									$(this.element.find(".e-workcellstab tr")[newIndex]).toggle();
-								}
-							}
-							this.element.find(".e-horires").height(this.element.find(".e-draggableworkarea").height());
-							this._horizontalRender();
-							if (this.model.cellHeight != "20px") this._reRenderScroller();
-							this._horizontalResIcon();
-						}
-					}
-				}
-				args.element.css("pointer-events","");
-			}
+            if (this.model.orientation == "horizontal" && this._tempResource.length != 0 && this._grouping.length != 0) {
+                args.element.css("pointer-events", "none");
+                if (this.model.group.resources.length > 1) {
+                    var tempTrgt = document.elementFromPoint(args.element.offset().left, args.element.offset().top);
+                    var trgtIndex = $(tempTrgt).closest(".e-workcells").parent().index();
+                    var trgtElement = $(this.element.find(".e-resourceheadertable tr")[trgtIndex]).children();
+                    if (trgtElement.hasClass("e-parentnode")) {
+                        if ($(trgtElement.children()[0]).hasClass("e-resourceexpand")) {
+                            $(trgtElement.children()[0]).removeClass("e-resourceexpand").addClass("e-resourcecollapse");
+                            var grpIndex = $(trgtElement.children()[0]).attr("id").split("_")[0];
+                            var resColl = new ej.DataManager(this.res1).executeLocal(new ej.Query().where(this._tempResource[this._tempResource.length - 1].resourceSettings["groupId"], ej.FilterOperators.equal, grpIndex));
+                            for (var a = 0; a < resColl.length; a++) {
+                                var newIndex = trgtIndex + a + 1;
+                                if ($(this.element.find(".e-resourceheadertable tr")[newIndex]).is(":hidden")) {
+                                    $(this.element.find(".e-resourceheadertable tr")[newIndex]).toggle();
+                                    $(this.element.find(".e-workcellstab tr")[newIndex]).toggle();
+                                }
+                            }
+                            this.element.find(".e-horires").height(this.element.find(".e-draggableworkarea").height());
+                            this._horizontalRender();
+                            if (this.model.cellHeight != "20px") this._reRenderScroller();
+                            this._horizontalResIcon();
+                        }
+                    }
+                }
+                args.element.css("pointer-events", "");
+            }
         },
 
         _dragStop: function (args) {
+            this._tooltipEvents("enable");
             this.model.showQuickWindow && (this._quickAppDetailsWindow.ejDialog("close"));
             var proxy = this; var model = this._appointmentSettings; var dragArea = this.element.find(".e-draggableworkarea");
             this._appUid = args.element.attr("guid");
@@ -10649,38 +10593,36 @@
                 var appoint = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid))[0];
             }
             else {
-                var twoDayApps = false;
+                var twoDayApps = (tempApp.length > 1) ? true : false;
                 var templist = $.extend(true, [], tempApp);
                 templist[0][model["endTime"]] = templist[templist.length - 1][model["endTime"]];
                 var appoint = (tempApp[0][model["recurrence"]] && (tempApp[0][model["recurrenceRule"]].toString().indexOf("RECUREDITID") == -1)) ? this._getAppointmentByParentId(this._appUid) : (tempApp[0][model["recurrence"]] ? (tempApp.length > 1) ? templist[0] : tempApp[0] : this._getAppointmentByParentId(this._appUid));
-                if (tempApp.length > 1) {
-                    var appId = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, parseInt(args.element[0].id.split("_")[1])))[0];
-                    var splitObj = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
-                    var twoDayApps = true;
-                }
             }
-			if ((ej.isNullOrUndefined(this._dragNewStartTime) || ej.isNullOrUndefined(this._dragNewEndTime)) && tempApp.length != 0) {
-				this._dragNewStartTime = new Date(tempApp[0][this._appointmentSettings["startTime"]]);
-				this._dragNewEndTime = new Date(tempApp[tempApp.length-1][this._appointmentSettings["endTime"]]);
-			}
+            if ((ej.isNullOrUndefined(this._dragNewStartTime) || ej.isNullOrUndefined(this._dragNewEndTime)) && tempApp.length != 0) {
+                this._dragNewStartTime = new Date(tempApp[0][this._appointmentSettings["startTime"]]);
+                this._dragNewEndTime = new Date(tempApp[tempApp.length - 1][this._appointmentSettings["endTime"]]);
+            }
             var apps = $.extend(true, {}, appoint);
             var splitDrag = ((Math.ceil((apps[model["endTime"]] - apps[model["startTime"]]) / 3600000) < 24) && (apps[model["endTime"]].getDay() != apps[model["startTime"]].getDay())) ? true : false;
             if (this.model.orientation == "vertical") {
                 if ($(args.element[0]).hasClass("e-appointment")) {
                     var newStartTime, newEndTime, cellstrtime, cellendtime;
-                    newStartTime = this._dragNewStartTime;
-                    newEndTime = this._dragNewEndTime;
-                    cellstrtime = this._dragNewStartTime;
-                    cellendtime = this._dragNewEndTime;
-                    if (args.target.classList[0] == "e-alldaycells" || Math.ceil((this._dragNewEndTime.getTime() - this._dragNewStartTime.getTime()) / (60 * 60 * 1000)) >= 24) var allday = true;
+                    newStartTime = cellstrtime = this._dragNewStartTime;
+                    newEndTime = cellendtime = this._dragNewEndTime;
+                    if (args.target.className.indexOf('e-alldaycells') > -1 || Math.ceil((this._dragNewEndTime.getTime() - this._dragNewStartTime.getTime()) / (60 * 60 * 1000)) >= 24) {
+                        var allday = true;
+                        cellstrtime = new Date(cellstrtime.setHours(0, 0, 0, 0));
+                        cellendtime = new Date(cellendtime.setHours(23, 59, 59, 59));
+                    }
                     var cellIndex = Math.round(($(args.element[0]).offset().left + dragArea.scrollLeft() - dragArea.offset().left) / this.element.find(".e-workcells").width());
                 }
                 else if ($(args.element[0]).hasClass("e-alldayappointment")) {
-                    if (args.target.classList[0] == "e-workcells") {
+                    if (args.target.className.indexOf('e-workcells') > -1) {
                         var cellIndex = args.target.cellIndex;
                         cellstrtime = this._dragNewStartTime;
                         cellendtime = this._dragNewEndTime;
                         var allday = false;
+                        this._allDayDrag = true;
                     }
                     else {
                         newStartTime = appoint[model["startTime"]];
@@ -10842,7 +10784,7 @@
                         var _prevObj = $.extend(true, [], _appList);
                         _newAddList[model["startTime"]] = cellstrtime;
                         _newAddList[model["endTime"]] = cellendtime;
-                        if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources)
+                        if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources)
                             _newAddList = this._getDragDropResourceData(this, cellIndex, _newAddList);
                         if (!ej.isNullOrUndefined(allday)) _newAddList[model["allDay"]] = allday;
                         var avail = this._checkAvailability(_newAddList);
@@ -10860,33 +10802,25 @@
                             this._deleteOcurrence(Parid, _appList[model["startTime"]]);
                             _newAddList[model["recurrenceRule"]] = appoint[model["recurrenceRule"]] + ";RECUREDITID=" + _newAddList["ParentId"];
                             _newAddList[model["recurrenceExDate"]] = appoint[model["recurrenceExDate"]];
-                            _newAddList["AppTaskId"] = maxId;
-                            _newAddList[model["id"]] = _newAddList["AppTaskId"];
+                            _newAddList[model["id"]] = _newAddList["AppTaskId"] = maxId;
                         }
                     }
                     var argsAdd = { data: _newAddList };
                     var temp = []; var _editApp = [];
                     temp.push(this._timeZoneAppointments(argsAdd.data, ""));
                     var Parid = _newAddList[model["recurrenceId"]] == null ? appoint["ParentId"] : _newAddList[model["recurrenceId"]];
-                    var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, Parid));
+                    var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, Parid));
                     _editApp.push(this._timeZoneAppointments(_App[0], ""));
                     var promise;
                     if (this.dataSource() instanceof ej.DataManager)
                         (!reverse) && (promise = this._dataManager.saveChanges({ added: temp, changed: _editApp, deleted: [] }, model["id"], this.model.appointmentSettings.query._fromTable));
                     else 
                         (!reverse) && (promise = this._dataManager.saveChanges({ added: temp, changed: _editApp, deleted: [] }, "AppTaskId"));
-                    var updateTempNew = [];
                     for (var c = 0; c < temp.length; c++) {
-                        updateTempNew = this._timeZoneAppointments(temp[c], "reverse");
-                        new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTempNew);
+                        new ej.DataManager(this._currentAppointmentData).update("AppTaskId", this._timeZoneAppointments(temp[c], "reverse"));
                     }
-                    if (_editApp[0].AppTaskId != temp[0].AppTaskId) {
-                        var updateTempNew1 = [];
-                        for (var c = 0; c < _editApp.length; c++) {
-                            updateTempNew1 = this._timeZoneAppointments(_editApp[c], "reverse");
-                            new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTempNew1);
-                        }
-                    }
+                    for (var c = 0; c < _editApp.length; c++)
+                        new ej.DataManager(this._currentAppointmentData).update("AppTaskId", this._timeZoneAppointments(_editApp[c], "reverse"));
                     if (!ej.isNullOrUndefined(promise) && $.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
                         promise.done(function (e) {
                             proxy._processUrlBinding(e);
@@ -10897,19 +10831,7 @@
                         });
                     }
                     else {
-                        if (!reverse) {
-                            if (twoDayApps) {
-                                for (i = 0; i < appListDetails.length; i++) {
-                                    new ej.DataManager(this._processed).remove("Guid", appListDetails[i]["Guid"]);
-                                }
-                            }
-                            else
-                                new ej.DataManager(this._processed).remove("Guid", this._appUid);
-                            var appLength = (argsAdd.data[this._appointmentSettings["endTime"]].getDate() == argsAdd.data[this._appointmentSettings["startTime"]].getDate());
-                            var multiDayApp = (Math.ceil(((_appList[this._appointmentSettings["endTime"]] - _appList[this._appointmentSettings["startTime"]]) / 3600000) / 24) > 1) ? true : false;;
-                            twoDayApps ? multiDayApp ? this._multipleSplit(argsAdd.data, argsAdd.data["AppTaskId"], argsAdd.data[this._appointmentSettings["startTime"]], argsAdd.data[this._appointmentSettings["endTime"]]) : appLength ? this._processed.push(argsAdd.data) : this._multipleDayApp(argsAdd.data, argsAdd.data["AppTaskId"], argsAdd.data[this._appointmentSettings["startTime"]], argsAdd.data[this._appointmentSettings["endTime"]]) : this._processed.push(argsAdd.data);
-                            //this._appointmentProcessing(argsAdd.data);
-                        }
+                        (!reverse) && this._dataProcessing(this._currentAppointmentData);
                         this._renderAppointmentAll();
                         this._trigger("actionComplete", { appointment: _newAddList, requestType: "appointmentDrag" });
                     }
@@ -10918,9 +10840,8 @@
                     var _prevObj = {};
                     if (twoDayApps)
                         var object = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, tempApp[0]["Guid"]));
-                    else {
+                    else
                         var object = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, tempApp[0]["Guid"]));
-                    }
                     var _prevObj = $.extend(true, [], object[0]);
                     var prvcellstrtime = object[0][model["startTime"]];
                     var prvcellendtime = object[0][model["endTime"]];
@@ -10938,11 +10859,11 @@
                         reverse = true;
                     }
                     else {
-                        if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0) && this._tempResource[0].resourceSettings.dataSource.length!=0 && ej.scheduleFeatures.resources)
+                        if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0) && this._tempResource[0].resourceSettings.dataSource.length != 0 && ej.scheduleFeatures.resources)
                             object[0] = this._getDragDropResourceData(this, cellIndex, object[0]);
                         if (!ej.isNullOrUndefined(allday)) object[0][model["allDay"]] = allday;
                         var avail = this._checkAvailability(object[0]);
-                        if (this._trigger("dragStop", { appointment: object[0], event: args }) || avail.length>0) {
+                        if (this._trigger("dragStop", { appointment: object[0], event: args }) || avail.length > 0) {
                             this._showBlockAlert && (avail.length > 0) && this._alertBlockError();
                             object[0] = $.extend(true, [], _prevObj);
                             reverse = true;
@@ -10957,11 +10878,10 @@
                     }
                     var temp = this._timeZoneAppointments(object[0], "");
                     var promise;
-                    if (this.dataSource() instanceof ej.DataManager) {
+                    if (this.dataSource() instanceof ej.DataManager)
                         (!reverse) && (promise = this._dataManager.update(model["id"], temp, this.model.appointmentSettings.query._fromTable));
-                    }
                     else 
-                    (!reverse) && (promise = this._dataManager.update("AppTaskId", temp));
+                        (!reverse) && (promise = this._dataManager.update("AppTaskId", temp));
                     var updateTemp = this._timeZoneAppointments(temp, "reverse");
                     if (twoDayApps)
                         new ej.DataManager(this._currentAppointmentData).update("Guid", updateTemp);
@@ -10998,10 +10918,12 @@
             (this.element.find('#cloneElement').length > 0) && this.element.find('#cloneElement').remove();
         },
 
-        _findRowIndex: function(args){
-            var element = $(document.elementsFromPoint($(args.element[0]).offset().left, $(args.element[0]).offset().top - 1));
-            var result = (this.model.orientation == "horizontal") ? $.grep(element, function (value) { if ($(value).hasClass("e-workcells")) { return value; } }) : $.grep(element, function (value) { if ($(value).hasClass("e-monthcells")) { return value; } });;
-            rowIndex = $(result).parent().index();
+        _findRowIndex: function (args) {
+            var eleOffset = $(args.element[0]).offset();
+            this.element.find(".e-appointment,.e-monthappointment").css("pointer-events", "none");
+            var element = $(document.elementFromPoint((eleOffset.left - $(document).scrollLeft()), (eleOffset.top - $(document).scrollTop() - 1)));
+            var rowIndex = $(element).closest("td").parent().index();
+            this.element.find(".e-appointment,.e-monthappointment").css("pointer-events", "visible");
             return rowIndex;
         },
 
@@ -11052,17 +10974,17 @@
                 templist[0][model["endTime"]] = templist[templist.length - 1][model["endTime"]];
                 var appoint = (tempApp[0][model["recurrence"]] && (tempApp[0][model["recurrenceRule"]].toString().indexOf("RECUREDITID") == 1)) ? this._getAppointmentByParentId(this._appUid) : (tempApp[0][model["recurrence"]] ? templist[0] : this._getAppointmentByParentId(this._appUid));
             }
-            if ((this.model.orientation == "vertical" && ($(args.element[0]).hasClass("e-appointment") || args.target.classList[0] == "e-workcells"))) {
+            if (this.model.orientation == "vertical" && ($(args.element[0]).hasClass("e-appointment") || args.target.className.indexOf('e-workcells') > -1)) {
                 var dragMax = dragArea.height() + dragArea.scrollTop();
                 var dragElmntHeight = args.element[0].offsetHeight;
-                var cellHeight = this.element.find(".e-workcells").height();
+                var cellHeight = this.element.find(".e-workcells").outerHeight();
                 var topPos = $(args.element[0]).offset().top - dragArea.offset().top + dragArea.scrollTop();
                 var dragMaxTop = (topPos - (cellHeight / (60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)))) < dragMax ? topPos : dragMax - dragElmntHeight;
                 var newStartTime, newEndTime, cellstrtime, cellendtime;
                 if ($(args.element[0]).hasClass("e-alldayappointment")) {
                     var cellIndex = args.target.cellIndex;
                     newStartTime = new Date(this.dateRender[cellIndex]);
-                    var newTopTime = (dragMaxTop > 0) ? dragMaxTop * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (cellHeight + 1)) : 1 * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (cellHeight + 1));
+                    var newTopTime = (dragMaxTop > 0) ? dragMaxTop * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * cellHeight) : 1 * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * cellHeight);
                     newStartTime.setHours(parseInt(this.model.startHour) + Math.round(newTopTime / 60));
                     newStartTime.setMinutes(parseInt(newTopTime % 60));
                     newStartTime = (new Date(newStartTime).getMinutes() >= 30) ? new Date(new Date(newStartTime).setHours(new Date(newStartTime).getHours() - 1)) : new Date(newStartTime);
@@ -11072,8 +10994,8 @@
                     cellendtime = new Date(newEndTime);
                 }
                 else {
-                    if ((dragMaxTop > 0 || !this.model.showAllDayRow) && (args.target.classList[0] != "e-alldaycells")) {
-                        var newTopTime = (dragMaxTop > 0) ? dragMaxTop * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (cellHeight + 1)) : 1 * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (cellHeight + 1));
+                    if ((dragMaxTop > 0 || !this.model.showAllDayRow) && (args.target.className.indexOf('e-alldaycells') != 1)) {
+                        var newTopTime = Math.round((dragMaxTop > 0) ? dragMaxTop * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * cellHeight) : 1 * 60 / ((60 / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * cellHeight));
                         var twoDayApps = (new Date(new Date(appoint[proxy._appointmentSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(appoint[proxy._appointmentSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) ? true : false;
                         if (proxy.currentView() !== "month" && !(proxy._isCustomMonthView())) {
                             var firstDayOfWeek = new Date(proxy._firstweekdate(proxy.currentDate()));
@@ -11154,7 +11076,7 @@
                             var differ = new Date(appoint["EndTime"]).getDay() - new Date(appoint["StartTime"]).getDay();
                             var hours = hours - ((differ - 1) * (this.model.endHour - this.model.startHour));
                         }
-                    var minutes = Math.floor((duration % 3600) / 60);
+                    var minutes = Math.round(Math.floor((duration % 3600) / 60) / 10.0) * 10;
                     newEndTime = proxy._getNewEndTime(newStartTime, hourValue, minutes);
                     if (new Date(appoint["StartTime"]).getDay() == new Date(appoint["EndTime"]).getDay() && this.currentView() == "workweek" && this.model.workWeek.length != 5) {
                         totalhrs = newStartTime.getHours() + hours;
@@ -11165,8 +11087,11 @@
                     }
                     var some = parseInt(colIndex) + (parseInt($(args.element[0]).width() / this.element.find(".e-workcells").width())) - 1;
                     some = parseInt(some / ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot)));
-                    var variable = (new Date(newEndTime).getHours() >= (this.model.endHour)) ? parseInt(parseInt((new Date(newEndTime) - new Date(new Date(new Date(newStartTime).setHours(0, 0, 0, 0)).setHours(this.model.endHour))) / (1000 * 60 * 60)) / (this.model.endHour - this.model.startHour)) + 1 : 0;
-                    minStartTime = (new Date(newEndTime).getHours() >= (this.model.endHour)) ? new Date(new Date(newEndTime).setHours(new Date(newEndTime).getHours() + (variable * ((24 - this.model.endHour) + this.model.startHour)))) : newEndTime;
+                    var variable = (new Date(newEndTime).getHours() >= (this.model.endHour)) ? parseInt(parseInt((new Date(newEndTime) - new Date(new Date(new Date(newStartTime).setHours(0, 0, 0, 0)).setHours(this.model.endHour))) / (1000 * 60 * 60)) / (this.model.endHour - this.model.startHour)) : 0;
+                    var newStart = new Date(newStartTime);
+                    var missDate = this.currentView() == "workweek" ? ((variable - 1) * (this.model.endHour - this.model.startHour)) : 0;
+                    minStartTime = (new Date(newEndTime).getHours() >= (this.model.endHour)) ? new Date(new Date(newStart).setHours(new Date(newStartTime).getHours() + missDate + (parseInt($(args.element[0]).width() / this.element.find(".e-workcells").width()) / (this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot))) + (variable * ((24 - this.model.endHour) + this.model.startHour)))) : newEndTime;
+                    if (new Date(newEndTime).getHours() >= (this.model.endHour)) minStartTime.setMinutes(new Date(newStartTime).getMinutes() + Math.round(parseInt(diffTimeLeft % 60) / 10.0) * 10);
                     if (this.model.endHour - this.model.startHour !== 24) {
                         if (new Date(new Date(minStartTime).setHours(0, 0, 0, 0)).getTime() != new Date(this._dateRender[some]).getTime())
                             minStartTime = new Date(this._dateRender[some]).setHours(new Date(minStartTime).getHours(), new Date(minStartTime).getMinutes(), new Date(minStartTime).getSeconds(), new Date(minStartTime).getMilliseconds());
@@ -11175,7 +11100,7 @@
                     this._cellIndex = (this.model.enableRTL) ? this.element.find(".e-workcells").length - (Math.round($(args.element[0]).offset().left / this.element.find(".e-workcells").width())) : Math.round(($(args.element[0]).offset().left + dragArea.scrollLeft() - dragArea.offset().left) / this.element.find(".e-workcells").width());
                 }
             }
-            args.element.find(".e-apptime").html(ej.format(cellstrtime, this._pattern.t) + " - " + ej.format(cellendtime, this._pattern.t)).insertBefore(args.element.find(".e-apptext")).css("font-size", "12px").css("white-space", "normal");
+            args.element.find(".e-apptime").html(ej.format(cellstrtime, (this._timeMode == "12") ? this._pattern.t : "HH:mm", this.model.locale) + " - " + ej.format(cellendtime, (this._timeMode == "12") ? this._pattern.t : "HH:mm", this.model.locale)).insertBefore(args.element.find(".e-apptext")).css("font-size", "12px").css("white-space", "normal");
             this._dragNewStartTime = cellstrtime;
             this._dragNewEndTime = cellendtime;
         },
@@ -11187,7 +11112,7 @@
         _getAppointmentByParentId: function (appId) {
             var tempApp, appoint, appList = this._currentAppointmentData;
             var tempApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, appId));
-            var appoint = new ej.DataManager(appList).executeLocal(new ej.Query().where("AppTaskId", ej.FilterOperators.equal, parseInt(tempApp[0]["ParentId"])));
+            var appoint = new ej.DataManager(appList).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, tempApp[0]["ParentId"]));
             return !$.isEmptyObject(appoint) ? appoint[0] : appoint;
         },
 
@@ -11198,14 +11123,15 @@
                 this._renderAgendaContent();
             else {
                 ej.preferredCulture(this.model.locale);
-                this.element.find("div.e-appointment,div.e-alldayappointment,div.e-monthappointment,.e-appsoverflow").remove();
-                this.element.find("div.e-categorybar").remove();
+                this.element.find("div.e-appointwrapper,.e-alldayappointment").remove();
+                if (!ej.isNullOrUndefined(this.model.group) && this._grouping.length > 1 && this.model.orientation == "horizontal")
+                    this.resHeaderHeight = this.element.find(".e-resourceheadercells").height();
                 if (this.currentView() != "month" && (!this._isCustomMonthView()) && this.model.timeScale.enable) {
                     this._renderAppointments();
                     if (this.model.showAppointmentNavigator) {
-						if (this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && (!this._mediaQuery)) this._renderUpDownIconPosition();
+                        if (this.model.orientation == "vertical" && this.element.find(".e-vscroll").length > 0 && (!this._mediaQuery)) this._renderUpDownIconPosition();
                         this._nextPrevButton(this._filtered);
-					}
+                    }
                 }
                 else
                     this._renderMonthAppointment();
@@ -11266,11 +11192,6 @@
             var data = $.extend(true, [], this.model.blockoutSettings.dataSource);
             for (var app = 0; app < data.length; app++) {
                 data[app] = this._processtimeZone(data[app]);
-                if (this.currentView() == "month" || this._isCustomMonthView()) {
-                    if ((Math.round((new Date(data[app][this.model.blockoutSettings["endTime"]]) - new Date(data[app][this.model.blockoutSettings["startTime"]])) / 3600000) < 24)) {
-                        continue;
-                    }
-                }
                 if (new Date(new Date(data[app][this.model.blockoutSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() < new Date(new Date(data[app][this.model.blockoutSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())
                     this._blockTimeSplit(data[app], new Date(data[app][this.model.blockoutSettings["startTime"]]), new Date(data[app][this.model.blockoutSettings["endTime"]]));
                 else
@@ -11307,8 +11228,6 @@
                 day_end = (new Date(nextDay).getDate() == new Date(endTime).getDate()) ? new Date(new Date(nextDay).setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds())) : new Date(new Date(nextDay).setHours(23, 59, 59));
                 if (day_end >= new Date(endTime))
                     day_end = app[this.model.blockoutSettings["endTime"]];
-                //else if (this.model.orientation == "horizontal" && this.currentView() == "workweek" && (day_end.getDay() == 6 || day_end.getDay() == 0))
-                //    day_end = (new Date(day_end).getDay() == 6) ? new Date((new Date(day_end)).setDate(day_end.getDate() - 1)) : new Date((new Date(day_end)).setDate(day_end.getDate() - 2));
                 if (!this.model.showNextPrevMonth && this.currentView() == "month" && new Date(start.getFullYear(), start.getMonth(), 1).getTime() != new Date(day_end.getFullYear(), day_end.getMonth(), 1).getTime())
                     day_end = new Date(start.getFullYear(), start.getMonth() + 1, 0, day_end.getHours(), day_end.getMinutes(), day_end.getSeconds());
                 var data = {};
@@ -11335,7 +11254,7 @@
             (new Date(new Date(dateCount[day]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointmentsList[app][this.model.blockoutSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime()) &&
             (new Date(new Date(appointmentsList[app][this.model.blockoutSettings["startTime"]]).setHours(0, 0, 0, 0)).getTime() <= new Date(new Date(appointmentsList[app][this.model.blockoutSettings["endTime"]]).setHours(0, 0, 0, 0)).getTime())) {
                     if (this.currentView() == "month" || this._isCustomMonthView() || !this.model.timeScale.enable)
-                        this._renderMonthBlockTime(appointmentsList[app], day, res);
+                        (appointmentsList[app][this.model.blockoutSettings["isAllDay"]]) && this._renderMonthBlockTime(appointmentsList[app], day, res);
                     else
                         this._renderBlockTime(appointmentsList[app], day, res);
                 }
@@ -11354,7 +11273,7 @@
             var startTime = ((new Date(rStartTime).getHours()) < startHour) ? (new Date(rStartTime).getHours() + (-new Date(rStartTime).getHours()) + (-new Date(rStartTime).getMinutes())) : (new Date(rStartTime).getHours() + (-startHour));
             if (rStartTime <= rEndTime && (new Date(dateCount[0]).getTime() <= rStartTime.getTime() && new Date(new Date(dateCount[dateCount.length - 1]).setHours(23, 59, 59)) >= rStartTime.getTime())) {
                 if (this.model.orientation == "vertical") {
-                    var appWidth = "100%", appHeight,topPosition, leftPosition = 0;
+                    var appWidth = "100%", appHeight, topPosition, leftPosition = 0;
                     appHeight = ((parseFloat(new Date(new Date(rEndTime).getTime()) - new Date(new Date(rStartTime).getTime()))) / (60 * 1000) * (cellHeight * this.model.timeScale.minorSlotCount) / (this.model.timeScale.majorSlot)) - 1;
                     topPosition = ((parseFloat((((new Date(rStartTime).getHours() * 60)) + new Date(rStartTime).getMinutes() + (new Date(rStartTime).getSeconds() / 60))) - parseInt((startTime * 60) / (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) * (this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount)) - (this.model.startHour * 60)) * cellHeight * (this.model.timeScale.minorSlotCount / this.model.timeScale.majorSlot);
                     var timeCellhtml = this._generateBlockElement(record, appWidth, appHeight, topPosition, leftPosition);
@@ -11448,7 +11367,7 @@
                 if (this.model.orientation == "vertical" && this._firstdayofweek != 0 && new Date(startTime).getDay() < this._firstdayofweek)
                     cellId = (resIndex * (7) + (new Date(startTime).getDay() + 1)) + ((rowPosition - 1) * (this.res1.length * 7)) - this._firstdayofweek + 7;
                 if (this.model.orientation == "vertical")
-                    cellHeight = $(this.element.find("div.e-appointwrapper")[cellId - 1]).closest("tr").find(".e-monthcells").outerHeight();
+                    cellHeight = $(this.element.find("td.e-monthcells")[cellId - 1]).closest("tr").find(".e-monthcells").outerHeight();
                 else {
                     var newResCollection = this._horiGroupCollection(), groupIndex = 0;
                     if (!ej.isNullOrUndefined(this.model.group) && this.model.group.resources.length > 1) {
@@ -11540,8 +11459,8 @@
                 var oRowCell = this.element.find('div.e-draggableworkarea tr');
                 var oEl = event.target || document.activeElement || event.srcElement;
                 $(oEl).hasClass("e-alldaycells") && (oRowCell = this.element.find(".e-alldaycells").parent());
-				if (this._trigger("keyDown", {event:event}))
-			      return false;
+                if (this._trigger("keyDown", { event: event }))
+                    return false;
                 if ($(oEl).hasClass("e-workcells") || $(oEl).hasClass("e-alldaycells") || $(oEl).hasClass("e-monthcells")) {
                     this._getDateByElement($(oEl));
                     var curDate = this.curDate;
@@ -12154,9 +12073,9 @@
             if (this.model.showQuickWindow && e.type !== "beforeOpen") {
                 this._quickAppointWindow.find("#" + this._id + "_quickAppwindow").css("display", "block");
                 if (new Date(new Date(this.cur_StartTime).setHours(0, 0, 0, 0)).getTime() == new Date(new Date(this.cur_EndTime).setHours(0, 0, 0, 0)).getTime())
-                    this._quickAppointWindow.find('.e-quickstartend').html(this._dayFullNames[new Date(this.cur_StartTime).getDay()] + ", " + ej.format(new Date(this.cur_StartTime), "MMMM") + " " + new Date(this.cur_StartTime).getDate() + ", " + ej.format(new Date(this.cur_StartTime), this._timeMode == "12" ? this._pattern.t : "HH:mm") + " - " + ej.format(new Date(this.cur_EndTime), this._timeMode == "12" ? this._pattern.t : "HH:mm"));
+                    this._quickAppointWindow.find('.e-quickstartend').html(this._dayFullNames[new Date(this.cur_StartTime).getDay()] + ", " + ej.format(new Date(this.cur_StartTime), "MMMM", this.model.locale) + " " + new Date(this.cur_StartTime).getDate() + ", " + ej.format(new Date(this.cur_StartTime), this._timeMode == "12" ? this._pattern.t : "HH:mm", this.model.locale) + " - " + ej.format(new Date(this.cur_EndTime), this._timeMode == "12" ? this._pattern.t : "HH:mm", this.model.locale));
                 else
-                    this._quickAppointWindow.find('.e-quickstartend').html(this._dayFullNames[new Date(this.cur_StartTime).getDay()] + ", " + ej.format(new Date(this.cur_StartTime), "MMMM") + " " + new Date(this.cur_StartTime).getDate() + ", " + ej.format(new Date(this.cur_StartTime), this._timeMode == "12" ? this._pattern.t : "HH:mm") + " - " + this._dayFullNames[new Date(this.cur_EndTime).getDay()] + ", " + ej.format(new Date(this.cur_EndTime), "MMMM") + " " + new Date(this.cur_EndTime).getDate() + ", " + ej.format(new Date(this.cur_EndTime), this._timeMode == "12" ? this._pattern.t : "HH:mm"));
+                    this._quickAppointWindow.find('.e-quickstartend').html(this._dayFullNames[new Date(this.cur_StartTime).getDay()] + ", " + ej.format(new Date(this.cur_StartTime), "MMMM", this.model.locale) + " " + new Date(this.cur_StartTime).getDate() + ", " + ej.format(new Date(this.cur_StartTime), this._timeMode == "12" ? this._pattern.t : "HH:mm", this.model.locale) + " - " + this._dayFullNames[new Date(this.cur_EndTime).getDay()] + ", " + ej.format(new Date(this.cur_EndTime), "MMMM", this.model.locale) + " " + new Date(this.cur_EndTime).getDate() + ", " + ej.format(new Date(this.cur_EndTime), this._timeMode == "12" ? this._pattern.t : "HH:mm", this.model.locale));
                 this._quickAppointWindow.find('.subject').val("");
                 if (!this.model.readOnly)
                     this._quickAppointWindow.ejDialog("open");
@@ -12165,7 +12084,7 @@
                 var xy = this._quickWindowPosition(x, y, $(target), this._quickAppointWindow);
                 this._quickAppointWindow.ejDialog({ position: { X: xy["X"], Y: xy["Y"] } });
                 this._quickAppointWindow.find(".subject").focus();
-                if (ej.scheduleFeatures.resources && (this._tempResource.length!=0))
+                if (ej.scheduleFeatures.resources && (this._tempResource.length != 0))
                     this._getResourceDetails($(target));
             }
             this._cellClick = true;
@@ -12185,9 +12104,9 @@
                 if ($(target).hasClass("e-workcells")) {
                     var cellmins = this.model.timeScale.majorSlot / this.model.timeScale.minorSlotCount;
                     var minStartTime = (this.model.startHour * 3600000) + (rowInx * cellmins * 60 * 1000);
-                    var maxEndTime = ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot) - 1) == maxrowInx ? (((this.model.startHour * this.model.timeScale.minorSlotCount) + (maxrowInx + 1)) * cellmins * 60 * 1000) - 1 : (((this.model.startHour * this.model.timeScale.minorSlotCount) + (maxrowInx + 1)) * cellmins * 60 * 1000);
+                    var maxEndTime = ((this.model.endHour - this.model.startHour) * this.model.timeScale.minorSlotCount * (60 / this.model.timeScale.majorSlot) - 1) == maxrowInx ? (this.model.startHour * 3600000) + ((maxrowInx + 1) * cellmins * 60 * 1000) - 1 : (this.model.startHour * 3600000) + ((maxrowInx + 1) * cellmins * 60 * 1000);
                     this.cur_StartTime = new Date(new Date(minStartDate).setMilliseconds(minStartTime));
-                    this.cur_EndTime = new Date(new Date(maxEndDate).setMilliseconds(maxEndTime));                 
+                    this.cur_EndTime = new Date(new Date(maxEndDate).setMilliseconds(maxEndTime));
                 }
                 else if ($(target).hasClass("e-monthcells")) {
                     var selCell = this.element.find('td.e-selectedCell');
@@ -12448,7 +12367,7 @@
                 var mincolindex = 7 * (parseInt(resIndex));
                 var count = this.currentView() == "day" ? 1 : this.currentView() == "workweek" ? this.model.workWeek.length : 7;
                 var colIndex = this.model.orientation == "vertical" ? count : this.currentView() == "month" ? this.totdays.length : count * (this.model.endHour - this.model.startHour) * 2;
-                maxcolindex = ((this._tempResource.length!=0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) && this.model.orientation == "vertical" ? this.render_Resources[this.render_Resources.length - 1].length * colIndex : colIndex;
+                maxcolindex = ((this._tempResource.length != 0) && !ej.isNullOrUndefined(this.model.group) && ej.scheduleFeatures.resources) && this.model.orientation == "vertical" ? this.render_Resources[this.render_Resources.length - 1].length * colIndex : colIndex;
                 var currrowindex = this.element.find("td.e-selectedCell").parent()[0].rowIndex;
                 var currcolindex = this.element.find("td.e-selectedCell")[0].cellIndex;
 
@@ -12599,15 +12518,15 @@
                         }
                     }
                 }
-                var event = { startTime: new Date(startTime), endTime: new Date(endTime), target: _target, resources: ((this.model.appointmentWindowOpen != null || this.model.cellDoubleClick != null) && (this._tempResource.length!=0)) ? this._getResourceValue(_target) : null };
+                var event = { startTime: new Date(startTime), endTime: new Date(endTime), target: _target, resources: ((this.model.appointmentWindowOpen != null || this.model.cellDoubleClick != null) && (this._tempResource.length != 0)) ? this._getResourceValue(_target) : null };
                 if (this._trigger("appointmentWindowOpen", event))
                     return false;
-                if (ej.scheduleFeatures.resources && (this._tempResource.length!=0))
+                if (ej.scheduleFeatures.resources && (this._tempResource.length != 0))
                     this._renderResourceData($(targetElement), this._cellIndex);
                 this._appointmentAddWindow.find("#" + this._id + "startdate").ejDatePicker("option", "value", new Date(startTime));
                 this._appointmentAddWindow.find("#" + this._id + "enddate").ejDatePicker("option", "value", new Date(endTime));
-                this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(new Date(startTime), this._pattern.t));
-                this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(new Date(endTime), this._pattern.t));
+                this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value", ej.format(new Date(startTime), this._pattern.t, this.model.locale));
+                this._appointmentAddWindow.find("#" + this._id + "endtime").ejTimePicker("option", "value", ej.format(new Date(endTime), this._pattern.t, this.model.locale));
                 ($(contextElement).hasClass("e-alldaycells") || this.currentView() == "month" || (this._isCustomMonthView())) && this._appointmentAddWindow.find(".allday").ejCheckBox({ checked: true });
                 this._timeZoneCollection(null);
                 this._tempStart = this._appointmentAddWindow.find("#" + this._id + "starttime").ejTimePicker("option", "value");
@@ -12624,6 +12543,20 @@
 
         },
 
+        _tooltipEvents: function (args) {
+            if (args == "disable") {
+                if (!ej.isNullOrUndefined(this.element.data("ejTooltip"))) {
+                    var tipObj = this.element.ejTooltip('instance');
+                    tipObj._wireEvents(false);
+                }
+            }
+            else {
+                if (!ej.isNullOrUndefined(this.element.data("ejTooltip"))) {
+                    var tipObj = this.element.ejTooltip('instance');
+                    tipObj._wireEvents(true);
+                }
+            }
+        },
         _showToolTip: function (event) {
             var event = event.event;
             var toolTipObj = this.element.data("ejTooltip");
@@ -12637,9 +12570,9 @@
                 var appData = this._getAppDetails(event.currentTarget);
                 if (appData == false) return false;
                 if (ej.isNullOrUndefined(this.model.tooltipSettings.templateId)) {
-                    var startTime = this._timeMode == "12" ? ej.format(appData[this._appointmentSettings["startTime"]], this._pattern.t) : ej.format(appData[this._appointmentSettings["startTime"]], "HH:mm");
-                    var endTime = this._timeMode == "12" ? ej.format(appData[this._appointmentSettings["endTime"]], this._pattern.t) : ej.format(appData[this._appointmentSettings["endTime"]], "HH:mm");
-                    var subject = appData.Subject == "" ? this._getLocalizedLabels("NoTitle") : appData[this._appointmentSettings["subject"]];
+                    var startTime = this._timeMode == "12" ? ej.format(appData[this._appointmentSettings["startTime"]], this._pattern.t, this.model.locale) : ej.format(appData[this._appointmentSettings["startTime"]], "HH:mm", this.model.locale);
+                    var endTime = this._timeMode == "12" ? ej.format(appData[this._appointmentSettings["endTime"]], this._pattern.t, this.model.locale) : ej.format(appData[this._appointmentSettings["endTime"]], "HH:mm", this.model.locale);
+                    var subject = (appData[this._appointmentSettings["subject"]] == "" || ej.isNullOrUndefined(appData[this._appointmentSettings["subject"]])) ? this._getLocalizedLabels("NoTitle") : appData[this._appointmentSettings["subject"]];
                     var appDetails = subject + ":&nbsp;(" + startTime + "-" + endTime + ")";
                 } else {
                     var appDetails = $(this.model.tooltipSettings.templateId).render(appData).trim();
@@ -12689,41 +12622,37 @@
             return true;
         },
 
-        _horizontalRender:function() {
-			this.element.find(".resemptytd").width((this.element.find(".e-horizontalrestd").width() < 100) ? 5 : (this.element.find(".e-horizontalrestd").width() >= 100 && this.element.find(".e-horizontalrestd").width() <= 150) ? 10 : 25);
-			if (this._mediaQuery) {
-				this.element.find(".e-parentnode,.e-childnode").height(this.element.find(".e-workcells").height());
-			}
-			else {
-                var scheheader = this.element.find(".e-scheduleheader").outerHeight();
-                var horiheader = this.element.find(".e-headerarearow").outerHeight();
-                var hscroller = this.element.find(".e-hscroll").outerHeight();
-				var resLength = (this._tempResource.length == 0 || this._tempResource.length == 0) ? this.res1.length : this._resourceSort().length;
-                if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) {
-                    var workareaheight = this.scHeight - (scheheader + horiheader + hscroller);
+        _horizontalRender: function () {
+            (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) && this.element.find(".resemptytd").width((this.element.find(".e-horizontalrestd").width() < 100) ? 5 : (this.element.find(".e-horizontalrestd").width() >= 100 && this.element.find(".e-horizontalrestd").width() <= 150) ? 10 : 25);
+            if (this._mediaQuery) {
+                this.element.find(".e-parentnode,.e-childnode").height(this.element.find(".e-workcells").height());
+            }
+            else {
+                var resLength = (this._tempResource.length == 0) ? this.res1.length : this._resourceSort().length;
+                var scrollHeight = (this.element.find("div#" + this._id + "_scroller").ejScroller("isHScroll")) ? this.element.find("div#" + this._id + "_scroller").find(".e-hscroll").outerHeight() : 0;
+                scrollHeight = ej.isNullOrUndefined(scrollHeight) ? 0 : scrollHeight;
+                var workareaheight = this.scHeight - 1 - ((this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top) + scrollHeight);
+                if (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) {
                     var workcellheight = Math.round(workareaheight / resLength) - 1;
-					if(this.model.cellWidth!="" && this.currentView()=="month") workcellheight =Math.round(workareaheight / resLength)-1;
                     this.element.find(".e-workcells").css('height', ((this.model.cellHeight != "20px") || workcellheight < 20) ? parseInt(this.model.cellHeight) : workcellheight + "px");
                     this.element.find(".e-childnode").css('height', ((this.model.cellHeight != "20px") || workcellheight < 20) ? parseInt(this.model.cellHeight) : workcellheight + "px");
-					this.element.find(".e-parentnode").css('height', ((this.model.cellHeight != "20px") || workcellheight < 20) ? parseInt(this.model.cellHeight) : workcellheight + "px");
-					if (this.currentView() != "agenda") {
-					    var restop = this.element.find(".e-draggableworkarea").offset().top - this.element.find(".e-workcellstab").offset().top;
-					    this.element.find(".e-horires").css("top", -restop + "px");
-					}
-				}
-                else {
-                    var workareaheight = this.scHeight - (scheheader + horiheader + hscroller);
-                    this.element.find(".e-workcells").css('height', ((this.model.cellHeight != "20px")) ? parseInt(this.model.cellHeight) :Math.round(workareaheight-2) + "px");
+                    this.element.find(".e-parentnode").css('height', ((this.model.cellHeight != "20px") || workcellheight < 20) ? parseInt(this.model.cellHeight) : workcellheight + "px");
+                    if (this.currentView() != "agenda") {
+                        var restop = this.element.find(".e-draggableworkarea").offset().top - this.element.find(".e-workcellstab").offset().top;//this.element.find(".e-draggableworkarea")[0].scrollTop;
+                        this.element.find(".e-horires").css("top", -restop + "px");
+                    }
                 }
-			}
+                else {
+                    this.element.find(".e-workcells").css('height', ((this.model.cellHeight != "20px")) ? parseInt(this.model.cellHeight) : Math.round(workareaheight - 2) + "px");
+                }
+            }
+            if (this.element.find(".e-workcells").height() > workareaheight) this.element.find("div#" + this._id + "_scroller").ejScroller("refresh");
+            this.element.find("div#" + this._id + "_scroller").ejScroller("isVScroll") && this._showScrollTd();
         },
-        _monthCellsRender: function() {
+        _monthCellsRender: function () {
             var len = this.element.find(".e-workcellstab tr").length;
-            var scheheader = this.element.find(".e-scheduleheader").outerHeight();
-            var monthheader = this.element.find(".e-headerarearow").outerHeight();
-            var workareaheight = this.scHeight - (scheheader + monthheader);
-            this.element.find(".e-monthcells").css('height', ((this.model.cellHeight != "20px") || workareaheight < 20) ? parseInt(this.model.cellHeight) : Math.round((workareaheight / len) - 2) + "px");
-            this.element.find(".e-timecells").height(this.element.find(".e-monthcells").height() + "px");
+            var workareaheight = parseInt(this.scHeight) - 1 - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top);
+            this.element.find(".e-monthcells, .e-timecells").outerHeight(((this.model.cellHeight != "20px") || workareaheight < 20) ? parseInt(this.model.cellHeight) + 1 : Math.round(workareaheight / len));
         },
 
         _processTab: function (oEl, event, oRowCell) {
@@ -12853,23 +12782,23 @@
                 else
                     this._slotByCellSelect(target);
             }
-            return { startTime: new Date(this.cur_StartTime), endTime: new Date(this.cur_EndTime), resources: (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this._getResourceValue(target) : null };
+            return { startTime: new Date(this.cur_StartTime), endTime: new Date(this.cur_EndTime), resources: (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this._getResourceValue(target) : null };
         },
 
         saveAppointment: function (obj) {
             if (!this.model.readOnly) {
+                var recurEdit = this._appointmentAddWindow.find(".e-recurrenceeditor").data("ejRecurrenceEditor");
                 var appointments = this._sortAppById(this._processed), maxId;
                 this._publicMethodSave = false;
-                obj[this._appointmentSettings["startTimeZone"]] = (this.model.timeZone == null) ? "UTC " + this._timezoneStringValue() : this.model.timeZone; 
-                obj[this._appointmentSettings["endTimeZone"]] = (this.model.timeZone == null) ? "UTC " + this._timezoneStringValue() : this.model.timeZone; 
-				var savingTimeZone = this._timeZoneSavingAppoint(obj, "");
+                if (this.model.appointmentSettings.applyTimeOffset) {
+                    ej.isNullOrUndefined(obj[this._appointmentSettings["startTimeZone"]]) && (obj[this._appointmentSettings["startTimeZone"]] = (this.model.timeZone == null) ? "UTC " + this._timezoneStringValue() : this.model.timeZone);
+                    ej.isNullOrUndefined(obj[this._appointmentSettings["endTimeZone"]]) && (obj[this._appointmentSettings["endTimeZone"]] = (this.model.timeZone == null) ? "UTC " + this._timezoneStringValue() : this.model.timeZone);
+                }
+                var savingTimeZone = this._timeZoneSavingAppoint(obj, "");
                 obj = savingTimeZone.obj;
-                var temp = this._timeZoneAppointments(obj, "");
-                if (!ej.isNullOrUndefined(obj[this._appointmentSettings["id"]]) || !obj[this._appointmentSettings["id"]] == "")
-                {
+                if (!ej.isNullOrUndefined(obj[this._appointmentSettings["id"]]) || !obj[this._appointmentSettings["id"]] == "") {
                     var tempApp = new ej.DataManager(this._processed).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, obj[this._appointmentSettings["id"]]));
-                    if (!ej.isNullOrUndefined(tempApp[0]))
-                    {
+                    if (!ej.isNullOrUndefined(tempApp[0])) {
                         obj.Guid = tempApp[0].Guid;
                         obj.AppTaskId = tempApp[0].AppTaskId;
                         obj.RecurrenceId = tempApp[0].recurrenceId;
@@ -12879,22 +12808,18 @@
                 }
                 var proxy = this;
                 maxId = !ej.isNullOrUndefined(this._appMainId) ? this._appMainId + 1 : 1;
+                var currentAction = this._currentAction == "save" ? "edit" : this._currentAction;
                 if (ej.isNullOrUndefined(obj["AppTaskId"]) || obj["AppTaskId"] == "") {
-                    obj[this._appointmentSettings["id"]] = (ej.isNullOrUndefined(obj[this._appointmentSettings["id"]]) || obj[this._appointmentSettings["id"]] == "")? maxId:obj[this._appointmentSettings["id"]];
-                    temp[this._appointmentSettings["id"]] = (ej.isNullOrUndefined(temp[this._appointmentSettings["id"]]) || temp[this._appointmentSettings["id"]] == "") ? maxId:temp[this._appointmentSettings["id"]];
-                    temp["AppTaskId"] = maxId;
-                    obj["AppTaskId"] = maxId;
-                    temp["ParentId"] = maxId;
-                    obj["ParentId"] = maxId;
-                   obj.Guid = this._guidFormatGenerate();
+                    obj[this._appointmentSettings["id"]] = (ej.isNullOrUndefined(obj[this._appointmentSettings["id"]]) || obj[this._appointmentSettings["id"]] == "") ? maxId : obj[this._appointmentSettings["id"]];
+                    obj["AppTaskId"] = obj["ParentId"] = maxId;
+                    obj.Guid = this._guidFormatGenerate();
                     if (this._trigger("actionBegin", { data: obj, requestType: "appointmentSave", methodType: "public" }))
                         return false;
                     if (this._trigger("beforeAppointmentCreate", { appointment: obj, methodType: "public" }))
                         return false;
+                    var temp = this._timeZoneAppointments(obj, "");
                     var promise = this._dataManager.insert(temp, this.model.appointmentSettings.query._fromTable);
-                   
-                    updateTempNew = this._timeZoneAppointments(temp, "reverse");
-                    new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTempNew);
+                    new ej.DataManager(this._currentAppointmentData).update("AppTaskId", this._timeZoneAppointments(temp, "reverse"));
                     if (!ej.isNullOrUndefined(promise) && $.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
                         promise.done(function (e) {
                             proxy._processUrlBinding(e);
@@ -12903,17 +12828,17 @@
                         });
                     }
                     else {
-                        this._renderSingleApp(obj, obj);
+                        this._renderSingleApp();
                         this._appMainId = this._sortAppById(this._processed)[this._processed.length - 1]["AppTaskId"];
                         this._trigger("appointmentCreated", { appointment: obj, requestType: "appointmentSaved", methodType: "public" });
-						this._trigger("actionComplete", { data: obj, requestType: "appointmentSave", methodType: "public" });
+                        this._trigger("actionComplete", { data: obj, requestType: "appointmentSave", methodType: "public" });
                     }
                 }
-                else if (this._currentAction == "editOcurrence") {
-                    if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit" }))
-                                return false;
-                    if (this._trigger("beforeAppointmentChange", { appointment: obj }))
-                                return false;
+                else if (this._currentAction == "editOccurrence") {
+                    if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit", currentAction: currentAction }))
+                        return false;
+                    if (this._trigger("beforeAppointmentChange", { appointment: obj, currentAction: currentAction }))
+                        return false;
                     var _appList = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid))[0];
                     var Parid = _appList[this._appointmentSettings["recurrenceId"]] == null ? _appList["ParentId"] : _appList[this._appointmentSettings["recurrenceId"]];
                     var MapValue = _appList[this._appointmentSettings["recurrenceId"]] == null ? "ParentId" : this._appointmentSettings["recurrenceId"];
@@ -12924,68 +12849,52 @@
                         this._alertCreateError();
                         return false;
                     }
-                    var query = new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid);
-                    var _editApps = new ej.DataManager(this._processed).executeLocal(query);
+                    var _editApps = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid));
                     this._objDate = _editApps;
                     var MapValue = this._objDate[0][this._appointmentSettings["recurrenceId"]] == null ? "ParentId" : this._appointmentSettings["recurrenceId"];
                     var _editApp = this._deleteOcurrence(this._objDate[0][MapValue], new Date(_editApps[0][this._appointmentSettings["startTime"]]));
-                    new ej.DataManager(this._processed).remove("Guid", this._appUid);
                     obj[this._appointmentSettings["recurrence"]] = 1;
-                    obj[this._appointmentSettings["recurrenceRule"]] = _editApp[0][this._appointmentSettings["recurrenceRule"]] + ";RECUREDITID=" + _editApp[0]["AppTaskId"];
+                    obj[this._appointmentSettings["recurrenceRule"]] = _editApp[0][this._appointmentSettings["recurrenceRule"]] + ";RECUREDITID=" + _editApp[0]["ParentId"];
                     obj[this._appointmentSettings["recurrenceId"]] = _editApp[0][this._appointmentSettings["recurrenceId"]];
-                    obj["Guid"] = this._appUid;
                     obj[this._appointmentSettings["recurrenceExDate"]] = _editApp[0][this._appointmentSettings["recurrenceExdate"]];
                     obj["Guid"] = _editApps[0]["Guid"];
                     obj[this._appointmentSettings["id"]] = _editApps[0][this._appointmentSettings["id"]];
                     var args = [], newAppointment;
-                    var parId = this._currentAction == ej.Schedule.Actions.EditOcurrence || (!ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && obj[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) ? this._parentId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : maxId;
-                    this._maxId = ((((new Date(obj[this._appointmentSettings["endTime"]]) - new Date(obj[this._appointmentSettings["startTime"]])) / 3600000) > 24) && this._currentAction != ej.Schedule.Actions.EditOcurrence && (obj[this._appointmentSettings["allDay"]] == true)) ? parId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : this._appMainId + 1;
-                    this._maxId = (((new Date(obj[this._appointmentSettings["endTime"]]) - new Date(obj[this._appointmentSettings["startTime"]])) / 3600000) > 24) && (!ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && obj[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) && (this._currentAction == ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : this._maxId;
-                    this._maxId = (this._currentAction == ej.Schedule.Actions.EditSeries) ? parId : this._maxId;
-                    newAppointment = this._addAppData(obj, this._maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
+                    newAppointment = this._addAppData(obj, maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), obj[this._appointmentSettings["recurrenceId"]]);
+                    newAppointment[this._appointmentSettings["id"]] = newAppointment.AppTaskId;
                     args.push(newAppointment);
-                    var temp = [];
+                    var newApp = [], _editApp = [];
                     var startTimezone1 = args[0][this._appointmentSettings["startTimeZone"]];
-                    (startTimezone1 != this.model.timeZone) ? temp.push(this._timeZoneAppointments(args[0], "")) : temp.push(args[0]);
-                    new ej.DataManager(this._currentAppointmentData).update("AppTaskId", args[0]);
-                    var _editApp = [];
-                    var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, this._parentId);
-                    var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
-                    new ej.DataManager(this._currentAppointmentData).update("AppTaskId", _App[0]);
-                    _editApp.push(this._timeZoneAppointments(_App[0], ""));
-                    if (this.dataSource() instanceof ej.DataManager) {
-                        promise = this._dataManager.saveChanges({ added: args, changed: _editApp, deleted: [] }, this._appointmentSettings["id"], this.model.appointmentSettings.query._fromTable);
-                    }
+                    (startTimezone1 != this.model.timeZone) ? newApp.push(this._timeZoneAppointments(args[0], "")) : newApp.push(args[0]);
+                    var _App = new ej.DataManager(this._currentAppointmentData).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, this._parentId));
+                    (startTimezone1 != this.model.timeZone) ? _editApp.push(this._timeZoneAppointments(_App[0], "")) : _editApp.push(_App[0]);
+                    if (this.dataSource() instanceof ej.DataManager)
+                        var promise = this._dataManager.saveChanges({ added: newApp, changed: _editApp, deleted: [] }, this._appointmentSettings["id"], this.model.appointmentSettings.query._fromTable);
                     else
-                        var promise = this._dataManager.saveChanges({ added: args, changed: _editApp, deleted: [] }, "AppTaskId");
-                    var updateTempNew = [];
-                    updateTempNew = (startTimezone1 != this.model.timeZone) ? this._timeZoneAppointments(temp[0], "reverse") : temp[0];
+                        var promise = this._dataManager.saveChanges({ added: newApp, changed: _editApp, deleted: [] }, "AppTaskId");
+                    var updateTempNew = (startTimezone1 != this.model.timeZone) ? this._timeZoneAppointments(newApp[0], "reverse") : newApp[0];
                     new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTempNew);
-                    var updateTempNew2 = [];
-                    if (startTimezone1 != this.model.timeZone)
-                        updateTempNew2 = this._timeZoneAppointments(_editApp[0], "reverse");
-                    else
-                        updateTempNew2 = _editApp[0];
+                    var updateTempNew2 = (startTimezone1 != this.model.timeZone) ? this._timeZoneAppointments(_editApp[0], "reverse") : _editApp[0];
                     new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTempNew2);
                     if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
                         promise.done(function (e) {
                             proxy._processUrlBinding(e);
-                            proxy._trigger("appointmentCreated", { appointment: args[0], requestType: "appointmentSaved" });
-                            proxy._trigger("actionComplete", { data: args, requestType: "appointmentSave" });
+                            proxy._trigger("appointmentChanged", { appointment: args[0], requestType: "appointmentChanged", currentAction: currentAction, methodType: "public" });
+                            proxy._trigger("actionComplete", { data: args, requestType: "appointmentEdit", currentAction: currentAction, methodType: "public" });
                         });
                         promise.fail(function (e) {
                         });
                     }
                     else {
-                        this._renderSingleApp(obj, args[0]);
-                        this._trigger("appointmentChanged", { data: args, requestType: "appointmentChanged", methodType: "public" });
-                        this._trigger("actionComplete", { data: args, requestType: "appointmentEdit", methodType: "public" });
+                        this._renderSingleApp();
+                        this._trigger("appointmentChanged", { appointment: args[0], requestType: "appointmentChanged", currentAction: currentAction, methodType: "public" });
+                        this._trigger("actionComplete", { data: args, requestType: "appointmentEdit", currentAction: currentAction, methodType: "public" });
                     }
                 }
                 else if ((this._currentAction == "save" && obj[this._appointmentSettings["recurrence"]]) || (this._currentAction == ej.Schedule.Actions.EditSeries)) {
-                    if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit" }))
+                    if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit", currentAction: currentAction }))
                         return false;
-                    if (this._trigger("beforeAppointmentChange", { appointment: obj }))
+                    if (this._trigger("beforeAppointmentChange", { appointment: obj, currentAction: currentAction }))
                         return false;
                     var query = new ej.Query().where("Guid", ej.FilterOperators.equal, this._appUid);
                     var _editApps = new ej.DataManager(this._processed).executeLocal(query);
@@ -13005,23 +12914,21 @@
                     }
                     else {
                         var Parid = _editApps[0][this._appointmentSettings["recurrenceId"]] == null ? _editApps[0]["ParentId"] : _editApps[0][this._appointmentSettings["recurrenceId"]];
-                        var query = new ej.Query().where("AppTaskId", ej.FilterOperators.equal, Parid);
+                        var query = new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, Parid);
                         var _editApp = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
-                        obj["AppTaskId"] = _editApp[0]["AppTaskId"];
+                        maxId = obj["AppTaskId"] = _editApp[0]["AppTaskId"];
                         obj[this._appointmentSettings["id"]] = _editApp[0][this._appointmentSettings["id"]];
-                        maxId = _editApp[0]["AppTaskId"];
                         obj[this._appointmentSettings["recurrenceId"]] = _editApp[0][this._appointmentSettings["recurrenceId"]];
-                        obj["Guid"] = this._appUid;
                         obj[this._appointmentSettings["recurrenceExDate"]] = _editApp[0][this._appointmentSettings["recurrenceExate"]];
-                       }
+                        obj[this._appointmentSettings["recurrenceRule"]] = (ej.isNullOrUndefined(recurEdit._recRule) || recurEdit._recRule == "") ? _editApp[0][this._appointmentSettings["recurrenceRule"]] : recurEdit._recRule;
+                    }
                     obj["Guid"] = _editApps[0]["Guid"];
                     obj[this._appointmentSettings["id"]] = (this._currentAction != ej.Schedule.Actions.EditSeries) ? _editApps[0][this._appointmentSettings["id"]] : obj[this._appointmentSettings["id"]];
                     var args = [], newAppointment;
-                    var parId = this._currentAction == ej.Schedule.Actions.EditOcurrence || (!ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && obj[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) ? this._parentId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : maxId;
-                    this._maxId = ((((new Date(obj[this._appointmentSettings["endTime"]]) - new Date(obj[this._appointmentSettings["startTime"]])) / 3600000) > 24) && this._currentAction != ej.Schedule.Actions.EditOcurrence && (obj[this._appointmentSettings["allDay"]] == true)) ? parId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : this._appMainId + 1;
-                    this._maxId = (((new Date(obj[this._appointmentSettings["endTime"]]) - new Date(obj[this._appointmentSettings["startTime"]])) / 3600000) > 24) && (!ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && obj[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) && (this._currentAction == ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : this._maxId;
-                    this._maxId = (this._currentAction == ej.Schedule.Actions.EditSeries) ? parId : this._maxId;
-                    newAppointment = this._addAppData(obj, this._maxId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
+                    var parId = this._currentAction == ej.Schedule.Actions.EditOccurrence || (!ej.isNullOrUndefined(obj[this._appointmentSettings["recurrenceRule"]]) && obj[this._appointmentSettings["recurrenceRule"]].toString().indexOf("RECUREDITID") != -1) ? this._parentId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : maxId;
+                    var taskId = ((((new Date(obj[this._appointmentSettings["endTime"]]) - new Date(obj[this._appointmentSettings["startTime"]])) / 3600000) > 24) && this._currentAction != ej.Schedule.Actions.EditOccurrence && (obj[this._appointmentSettings["allDay"]] == true)) ? parId : this._currentAction == (ej.Schedule.Actions.Save) ? _editApps[0].AppTaskId : this._appMainId + 1;
+                    taskId = (this._currentAction == ej.Schedule.Actions.EditSeries) ? parId : taskId;
+                    newAppointment = this._addAppData(obj, taskId, new Date(obj[this._appointmentSettings["startTime"]]), new Date(obj[this._appointmentSettings["endTime"]]), parId);
                     args.push(newAppointment);
                     var newApp = [], editedApp = [], deleted = [];
                     var GId = this._currentAction == ej.Schedule.Actions.Save ? args[0]["Guid"] : args[0][this._appointmentSettings["recurrenceId"]];
@@ -13031,8 +12938,11 @@
                     if (this._currentAction == ej.Schedule.Actions.EditSeries) {
                         var query = ej.Query().where(ej.Predicate(this._appointmentSettings["recurrenceRule"], ej.FilterOperators.contains, "RECUREDITID=" + args[0].ParentId, true));
                         var dele = new ej.DataManager(this._currentAppointmentData).executeLocal(query);
-                        deleted = deleted.concat(dele);                        
-                        }
+                        deleted = deleted.concat(dele);
+                        //this._appointmentAddWindow.find('.recurbutton').click();
+                        editedApp[0][this._appointmentSettings["recurrenceRule"]] = recurEdit._recRule;
+                        editedApp[0][this._appointmentSettings["recurrenceExDate"]] = null;
+                    }
 
                     var proxy = this, promise, newTemp = [], editTemp = [];
                     if (newApp.length > 0)
@@ -13048,59 +12958,43 @@
                     if (newApp.length > 0)
                         var updateTemp = this._timeZoneAppointments(newTemp[0], "reverse");
                     new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTemp);
-                    if (editedApp.length > 0) {
-                        var proxy = this;
-                        if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
-                            promise.done(function (e) {
-                                proxy._processUrlBinding(e);
-                                proxy._appMainId = proxy._processed.length > 0 ? proxy._sortAppById(proxy._processed)[proxy._processed.length - 1]["AppTaskId"] : proxy._appMainId;
-                                proxy._trigger("appointmentChanged", { data: editedApp, requestType: "appointmentChanged" });
-                                proxy._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit" });
-                            });
-                            promise.fail(function (e) {
-                            });
-                        }
-                        else {
-                            this._renderSingleApp(editedApp[0], editedApp[0]);
-                            this._appMainId = this._processed.length > 0 ? this._sortAppById(this._processed)[this._processed.length - 1]["AppTaskId"] : this._appMainId;
-                        }
-                        this._trigger("appointmentChanged", { data: editedApp, requestType: "appointmentChanged", methodType: "public" });
-                        this._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit", methodType: "public" });
+                    if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
+                        promise.done(function (e) {
+                            proxy._processUrlBinding(e);
+                            proxy._trigger("appointmentChanged", { appointment: editedApp[0], requestType: "appointmentChanged", currentAction: currentAction, methodType: "public" });
+                            proxy._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit", currentAction: currentAction, methodType: "public" });
+                        });
+                        promise.fail(function (e) {
+                        });
                     }
-                    if (newApp.length > 0) {
-                        if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
-                            promise.done(function (e) {
-                                proxy._processUrlBinding(e);
-                            });
-                            promise.fail(function (e) {
-                            });
-                        }
-                        else {
-                            this._renderSingleApp(newApp[i], newApp[i]);
-                        }
+                    else {
+                        this._renderSingleApp();
+                        this._trigger("appointmentChanged", { appointment: editedApp[0], requestType: "appointmentChanged", currentAction: currentAction, methodType: "public" });
+                        this._trigger("actionComplete", { data: editedApp, requestType: "appointmentEdit", currentAction: currentAction, methodType: "public" });
                     }
                 }
                 else {
-                    if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit", methodType: "public" }))
+                    if (this._trigger("actionBegin", { data: obj, requestType: "appointmentEdit", currentAction: currentAction, methodType: "public" }))
                         return false;
-                    if (this._trigger("beforeAppointmentChange", { appointment: obj, methodType: "public" }))
+                    if (this._trigger("beforeAppointmentChange", { appointment: obj, currentAction: currentAction, methodType: "public" }))
                         return false;
+                    var temp = this._timeZoneAppointments(obj, "");
                     if (this.dataSource() instanceof ej.DataManager)
                         var promise = this._dataManager.update(this._appointmentSettings["id"], temp, this.model.appointmentSettings.query._fromTable);
                     else
                         var promise = this._dataManager.update("AppTaskId", temp);
-                    var updateTemp = this._timeZoneAppointments(temp, "reverse");
-                    new ej.DataManager(this._currentAppointmentData).update("AppTaskId", updateTemp);
+                    new ej.DataManager(this._currentAppointmentData).update("AppTaskId", this._timeZoneAppointments(temp, "reverse"));
                     if ($.isFunction(promise.promise) && this.dataSource() instanceof ej.DataManager) {
                         promise.done(function (e) {
                             proxy._processUrlBinding(e);
-                            proxy._trigger("appointmentChanged", { data: e, requestType: "appointmentChanged", methodType: "public" });
-                            proxy._trigger("actionComplete", { data: e, requestType: "appointmentEdit", methodType: "public" });
+                            proxy._trigger("appointmentChanged", { appointment: obj, requestType: "appointmentChanged", currentAction: currentAction, methodType: "public" });
+                            proxy._trigger("actionComplete", { data: obj, requestType: "appointmentEdit", currentAction: currentAction, methodType: "public" });
                         });
                     }
                     else {
-                        this._renderSingleApp(updateTemp, updateTemp);
-                        this._trigger("actionComplete", { data: updateTemp, requestType: "appointmentEdit", methodType: "public" });
+                        this._renderSingleApp();
+                        this._trigger("appointmentChanged", { appointment: obj, requestType: "appointmentChanged", currentAction: currentAction, methodType: "public" });
+                        this._trigger("actionComplete", { data: obj, requestType: "appointmentEdit", currentAction: currentAction, methodType: "public" });
                     }
                 }
             }
@@ -13112,9 +13006,9 @@
             else {
                 var cloneElement = this.element.clone();
                 if (this.currentView() == "agenda") {
-                    cloneElement.width(this.element.find('.e-agendacellstab').width());
+                    cloneElement.width(this.element.find('.e-agendacellstab').width() + 2);
                     cloneElement.height($("#" + this._id + " .e-headertr").height() + this.element.find('.e-agendacellstab').height() + $("#" + this._id + " .e-scheduleheader").height() + 2);
-                    cloneElement.find('.e-scroller').ejScroller({ width: this.element.find('.e-agendacellstab').width(), height: $("#" + this._id + " .e-agendacellstab").height() + 2 });
+                    cloneElement.find("div#" + this._id + "_scroller").ejScroller({ width: this.element.find('.e-agendacellstab').width(), height: this.element.find('.e-agendacellstab').height() + 2 });
                     cloneElement.find('.e-commonviewbutton').css({ 'margin-top': '0px' });
                     cloneElement.find('.e-viewstable').css({ 'padding-top': '15px' });
                 }
@@ -13133,7 +13027,7 @@
                             cloneElement.find('.e-viewstable').css({ 'padding-top': '15px' });
                             cloneElement.children().first().css({ border: "0px solid #bbbcbb" });
                             cloneElement.css({ border: "1px solid #bbbcbb" });
-                            if (this.model.currentView == "month")
+                            if (this.currentView() == "month")
                                 cloneElement.find('.e-draggableworkarea').css({ 'height': this.element.find('.e-timecells').height() * this.element.find('.e-timecells').length + 2 });
                         }
                         else {
@@ -13155,6 +13049,33 @@
             }
         },
 
+        notifyChanges: function (action, data) {
+            if (!ej.isNullOrUndefined(data) || data.length != 0) {
+                var app = (!ej.isNullOrUndefined(data)) ? data : data[0];
+                var object = $.extend(true, {}, app);
+                object[this._appointmentSettings["startTime"]] = new Date(object[this._appointmentSettings["startTime"]]);
+                object[this._appointmentSettings["endTime"]] = new Date(object[this._appointmentSettings["endTime"]]);
+
+                if (action == "beforeAppointmentCreate") {
+                    new ej.DataManager(this._currentAppointmentData).insert(object);
+                    this._appointmentProcessing(object);
+                    this._renderAppointmentAll();
+                }
+                else if (action == "beforeAppointmentChange") {
+                    new ej.DataManager(this._currentAppointmentData).update(this._appointmentSettings["id"], object);
+                    new ej.DataManager(this._processed).remove(this._appointmentSettings["id"], object[this._appointmentSettings["id"]]);
+                    this._dataProcessing(this._currentAppointmentData);
+                    this._renderAppointmentAll();
+                }
+                else if (action == "beforeAppointmentRemove") {
+                    var appointment = new ej.DataManager(this._processed).executeLocal(new ej.Query().where(this._appointmentSettings["id"], ej.FilterOperators.equal, object[this._appointmentSettings["id"]]));
+                    new ej.DataManager(this._currentAppointmentData).remove(this._appointmentSettings["id"], appointment[0][this._appointmentSettings["id"]]);
+                    new ej.DataManager(this._processed).remove(this._appointmentSettings["id"], appointment[0][this._appointmentSettings["id"]]);
+                    this._renderAppointmentAll();
+                }
+            }
+        },
+
         deleteAppointment: function (id) {
             if (!this.model.readOnly) {
                 if (typeof id == "string") {
@@ -13168,7 +13089,7 @@
                 else if (typeof id == "object") {
                     this._deleteUid = id.Guid;
                     if (ej.isNullOrUndefined(this._deleteUid)) {
-                        var appointment = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("ParentId", ej.FilterOperators.equal, parseInt(id.ParentId)));
+                        var appointment = new ej.DataManager(this._processed).executeLocal(new ej.Query().where("ParentId", ej.FilterOperators.equal, id.ParentId));
                         this._deleteUid = appointment[0].Guid;
                     }
                     if (id[this._appointmentSettings["recurrence"]])
@@ -13224,90 +13145,88 @@
         },
 
         refreshScroller: function () {
-            var scrollerObj = this.element.find(".e-scroller").data("ejScroller");
-            var scrollWidth = (this.model.orientation === "vertical") ? this.element.width() - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : this.element.find('.e-scrolltimecells').parent().outerWidth()) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
-            scrollerObj.model.width = scrollWidth - 2;
+            var scrollerObj = this.element.find('div#' + this._id + '_scroller').data("ejScroller");
+            var scrollWidth = (this.model.orientation === "vertical") ? this.element.width() - (this._mediaQuery && (this.currentView() == "month" || this._isCustomMonthView()) ? 1 : (this.element.find('.e-scrolltimecells').length > 0 ? this.element.find('.e-scrolltimecells').parent().outerWidth() : 0)) : (this.model.orientation == "horizontal") && (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length != 0)) ? this.element.width() - this.element.find(".e-resourceheadertable").width() : this.element.width();
+            scrollerObj.model.width = parseInt(scrollWidth) - 2;
             scrollerObj.model.height = this.scHeight - 1 - (this.element.find('.e-draggableworkarea').offset().top - this.element.offset().top);
             scrollerObj.refresh();
             if (this.model.orientation == "vertical") {
-                if (this.model.cellWidth) {
-                    (this.currentView() == "day") && this.element.find(".e-headerdaydisplay").css("width", this.model.cellWidth);
-                    var cols = this.currentView() == "workweek" ? this.model.workWeek.length : this.currentView() == "day" ? 1 : (this.currentView() === "customview" && this._renderDays <= 7) ? this._dateRender.length : 7;
-                    var col = (!ej.isNullOrUndefined(this.model.group) && (this._tempResource.length!=0)) ? (this.res1.length * cols) : cols;
-                    var rows = this._dateRender.length / 7;
-                    var overallWidth = parseInt(this.model.cellWidth) * col;
-                    var overallHeight = parseInt(this.model.cellHeight) * rows;
-                    this.element.find(".e-draggableworkarea").width((this.element.width() > overallWidth + this.element.find(".e-scrolltimecells").width() + 18) ? overallWidth : scrollerObj.model.width - 18);
-                }
-				if (this._mediaQuery && this.res1.length > 1)
-					this.element.find(".e-draggableworkarea").width(this.element.find(".e-draggableworkarea").width() * this.res1.length);
-                this.element.find(".e-headrealldaytable").parent().width(this.element.find(".e-draggableworkarea").width());
-                this.element.find(".e-datecommondiv").parent().width(this.element.width()-2);
+                this._renderHoriVerticalScroll();
+                this.element.find(".e-datecommondiv").parent().width(parseInt(this.element.width()) - 2);
                 this.element.find(".e-headrealldaytable").css("left", -(this.element.find(".e-draggableworkarea").scrollLeft()) + "px");
             }
             else {
-                $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", -(scrollerObj.model.scrollLeft) + "px");
+                $(this.element.find(".e-horizontaltimecells").find("table tr")[2]).css("left", -(this.element.find('.e-draggableworkarea').scrollLeft()) + "px");
                 this.element.find(".e-horizontresdiv").height(this.element.find('.e-draggableworkarea').height());
             }
-			this._reRenderHeaderBar();
-			this.model.showAppointmentNavigator && this._refreshAppNavigation();
-			 if (this.model.showCurrentTimeIndicator) this.element.find(".e-highlightcurrenttimeline").remove();
-                this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
-            if (this.currentView() == "month" && this.model.orientation == "vertical")
+            this._reRenderHeaderBar();
+            this.model.showAppointmentNavigator && this._refreshAppNavigation();
+            if (this.model.showCurrentTimeIndicator) this.element.find(".e-highlightcurrenttimeline").remove();
+            this._highlightCurrentTime(this.model.showCurrentTimeIndicator);
+            if ((this.currentView() == "month" || this._isCustomMonthView()) && this.model.orientation == "vertical")
                 this._renderCurrentView();
-				this._showScrollTd();
-			this.element.find(".e-mobileNavigation").css("left", (this.model.enableRTL) ? ($('div#' + this._id + "_scroller").ejScroller("isVScroll") ? 18 : 0) : this.element.outerWidth() - 36);
+            this._showScrollTd();
+            this.element.find(".e-mobileNavigation").css(this.model.enableRTL ? "right" : "left", this.element.outerWidth() - 36);
         },
-      _refreshAppNavigation:function(){
-                var base = this.element.find("#" + this._id + "_scroller");
-                this.height = base.height();
-                this.width = base.width();
-                var scroll = this.element.find(".e-vscroll").width();
-                var timecell = this.element.find(".e-scrolltimecells").width();
-                timecell = ej.isNullOrUndefined(timecell) ? this.model.orientation == "vertical" ? 56 : 0 : timecell;
-                var top = (this.height / 2) - (150 / 2), left;
-                left = (this.model.showTimeScale && this.currentView() != "agenda") ? (this.model.orientation == "vertical") ? ((this.currentView() != "month") && !(this._isCustomMonthView()) ? -4 : -10) : -61 : -61;
-                this.width = (this.model.showTimeScale && this.currentView() != "agenda") ? this.width : this.width - timecell;
-                if (!this.model.enableRTL) {
-                    this.element.find(".e-prevapp").css("top", (top + 40) + "px").css("transform", "rotate(90deg)").css("left", left + "px");
-                    this.element.find(".e-nextapp").css("top", (top + 40) + "px").css("transform", "rotate(-90deg)").css("left", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 41 : this.model.orientation == "vertical" ? 34 : 90)) + "px");
-                }
-                else {
-                    this.element.find(".e-prevapp").css("top", (top + 40) + "px").css("transform", "rotate(-90deg)").css("right", left + "px");
-                    this.element.find(".e-nextapp").css("top", (top + 40) + "px").css("transform", "rotate(90deg)").css("right", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 41 : this.model.orientation == "vertical" ? 34 : 90)) + "px");
-                }
+        _refreshAppNavigation: function () {
+            var base = this.element.find("#" + this._id + "_scroller");
+            if ((this._browserInfo.name === "msie" && this._browserInfo.version < 9) || ej.isNullOrUndefined(base.data("ejScroller")))
+                return;
+            this.height = base.height();
+            this.width = base.width();
+            var scroll = (base.ejScroller('instance').isVScroll()) ? base.find(".e-vscroll").width() : 0;
+            var timecell = this.element.find(".e-scrolltimecells").width();
+            timecell = ej.isNullOrUndefined(timecell) ? this.model.orientation == "vertical" ? 56 : 0 : timecell;
+            var top = (this.height / 2) - (150 / 2), left;
+            left = (this.model.showTimeScale && this.currentView() != "agenda") ? (this.model.orientation == "vertical") ? ((this.currentView() != "month") && !(this._isCustomMonthView()) ? -4 : -10) : -61 : -61;
+            this.width = (this.model.showTimeScale && this.currentView() != "agenda") ? this.width : this.width - timecell;
+            if (!this.model.enableRTL) {
+                this.element.find(".e-prevapp").css("top", (top + 40) + "px").css("transform", "rotate(90deg)").css("left", left + "px");
+                this.element.find(".e-nextapp").css("top", (top + 40) + "px").css("transform", "rotate(-90deg)").css("left", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 41 : this.model.orientation == "vertical" ? 35 : 90)) + "px");
+            }
+            else {
+                this.element.find(".e-prevapp").css("top", (top + 40) + "px").css("transform", "rotate(-90deg)").css("right", left + "px");
+                this.element.find(".e-nextapp").css("top", (top + 40) + "px").css("transform", "rotate(90deg)").css("right", (this.width - scroll - (this.model.orientation == "vertical" && (this.currentView() == "month" || this._isCustomMonthView()) ? 41 : this.model.orientation == "vertical" ? 35 : 90)) + "px");
+            }
         },
-      getDifference: function (value) {
-          var time = "";
-          if(value.toString().indexOf("-")!=-1){
-              time = value.toString().substring(value.toString().indexOf("-")+1,value.toString().indexOf("-") + 5);
-              return -(parseInt(time.substring(0,2)) * 60 )+parseInt(time.substring(2,4));
-          }
-          else{
-              time = value.toString().substring(value.toString().indexOf("+")+1,value.toString().indexOf("+") + 5);
-              return (parseInt(time.substring(0,2)) * 60 )+parseInt(time.substring(2,4));
-          }
-      },
+        getDifference: function (value) {
+            var time = "";
+            if (value.toString().indexOf("-") != -1) {
+                time = value.toString().substring(value.toString().indexOf("-") + 1, value.toString().indexOf("-") + 5);
+                return -(parseInt(time.substring(0, 2)) * 60) + parseInt(time.substring(2, 4));
+            }
+            else {
+                time = value.toString().substring(value.toString().indexOf("+") + 1, value.toString().indexOf("+") + 5);
+                return (parseInt(time.substring(0, 2)) * 60) + parseInt(time.substring(2, 4));
+            }
+        },
         exportSchedule: function (action, serverEvent, id) {
-            var sampleModel = {}, processedApp = [];
-            $.extend( sampleModel, this.model );
-            $.extend( processedApp, this._processed );
-            for (var i = 0; i < processedApp.length; i++)
-            {
+            var sampleModel = {}, processedApp = [], blockedApp = [];
+            $.extend(true, sampleModel, this.model);
+            $.extend(true, processedApp, this._processed);
+            $.extend(true, blockedApp, this._processedIntervals);
+            for (var i = 0; i < processedApp.length; i++) {
                 processedApp[i][this._appointmentSettings["startTime"]] = new Date(processedApp[i][this._appointmentSettings["startTime"]].getTime() + (this.getDifference(processedApp[i][this._appointmentSettings["startTime"]]) * 60000));
                 processedApp[i][this._appointmentSettings["endTime"]] = new Date(processedApp[i][this._appointmentSettings["endTime"]].getTime() + (this.getDifference(processedApp[i][this._appointmentSettings["endTime"]]) * 60000));
             }
-			var value = new Date(new Date(this.currentDate()).setHours(0, 0, 0));
+            for (var a = 0; a < blockedApp.length; a++) {
+                blockedApp[a][this.model.blockoutSettings["startTime"]] = new Date(blockedApp[a][this.model.blockoutSettings["startTime"]].getTime() + (this.getDifference(blockedApp[a][this.model.blockoutSettings["startTime"]]) * 60000));
+                blockedApp[a][this.model.blockoutSettings["endTime"]] = new Date(blockedApp[a][this.model.blockoutSettings["endTime"]].getTime() + (this.getDifference(blockedApp[a][this.model.blockoutSettings["endTime"]]) * 60000));
+            }
+            var value = new Date(new Date(this.currentDate()).setHours(0, 0, 0));
             sampleModel.currentDate = new Date(value.getTime() + (this.getDifference(value) * 60000));
             var appointmentClone = JSON.parse(JSON.stringify(this._appointmentSettings));
             $.extend(true, sampleModel.appointmentSettings, appointmentClone);
-			var modelClone = JSON.parse(JSON.stringify(sampleModel));
+            var blockAppsClone = JSON.parse(JSON.stringify(this.model.blockoutSettings));
+            $.extend(true, sampleModel.blockoutSettings, blockAppsClone);
+            var modelClone = JSON.parse(JSON.stringify(sampleModel));
             var attr = { action: action, method: 'post' };
             var form = ej.buildTag('form', "", null, attr);
             var view = this.currentView() == "day" ? "Day" : this.currentView() == "month" ? "Month" : this.currentView() == "week" ? "Week" : this.currentView() == "agenda" ? "Agenda" : this.currentView() == "workweek" ? "WorkWeek" : "CustomView";
             if (this._ignoreFromAppointmentOnExport) {
                 for (var i = 0; i < this._ignoreFromAppointmentOnExport.length; i++) {
                     delete appointmentClone[this._ignoreFromAppointmentOnExport[i]];
+                    delete blockAppsClone[this._ignoreFromAppointmentOnExport[i]];
                 }
             }
             if (this._ignoreFromModelOnExport) {
@@ -13316,21 +13235,27 @@
                 }
             }
             delete modelClone.appointmentSettings.dataSource;
+            delete modelClone.blockoutSettings.dataSource;
             if (ej.raiseWebFormsServerEvents) {
                 var args = { model: modelClone, originalEventType: serverEvent };
-                var clientArgs = { appSetting: JSON.stringify(appointmentClone), appId: id, processedApp: JSON.stringify(processedApp), model: JSON.stringify(modelClone), locale: this._getLocalizedLabels(view) + ',' + this._getLocalizedLabels("AllDay") + ',' + this._getLocalizedLabels("Date") + ',' + this._getLocalizedLabels("Time") + ',' + this._getLocalizedLabels("Event") };
+                var clientArgs = { appSetting: JSON.stringify(appointmentClone), appId: id, processedApp: JSON.stringify(processedApp), blockedApp: JSON.stringify(blockedApp), model: JSON.stringify(modelClone), locale: this._getLocalizedLabels(view) + ',' + this._getLocalizedLabels("AllDay") + ',' + this._getLocalizedLabels("Date") + ',' + this._getLocalizedLabels("Time") + ',' + this._getLocalizedLabels("Event") };
                 ej.raiseWebFormsServerEvents(serverEvent, args, clientArgs);
             } else {
                 var inputAttr = { name: 'ScheduleApps', type: 'hidden', value: JSON.stringify(appointmentClone) }
                 var input = ej.buildTag('input', "", null, inputAttr);
+                var blockInputAttr = { name: 'ScheduleBlockedApps', type: 'hidden', value: JSON.stringify(blockAppsClone) }
+                var blockInput = ej.buildTag('input', "", null, blockInputAttr);
                 var inputAttrModel = { name: 'ScheduleModel', type: 'hidden', value: JSON.stringify(modelClone) }
                 var inputModel = ej.buildTag('input', "", null, inputAttrModel);
                 var processedApp = { name: 'ScheduleProcesedApps', type: 'hidden', value: JSON.stringify(processedApp) }
                 var inputApp = ej.buildTag('input', "", null, processedApp);
+                var blockedApp = { name: 'ScheduleProcesedIntervalsApps', type: 'hidden', value: JSON.stringify(blockedApp) }
+                var blockInputApp = ej.buildTag('input', "", null, blockedApp);
                 var localeText = { name: 'Locale', type: 'hidden', value: this._getLocalizedLabels(view) + ',' + this._getLocalizedLabels("AllDay") + ',' + this._getLocalizedLabels("Date") + ',' + this._getLocalizedLabels("Time") + ',' + this._getLocalizedLabels("Event") }
                 var inputLocale = ej.buildTag('input', "", null, localeText);
                 form.append(inputModel);
                 form.append(inputApp);
+                form.append(blockInputApp);
                 form.append(inputLocale);
                 if (!ej.isNullOrUndefined(id)) {
                     var idAttr = { name: 'AppointmentId', type: 'hidden', value: id }
@@ -13338,6 +13263,7 @@
                     form.append(inputId);
                 }
                 form.append(input);
+                form.append(blockInput);
                 form.append(this);
                 $('body').append(form);
                 form.submit();
@@ -13351,7 +13277,7 @@
     if (ej.scheduleFeatures.horizontal)
         $.extend(ej.Schedule.prototype, ej.scheduleFeatures.horizontal);
 
-    ej.Schedule.Locale =ej.Schedule.Locale || {} ;
+    ej.Schedule.Locale = ej.Schedule.Locale || {};
     ej.Schedule.Locale['default'] = ej.Schedule.Locale["en-US"] = {
         ReminderWindowTitle: "Reminder window",
         CreateAppointmentTitle: "Create Appointment",
@@ -13387,7 +13313,7 @@
         EveryWeekDay: "Every weekday",
         Never: "Never",
         After: "After",
-        Occurence: "Occurrence(s)",
+        Occurrence: "Occurrence(s)",
         On: "On",
         Edit: "Edit",
         RecurrenceDay: "Day(s)",
@@ -13443,8 +13369,8 @@
         Priority: "Priority",
         RecurrenceAlert: "Alert",
         NoTitle: "No Title",
-        OverFlowAppCount : "more appointment(s)",
-		AppointmentIndicator: "Click for more appointments",
+        OverFlowAppCount: "more appointment(s)",
+        AppointmentIndicator: "Click for more appointments",
         WrongPattern: "The recurrence pattern is not valid",
         CreateError: "The duration of the appointment must be shorter than how frequently it occurs. Shorten the duration, or change the recurrence pattern in the Appointment Recurrence dialog box.",
         DragResizeError: "Cannot reschedule an occurrence of the recurring appointment if it skips over a later occurrence of the same appointment.",
@@ -13461,7 +13387,9 @@
         Add: "add",
         Save: "save",
         Delete: "delete",
-        EditOcurrence: "editOcurrence",
+        DeleteOccurrence: "deleteOccurrence",
+        DeleteSeries: "deleteSeries",
+        EditOccurrence: "editOccurrence",
         EditSeries: "editSeries"
     };
 

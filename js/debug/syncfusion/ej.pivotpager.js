@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.pivotpager.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -53,6 +53,16 @@
             if ($("#" + this.model.targetControlID).hasClass('e-pivotgrid')) {
                 this.targetControlName = "PivotGrid";
                 this.targetControl = $("#" + this.model.targetControlID).data("ejPivotGrid");
+                this.targetControl._pagerObj = this;
+            }
+            else if ($("#" + this.model.targetControlID).hasClass('e-pivotchart')) {
+                this.targetControlName = "PivotChart";
+                this.targetControl = $("#" + this.model.targetControlID).data("ejPivotChart");
+                this.targetControl._pagerObj = this;
+            }
+            else if ($("#" + this.model.targetControlID).hasClass('e-pivotclient')) {
+                this.targetControlName = "PivotClient";
+                this.targetControl = $("#" + this.model.targetControlID).data("ejPivotClient");
                 this.targetControl._pagerObj = this;
             }
             this._load();
@@ -136,6 +146,8 @@
                 if (pagerInput.id.indexOf("Categ") != -1) {
                     this.model.categoricalCurrentPage = pagerInput.value;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("categorical", pagerInput.value);
+                    if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("categorical", pagerInput.value);
+                    else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient("categorical", pagerInput.value);
                     if (pagerInput.value == this.model.categoricalPageCount) {
                         $(e.target).addClass("disabled");
                         $($($(e.target).parents('td')[0]).find(".moveLast")[0]).addClass("disabled");
@@ -144,6 +156,8 @@
                 else if (pagerInput.id.indexOf("Series") != -1) {
                     this.model.seriesCurrentPage = pagerInput.value;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("series", pagerInput.value);
+                    else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("series", pagerInput.value);
+                    else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient("series", pagerInput.value);
                     if (pagerInput.value == this.model.seriesPageCount) {
                         $(e.target).addClass("disabled");
                         $($($(e.target).parents('td')[0]).find(".moveLast")[0]).addClass("disabled");
@@ -161,6 +175,8 @@
                 if (pagerInput.id.indexOf("Categ") != -1) {
                     this.model.categoricalCurrentPage = pagerInput.value;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("categorical", pagerInput.value);
+                    else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("categorical", pagerInput.value);
+                    else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient("categorical", pagerInput.value);
                     if (pagerInput.value == "1") {
                         $(e.target).addClass("disabled");
                         $($($(e.target).parents('td')[0]).find(".moveFirst")[0]).addClass("disabled");
@@ -169,6 +185,10 @@
                 else if (pagerInput.id.indexOf("Series") != -1) {
                     this.model.seriesCurrentPage = pagerInput.value;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("series", pagerInput.value);
+                    else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("series", pagerInput.value);
+                    if (this.targetControlName == "PivotClient") {
+                        this.targetControl.refreshPagedPivotClient("series", pagerInput.value);
+                    }
                     if (pagerInput.value == "1") {
                         $(e.target).addClass("disabled");
                         $($($(e.target).parents('td')[0]).find(".moveFirst")[0]).addClass("disabled");
@@ -187,10 +207,14 @@
                 if (pagerInput.id.indexOf("Categ") != -1) {
                     this.model.categoricalCurrentPage = pagerInput.value = this.model.categoricalPageCount;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("categorical", pagerInput.value);
+                    else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("categorical", pagerInput.value);
+                    else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient("categorical", pagerInput.value);                    
                 }
                 else if (pagerInput.id.indexOf("Series") != -1) {
                     this.model.seriesCurrentPage = pagerInput.value = this.model.seriesPageCount;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("series", pagerInput.value);
+                    else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("series", pagerInput.value);
+                    else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient("series", pagerInput.value);
                 }
             }
         },
@@ -205,21 +229,25 @@
                 if (pagerInput.id.indexOf("Categ") != -1) {
                     this.model.categoricalCurrentPage = pagerInput.value = 1;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("categorical", pagerInput.value);
+                    else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("categorical", pagerInput.value);
+                    else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient("categorical", pagerInput.value);
                 }
                 else if (pagerInput.id.indexOf("Series") != -1) {
                     this.model.seriesCurrentPage = pagerInput.value = 1;
                     if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid("series", pagerInput.value);
+                    else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart("series", pagerInput.value);
+                    else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient("series", pagerInput.value);
                 }
             }
         },
         _createErrorDialog: function (message) {
             var dialogElem = ej.buildTag("div.errorDialog#errorDialog", ej.buildTag("div.errorImg")[0].outerHTML + ej.buildTag("div.errorContent", message)[0].outerHTML + ej.buildTag("div", ej.buildTag("button#errOKBtn.errOKBtn", this._getLocalizedLabels("OK"))[0].outerHTML)[0].outerHTML).attr("title", this._getLocalizedLabels("Error"))[0].outerHTML;
             this.targetControl.element.append(dialogElem), me = this.targetControl;
-            this.targetControl.element.find(".errorDialog").ejDialog({ width: 400, target: "#" + this.model.targetControlID, enableResize: false, enableRTL: this.targetControl.model.enableRTL, close: this.targetControl._onPreventPanelClose });
-            this.targetControl.element.find(".errOKBtn").ejButton({ type: ej.ButtonType.Button }).bind(ej.eventType.click, function (e) {
+            this.targetControl.element.find(".errorDialog").ejDialog({ width: 400, target: "#" + this.model.targetControlID, enableResize: false, enableRTL: this.targetControl.model.enableRTL, close: this.targetControl._preventPanelClose });
+            this.targetControl.element.find(".errOKBtn").ejButton({ type: ej.ButtonType.Button }).on(ej.eventType.click, function (e) {
                 e.preventDefault();
                 me.element.find(".e-dialog, .errorDialog").remove();
-                me._onPreventPanelClose();
+                me._preventPanelClose();
             });
             this.element.find(".e-dialog .e-close").attr("title", this._getLocalizedLabels("Close"));
         },
@@ -236,10 +264,14 @@
                     if (pagerTd.className.indexOf('categ') != -1 && this.model.categoricalCurrentPage != parseInt(e.target.value)) {
                         this.model.categoricalCurrentPage = e.target.value;
                         if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid(pagerTd.className, e.target.value);
+                        else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart(pagerTd.className, e.target.value);
+                        else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient(pagerTd.className, e.target.value);
                     }
                     else if (pagerTd.className.indexOf('series') != -1 && this.model.seriesCurrentPage != parseInt(e.target.value)) {
                         this.model.seriesCurrentPage = e.target.value;
                         if (this.targetControlName == "PivotGrid") this.targetControl.refreshPagedPivotGrid(pagerTd.className, e.target.value);
+                        else if (this.targetControlName == "PivotChart") this.targetControl.refreshPagedPivotChart(pagerTd.className, e.target.value);
+                        else if (this.targetControlName == "PivotClient") this.targetControl.refreshPagedPivotClient(pagerTd.className, e.target.value);
                     }
                     this._setNavigators(e.target.value, pageCount, pagerTd);
                     e.target.blur();

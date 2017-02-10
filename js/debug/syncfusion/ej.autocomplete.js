@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.autocomplete.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","jquery-easing","./../common/ej.core","./../common/ej.data","./../common/ej.scroller"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.data","./../common/ej.scroller"], fn) : fn();
 })
 (function () {
 	
@@ -40,6 +40,7 @@
             require: ['?ngModel', '^?form', '^?ngModelOptions']
         },
 
+        _requiresID: true,
 
         defaults: {
 
@@ -148,7 +149,17 @@
                 columns:[{
                            field:null,
            
-                            headerText:null
+                            headerText:null,
+							
+							textAlign:"left",
+							
+							headerTextAlign:"left",
+							
+							cssClass: "",
+							
+							type:"string",
+
+							filterType: "startswith"
        
                         }]
             },
@@ -245,7 +256,7 @@
                 this.element.attr("disabled", "disabled");
                 this.element.addClass("e-disable").attr({ "aria-disabled": true });
                 if (this.model.showPopupButton) this.dropdownbutton.addClass("e-disable").attr({ "aria-disabled": true });
-                if (this.model.multiSelectMode == "visualmode") this._ulBox.addClass("e-disable").attr({ "aria-disabled": true });
+                if (this.model.multiSelectMode == "visualmode" && this._ulBox) this._ulBox.addClass("e-disable").attr({ "aria-disabled": true });
             }
         },
 
@@ -272,7 +283,7 @@
         _setValue: function (value) {
             if (!this._isWatermark)
                 this._hiddenSpan.css("display", "none");
-            if (typeof value === "object" || (typeof value === "number" && isNaN(value)) || $.trim(value) == "") value = null;
+            if (typeof value === "object" || (typeof value === "number" && isNaN(value)) || $.trim(value) == "") value = "";
             if (this.model.multiSelectMode == "visualmode")
                 this._hiddenInput.val("");
             this.element.val("");
@@ -291,7 +302,7 @@
                         this.suggestionListItems = this.model.dataSource;
                         if (this.suggestionListItems && typeof this.suggestionListItems[0] != "object") {
 							this._hiddenInput.val(value);
-                            for (var i = 0; i < values.length; i++) {
+                            for (var i = 0, length = values.length; i < length; i++) {
                                 if (values[i]) {
                                     this._ulBox.append(this._createBox(values[i]));
                                     this._selectedItems.push(values[i]);
@@ -314,7 +325,7 @@
         },
         _createBoxForObjectType: function (values) {
 			var proxy=this, map=this._declareVariable();
-            for (var data = 0; data < values.length; data++) {
+            for (var data = 0, length = values.length; data < length; data++) {
                 var _val = $.trim(values[data]);
 				if(_val != ""){
                 if (ej.DataManager && this.model.dataSource instanceof ej.DataManager) {
@@ -389,7 +400,6 @@
         },
 
         _setOperation: function (source, value) {
-            if (!this.model.enabled) return false;
             var bindTo = "", promise, dataQuery, proxy = this, list = this.model.dataSource;
             if (ej.isNullOrUndefined(list)) return false;
             if (typeof list[0] == "object" || list instanceof ej.DataManager) {
@@ -421,26 +431,36 @@
             if (currentValue) {
                 if (this.model.multiSelectMode == "visualmode" && this._removeDuplicates(data)) return false;
                 this._valueToTextBox(currentValue, data, true);
-                var currValue = this.model.multiSelectMode == "visualmode" ? this._modelValue : this.element.val() == "" ? null : this.element.val();
+                var currValue = this.model.multiSelectMode == "visualmode" ? this._modelValue : this.element.val();
                 this.value(currValue);
+				if (this.model.showResetIcon) this._showReset();
             }
         },
 
         _textFormateString: function (data, index) {
             var _textFormatString = this.model.multiColumnSettings.stringFormat
-            this._columnIndex = this.model.multiColumnSettings.stringFormat.match(/\{.+?\}/g).map(function (x) { return x.slice(1, -1) });
-            if (typeof this.model.dataSource[0] == "object") {
-                for (var i = 0; i < this._columnIndex.length; i++)
+			this._columnsIndex();
+            if (!ej.isNullOrUndefined(data) && typeof data == "object") {
+                for (var i = 0, length = this._columnIndex.length; i < length; i++)
                     _textFormatString = _textFormatString.replace("{" + this._columnIndex[i] + "}", data[this.model.multiColumnSettings.columns[parseInt(this._columnIndex[i])].field]);
+            }
+            else if (!ej.isNullOrUndefined(data) && typeof data != "object") {
+                _textFormatString = _textFormatString.replace("{" + this._columnIndex[0] + "}", data);
             }
             else
                 _textFormatString = this._currList[this._activeItem - 1];
             return _textFormatString;
         },
 
+		_columnsIndex: function(){
+			var _proxy = this; this._columnIndex = [];
+			$.each(this.model.multiColumnSettings.stringFormat.match(/\{.+?\}/g),function (x,n){ 
+				  _proxy._columnIndex[x] = n.slice(1,-1)
+			});
+		},
         _valueToTextBox: function (currentValue, data, flag) {
             var delimiterIndex;
-         if(!this._addNewTemplate && this.model.multiColumnSettings.enable) 
+         if(!this._addNewTemplate && this.model.multiColumnSettings.enable && typeof data != "string") 
              currentValue = this._textFormateString(data);
          if (this.model.multiSelectMode == "visualmode") {
              data = (typeof data == "string" && this._addNewTemplate && data.substr(data.length - this._addNewTemplate.length) == this._addNewTemplate) ? data.replace(this._addNewTemplate, "") : data;
@@ -585,6 +605,9 @@
                 }
             }
         },
+		_removeDuplicateValue: function(values) {
+			return values.split(this.model.delimiterChar).reduce(function (a, b) { if (a.indexOf(b) < 0) a.push(b); return a; }, []).join(this.model.delimiterChar);
+		},
         _delimiterChar:function(){
             return (this.model.multiSelectMode != "none" ? this.model.delimiterChar : "");
         },
@@ -596,21 +619,20 @@
                     case "watermarkText": this._changeWatermark(options[option]); break;
                     case "delaySuggestionTimeout": this.model.delaySuggestionTimeout = parseInt(options[option]); break;
                     case "value":
-                        if (options[option] != "") {
-                            deli = this._delimiterChar();
-                            if (this.model.multiSelectMode != "none") {
-                                value = options[option].substr(options[option].length - deli.length) == deli ? options[option] : options[option] + deli;
-                                options[option] = this.value() + value;
-                                if (this.model.multiSelectMode == "visualmode") {
-                                    options[option] = options[option].split(deli).reduce(function (a, b) { if (a.indexOf(b) < 0) a.push(b); return a; }, []);
-                                    options[option] = options[option].join(deli);
-                                }
+                        deli = this._delimiterChar();
+                        if (this.model.multiSelectMode != "none") {
+                            value = options[option].substr(options[option].length - deli.length) == deli ? options[option] : options[option] + deli;
+                            options[option] = options[option] == "" ? this.value() : (this.value() ? this.value() : "") + value;
+                            if (this.model.multiSelectMode == "visualmode") {
+                                options[option] = options[option].split(deli).reduce(function (a, b) { if (a.indexOf(b) < 0) a.push(b); return a; }, []);
+                                options[option] = options[option].join(deli);
                             }
-                            this._setValue(options[option]);
-                            this._modelValue = options[option];
-                            var currValue = this.model.multiSelectMode == "visualmode" ? this._hiddenInput.val() : this.element.val() == "" ? null : this.element.val();
-                            this._changeEvtTrigger(currValue);
                         }
+                        this.value(this._setValue(options[option]));
+                        this._modelValue = this.value()
+                        var currValue = this.model.multiSelectMode == "visualmode" ? this._hiddenInput.val() : this.element.val();
+                        this._changeEvtTrigger(currValue);
+                        if (this.model.showResetIcon) this._showReset();
                         break;
                     case "showPopupButton": this._setDropdown(options[option]); break;
                     case "enableRTL": this._RightToLeft(options[option]); break;
@@ -646,6 +668,16 @@
                             this._setCulture();
                         } else options[option] = this.model.locale;
                         break;
+                    case "filterType":
+                        var arr = [];
+                        for (var key in ej.filterType)
+                            if (ej.filterType.hasOwnProperty(key))
+                                arr.push(ej.filterType[key]);
+                        if (arr.indexOf(options[option]) > -1)
+                            this.model.filterType = options[option];
+                        else
+                            options[option] = this.model.filterType;
+                        break;
                     case "multiSelectMode":
                         this.model.multiSelectMode = options[option];
                          var delimiter =this._delimiterChar();
@@ -654,10 +686,13 @@
                              if (value) {
                                  value = value.substr(value.length - delimiter.length) == delimiter ? value : value + delimiter
                                  this.value(value);
+								 if(this.model.multiSelectMode == "visualmode") this.value(this._removeDuplicateValue(this.value()))
                              }
-                             if (key)
+                             if (key) {
                              this._selectValueByKey(key.substr(key.length - delimiter.length) == delimiter ? key : key + delimiter);
-                         }
+							 if(this.model.multiSelectMode == "visualmode") this._selectValueByKey(this._removeDuplicateValue(this._selectValueByKey()));
+							 }
+						 }
                          else {
 
                          }
@@ -688,7 +723,7 @@
                         deli = this._delimiterChar();
                         key = ej.util.getVal(options[option]);
                         this.selectValueByKey(key);
-                        keyValue = this._selectValueByKey() + options[option];
+                        keyValue =   (this.model.multiSelectMode != "none") ? this._selectValueByKey() + options[option]:options[option];
                         keyValue = keyValue.split(deli).reduce(function (a, b) { if (a.indexOf(b) < 0) a.push(b); return a; }, []);
                         keyValue=keyValue.join(deli);
                         options[option] = keyValue.substr(keyValue.length - deli.length) == deli ? keyValue  : keyValue+ deli;
@@ -710,23 +745,32 @@
 						this.suggestionList.remove();
 						this._renderSuggestionList();
 						break; 
+					case "showResetIcon": this.model.showResetIcon = options[option];
+					    if(options[option]) this._showReset();
+						else this._removeReset();
+						break;
                 }
+				this._hideResult();
             }
         },
 
         _destroy: function () {
+            this.element.width("").removeAttr("role aria-label aria-expanded aria-haspopup aria-autocomplete autocomplete placeholder aria-owns aria-disabled disabled");
             this.element.insertAfter(this.wrapper);
             if (this.model.multiSelectMode == "visualmode")
-                this.element.attr("name", this._hiddenInput.attr("name"));
+                this.element.removeClass("e-visual-mode").attr("name", this._hiddenInput.attr("name"));
+            if (!this.model.enabled) this.element.removeClass('e-disable');
             this.wrapper.remove();
             this.element.removeClass("e-input").val("");
             if (this._isWatermark) this.element.removeAttr("placeholder");
+            this._hideResult();
             this.suggestionList.remove();
         },
 
         _initialize: function () {
             this.value(this.value() === "" ? this.element[0].value : this.value());
             this.element.attr("role", "combobox").attr("aria-label", "Autocomplete textbox").attr("aria-expanded", false).attr("tabindex", 0).attr("aria-autocomplete", "list");
+            if (/Edge\/12./i.test(navigator.userAgent)) this.element.addClass('edge-browser');
             this.target = this.element[0];
             this.dropdownbutton = null;
             this._isIE8 = (ej.browserInfo().name == "msie") && (ej.browserInfo().version == "8.0") ? true : false;
@@ -744,6 +788,7 @@
             this._typed = false;
             this._cancelEvent = false;
             this._isWatermark = this._checkWatermarkSupport();
+			this._selectedObj = [];
         },
 
         _render: function () {
@@ -782,7 +827,8 @@
                 var span = ej.buildTag("span.e-icon e-search").attr((this._isIE8) ? { 'unselectable': 'on' } : {});
                 this.dropdownbutton = ej.buildTag("span.e-select#" + this.target.id + "_dropdown").attr((this._isIE8) ? { 'unselectable': 'on' } : {}).append(span);
                 this.container.append(this.dropdownbutton).addClass("e-padding");
-                this.dropdownbutton.bind("mousedown", $.proxy(this._OnDropdownClick, this));
+                if (!this.model.enabled)this.dropdownbutton.addClass("e-disable").attr({ "aria-disabled": true });
+                this.dropdownbutton.on("mousedown", $.proxy(this._OnDropdownClick, this));
             }
         },
         _addAttr: function (htmlAttr) {
@@ -792,7 +838,7 @@
                 if (key == "class") proxy.wrapper.addClass(value);
                 else if (key == "name") proxy.element.attr(key, value);
                 else if (key == "disabled" && value == "disabled") proxy._disabled(true);
-                else if (key == "readOnly" && value == "readOnly") proxy._checkReadOnly(true);
+                else if (key == "readOnly" && value === true) proxy._checkReadOnly(true);
                 else proxy.wrapper.attr(key, value);
             });
         },
@@ -805,6 +851,8 @@
 
         _renderBoxModel: function () {
             this._ulBox = ej.buildTag("ul.e-ul e-boxes");
+            var disableClass = this.model.enabled ? "" : "e-disable";
+            this._ulBox.addClass(disableClass);
             this._hiddenInput = ej.buildTag("input#" + this.target.id + "_hidden", "", {}, { type: "hidden" }).insertBefore(this.element);
             this._hiddenInput.attr("name", this.element.attr("name"));
             this.element.val("").removeAttr("name").addClass("e-visual-mode");
@@ -843,7 +891,7 @@
             flag ? this._deleteBox(item) : item.addClass("e-active");
         },
         _deleteBox: function (items) {
-            for (var i = 0; i < items.length; i++) {
+            for (var i = 0, length = items.length; i < length; i++) {
                 var boxes = this._ulBox.children();
                 var index = boxes.index(items[i]);
                 this._selectedItems.splice(index, 1);
@@ -899,13 +947,15 @@
                     ((this.model.multiSelectMode == "visualmode") ? this._selectValueByKey(null) : this._selectValueByKey(key));
                 }
                 this.selectValueByKey(key);
+				if (this.model.showResetIcon) this._showReset();
             }
             else {
                 var value = this.value();
-                if (this.model.multiSelectMode != "none" && (ej.isNullOrUndefined(value)|| value !="")) {
+                if (this.model.multiSelectMode != "none" && (!ej.isNullOrUndefined(value) && value !="")) {
                     value = value.substr(value.length - this.model.delimiterChar.length) == this.model.delimiterChar ? value : value + this.model.delimiterChar;
                 }
                 this.value(this._setValue(value));
+				if (this.model.showResetIcon && this.value() != "") this._showReset();
             }
         },
 
@@ -920,7 +970,7 @@
         },
 
         _destroyDropdown: function () {
-            this.dropdownbutton.unbind("mousedown", $.proxy(this._OnDropdownClick, this));
+            this.dropdownbutton.off("mousedown", $.proxy(this._OnDropdownClick, this));
             this.dropdownbutton.remove();
             this.dropdownbutton = null;
             this.container.removeClass("e-padding");
@@ -948,7 +998,7 @@
         },
 
         _renderSuggestionList: function () {
-            var oldWrapper = $("#" + this.element.context.id + "_suggestion").get(0);
+            var oldWrapper = $("#" + this.element[0].id + "_suggestion").get(0);
             if (oldWrapper)
                 $(oldWrapper).remove();
             this.suggestionList = ej.buildTag("div.e-atc-popup e-popup e-widget e-box " + this.model.cssClass + "#" + this.target.id + "_suggestion", "", { "display": "none" }).attr("role", "listbox");
@@ -965,16 +1015,16 @@
 				var tr = document.createElement("tr");
 				this._tableHeader = ej.buildTag("table" , "" ,{},{"cellspacing": "0.25px"});
 									
-				for( var z = 0 ; z < this.model.multiColumnSettings.columns.length ; z++) {
-					$(tr).append( ej.buildTag("th" , (this.model.multiColumnSettings.columns[z].headerText ? this.model.multiColumnSettings.columns[z].headerText : "column"+z) , {}, {"class":((z == this.model.multiColumnSettings.columns.length - 1) ? "" :(this.model.enableRTL ? "e-atc-thleft" : "e-atc-thright"))}) );
+                for (var z = 0, length = this.model.multiColumnSettings.columns.length; z < length; z++) {
+					$(tr).append( ej.buildTag("th" , (this.model.multiColumnSettings.columns[z].headerText ? this.model.multiColumnSettings.columns[z].headerText : "column"+z) , {"text-align":(this.model.multiColumnSettings.columns[z].headerTextAlign ? this.model.multiColumnSettings.columns[z].headerTextAlign:"left")}, {"class":((z == this.model.multiColumnSettings.columns.length - 1) ? "" :(this.model.enableRTL ? "e-atc-thleft" : "e-atc-thright"))}) );
 				    $(this._headerColGroup).append(document.createElement("col"));
 				}
 				$(this._tableHeaderDiv).append($(headerDiv).append($(this._tableHeader).append(tr).append(this._headerColGroup)));
 				this.suggestionList.append(this._tableHeaderDiv);
 				}
 				else {
-					for( var z = 0 ; z < this.model.multiColumnSettings.columns.length ; z++)
-						$(this._headerColGroup).append(document.createElement("col"));
+                    for (var z = 0, length = this.model.multiColumnSettings.columns.length; z < length; z++)
+                        $(this._headerColGroup).append(document.createElement("col"));
 					this._tableColumn.append(this._headerColGroup);
 				}
 				var scrollerParent = ej.buildTag("div");
@@ -1035,20 +1085,39 @@
 
         _generateSuggestionList: function (e) {
             var list = this.suggestionListItems, i, suggList = [];
-            (!this.model.multiColumnSettings.enable) ? this.ul.empty() : this._tableColumn.empty() && this.model.multiColumnSettings.showHeader && this._tableHeaderDiv.css("display","");
+            (!this.model.multiColumnSettings.enable) ? this.ul.empty() : this._tableColumn.empty() && this.model.multiColumnSettings.showHeader && this._tableHeaderDiv.css("display", "");
             var _proxy = this;
+            var fragmentParent = document.createDocumentFragment();
             if (typeof list[0] != "object") {
-               list.forEach(function (each) {
-                    var _txt = (_proxy.model.highlightSearch && !_proxy.noresult) ? _proxy._highlightSuggestion(each) : each;
-                    if(_proxy.model.multiColumnSettings.enable){
-						var trColumn = ej.buildTag("tr").attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {});
-						trColumn.append(ej.buildTag("td", _txt).attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {}).attr( (each != (list.length - 1)) ? {"class" : "e-atc-tdbottom"} : {} ));
-						_proxy._tableColumn.append(trColumn); 
-                        _proxy.model.showEmptyResultText && _proxy.model.emptyResultText == _txt && _proxy.model.multiColumnSettings.showHeader && _proxy._tableHeaderDiv.css("display","none");					
-					    (_proxy._addNewTemplate) && _proxy._tableHeaderDiv.css("display","none");
-					}  
-                    else _proxy.ul.append(ej.buildTag("li", _txt).attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {}));
-                });
+                if (_proxy.model.multiColumnSettings.enable) {
+					var tbodyEle = ej.buildTag("tbody"); 
+                    var trColumnEle = ej.buildTag("tr").attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {});
+                    var tdEle = ej.buildTag("td", {}, {}, { "role": "option" });
+                    for (var i = 0, listLength = list.length; listLength > i; i++) {
+                        var _txt = (_proxy.model.highlightSearch && !_proxy.noresult) ? _proxy._highlightSuggestion(list[i]) : list[i];
+                        var trColumn = trColumnEle.clone();
+                        var td = tdEle.clone()
+                         $(td).attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {}).attr((list[i] != (list.length - 1)) ? { "class": "e-atc-tdbottom" } : {}).html(_txt);
+                        trColumn[0].appendChild(td[0]);
+						tbodyEle[0].appendChild(trColumn[0]);
+                        fragmentParent.appendChild(tbodyEle[0]);
+                        _proxy.model.showEmptyResultText && _proxy.model.emptyResultText == _txt && _proxy.model.multiColumnSettings.showHeader && _proxy._tableHeaderDiv.css("display", "none") && $(td).removeClass("e-atc-tdbottom");
+                        
+                        if ((_proxy._addNewTemplate) && !ej.isNullOrUndefined(_proxy._tableHeaderDiv))
+                            _proxy._tableHeaderDiv.css("display", "none");
+                    }
+                    _proxy._tableColumn[0].appendChild(fragmentParent);
+                }
+                else {
+                    var liEle = ej.buildTag("li", {}, {}, { "role": "option" }).attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {})
+                    for (var i = 0, listLength = list.length; listLength > i; i++) {
+                        var _txt = (_proxy.model.highlightSearch && !_proxy.noresult) ? _proxy._highlightSuggestion(list[i]) : list[i];
+                        var li = liEle.clone();
+                        li[0].innerHTML=_txt;
+                        fragmentParent.appendChild(li[0])
+                    }
+                    _proxy.ul[0].appendChild(fragmentParent);
+                }
                 this._currList = list;
                 this._mapper = { txt: null, key: null };
             }
@@ -1064,60 +1133,91 @@
                     this._addSortingQuery(_query, "key");
                     groupedList = ej.DataManager(list).executeLocal(_query);
                     this._swapUnCategorized(groupedList);
-                    groupedList.forEach( function(each , i){ 
+                    groupedList.forEach(function (each, i) {
                         if (each.key)
-                             if(_proxy.model.multiColumnSettings.enable){
-								var trColumn = ej.buildTag("tr.e-category").attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {});
-                                trColumn.append(ej.buildTag("td", each.key).attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } :{}).attr( (i != (list.length - 1)) ? {"class" : "e-atc-tdbottom"} : {}));
+                            if (_proxy.model.multiColumnSettings.enable) {
+                                var trColumn = ej.buildTag("tr.e-category").attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {});
+                                trColumn.append(ej.buildTag("td", each.key).attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {}).attr((i != (list.length - 1)) ? { "class": "e-atc-tdbottom" } : {}));
                                 _proxy._tableColumn.append(trColumn);
-							 }
-							else   _proxy.ul.append(ej.buildTag("li.e-category", each.key).attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {}));                 
+                            }
+                            else _proxy.ul.append(ej.buildTag("li.e-category", each.key).attr("role", "option").attr((_proxy._isIE8) ? { 'unselectable': 'on' } : {}));
                         _proxy._generateLi(each.items, mapFld);
                     });
                 }
                 else this._generateLi(list, mapFld);
             }
-            if (this._getLiTags().length > 0) this._showResult(e);
+            if (this._getLiTags().length > 0) {
+				$(document).off("mousedown", $.proxy(this._OnDocumentClick, this));
+				this._showResult(e);
+			}
+
         },
 
         _swapUnCategorized: function (list) {
-            $(list).each(function (i, obj) {
-                if (!obj.key) {
+            var length = list.length;
+            for (var i = 0; i < length; i++) {
+                if (!list[i].key) {
                     for (var j = i; j > 0; j--) {
                         list[j] = list[j - 1];
                     }
-                    list[j] = obj;
+                    list[j] = list[i];
                     return false;
                 }
-            });
+            }
         },
 
         _generateLi: function (list, mapFld) {
             var _proxy = this;
-            list.forEach(function(each , j) {
-				var _text = each[mapFld._text];
-                var _key = each[mapFld._key];
-                if (!ej.isNullOrUndefined(_text) || _proxy.model.multiColumnSettings.enable) {
-					if(!_proxy.model.multiColumnSettings.enable) {
-                    if (_proxy.model.highlightSearch) _text = _proxy._highlightSuggestion(_text);
-                    if (_proxy.model.template) _text = _proxy._getTemplatedString(each, mapFld._text, _text);
-					}
-                    if(_proxy.model.multiColumnSettings.enable) {
-						var tr = ej.buildTag("tr","",{},{"class":(j % 2) ? "e-atc-trbgcolor" : "" });
-						for( var z = 0 ; z < _proxy.model.multiColumnSettings.columns.length ; z++) 			
-							$(tr).append(ej.buildTag("td" , (_proxy.model.highlightSearch && $.inArray(z.toString(),_proxy._columnIndex) > -1) ? _proxy._highlightSuggestion(_proxy._getField(each, _proxy.model.multiColumnSettings.columns[z].field).toString()) : _proxy._getField(each, _proxy.model.multiColumnSettings.columns[z].field)  , {} , {"class":(((j != (list.length - 1)) ? "e-atc-tdbottom " : "")+((z != (_proxy.model.multiColumnSettings.columns.length - 1)) ? ((_proxy.model.enableRTL) ? "e-atc-tdleft" : "e-atc-tdright" ): ""))}));	
-					}
-					else {
-						var li = document.createElement("li");
-						li.innerHTML += _text;
-					}
-                    if (_key)
-                        (_proxy.model.multiColumnSettings.enable) ?  tr.attr("id", _key) : li.setAttribute("id", _key);
-                    _proxy._setAttributes(_proxy._getField(list[j], mapFld._attr), (_proxy.model.multiColumnSettings.enable) ? tr : li);
-                    (_proxy.model.multiColumnSettings.enable) ? $(_proxy._tableColumn).append(tr) : _proxy.ul[0].appendChild(li);
-                    _proxy._currList = $.merge(_proxy._currList, [each]);
+            var fragmentParent = document.createDocumentFragment();
+            var fragment = document.createDocumentFragment();
+            if (_proxy.model.multiColumnSettings.enable) {
+                var multiColumnLength = _proxy.model.multiColumnSettings.columns.length;
+                this._tableColumn.append(ej.buildTag("tbody"));
+                var trEle = ej.buildTag("tr");
+                var tdEle = ej.buildTag("td");
+                for (var j = 0, listLength = list.length; listLength > j; j++) {
+                    var _text = list[j][mapFld._text];
+                    var _key = list[j][mapFld._key];
+                    if (!ej.isNullOrUndefined(_text) || _proxy.model.multiColumnSettings.enable) {
+                        var fieldAttr = _proxy._getField(list[j]);
+                        var tr = trEle.clone();
+                        tr[0].className = (j % 2) ? "e-atc-trbgcolor" : "";
+                        for (var z = 0; z < multiColumnLength; z++) {
+                            var td = tdEle.clone();
+                            td[0].innerHTML = (_proxy.model.highlightSearch && $.inArray(z.toString(), _proxy._columnIndex) > -1) ? _proxy._highlightSuggestion(_proxy._getField(list[j], _proxy.model.multiColumnSettings.columns[z].field).toString()) : _proxy._getField(list[j], _proxy.model.multiColumnSettings.columns[z].field);
+                            td[0].className = (((j != (list.length - 1)) ? "e-atc-tdbottom " : "") + ((z != (_proxy.model.multiColumnSettings.columns.length - 1)) ? ((_proxy.model.enableRTL) ? "e-atc-tdleft " : "e-atc-tdright ") : ""))+(_proxy.model.multiColumnSettings.columns[z].cssClass ?_proxy.model.multiColumnSettings.columns[z].cssClass:"" );
+                            td[0].style.textAlign = (_proxy.model.multiColumnSettings.columns[z].textAlign ? _proxy.model.multiColumnSettings.columns[z].textAlign:"left");
+							fragment.appendChild(td[0])
+                        }
+                        tr[0].appendChild(fragment);
+                        if (_key)
+                            tr.attr("id", _key);
+                        _proxy._setAttributes(_proxy._getField(list[j], mapFld._attr), tr[0]);
+                        fragmentParent.appendChild(tr[0]);
+                        _proxy._currList = _proxy._currList.concat([list[j]]);
+                    }
                 }
-            });
+                $(_proxy._tableColumn).find("tbody")[0].appendChild(fragmentParent);
+            }
+            else {
+                for (var j = 0, listLength = list.length; listLength > j; j++) {
+                    var _text = list[j][mapFld._text];
+                    var _key = list[j][mapFld._key];
+                    if (!ej.isNullOrUndefined(_text)) {
+                        if (_proxy.model.highlightSearch) _text = _proxy._highlightSuggestion(_text);
+                        if (_proxy.model.template) _text = _proxy._getTemplatedString(list[j], mapFld._text, _text);
+                        var li = document.createElement("li");
+                        li.innerHTML += _text;
+                        if (_key)
+                             li.setAttribute("id", _key);
+                        _proxy._setAttributes(_proxy._getField(list[j], mapFld._attr), li);
+                        fragmentParent.appendChild(li);
+                        _proxy._currList = _proxy._currList.concat([list[j]]);
+                    }
+                }
+                _proxy.ul[0].appendChild(fragmentParent);
+            }
+
         },
 
         _getLiTags: function () {
@@ -1174,14 +1274,14 @@
             this._refreshScroller();
             this._refreshPopup();
             if (this._isOpened)
-                $(document).bind("mousedown", $.proxy(this._OnDocumentClick, this));
+                $(document).on("mousedown", $.proxy(this._OnDocumentClick, this));
             else {
                 this.suggestionList.css("display", "none");
                 var tis = this;
                 clearTimeout(this._typing);
                 this._typing = setTimeout(function () {
-                    tis.suggestionList[(tis.model.animateType == "slide" ? "slideDown" : "fadeIn")]((tis.model.animateType == "none" ? 0 : 300), "easeOutQuad", function () {
-                        $(document).bind("mousedown", $.proxy(tis._OnDocumentClick, tis));
+                    tis.suggestionList[(tis.model.animateType == "slide" ? "slideDown" : "fadeIn")]((tis.model.animateType == "none" ? 0 : 300), function () {
+                        $(document).on("mousedown", $.proxy(tis._OnDocumentClick, tis));
                     });
                 }, this.model.delaySuggestionTimeout);
                 var args = (e != undefined) ? { event: e, isInteraction: true } : { isInteraction: false };
@@ -1192,10 +1292,10 @@
             this._isOpened = true;
             this.showSuggestionBox = true;
             var _suggestionListItems = this._getLiTags();
-            this._listSize = _suggestionListItems.size();
+            this._listSize = _suggestionListItems.length;
 
 
-            $(window).bind("resize", $.proxy(this._OnWindowResize, this));
+            $(window).on("resize", $.proxy(this._OnWindowResize, this));
             var scrObj = ej.getScrollableParents(this.wrapper);
             if (scrObj[0] != window)
                 this._on(scrObj, "scroll", this._hideResult);
@@ -1215,11 +1315,12 @@
                 }
                 else {
                     this._hiding = setTimeout(function () {
-                        proxy.suggestionList[(proxy.model.animateType == "slide" ? "slideUp" : "fadeOut")]((proxy.model.animateType == "none" ? 0 : 100), "easeOutQuad");
+                        if( proxy.model ) proxy.suggestionList[(proxy.model.animateType == "slide" ? "slideUp" : "fadeOut")]((proxy.model.animateType == "none" ? 0 : 100));
+                         proxy._activeItem = 0;
                     }, this.model.delaySuggestionTimeout);
                 }
-                $(document).unbind("mousedown", $.proxy(this._OnDocumentClick, this));
-                $(window).unbind("resize", $.proxy(this._OnWindowResize, this));
+                $(document).off("mousedown", $.proxy(this._OnDocumentClick, this));
+                $(window).off("resize", $.proxy(this._OnWindowResize, this));
                 this._off(ej.getScrollableParents(this.wrapper), "scroll", this._hideResult);
                 this.wrapper.removeClass("e-active");
             }
@@ -1238,8 +1339,10 @@
 				this.scrollerObj.option("height","auto");
 				this._columnBorderAlign();
 			}
-            if ( this.suggestionList.height() > (parseInt($.isNumeric(this.model.popupHeight) ? this.model.popupHeight : this.model.popupHeight.replace("px", "")) - 4) || (this.model.multiColumnSettings.enable && (( this.suggestionList.height() <= this._tableColumn.height() )|| ( this.suggestionList.width() <= this._tableColumn.width() || (this.model.multiColumnSettings.showHeader && this.suggestionList.width() <= this._tableHeader.width()) )))){
-                this.scrollerObj.model.height = (this.model.multiColumnSettings.showHeader && this._tableHeader) ? parseInt(this.suggestionList.height()) - parseInt(this._tableHeader.height()) : this.suggestionList.height();
+            var _suggestHeight = this.suggestionList.height() > (parseInt($.isNumeric(this.model.popupHeight) ? this.model.popupHeight : this.model.popupHeight.replace("px", "")) - 4);
+            if ( _suggestHeight || (this.model.multiColumnSettings.enable && (( this.suggestionList.height() <= this._tableColumn.height() )|| ( this.suggestionList.width() <= this._tableColumn.width() || (this.model.multiColumnSettings.showHeader && this.suggestionList.width() <= this._tableHeader.width()) )))){
+                if( _suggestHeight ) this.scrollerObj.model.height = (this.model.multiColumnSettings.showHeader && this._tableHeader) ? parseInt(this.suggestionList.height()) - parseInt(this._tableHeader.height()) : this.suggestionList.height();
+                if(!this.model.multiColumnSettings.enable && this.suggestionList.width() < this.suggestionList.find(".e-ul").width())  this.suggestionList.find(".e-ul").width(this.suggestionList.find(".e-ul").width());
 				this.scrollerObj.model.width = this.suggestionList.width();
                 this.scrollerObj.refresh();
                 this.scrollerObj.option({"enableRTL" : this.model.enableRTL , "scrollTop": 0 , "scrollLeft" : 0 });
@@ -1268,7 +1371,7 @@
 				this._tableWid = (this._tableHeader.outerWidth() > this._tableColumn.outerWidth() ) ? this._tableHeader.outerWidth() : this._tableColumn.outerWidth(); 
 				this._tableColumn.find("colgroup").remove();
 				$(this._headerColGroup.children).removeAttr("style");
-				for(var z = 0; z < this._headerColGroup.children.length ; z++) {
+                for (var z = 0, length = this._headerColGroup.children.length; z < length; z++) {
 					$(this._headerColGroup.children[z]).css({"width": ( parseInt($(this._tableColumn).find("tr:first td").eq(z).outerWidth()) > parseInt(this._tableHeader.find("tr:first th").eq(z).outerWidth() ) ? $(this._tableColumn).find("tr:first td").eq(z).outerWidth() : this._tableHeader.find("tr:first th").eq(z).outerWidth()) });
 				}
 				this._tableColumn.append($(this._headerColGroup).clone());
@@ -1282,7 +1385,7 @@
 				$(this._headerColGroup.children).removeAttr("style");
 				var wid = (this._tableWid > this.suggestionList.width()) ? this._tableWid : "100%" ;
 				if(wid != "100%") {
-					for(var z = 0; z < this._headerColGroup.children.length ; z++) {
+                    for (var z = 0, length = this._headerColGroup.children.length; z < length; z++) {
 						$(this._headerColGroup.children[z]).css({"width": $(this._tableColumn).find("tr:first td").eq(z).outerWidth() });
 					}
 					this._tableColumn.append(this._headerColGroup);
@@ -1353,10 +1456,8 @@
                 this._addNewTemplate = null;
             }
             else {
-                if (this.model.multiSelectMode == "delimiter") {
-                   
+                if (this.model.multiSelectMode == "delimiter") 
                         this._valueChange(e);
-                }
                 this._updateSelectedItemArray(this.getValue());
             }
 		    if(!ej.isNullOrUndefined(this.value()) && this.value()!="")
@@ -1379,10 +1480,7 @@
             this.model.watermarkText && this.element.attr('placeholder') ? this.element.width("") : this.element.val("").width(width);
         },
         _checkDeli: function () {
-            var val, deli, last;
-            val = this.element.val();
-            deli = this.model.delimiterChar;
-            last = val.substr(val.length - deli.length, val.length);
+            var val = this.element.val(), deli = this.model.delimiterChar, last = val.substr(val.length - deli.length, val.length);
             if (last == deli) {
                 this.element.val(val.substr(0, val.length - deli.length));
                 return true;
@@ -1418,9 +1516,11 @@
         },
 
         getActiveText: function () {
-		    if(this.model.multiColumnSettings.enable) return this._textFormateString(this._currList[this._activeItem -1 ])
-            else if (this._mapper.txt) return this._getField(this._currList[this._activeItem - 1], this._mapper.txt);			
-            else return  this._currList[this._activeItem  - 1];
+			if (this._activeItem > 0) {
+				if(this.model.multiColumnSettings.enable) return this._textFormateString(this._currList[this._activeItem -1 ])
+				else if (!ej.isNullOrUndefined(this._mapper) && this._mapper.txt) return this._getField(this._currList[this._activeItem - 1], this._mapper.txt);			
+				else  return  this._currList[this._activeItem  - 1];
+			}
         },
 
         _getUniqueKey: function () {
@@ -1457,7 +1557,11 @@
 					}
                     if (this.model.autoFocus && !this.noresult) this._addListHover();
                 }
-                else this._removeSelection();
+                else {
+					if (this.model.multiSelectMode == "delimiter" && currentValue && query) this.element.val(this.element.val().replace(query,currentValue))
+					else if (currentValue) this.element.val(currentValue)
+					this._removeSelection();
+				} 
             }
         },
 
@@ -1469,8 +1573,9 @@
                 var currValue = this.model.multiSelectMode == "visualmode" ? this._modelValue : this.element.val() == "" ? null : this.element.val();
                 this._trigger("select", { event: e, isInteraction: true, value: currValue, text: currentValue, key: this._getUniqueKey(), item: currItem });
                 this._valueChange(e);
+                if (this.model.showResetIcon) this._showReset();
             }
-            this._trigger("close", { event: e, isInteraction: true });
+            this._isOpened && this._trigger("close", { event: e, isInteraction: true });
         },
 
         _createBox: function (value) {
@@ -1508,12 +1613,8 @@
                     str = suggestion.replace(RegEx, "~^");
                     split = str.split("~^");
                     suggestion = "";
-                    $(split).each(function (i, val) {
-                        if (mch[i])
-                            suggestion += val + "<span class='e-hilight-txt'>" + mch[i] + "</span>";
-                        else
-                            suggestion += val;
-                    });
+                    for (var i = 0, splitlength = split.length; splitlength > i; i++)
+                        suggestion += mch[i] ? split[i] + "<span class='e-hilight-txt'>" + mch[i] + "</span>" : split[i];
                 }
             }
             return suggestion;
@@ -1551,14 +1652,26 @@
                 this.element.attr({ "readonly": "readonly", "aria-readonly": true });
                 this._off(this.element, "keydown", this._OnKeyDown);
                 this._off(this.element, "keyup", this._OnKeyUp);
+				this._off(this.element, "paste", this._OnPaste);
+				this._off(this.element, "keypress", this._onkeyPress);
             }
             else {
-                this.element.removeAttr("readonly").removeAttr("aria-readonly");
+                this.element.removeAttr("readonly aria-readonly");
                 this._on(this.element, "keydown", this._OnKeyDown);
                 this._on(this.element, "keyup", this._OnKeyUp);
+			    this._on(this.element, "paste", this._OnPaste);
+				this._on(this.element, "keypress", this._onkeyPress);
             }
         },
-
+		_onkeyPress: function (e) {
+			if(e.keyCode == 13) this._PreventDefaultAction(e);
+		},
+		_OnPaste: function (e) {
+			var _proxy = this;
+			setTimeout(function () {
+				 _proxy._OnKeyUp(e);
+				}, 0);
+		},
         _OnKeyDown: function (e) {
             if (this.model.filterType != "startswith")
                 this.model.enableAutoFill = false;
@@ -1568,6 +1681,7 @@
                 case 35:
                 case 36:
                     this._removeSelection();
+				case 13:
                 case 39:
                     break;
                 case 38:
@@ -1622,9 +1736,6 @@
                 case 17:
                     this.ctrlKeyPressed = true;
                     break;
-                case 13:
-                    e.preventDefault();
-                    break;
                 case 9:
                     if (this.showSuggestionBox) {
                         this._queryString = this.element.val();
@@ -1677,7 +1788,7 @@
 
         _OnKeyUp: function (e) {
             this._keyDownComplete(e);
-            if (this.ctrlKeyPressed) {
+            if (this.ctrlKeyPressed && e.type != "paste") {
                 if (e.keyCode == 17)
                     this.ctrlKeyPressed = false;
                 return false;
@@ -1733,10 +1844,8 @@
                     else {
                         this.noresult = true;
                         this._hideResult(e);
-                        if ($.trim(this.element.val()) == "") {
+                        if ($.trim(this.element.val()) == "") 
                             this._isOpened = false;
-                            this._trigger("close", { event: e, isInteraction: true });
-                        }
                     }
                     this._typed = true;
                     break;
@@ -1753,6 +1862,7 @@
         },
 
         _getFilteredList: function (list, e) {
+            clearTimeout(this.timeDelay);
             if (!ej.isNullOrUndefined(list) && typeof list[0] == "object") {
                 var bindTo = (this.model.fields.text) ? this.model.fields["text"] : "text";
                 if ( this.model.actionFailure && ej.isNullOrUndefined((ej.DataManager(list).executeLocal(ej.Query().select(bindTo))[0])) )
@@ -1781,12 +1891,14 @@
                 if (!source.dataSource.offline && !(source.dataSource.json && source.dataSource.json.length > 0)) {
                     window.clearTimeout(this.timer);
                     var proxy = this;
-
                     this.timer = window.setTimeout(function () {
                         proxy._fetchRemoteDat(source);
                     }, 700);
                 }
-                else this._getFilteredList(source.dataSource.json, e);
+                else {
+					this._getFilteredList(source.dataSource.json, e);
+					this._selectedObj.push(source.dataSource.json);
+				}
             }
             else this._getFilteredList(source, e);
         },
@@ -1801,6 +1913,10 @@
                 proxy._trigger("actionFailure", e);
             }).done(function (e) {
                 proxy.suggestionListItems = e.result;
+				if(proxy.model.multiSelectMode == "none")
+					proxy._selectedObj = e.result;
+				else if(proxy.model.multiSelectMode == "delimiter")
+					proxy._selectedObj = proxy._selectedObj.concat(e.result);
                 proxy._doneRemaining(e);
                 proxy._trigger("actionSuccess", e);
             }).always(function (e) {
@@ -1817,22 +1933,49 @@
 
         _addQuery: function (_query, checkMapper) {
             var bindTo = "";
+			var predicate;
             if (checkMapper) {
                 var mapper = this.model.fields;
                 bindTo = (mapper && mapper.text) ? mapper["text"] : "text";
             }
 			if (this._queryString) {
             if (this.model.multiColumnSettings.enable) {
-				var bindTo = [];
-				this._columnIndex = this.model.multiColumnSettings.stringFormat.match(/\{.+?\}/g).map(function (x) { return x.slice(1, -1) });
-				for(var i =0; i < this._columnIndex.length; i++) bindTo.push(this.model.multiColumnSettings.columns[this._columnIndex[i]].field);
-				_query.search( this._queryString , bindTo, this.model.filterType, !this.model.caseSensitiveSearch);
-			}
+				this._columnsIndex();
+				if (checkMapper) {
+				    var bindTo = [];
+				    for (var i = 0, length = this._columnIndex.length; i < length; i++) {
+				        bindTo.push(this.model.multiColumnSettings.columns[this._columnIndex[i]].field);
+				        predicate = this._predicateConvertion(predicate, this.model.multiColumnSettings.columns[this._columnIndex[i]].field, (this.model.multiColumnSettings.columns[this._columnIndex[i]].filterType ? this.model.multiColumnSettings.columns[this._columnIndex[i]].filterType : "startswith"), this._queryString, !this.model.caseSensitiveSearch, (this.model.multiColumnSettings.columns[this._columnIndex[i]].type ? this.model.multiColumnSettings.columns[this._columnIndex[i]].type : "string"));
+				    }
+				    _query.where(predicate);
+				}
+				else _query.where(bindTo, this.model.filterType, this._queryString, !this.model.caseSensitiveSearch);
+
+            }
+            
 			else _query.where(bindTo, this.model.filterType, this._queryString, !this.model.caseSensitiveSearch);
 			}
             this._addSortingQuery(_query, bindTo);
         },
 
+		_predicateConvertion: function( predicate, field, filterType, value, casing ,type){
+			var _query;
+			if(type == "number")
+				_query = Number(value);
+			else if(type == "boolean") {
+				if(value == "true" || value == "yes" || value =="1") _query = true;
+				else if(value == "false" || value == "no" || value =="0") _query = false;
+			}	
+			else if(type =="date")
+				_query = new Date(value);
+			else _query = value;
+			if( (type == "number" && isNaN(_query)) ||(type == "boolean" && _query == undefined ) )
+				predicate = predicate;
+			else 
+				predicate = predicate != undefined ? predicate["or"]( field, filterType, _query,casing):ej.Predicate( field, filterType, _query,casing);
+			return predicate;
+		}, 
+		
         _getQuery: function () {
             if (ej.isNullOrUndefined(this.model.query)) {
                 var column = [], queryManager = ej.Query(), mapper = this.model.fields;
@@ -1850,12 +1993,21 @@
         },
 
         _OnTextEnter: function (e) {
-            this._addLoadingClass();
-            this.element.attr("aria-expanded", false);
-            this._performSearch(e);
-			if(this.model.showResetIcon)this._showReset();		
-         },
-		
+            var proxy = this;
+			if( ej.isDevice() ) {
+            clearTimeout(this.timeDelay);
+            this.timeDelay = setTimeout(function () {
+                proxy._onTextProcess(e);
+            }, proxy.model.delaySuggestionTimeout);
+			}
+			else proxy._onTextProcess(e);
+        },
+		_onTextProcess: function (e) {
+			this._addLoadingClass();
+			this.element.attr("aria-expanded", false);
+			this._performSearch(e);
+			if (this.model.showResetIcon) this._showReset();
+		},
         _showReset: function () {
             if (ej.isNullOrUndefined(this.resetSpan)) {
                 this.resetSpan = ej.buildTag("span.e-icon e-iclose");
@@ -1877,7 +2029,7 @@
 		},
 		
 		_removeReset:function (){
-	        this.resetSpan.remove();		
+	        this.resetSpan = this.resetSpan && this.resetSpan[0].remove();		
             this._refreshPopup();			  
 		  },
 
@@ -1898,10 +2050,10 @@
 
         _removeRepeated: function () {
             var results = this.suggestionListItems;
-            if (!results || results.length == 0 || this._selectedItems.length == 0)
+            if (!results || results.length == 0 || this._selectedItems.length == 0 || ( this.suggestionListItems.length == 1 && this.suggestionListItems[0] == (this.element.val() + this._addNewTemplate)))
                 return false;
 			this._repeatRemove = false;
-            for (var i = 0; i < this._selectedItems.length; i++) {
+            for (var i = 0, length = this._selectedItems.length; i < length; i++) {
                 var index = results.indexOf(this._selectedItems[i]);
                 if (index != -1) this.suggestionListItems.splice(index, 1);
 				if( this.element.val() == this._selectedItems[i] )this._repeatRemove = true;
@@ -1943,8 +2095,8 @@
 				if ((e.which && e.which == 1) ||(e.button && e.button == 0)) {
                 this._addLoadingClass();
                 if (this.showSuggestionBox) {
-                    this._isOpened = false;
                     this._hideResult(e);
+                    this._isOpened = false;
                     this._removeLoadingClass();
                 }
                 else this._showFullList(e);
@@ -2008,20 +2160,12 @@
 		    var delimiterIndex;
 		    delimiterIndex = this._delimiterChar();
 		    if (!ej.isNullOrUndefined(values)){
-                for (var data = 0; data < values.length; data++) {
+                for (var data = 0, length = values.length; data < length; data++) {
                     var _val =values[data];
-                    if (ej.DataManager && this.model.dataSource instanceof ej.DataManager) {
-                        this._dataQuery = this.model.multiColumnSettings.enable ? this._getQuery() :this._getQuery().where(map[0], "equal", _val, false);
-                        this._promise = (this.model.dataSource).executeQuery(this._dataQuery);
-                        this._promise.done(function (e) {
-                            proxy._selectValueByKey(null);
-                            return false;
-                        }).fail(function (e) {
-                            return false;
-                        });
-                    }
+                    if (ej.DataManager && this.model.dataSource instanceof ej.DataManager)
+                        proxy._selectValueByKey(null);
                  else {
-                        this._dataQuery =this.model.multiColumnSettings.enable ? ej.Query(): ej.Query().where(map[0], "equal", _val, false);
+                        this._dataQuery =this.model.multiColumnSettings.enable ? ej.Query(): ej.Query().where(map[0], this.model.filterType, _val, false);
                         this._promise = ej.DataManager(this.model.dataSource).executeLocal(this._dataQuery);
                         if (!this.model.multiColumnSettings.enable) {
                             if (this._promise instanceof Array && (this._promise.length == 0))
@@ -2037,11 +2181,11 @@
 
 		_formatStringKey: function (values, map, delimiterIndex) {
 		    this._selectValueByKey(null);
-		    for (var data = 0; data < values.length; data++) {
+            for (var data = 0, valueLength = values.length; data < valueLength; data++) {
 		        if (values[data] != "") {
 		            var _val = values[data];
 		            var _isExistIndex
-		            for (var i = 0; i < this._promise.length; i++) {
+                    for (var i = 0, length = this._promise.length; i < length; i++) {
 		                if (_val == this._textFormateString(this._promise[i]))
 		                    _isExistIndex = i;
 		            }
@@ -2088,8 +2232,8 @@
 		},
 
         _valueChange: function (e) {
-            var currValue = this.model.multiSelectMode == "visualmode" ? this._modelValue : this.element.val() == "" ? null : this.element.val();
-            if (this.value() != currValue) {
+            var currValue = this.model.multiSelectMode == "visualmode" ? this._modelValue : this.element.val();
+            if (this.value() != currValue || (currValue == "" && this.element.val() != "")) {
                 this.value(currValue);
                 this._changeEvtTrigger(currValue, e);
             }
@@ -2112,9 +2256,19 @@
             if (this.model.multiSelectMode == "delimiter" && value) {
                 values = value.split(this.model.delimiterChar);
                 if ((ej.DataManager && this.model.dataSource instanceof ej.DataManager) || ((!ej.isNullOrUndefined(this.suggestionListItems)) && (typeof this.suggestionListItems[0] != "object"))) {
-                    for (var i = 0; i < values.length; i++) {
-                        if (values[i])
-                            this._selectedItems.push(values[i]);
+                    for (var i = 0, length = values.length; i < length; i++) {
+                        if (values[i]) {
+                            var _proxy = this;
+							var _objLen = this._selectedObj.length;
+							var result = {};
+							for (var j = 0; j< _objLen; j++ ){
+								if(this._selectedObj[j][_proxy.model.fields.text] == values[i]) {
+									result = this._selectedObj[j];
+									j = _objLen;
+								}
+							}
+							this._selectedItems.push(!$.isEmptyObject(result) ? result : values[i]);
+						}
                     }
                 }
                 else
@@ -2122,8 +2276,11 @@
             }
             else if (this.model.multiSelectMode == "none" && value) {
                 values.push(value);
-                if ((ej.DataManager && this.model.dataSource instanceof ej.DataManager) || ((!ej.isNullOrUndefined(this.suggestionListItems)) && (typeof this.suggestionListItems[0] != "object")))
-                    this._selectedItems.push(value);
+                if ((ej.DataManager && this.model.dataSource instanceof ej.DataManager) || ((!ej.isNullOrUndefined(this.suggestionListItems)) && (typeof this.suggestionListItems[0] != "object"))) {
+                    var _proxy = this;
+					var result = $.grep(this._selectedObj, function(e){ if(e[_proxy.model.fields.text] == value) return e; });
+					this._selectedItems.push(result.length > 0 ? result : value);
+				}
                 else
                     this._createBoxForObjectType(values);
             }
@@ -2235,6 +2392,12 @@
         /** Supports to animation type with fade only */
         Fade: "fade"
     };
+	ej.Type = {
+		Number: "number",
+		String: "string",
+		Boolean: "boolean",
+		Date: "date"
+	}
 })(jQuery, Syncfusion);;
 
 });

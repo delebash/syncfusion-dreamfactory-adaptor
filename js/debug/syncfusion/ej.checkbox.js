@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.checkbox.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -68,7 +68,7 @@
 
             size: "small",
 
-            checkState: null,
+            checkState: "uncheck",
 
             validationRules: null,
 
@@ -191,8 +191,8 @@
                         break;
                     case "enableTriState":
                         if (options[prop]) {
+                            this.model.enableTriState= options[prop];
                             this._indeterminateState = options[prop];
-                            this._setIndeterminate(this._indeterminateState);
                         }
                         break;
                     case "checkState":
@@ -269,6 +269,7 @@
             if (!ej.isNullOrUndefined(_value) && _value != "") this.model.value = _value;
             if (!this.checked() && !ej.isNullOrUndefined(this.element.attr('checked'))) this._isChecked = true;
             ej.isNullOrUndefined(this.model.name) && (this.model.name = this.model.id);
+            this.model.enabled = this.model.enabled && !this.element.attr("disabled");
         },
 
         _setSize: function (val) {
@@ -301,6 +302,8 @@
                 else if (this.model.checkState == "uncheck")
                     this._isChecked = false;
             }
+            else if (this.model.checkState == "indeterminate")
+                this.model.checkState = "uncheck";
         },
         _createElement: function (tagName, attrs) {
             var ele = document.createElement(tagName);
@@ -315,7 +318,10 @@
         _renderControl: function () {
             this._setCheckBoxState();
             this.maindiv = this._createElement("span", { "class": "e-chkbox-wrap e-widget " + this.model.cssClass, "role": "checkbox", tabindex: 0 });
-            this._isValid(this.model.id) && this.maindiv.setAttribute("id", this.model.idPrefix + this.model.id);
+            if (this._isValid(this.model.id)) {
+                this.maindiv.setAttribute("id", this.model.idPrefix + this.model.id);
+                this.element[0].setAttribute("id", this.model.id);
+            }
             this.innerdiv = document.createElement("div");
             this._setSize(this.model.size);
             this.span = document.createElement("span");
@@ -325,7 +331,7 @@
             this.element.addClass("e-input");
             this.model.name = ej.isNullOrUndefined(this.model.name) ? this.model.id : this.model.name;
             this.model.value = ej.isNullOrUndefined(this.model.value) ? true : this.model.value;
-            this._setAttributes(this.element[0], { "id": this.model.id, "name": this.model.name, "value": this.model.value });
+            this._setAttributes(this.element[0], { "name": this.model.name, "value": this.model.value });
             this._hiddenInput = this._createElement("input", { type: "checkbox", value: false, style: "display:none" });
             this._isValid(this.model.name) && this._hiddenInput.setAttribute("id", this.model.name + "_hidden");
 
@@ -336,6 +342,7 @@
                 this.spanImg.addClass("e-checkmark");
                 this.span.addClass("e-chk-act");
                 this.maindiv.setAttribute("aria-checked", true);
+                this.element.attr("checked", "checked")
             }
             else {
                 this.span.addClass("e-chk-inact");
@@ -428,7 +435,7 @@
         },
 
         _wireEvents: function () {
-            this._on(this.wrapper, (this._isDevice && $.isFunction($.fn.tap)) ? "tap" : "click", this._checkedHandler);
+            this._on(this.wrapper, "click", this._checkedHandler);
             if (this._isIE8) {
                 this._isValid(this.model.id) && this._on($("label[for=" + this.model.id + "]"), "click", function () { this.wrapper.click(); });
             }
@@ -447,11 +454,11 @@
         },
         _focusIn: function (evt) {
             $(this.wrapper).addClass("e-focus");
-            $(this.wrapper).bind("keydown", $.proxy(this._checkUnCheck, this));
+            $(this.wrapper).on("keydown", $.proxy(this._checkUnCheck, this));
         },
         _focusOut: function (evt) {
             $(this.wrapper).removeClass("e-focus");
-            $(this.wrapper).unbind("keydown", $.proxy(this._checkUnCheck, this));
+            $(this.wrapper).off("keydown", $.proxy(this._checkUnCheck, this));
         },
         _checkUnCheck: function (evt) {
             //Space bar to check and uncheck
@@ -516,7 +523,7 @@
             this.span.removeClass("e-chk-act e-chk-indeter").addClass("e-chk-inact");
             this.wrapper[0].setAttribute("aria-checked", false);
             this.spanImg.removeClass("e-checkmark e-stop");
-            this.wrapper.find('input[type=checkbox]').removeAttr('checked');
+            this.wrapper.find('input[type=checkbox]').prop('checked', false);
             this.model.checkState = "uncheck";
             this._hiddenInput.setAttribute("name", this.model.name);
         },
@@ -563,7 +570,7 @@
             if (this.wrapper.hasClass("e-disable")) {
                 this.wrapper.removeClass("e-disable");
                 this.wrapper[0].setAttribute("aria-disabled", false);
-                this.element[0].removeAttribute("disabled");
+                this.element.prop("disabled", false);
                 if (this._isIE8) this.span.removeClass("e-disable");
                 this._wireEvents();
                 this.model.enabled = true;

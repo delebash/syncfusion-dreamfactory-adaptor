@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.treeview.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -31,11 +31,15 @@
         model: null,
 
         validTags: ["ul", "div"],
-        _addToPersist: ["expandedNodes", "checkedNodes", "selectedNode"],
+        _addToPersist: ["expandedNodes", "checkedNodes", "selectedNodes"],
        
         _setFirst: false,
 
+        _requiresID: true,
+
         defaults: {
+
+            allowMultiSelection: false,
 
             showCheckbox: false,
 
@@ -115,6 +119,8 @@
 
             selectedNode: -1,
 
+            selectedNodes: [],
+
             width: null,
 
             height: null,
@@ -122,6 +128,8 @@
             autoCheck: true,
 
             enableMultipleExpand: true,
+
+            fullRowSelect: false,
 
             sortSettings: {
 
@@ -144,6 +152,8 @@
             beforeSelect: null,
 
             nodeSelect: null,
+
+            nodeUnselect: null,
 
             nodeCheck: null,
 
@@ -197,6 +207,8 @@
 
         dataTypes: {
 
+            allowMultiSelection: "boolean",
+
             cssClass: "string",
 
             showCheckbox: "boolean",
@@ -225,6 +237,8 @@
 
             enableMultipleExpand: "boolean",
 
+            fullRowSelect: "boolean",
+
             items: "data",
 
             fields: {
@@ -242,6 +256,8 @@
             checkedNodes: "array",
 
             selectedNode: "number",
+
+            selectedNodes: "array",
 
             htmlAttributes: "data",
 
@@ -261,6 +277,16 @@
         _setModel: function (options) {
             for (var key in options) {
                 switch (key) {
+                    case "allowMultiSelection":
+                        this.model.allowMultiSelection = options[key];
+                        if (!this.model.allowMultiSelection) {
+                            var sleNode = $(this._liList[this.model.selectedNodes[0]]);
+                            this._unselectAll();
+                            this._isRender = false;
+                            this._nodeSelectionAction(sleNode);
+                            this._isRender = true;
+                        }
+                        break;
                     case "cssClass": this._changeSkin(options[key]); break;
                     case "fields":
                         this._unWireEvents();
@@ -272,7 +298,11 @@
                             this._extendFields(this.model.fields, options[key]);
                         this.model.expandedNodes = [];
                         this.model.checkedNodes = [];
-                        this.model.selectedNode = -1;
+                        this.model.selectedNodes = [];
+                        this._persistValues(this.model.expandedNodes, "expandedNodes");
+                        this._persistValues(this.model.checkedNodes, "checkedNodes");
+                        this._persistValues(this.model.selectedNodes, "selectedNodes");
+                        this._newDataSource = this.dataSource();
                         (!ej.isNullOrUndefined(this.model.fields) && this.dataSource() != null) ? this._checkDataBinding() : this._initialize();
                         if (f) {
                             tempUl = this.element.children(".e-treeview-ul");
@@ -308,6 +338,7 @@
                             }
                         } else
                              (len == 0) && this._collapseAll();
+                        options[key] = this.model.expandedNodes;
                         break;
                     case "checkedNodes":
                         if (this.model.showCheckbox) {
@@ -319,10 +350,12 @@
                             } else
                                  (len == 0) && this._uncheckAll();
                         }
+                        options[key] = this.model.checkedNodes;
                         break;
                     case "expandOn":
-                        this._off(this.element, this.model.expandOn, this._expandEventHandler);
-                        this._on(this.element, options[key], this._expandEventHandler);
+                        this._off(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? this._touchExpandOn : this.model.expandOn, this._expandEventHandler);
+                        this._assignTouchExpandOn(options[key]);
+                        this._on(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? this._touchExpandOn : options[key], this._expandEventHandler);
                         break;
                     case "allowEditing":
                         this._preventEditable();
@@ -350,22 +383,35 @@
                         action = (this.model.enableRTL) ? "addClass" : "removeClass";
                         ele[action]("e-rtl");
                         break;
-                    case "height": this.element.height(options[key]); break;
-                    case "width": this.element.width(options[key]); break;
+                    case "height": this.element.is("ul") ? this.element.parent().height(options[key]) : this.element.height(options[key]); break;
+                    case "width": this.element.is("ul") ? this.element.parent().width(options[key]) : this.element.width(options[key]); break;
                     case "selectedNode":
-                        this.model.selectedNode = options[key];
-                        (this.model.selectedNode >= 0) ? this._nodeSelectionAction($(this._liList[this.model.selectedNode])) : this.unselectNode(this.element.find('.e-item > div > .e-active').closest('.e-item'));
+                    case "selectedNodes":
+                        this.model.selectedNodes = (key == "selectedNode") ? [options[key]] : options[key];
+                        this.element.find('a.e-text.e-active').removeClass('e-node-focus e-active').closest('li').attr("aria-selected", false);
+                        this._doSelectNodes(this.model.selectedNodes, false);
+                        if (key != "selectedNode") options[key] = this.model.selectedNodes;
                         break;
                     case "htmlAttributes": this._addAttr(options[key]); break;
-                    case "enableMultipleExpand": (!options[key]) && this.collapseAll(); break;
+                    case "enableMultipleExpand":
+                        (!options[key]) && this.collapseAll();
+                        this.model.enableMultipleExpand = options[key];
+                        break;
                     case "sortSettings":
                         $.extend(this.model.sortSettings, options[key]);
                         if (!ej.isNullOrUndefined(this.model.fields) && this.dataSource() != null) {
                             this.model.expandedNodes = [];
                             this.model.checkedNodes = [];
-                            this.model.selectedNode = -1;
+                            this.model.selectedNodes = [];
                             this._checkDataBinding();
                         }
+                        break;
+                    case "fullRowSelect":
+                        this._wholeRowEvents("_off");
+                        this.model.fullRowSelect = options[key];
+                        this.model.fullRowSelect ? this._addWholeRowWrap() : this._removeWholeRowWrap();
+                        this._doWholeRowAction();
+                        this._wholeRowEvents("_on");
                         break;
                 }
             }
@@ -389,10 +435,12 @@
 
         _init: function () {
             this._cloneElement = this.element.clone(), this._dataSource = [], this._fragment = [], this._templateType = "", this._indexID = 0, this._newDataSource = this.dataSource(), this._id = this.element.prop("id"), this._treeList = [], this._isTextbox = false;
+            this._isDevice = this._checkDevice();
+            this._assignTouchExpandOn(this.model.expandOn);
             if (this.model.enablePersistence) {
                 var cookieData = this._getCookies("_persistedValues");
                 if (!cookieData) {
-                    var obj = { selectedNode: "", expandedNodes: [], checkedNodes: [] };
+                    var obj = { selectedNodes: [], expandedNodes: [], checkedNodes: [] };
                     obj = this._updatePersistAttr(obj);
                     this._setCookies("_persistedValues", JSON.stringify(obj));
                 }
@@ -406,7 +454,8 @@
         },
 
         _initialize: function () {
-            this._cutNode = null, this._beforeEditText = null, this._CurrenctSelectedNodes = [];
+            this._cutNode = null, this._beforeEditText = null, this._CurrenctSelectedNodes = [], this._isLoaded = false;
+            this._renderMultiTouchDialog();
             if (this.element.is("ul")) {
                 this._createWrapper();
             }
@@ -425,13 +474,48 @@
                 this._addBaseClass();
                 this._controlRender();
             }
+            this._addWholeRowWrap();
             this._finalize();
-            this._enabledAction(this.model.enabled);
         },
 
         _completeRendering: function () {
-            if (this._treeList.length == 0) {
+            if (this._treeList.length == 0 && !this._isLoaded) {
+                this._finalizeNode();
+                this._enabledAction(this.model.enabled);
                 this._triggerEvent('ready', { element: this.element[0] });
+                this._isLoaded = true;
+            }
+        },
+
+        _addWholeRowWrap: function () {
+            if (this.model.fullRowSelect)
+                (this.element.is('UL')) ? this.element.parent('.e-treeview-wrap').addClass("e-fullrow-wrap") : this.element.addClass("e-fullrow-wrap");
+        },
+
+        _removeWholeRowWrap: function () {
+            (this.element.is('UL')) ? this.element.parent('.e-treeview-wrap').removeClass("e-fullrow-wrap") : this.element.removeClass("e-fullrow-wrap");
+        },
+
+        _doWholeRowAction: function () {
+            if (this.model.fullRowSelect) {
+                for (var i = 0, len = this._liList.length; i < len; i++) {
+                    var element = $(this._liList[i]);
+                    if (element[0] != null) {
+                        var txtEle = element.find("> .e-text-wrap");
+                        this._renderWholeRow(element, txtEle);
+                    }
+                }
+            }
+            else
+                this.element.find(".e-fullrow").remove();
+        },
+
+        _renderWholeRow: function (element, nestedEle) {
+            if (!element) return;
+            if (this.model.fullRowSelect) {
+                var absolutediv = document.createElement('div');
+                absolutediv.setAttribute('class', 'e-fullrow');
+                nestedEle ? $(absolutediv).insertAfter(nestedEle) : element[0].appendChild(absolutediv);
             }
         },
 
@@ -445,6 +529,51 @@
                 var tempField = mapper.child;
                 $.extend(mapper, value);
                 $.extend(mapper.child, tempField);
+            }
+        },
+
+        _checkDevice: function () {
+            return (ej.isDevice() && ej.isTouchDevice());
+        },
+
+        _assignTouchExpandOn: function (expandon) {
+            if (expandon == "dblclick")
+                this._touchExpandOn = "doubletap";
+            else if (expandon == "click")
+                this._touchExpandOn = "tap";
+            else
+                this._touchExpandOn = expandon;
+        },
+
+        _renderMultiTouchDialog: function () {
+            this._customPop = ej.buildTag("div.e-fe-popup", "", { display: "none" });
+            var $content = ej.buildTag("div.e-content"), $downTail = ej.buildTag("div.e-downtail e-tail");
+            if (this.model.allowMultiSelection) {
+                var $selElement = ej.buildTag("span.e-rowselect e-icon");
+                $content.append($selElement);
+            }
+            this._customPop.append($content);
+            this._customPop.append($downTail);
+            this.element.append(this._customPop);
+            this._on($content, (this._isDevice && $.isFunction($.fn.tap)) ? "touchstart" : "mousedown", this._popupClick);
+        },
+
+        _popupClick: function () {
+            var $selElement = this._customPop.find(".e-rowselect");
+            if ($selElement.hasClass("e-spanclicked")) {
+                this._hidePopup();
+            }
+            else {
+                this._isPopup = true;
+                $selElement.addClass("e-spanclicked");
+            }
+        },
+
+        _hidePopup: function () {
+            if (this._customPop != null && this._customPop.is(":visible")) {
+                this._customPop.find(".e-rowselect").removeClass("e-spanclicked");
+                this._customPop.hide();
+                this._isPopup = false;
             }
         },
 
@@ -483,6 +612,7 @@
                 var ele = (this.element.is('UL')) ? this.element.parent('.e-treeview-wrap') : this.element;
                 ele.removeClass(this.model.cssClass).addClass(skin);
                 ele.find('.e-item > div > .e-chkbox-wrap').removeClass(this.model.cssClass).addClass(skin);
+                this._waitingPopup && this._waitingPopup.option("cssClass", skin);
             }
         },
 
@@ -509,8 +639,10 @@
         },
 
         _initDataSource: function () {
-            this.element.ejWaitingPopup();
-            var waitingPopup = this.element.ejWaitingPopup("instance"), proxy = this, queryPromise, queryManager;
+            this.element.ejWaitingPopup({ cssClass: this.model.cssClass });
+            this._waitingPopup = this.element.ejWaitingPopup("instance");
+            this._waitingPopup.maindiv.addClass("e-tree-popup");
+            var proxy = this, queryPromise, queryManager;
             this.element.ejWaitingPopup("refresh");
             this.element.ejWaitingPopup("show");
             queryManager = this._columnToSelect(this.model.fields);
@@ -750,17 +882,16 @@
                     linkElement = liElement.lastChild;
                 if (linkElement) {
                     nText = (linkElement.lastChild != null) ? linkElement.lastChild.nodeValue : "";
-                    nodeText = linkElement.innerHTML;
+                    nodeText = $.trim(linkElement.innerHTML);
                     textElement = $(linkElement).clone()[0];
                     $(linkElement).remove();
                     textElement.className += " e-text CanSelect";
                     textElement.innerHTML = nodeText;
                     liElement.innerHTML = '';
-                    this._on($(textElement), "mouseenter", this._mouseEnterEvent)
-                        ._on($(textElement), "mouseleave", this._mouseLeaveEvent);
                 }
 
                 outerdiv = document.createElement('div');
+                outerdiv.setAttribute('class', 'e-text-wrap');
                 outerdiv.setAttribute('role', "presentation");
                 if (subItem) {
                     exCollpasediv = document.createElement('div');
@@ -769,8 +900,9 @@
                 }
                 (spanTag) && outerdiv.appendChild(spanTag);
                 outerdiv.appendChild(textElement);
-                ($(liElement).prop('name') == undefined) && $(liElement).prop('name', nText);
+                ($(liElement).prop('name') == undefined) && $(liElement).prop('name', $.trim(nText));
                 liElement.appendChild(outerdiv);
+                this._renderWholeRow($(liElement));
             }
         },
 
@@ -809,7 +941,7 @@
                         $(listEl.children('ul')[0]).remove();
                     linkElement = listEl.children('a')[0];
                     if (linkElement) {
-                        nodeText = $(linkElement).text();
+                        nodeText = $.trim($(linkElement).text());
                         textElement = $(linkElement).clone();
                         $(linkElement).remove();
                         customElement = listEl.clone();
@@ -818,7 +950,7 @@
                         listEl.html('');
                     }
                     else {
-                        nodeText = this._getText(listEl);
+                        nodeText = $.trim(this._getText(listEl));
                         customElement = listEl.clone();
                         listEl.html('');
                         textElement = ej.buildTag("a.e-text CanSelect", "", "", { alt: "" });
@@ -826,9 +958,10 @@
                         textElement[0].innerHTML += nodeText;
                     }
                     exCollpasediv = ej.buildTag('div', "", {}, { role: "presentation" });
-                    outerdiv = ej.buildTag('div', "", {}, { role: "presentation" });
+                    outerdiv = ej.buildTag('div.e-text-wrap', "", {}, { role: "presentation" });
                     $(outerdiv).append(exCollpasediv).append(textElement);
                     listEl.prepend(outerdiv);
+                    this._renderWholeRow(listEl);
                     if (subItems)
                         listEl.append(subItems);
                     (listEl.prop('name') == undefined) && listEl.prop('name', nodeText);
@@ -868,10 +1001,11 @@
                       .text();
         },
 
-        _expandNodes: function (indexColl) {
+        _expandNodes: function (indexColl, _isIdBase) {
             var len = indexColl.length, element = [], temp;
             for (var i = 0; i < len; i++) {
-                element = $(this._liList[indexColl[i]]);
+                element = _isIdBase ? this._getNodeByID(indexColl[i]) : $(this._liList[indexColl[i]]);
+                if (ej.isNullOrUndefined(element)) continue;
                 if (!this.model.enableMultipleExpand) {
                     var distinctEle = element.siblings().find(">div>.e-minus").closest(".e-item");
                     if (distinctEle.length > 0) continue;
@@ -894,10 +1028,14 @@
         },
 
         _finalize: function () {
+            if (this.model.showCheckbox)
+                this.element.find('.e-item > div .nodecheckbox').ejCheckBox({ cssClass: this.model.cssClass, change: this._checkedChange });
+            this.model.allowEditing && this._allowEditable();
+        },
+
+        _finalizeNode: function () {
             this._isRender = false;
             var thisElement = this.element, cookieData = this._getCookies("_persistedValues"), idColl = [], id = 0, element = [], expandList, parsedData, temp;
-            if (this.model.showCheckbox)
-                thisElement.find('.e-item > div .nodecheckbox').ejCheckBox({ cssClass: this.model.cssClass, change: this._checkedChange });
             if (!(this.model.expandedNodes instanceof Array && this.model.expandedNodes.length > 0)) {
                 expandList = thisElement.find("li.expanded"), len = expandList.length;
                 for (var i = 0; i < len; i++) {
@@ -936,7 +1074,7 @@
                     this._removeField(this._newDataSource, this.model.fields.isChecked);
                     for (var i = 0, len = idColl.length; i < len; i++) {
                         element = this.element.find('.e-item#' + idColl[i]);
-                        if (element[0] != null && !(this.dataSource() instanceof ej.DataManager))
+                        if (element[0] != null)
                             this._nodeCheck(element.find("> div > .e-chkbox-wrap > .nodecheckbox:first")[0]);
                     }
                 } else {
@@ -946,28 +1084,63 @@
             }
             if (!(this.model.checkedNodes instanceof Array && this.model.checkedNodes.length > 0))
                 this.model.showCheckbox && this._isCheckedAction();
-            element = [];
-            (cookieData) && (id = parsedData.selectedNode);
-            if (id && !ej.isNullOrUndefined(this.model.fields) && this.dataSource() != null)
-                element = this.element.find('.e-item#' + id);
-            (element[0] != null) ? this._nodeSelectionAction(element) : (this.model.selectedNode >= 0) ? this._nodeSelectionAction($(this._liList[this.model.selectedNode])) : (this.model.selectedNode != null) && this._isSelectedAction();
+            var _isIdBase = false;
+            if (cookieData) {
+                parsedData = JSON.parse(cookieData), idColl = parsedData.selectedNodes;
+                _isIdBase = true;
+            }
+            if (!cookieData || (idColl && idColl.length == 0)) {
+                idColl = this.model.selectedNodes.length > 0 ? this.model.selectedNodes : (this.model.selectedNode == -1 ? [] : [this.model.selectedNode]);
+                _isIdBase = false;
+            }
+            var data = { ctrlKey: true };
+            if (idColl && idColl.length > 0)
+                this._doSelectNodes(idColl, _isIdBase);
+            else
+                this._isSelectedAction(data);
             this._isRender = true;
-            this.model.allowEditing && this._allowEditable();
             thisElement.find('.e-item.checked, .e-item.expanded, .e-item.selected').removeClass("checked expanded selected");
+        },
+
+        _doSelectNodes: function (idColl, _isIdBase) {
+            var data = { ctrlKey: true };
+            for (var i = 0, len = idColl.length; i < len; i++) {
+                var element = _isIdBase ? this._getNodeByID(idColl[i]) : $(this._liList[idColl[i]]);
+                if (element[0] != null)
+                    this._nodeSelectionAction(element, data);
+                if (!this.model.allowMultiSelection) break;
+            }
+        },
+
+        _doUnselectNodes: function (idColl) {
+            for (var i = 0, len = idColl.length; i < len; i++) {
+                var element = this._getNodeByID(idColl[i]);
+                if (element[0] != null)
+                    this._nodeUnSelectionAction(element);
+                if (!this.model.allowMultiSelection) break;
+            }
         },
 
         _updateSelectedNode: function () {
             var node = $(this._liList).find('.e-text.e-active').closest('.e-item'), element = [];
-            this.model.selectedNode = (node[0] != null && node.length > 0) ? $(this._liList).index(node) : null;
-            if (this.model.selectedNode >= 0) {
-                element = $(this._liList[this.model.selectedNode]);
-                if (element[0] != null) {
-                    this._isRender = false;
-                    this.selectNode(element);
-                    this._isRender = true;
-                }
+            this.model.selectedNodes = [];
+            if (!this.model.allowMultiSelection) this.model.selectedNode = null;
+            if (node[0] == undefined || node.length <= 0) {
+                this._persistValues(this.model.selectedNodes, "selectedNodes");
+                return;
             }
-            this._persistValues([this.model.selectedNode], "selectedNode");
+            if (!this.model.allowMultiSelection) {
+                this._isRender = false;
+                this._nodeSelectionAction($(node[0]));
+                this._isRender = true;
+            }
+            else {
+                for (var i = 0, len = node.length; i < len; i++) {
+                    var index = $(this._liList).index(node[i]);
+                    this.model.selectedNodes.push(index);
+                }
+                this._persistValues(this.model.selectedNodes, "selectedNodes");
+            }
         },
 
         _setCookies: function (name, value) {
@@ -1018,10 +1191,26 @@
             this.element.find('.e-item.checked, .e-item.unchecked').removeClass("checked unchecked");
         },
 
-        _isSelectedAction: function () {
-            var snode = this.element.find('.e-item.selected:last');
-            if (snode[0] != null)
-                this._nodeSelectionAction(snode);
+        _isExpandedAction: function (event) {
+            var expandList = this.element.find("li.expanded"), len = expandList.length;
+            for (var i = 0; i < len; i++) {
+                var expandEle = $(expandList[i]);
+                if (!this.model.enableMultipleExpand) {
+                    var distinctEle = expandEle.siblings().find(" > div > .e-minus").closest(".e-item");
+                    if (distinctEle.length > 0) continue;
+                }
+                this._expandNode(expandEle);
+            }
+            this.element.find('.e-item.expanded').removeClass("expanded");
+        },
+
+        _isSelectedAction: function (event) {
+            var snode = this.element.find('.e-item.selected');
+            for (var i = 0, len = snode.length; i < len; i++) {
+                if (snode[i] != null)
+                    this._nodeSelectionAction($(snode[i]), event);
+                if (!this.model.allowMultiSelection) break;
+            }
             this.element.find('.e-item.selected').removeClass("selected");
         },
 
@@ -1034,10 +1223,12 @@
 
         _ClickEventHandler: function (event) {
             var proxy = this, parentLi, element = $(event.target), divTag = element.closest('.e-item').find("> div > div:first");
+            this._isPopup = false;
             if (divTag && !divTag.hasClass("e-process")) {
                 parentLi = element.closest('.e-item');
                 if (!parentLi.hasClass('e-node-disable')) {
-                    this._triggerEvent('nodeClick', { event: event, currentElement: element[0] });
+                    var _id = (parentLi[0] != null) ? parentLi[0].getAttribute('id') : "";
+                    this._triggerEvent('nodeClick', { event: event, currentElement: element[0], id: _id, parentId: parentLi.closest('ul').closest('.e-item').attr('id') });
                     if (!ej.isNullOrUndefined(element) && element.is('DIV')) {
                         if (element.hasClass('e-plus') || element.hasClass('e-minus')) {
                             var expandUl = null, args, nodeDetails, isChildLoaded;
@@ -1059,10 +1250,27 @@
                             else
                                 (element.hasClass('e-plus')) ? this._expandNode(parentLi) : this._collpaseNode(parentLi);
                         }
+                        else if (this.model.fullRowSelect && (element.hasClass("e-fullrow") || element.hasClass("e-text-wrap"))) {
+                            element = element.closest('.e-item').find("> .e-text-wrap .e-text");
+                        }
                     }
-                    (!element.is('A') && !element.hasClass('input-text')) && (element = element.parent());
-                    if (!ej.isNullOrUndefined(element) && element.is('A'))
-                        element.hasClass('CanSelect') && !element.hasClass('e-active') && this._nodeSelectionAction(element.closest('.e-item'));
+                    (!element.is('A') && !element.hasClass('input-text')) && (element = element.closest('.e-text'));
+                    if (!ej.isNullOrUndefined(element) && element.is('A') && element.hasClass('CanSelect')) {
+                        if (event && event["pointerType"] == "touch" && this._customPop != null && this.model.allowMultiSelection) {
+                            var $target = $(event.target);
+                            if (!this._customPop.is(":visible"))
+                                this._customPop.show();
+                            if (this._customPop.is(":visible") && !this._customPop.find(".e-rowselect").hasClass("e-spanclicked")) {
+                                var offset = $target.offset();
+                                this._customPop.offset({ left: offset.left, top: offset.top - 40 });
+                            }
+                            else
+                                event.ctrlKey = true;
+                        }
+                        else
+                            this._hidePopup();
+                        element.hasClass('e-active') ? (this.model.allowMultiSelection && this._nodeUnSelectionAction(element.closest('.e-item'), event)) : this._nodeSelectionAction(element.closest('.e-item'), event);
+                    }
                 }
             }
         },
@@ -1079,8 +1287,11 @@
                 mapper = this._getChildTables(proxy.model.fields, parent, 1);
                 if (ej.isNullOrUndefined(mapper) && ej.isNullOrUndefined(this.model.fields["child"]))
                     mapper = this.model.fields;
+                if (!mapper) {
+                    $(args.targetElement).hasClass('e-load') && $(args.targetElement).removeClass(($(args.targetElement).hasClass('e-plus') || $(args.targetElement).hasClass('e-minus')) ? 'e-load' : 'e-icon e-load');
+                    return;
+                }
                 (mapper.query && mapper.query.queries.length > 0) && (mapper.query.queries = []);
-                if (!mapper) return;
                 queryPromise = this._executeDataQuery(mapper, mapper["parentId"], (this._typeOfFieldId == "number" ? parseInt(args.currentElement[0].id) : args.currentElement[0].id));
                 queryPromise.done(function (e) {
                     childItems = (e.xhr && e.xhr.responseJSON && e.xhr.responseJSON.d) ? e.xhr.responseJSON.d : (e.result ? e.result : []);
@@ -1136,16 +1347,23 @@
                     _childItems.not(".unchecked").addClass('checked');
                 else if (_uncheckedItems.length == _childItems.length && this.isNodeChecked(element))
                     this._nodeUncheck(element.find("> div > .e-chkbox-wrap > .nodecheckbox:first")[0]);
-                this._isCheckedAction();
-                this._updateCheckedNodes();
+                if (this._isLoaded) {
+                    this._isCheckedAction();
+                    this._updateCheckedNodes();
+                }
             }
             this._isRender = true;
             this._addDragableClass();
             this._preventEditable();
             this.model.allowEditing && this._allowEditable();
-            this._isSelectedAction();
-            this._updateSelectedNode();
-            this._updateExpandedNodes();
+            if (this._isLoaded) {
+                this._isSelectedAction();
+                this._updateSelectedNode();
+                this._allowOnDemand = true;
+                this._isExpandedAction();
+                this._updateExpandedNodes();
+                this._allowOnDemand = false;
+            }
             if (this.model.loadOnDemand && this.model.enablePersistence && !(this.dataSource() instanceof ej.DataManager)) {
                 var obj, value = this._getCookies("_childNodes");
                 if (value) obj = JSON.parse(value);
@@ -1187,27 +1405,98 @@
             return path;
         },
 
-        _nodeSelectionAction: function (liElement) {
+        _nodeSelectionAction: function (liElement, event) {
             if (liElement[0] == null && liElement.length == 0) return;
-            if(liElement.find('> div > .text.e-active').length > 0) return;
-            var nodeDetails, data;
+            var nodeDetails, data, angElement = $(liElement.find('> div > .e-text')[0]), _isSelected = false, _oldSelectedNodes = this.model.selectedNodes.slice();
+            var index = this._liList.index(liElement[0]);
+            this._currNode = liElement;
             if (this._triggerEvent('beforeSelect', { target: liElement, nodeDetails: this._getNodeDetails(liElement) })) return;
-            this.element.find('a.e-text.e-active').removeClass('e-node-focus e-active').closest('li')
-                        .find('[aria-selected=true]').attr("aria-selected", false);
-            this.element.find('a.e-text.e-node-focus').removeClass('e-node-focus');
-            liElement.attr("aria-selected", true);
-            $(liElement.find('> div > .e-text')[0]).addClass('e-active').attr("id", this._id + "_active");
-            this.model.selectedNode = this._liList.index(liElement[0]);
-            nodeDetails = this._getNodeDetails(liElement);
-            data = { currentElement: liElement, value: nodeDetails.text, id: nodeDetails.id, parentId: nodeDetails.parentId };
+            if (!this.model.allowMultiSelection || !event || (event && !event.ctrlKey)) {
+                this.element.find('a.e-text.e-active').removeClass('e-node-focus e-active');
+                this.element.find('[aria-selected=true]').attr("aria-selected", false);
+                this.element.find('.e-li-active').removeClass('e-li-active');
+                if (this.model.fullRowSelect) {
+                    this.element.find('.e-li-focus').removeClass('e-li-focus');
+                    this.element.find('.e-node-focus').removeClass('e-node-focus');
+                }
+                this.element.find("#" + this._id + "_active").removeAttr("id");
+                this.model.selectedNodes = [];
+            }
+            if (this.model.allowMultiSelection && event && event.shiftKey) {
+                if (!this._startNode)
+                    this._startNode = this._currNode;
+                var nodes = this.getVisibleNodes();
+                var startIndex = nodes.index(this._startNode);
+                var endIndex = nodes.index(liElement[0]);
+                if (startIndex > endIndex) {
+                    var temp = startIndex;
+                    startIndex = endIndex;
+                    endIndex = temp;
+                }
+                for (var i = startIndex ; i <= endIndex; i++) {
+                    var _currLi = $(nodes.get(i));
+                    var _currIndex = this._liList.index(_currLi[0]);
+                    if ($.inArray(_currIndex, this.model.selectedNodes) == -1) {
+                        this.model.selectedNodes.push(_currIndex);
+                        var _currAng = _currLi.find('> div > a.e-text');
+                        _currAng.removeClass('e-node-focus');
+                        _currLi.attr("aria-selected", true);
+                        _currLi.addClass('e-li-active');
+                        _currAng.addClass('e-active');
+                        _isSelected = true;
+                    }
+                }
+            }
+            else
+                this._startNode = liElement;
+            if (!this.model.allowMultiSelection) this.model.selectedNode = index;
+            if (!_isSelected) {
+                this.element.find('a.e-text.e-node-focus').removeClass('e-node-focus');
+                liElement.attr("aria-selected", true);
+                liElement.addClass('e-li-active');
+                angElement.addClass('e-active');
+                if (!this.model.allowMultiSelection) angElement.attr("id", this._id + "_active");
+                if ($.inArray(index, this.model.selectedNodes) == -1)
+                    this.model.selectedNodes.push(index);
+            }
             if (this.model.enablePersistence)
-                this._persistValues([this.model.selectedNode], "selectedNode");
-            this._triggerEvent('nodeSelect', data);
+                this._persistValues(this.model.selectedNodes, "selectedNodes");
+            this._triggerGivenEvent('nodeSelect', liElement);
         },
 
-        _nodeUnSelectionAction: function (liElement) {
+        _nodeUnSelectionAction: function (liElement, event) {
+            if (this.model.allowMultiSelection && event && !event.ctrlKey) {
+                this._nodeSelectionAction(liElement, event);
+                return;
+            }
+            liElement.removeClass('e-li-active');
             liElement.attr("aria-selected", false).find('> div > .e-text').removeClass('e-active').attr("id", "");
-            this.model.selectedNode = null;
+            this._updateUnselectModel(liElement[0]);
+            this._triggerGivenEvent('nodeUnselect', liElement);
+        },
+
+        _updateUnselectModel: function (liElement) {
+            var index = this._liList.index(liElement), _nodes = this.model.selectedNodes;
+            if (!this.model.allowMultiSelection) this.model.selectedNode = null;
+            var arrIndex = $.inArray(index, _nodes);
+            if (arrIndex > -1) {
+                this.model.selectedNodes.splice(arrIndex, 1);
+            }
+            this._persistValues(this.model.selectedNodes, "selectedNodes");
+        },
+
+        _triggerGivenEvent: function (event, element) {
+            if (this._isRender) {
+                var data = { currentElement: element, value: element.find('> div > a.e-text').eq(0).text(), id: element[0].getAttribute('id'), parentId: element.closest('ul').closest('.e-item').attr('id'), selectedNodes: this.model.selectedNodes };
+                this._triggerEvent(event, data);
+            }
+        },
+
+        _getNodesIndex: function (cnodes) {
+            var cindex = [];
+            for (var i = 0, len = cnodes.length; i < len; i++)
+                cindex.push(this._liList.index(cnodes[i]));
+            return cindex;
         },
 
         _nodeEnableAction: function (liElement) {
@@ -1225,15 +1514,15 @@
             this._collpaseNode(liElement);
             if (this.model.showCheckbox)
                 liElement.find('div > .e-chkbox-wrap > .nodecheckbox').ejCheckBox('disable').prop('disabled', true);
+            var snodes = liElement.find(".e-text.e-active").closest(".e-item");
             liElement.find('.e-text').addClass('e-node-disable')
                      .removeClass('e-active')
                      .attr("id", "")
                      .closest('.e-item')
                      .addClass('e-node-disable')
                      .prop('disabled', true);
-            var snode = this._liList[this.model.selectedNode];
-            if ($(this._liList).index(liElement) == this.model.selectedNode || liElement.find(snode)[0] != null)
-                this.model.selectedNode = null;
+            for (var i = 0, len = snodes.length; i < len; i++)
+                this._updateUnselectModel(snodes[i]);
         },
 
         _getNodeDetails: function (liElement) {
@@ -1281,10 +1570,7 @@
                         this._addExpandedNodes(this._liList.index(parentLi));
                         $(element).removeClass('e-icon e-plus').addClass('e-icon e-minus');
                         parentLi.addClass('e-collapse');
-                        expandUl.animate({ height: 'toggle' }, this.model.enableAnimation ? 350 : 0, 'linear', function () {
-                            element.removeClass("e-process");
-                            proxy._triggerEvent('nodeExpand', data);
-                        });
+                        this._doAnimation(expandUl, element, "nodeExpand", data, 350);
                     }
                     else {
                         parentLi.attr("aria-expanded", false);
@@ -1293,13 +1579,28 @@
                         this._removeExpandedNodes(this._liList.index(data.currentElement));
                         $(element).removeClass('e-icon e-minus').addClass('e-icon e-plus');
                         parentLi.removeClass('e-collapse');
-                        expandUl.animate({ height: 'toggle' }, this.model.enableAnimation ? 200 : 0, 'linear', function () {
-                            element.removeClass("e-process");
-                            proxy._triggerEvent('nodeCollapse', data);
-                        });
+                        this._doAnimation(expandUl, element, "nodeCollapse", data, 200);
                     }
                 }
             }
+        },
+
+        _doAnimation: function (expandUl, element, event, data, animationSpeed) {
+            var proxy = this;
+            if (this.model.enableAnimation) {
+                expandUl.animate({ height: 'toggle' }, animationSpeed, 'linear', function () {
+                    proxy._doAnimateAction(element, event, data);
+                });
+            }
+            else {
+                expandUl.css("display", animationSpeed == 200 ? "none" : "block");
+                this._doAnimateAction(element, event, data);
+            }
+        },
+
+        _doAnimateAction: function (element, event, data) {
+            element.removeClass("e-process");
+            this._triggerEvent(event, data);
         },
 
         _isChecked: function (liElement) {
@@ -1308,7 +1609,7 @@
 
         _doRecursiveCheck: function (parentLi, checkedArray) {
             var chkWrapper, chkEle, liElement, textvalue, parentLi, childUl;
-            childUl = parentLi.children[1];
+            childUl = this._getChildUl(parentLi);
             chkWrapper = (childUl) ? childUl.querySelectorAll('.e-chkbox-wrap[aria-checked="true"]').length : 0;
             var allChkEle = (childUl) ? childUl.querySelectorAll('.e-item > div > .e-chkbox-wrap > .nodecheckbox') : [];
             chkEle = parentLi.firstChild.querySelector('.nodecheckbox');
@@ -1346,7 +1647,7 @@
                 this._addCheckNodes(this._liList.index(currentLi));
                 if (this.model.autoCheck) {
                     var allChkEle, liElement, childUl;
-                    childUl = currentLi.children[1];
+                    childUl = this._getChildUl(currentLi);
                     allChkEle = (childUl) ? childUl.querySelectorAll('.e-item > div > .e-chkbox-wrap > .nodecheckbox') : [];
                     for (var i = 0, chklen = allChkEle.length; i < chklen; i++) {
                         $(allChkEle[i]).ejCheckBox({ checked: true, enableTriState: false })[0].className += " checked";
@@ -1381,7 +1682,7 @@
 
         _doRecursiveUncheck: function (parentLi, uncheckedArray) {
             var chkWrapper, chkEle, liElement, textvalue, parentLi, childUl;
-            childUl = parentLi.children[1];
+            childUl = this._getChildUl(parentLi);
             chkWrapper = (childUl) ? childUl.querySelectorAll('.e-chkbox-wrap[aria-checked="true"]').length : 0;
             var allChkEle = (childUl) ? childUl.querySelectorAll('.e-item > div > .e-chkbox-wrap > .nodecheckbox') : [];
             chkEle = parentLi.firstChild.querySelector('.nodecheckbox');
@@ -1427,7 +1728,7 @@
                 this._uncheckedArray.push({ id: currentLi.id, text: textvalue });
                 this._updateField(this._newDataSource, currentLi.id, this.model.fields.isChecked, false);
                 if (this.model.autoCheck) {
-                    childUl = currentLi.children[1];
+                    childUl = this._getChildUl(currentLi);
                     var allChkEle = (childUl) ? childUl.querySelectorAll('.e-item > div > .e-chkbox-wrap > .nodecheckbox') : [];
                     for (var i = 0, chklen = allChkEle.length; i < chklen; i++) {
                         $(allChkEle[i]).ejCheckBox({ enableTriState: false, checked: false });
@@ -1462,7 +1763,7 @@
             return queryPromise;
         },
 
-        _createChildNodesWhenExpand: function (parentLi) {
+        _createChildNodesWhenExpand: function (parentLi, expandChild, level, excludeHiddenNodes, outerLi, thisObj) {
             var nodeid, nodeText, args, element;
             if (parentLi.length > 0 && parentLi.find('ul .e-item').length == 0) {
                 nodeid = parentLi.attr('id');
@@ -1479,43 +1780,52 @@
                     mapper = this._getChildTables(this.model.fields, parent, 1);
                     if (ej.isNullOrUndefined(mapper) && ej.isNullOrUndefined(this.model.fields["child"]))
                         mapper = this.model.fields;
+                    if (!mapper) {
+                        $(args.targetElement).hasClass('e-load') && $(args.targetElement).removeClass(($(args.targetElement).hasClass('e-plus') || $(args.targetElement).hasClass('e-minus')) ? 'e-load' : 'e-icon e-load');
+                        return;
+                    }
                     (mapper.query && mapper.query.queries.length > 0) && (mapper.query.queries = []);
-                    if (!mapper) return;
                     this._treeList.push("false");
                     queryPromise = this._executeDataQuery(mapper, mapper["parentId"], (this._typeOfFieldId == "number" ? parseInt(args.currentElement[0].id) : args.currentElement[0].id));
                     queryPromise.done(function (e) {
                         proxy._treeList.pop();
                         childItems = (e.xhr && e.xhr.responseJSON && e.xhr.responseJSON.d) ? e.xhr.responseJSON.d : (e.result ? e.result : []);
                         childItems = proxy._getSortAndFilterList(mapper, childItems);
-                        if (!ej.isNullOrUndefined(childItems) && childItems.length > 0) {
-                            proxy._checkboxChecked = parentLi.find('> div > .e-chkbox-wrap > .nodecheckbox').hasClass('checked');
-                            proxy._loadOnDemandNodes = true;
-                            if (parentLi.find('ul .e-item').length == 0) {
-                                proxy._templateNodeCreation(childItems, mapper);
-                                parentLi.append(proxy._fragment);
-                            }
-                            proxy._finalizeLoadOnDemand(parentLi);
-                            proxy._expandNode(parentLi);
-                            if (proxy._treeList.length == 0) {
-                                proxy._completeRendering();
-                            }
+                        proxy._appendChild(childItems, parentLi, mapper, expandChild, level, excludeHiddenNodes);
+                        level && proxy._expandByLevel(parentLi.find('> ul'), level - 1, excludeHiddenNodes);
+                        if (proxy._treeList.length == 0) {
+                            outerLi && proxy._doAfterExpand(parentLi, outerLi, thisObj);
+                            proxy._completeRendering();
                         }
                     });
                 }
                 else {
                     var childItems = this._getChildNodes(this._dataSource, { id: parentLi[0].id });
-                    if (!ej.isNullOrUndefined(childItems) && childItems.length > 0) {
-                        this._checkboxChecked = parentLi.find('> div > .e-chkbox-wrap > .nodecheckbox').hasClass('checked');
-                        this._loadOnDemandNodes = true;
-                        this._templateNodeCreation(childItems, this.model.fields);
-                        parentLi.append(this._fragment);
-                        this._finalizeLoadOnDemand(parentLi);
-                        this._expandNode(parentLi);
-                    }
+                    this._appendChild(childItems, parentLi, this.model.fields, expandChild, level, excludeHiddenNodes);
                 }
             }
             else
                 this._expandNode(parentLi);
+        },
+
+        _appendChild: function (childItems, parentLi, mapper, expandChild, level, excludeHiddenNodes) {
+            if (!ej.isNullOrUndefined(childItems) && childItems.length > 0) {
+                this._checkboxChecked = parentLi.find('> div > .e-chkbox-wrap > .nodecheckbox').hasClass('checked');
+                this._loadOnDemandNodes = true;
+                if (parentLi.find('ul .e-item').length == 0) {
+                    this._templateNodeCreation(childItems, mapper);
+                    parentLi.append(this._fragment);
+                }
+                this._finalizeLoadOnDemand(parentLi);
+                this._expandNode(parentLi);
+                if (expandChild && !level && !excludeHiddenNodes) {
+                    var _items = parentLi.find(".e-item > div > .e-plus").closest(".e-item");
+                    for (var i = 0, len = _items.length; i < len; i++)
+                        this._createChildNodesWhenExpand($(_items[i]), true, null, excludeHiddenNodes);
+                }
+            }
+            else if (expandChild)
+                parentLi.find("> div > .e-plus").removeClass('e-plus e-icon');
         },
 
         _getSortAndFilterList: function (mapper, list) {
@@ -1571,26 +1881,54 @@
             }
         },
 
-        _expandAll: function () {
-            var element = this.element, i, liCollection;
-            if (this.model.loadOnDemand) {
-                liCollection = $(element).find(".e-item");
-                for (i = 0, len = liCollection.length; i < len; i++)
-                    this._createChildNodesWhenExpand($(liCollection[i]));
-            }
-            else {
-                cnodes = element.find('.e-item > div > .e-plus').closest('.e-item');
-                if (element.find('ul:hidden').length == cnodes.length) {
-                    for (i = 0, len = cnodes.length; i < len; i++)
-                        this._expandNode($(cnodes[i]));
-                }
+        _getElement: function (level) {
+            return (!this.element.is('UL')) ? this.element.find('> ul') : this.element;
+        },
+
+        _getImmediateChild: function (ele, excludeHiddenNodes) {
+            return excludeHiddenNodes ? ele.find('> .e-item:not(:hidden)') : ele.find('> .e-item');
+        },
+
+        _expandByLevel: function (ele, level, excludeHiddenNodes) {
+            (level > 0) && this._expandByNode(this._getImmediateChild(ele, excludeHiddenNodes), level, excludeHiddenNodes);
+        },
+
+        _expandByNode: function (cnodes, level, excludeHiddenNodes) {
+            for (var i = 0, len = cnodes.length; i < len; i++) {
+                if ($(cnodes[i]).find("> div > div").hasClass("e-plus"))
+                    this.model.loadOnDemand ? this._createChildNodesWhenExpand($(cnodes[i]), true, level, excludeHiddenNodes) : this._expandNode($(cnodes[i]));
+                this._expandByLevel($(cnodes[i]).find('> ul'), level - 1, excludeHiddenNodes);
             }
         },
 
-        _collapseAll: function () {
-            var element = this.element, i, liCollection;
-            liCollection = element.find('.e-item > ul:not(:hidden)').closest('.e-item');
-            enodes = liCollection.find('> div > .e-minus').closest('.e-item');
+        _expandAll: function (excludeHiddenNodes) {
+            var element = this.element, i, cnodes;
+            cnodes = element.find(excludeHiddenNodes ? '.e-item > div > .e-plus:not(:hidden)' : '.e-item > div > .e-plus').closest('.e-item');
+            if (this.model.loadOnDemand) {
+                for (i = 0, len = cnodes.length; i < len; i++)
+                    this._createChildNodesWhenExpand($(cnodes[i]), true, null, excludeHiddenNodes);
+            }
+            else {
+                for (i = 0, len = cnodes.length; i < len; i++)
+                    this._expandNode($(cnodes[i]));
+            }
+        },
+
+        _collapseByLevel: function (ele, level, excludeHiddenNodes) {
+            (level > 0) && this._collapseByNode(this._getImmediateChild(ele, excludeHiddenNodes), level, excludeHiddenNodes);
+        },
+
+        _collapseByNode: function (cnodes, level, excludeHiddenNodes) {
+            for (var i = 0, len = cnodes.length; i < len; i++) {
+                if ($(cnodes[i]).find("> div > div").hasClass("e-minus"))
+                    this._collpaseNode($(cnodes[i]));
+                this._collapseByLevel($(cnodes[i]).find('> ul'), level - 1, excludeHiddenNodes);
+            }
+        },
+
+        _collapseAll: function (excludeHiddenNodes) {
+            var element = this.element, i, enodes;
+            enodes = element.find(excludeHiddenNodes ? '.e-item > div > .e-minus:not(:hidden)' : '.e-item > div > .e-minus').closest('.e-item');
             if (enodes.length > 0) {
                 for (i = 0, len = enodes.length; i < len; i++) {
                     this._collpaseNode($(enodes[i]));
@@ -1618,6 +1956,26 @@
                 $(chkColl[i]).ejCheckBox("setModel", { checked: false });
             this.model.checkedNodes = [];
             this.model.checkedNodes.push(-1);
+        },
+
+        _selectAll: function () {
+            this._isRender = false;
+            var data = { ctrlKey: true };
+            for (var i = 0, len = this._liList.length; i < len; i++) {
+                var element = $(this._liList[i]);
+                if (element[0] != null)
+                    this._nodeSelectionAction(element, data);
+                if (!this.model.allowMultiSelection) break;
+            }
+            this._isRender = true;
+        },
+
+        _unselectAll: function () {
+            this.element.find('a.e-text.e-active').removeClass('e-node-focus e-active').closest('li')
+                            .find('[aria-selected=true]').attr("aria-selected", false);
+            this.model.selectedNodes = [];
+            if (this.model.enablePersistence)
+                this._persistValues(this.model.selectedNodes, "selectedNodes");
         },
 
         _isNodeExpanded: function (liElement) {
@@ -1672,7 +2030,7 @@
                     $(_clonedElement).find('>.e-dropedStatus').css({ "display": "table-cell" });
                     
                     data = { draggedElement: $(args.element).closest(".e-item"), draggedElementData: proxy._getNodeDetails($(args.element).closest(".e-item")), dragTarget: target, target: trgtEle, targetElementData: proxy._getNodeDetails(trgtEle), event: args.event };
-                    if (($(args.element).parent().parent().has($(target)).length == 0) && ($(target).hasClass('e-droppable') || $(target).parent().hasClass('e-droppable')) && $(target).hasClass('e-dropchild') && !$(target).hasClass('e-node-disable') &&
+                    if (($(args.element).parent().parent().has($(target)).length == 0 || (proxy.model.allowMultiSelection && proxy.model.selectedNodes.length > 1)) && ($(target).hasClass('e-droppable') || $(target).parent().hasClass('e-droppable')) && $(target).hasClass('e-dropchild') && !$(target).hasClass('e-node-disable') &&
                        (proxy.model.allowDragAndDropAcrossControl || (!proxy.model.allowDragAndDropAcrossControl && $(target).parents('.e-treeview').is(proxy.element)))) {
                         document.body.style.cursor = '';
                         $(_clonedElement).find('span.e-dropedStatus').removeClass().addClass("e-dropedStatus e-icon e-plus");
@@ -1687,7 +2045,7 @@
                         $(target).removeClass('showline-hover');
                         $(target).removeClass('noline-hover');
                     }
-                    if (target.nodeName != 'A' && $(args.element).parent().parent().has($(target)).length == 0 && $(args.element).parent().parent()[0] != $(target)[0]) {
+                    if (target.nodeName != 'A' && ($(args.element).parent().parent().has($(target)).length == 0 || (proxy.model.allowMultiSelection && proxy.model.selectedNodes.length > 1)) && $(args.element).parent().parent()[0] != $(target)[0]) {
                         if (target.nodeName == 'UL' && $(target).children()[0] != null)
                         { target = $(target).children()[0]; pre = true; }
                         if (target.nodeName != 'LI')
@@ -1735,30 +2093,17 @@
                     data = { draggedElementData: proxy._getNodeDetails($(args.element).closest('.e-item')), draggedElement: $(args.element).closest('.e-item'), dropTarget: $(target), target: trgtEle, targetElementData: proxy._getNodeDetails(trgtEle), position: position, event: args.event };
                     if (proxy._triggerEvent('nodeDragStop', data))
                         return false;
-                    if (target.nodeName == 'A' && $(target).hasClass('e-dropchild') && $(target).hasClass('e-droppable') || (target.nodeName == 'UL' && $(target).children().length == 0)) {
-                        position = "Over";
-                        if ($(target).is("UL") && $(target).hasClass('e-ul') && $(target).find('.e-item').length == 0 && $(target).parent('.e-treeview-wrap').length > 0)
-                            proxy._dropAsChildNode($(target), $(args.element), args.event);
-                        else if (($(args.element).parent().parent().has($(target)).length == 0) && ($(target).parent().parent().has($(args.element)).length == 0 || proxy._isDescendant($(target).parents("li:last").find('>ul>li'), $(args.element).parents("li:first")[0])) && (proxy.model.allowDragAndDropAcrossControl || (!proxy.model.allowDragAndDropAcrossControl && $(target).parents('.e-treeview').is(proxy.element))))
-                            proxy._dropAsChildNode($(target).closest('.e-item'), $(args.element), args.event);
-                    }
-                    else {
-                        if (target.nodeName == 'UL')
-                            target = $(target).children()[0];
-                        if (target.nodeName != 'LI')
-                            target = $(target).closest('.e-droppable')[0] || $(target).parent();
-                        if (target.nodeName == 'LI' && $(target).hasClass('e-dropsibling') && $(target).hasClass('e-droppable')) {
-                            if ($(args.element).parent().parent().has($(target)).length < 1 && $(args.element).parent().parent()[0] != $(target)[0] && (proxy.model.allowDragAndDropAcrossControl || (!proxy.model.allowDragAndDropAcrossControl && $(target).parents('.e-treeview').is(proxy.element))))
-                                proxy._dropAsSublingNode($(target), $(args.element), pre, args.event);
-                        }
-                        else if (target.nodeName == 'A' && $(target).hasClass('e-dropchild') && $(target).hasClass('e-droppable')) {
-                            position = "Over";
-                            if (($(args.element).parent().parent().has($(target)).length == 0) && ($(target).parent().parent().has($(args.element)).length == 0 || proxy._isDescendant($(target).parents("li:last").find('>ul>li'), $(args.element).parents("li:first")[0])))
-                                proxy._dropAsChildNode($(target).closest('.e-item'), $(args.element), args.event);
+                    if (proxy.model.allowMultiSelection && $(args.element).hasClass("e-active")) {
+                        var sleNodes = proxy.element.find('.e-item > div > .e-active');
+                        for (var l = 0, slelen = sleNodes.length; l < slelen; l++) {
+                            args.element = sleNodes[l];
+                            position = proxy._dropNode(target, args, position, pre);
                         }
                     }
+                    else
+                        position = proxy._dropNode(target, args, position, pre);
                     $(".allowDrop").removeClass("allowDrop");
-                    args.element.attr('aria-grabbed', false);
+                    $(args.element).attr('aria-grabbed', false);
                     if (!$(target).hasClass('e-dropchild')) {
                         _clonedElement && _clonedElement.remove();
                     }
@@ -1774,15 +2119,46 @@
                         if (proxy) {
                             _clonedElement = ej.buildTag('div.e-dragedNode');
                             _clonedElement.addClass(proxy.model.cssClass + (proxy.model.enableRTL ? ' e-rtl' : ''));
+                            var sleNodes = proxy.element.find('.e-item > div > .e-active');
+                            var sleNodesLen = sleNodes.length;
                             _draggedElement = $(event.element).clone().addClass("dragClone");
                             this.spanEle = ej.buildTag('span.e-icon e-plus e-dropedStatus');
                             _clonedElement.append(this.spanEle);
                             _clonedElement.append(_draggedElement);
+                            var _spanEle = ej.buildTag('span.e-drop-count', sleNodesLen);
+                            if (sleNodesLen > 1 && proxy.model.allowMultiSelection && $(event.element).hasClass("e-active"))
+                                _clonedElement.append(_spanEle);
                             return _clonedElement.appendTo($("body"));
                         }
                     }
                 }
             });
+        },
+
+        _dropNode: function (target, args, position, pre) {
+            if (target.nodeName == 'A' && $(target).hasClass('e-dropchild') && $(target).hasClass('e-droppable') || (target.nodeName == 'UL' && $(target).children().length == 0)) {
+                position = "Over";
+                if ($(target).is("UL") && $(target).hasClass('e-ul') && $(target).find('.e-item').length == 0 && $(target).parent('.e-treeview-wrap').length > 0)
+                    this._dropAsChildNode($(target), $(args.element), args.event);
+                else if (($(args.element).parent().parent().has($(target)).length == 0) && ($(target).parent().parent().has($(args.element)).length == 0 || this._isDescendant($(target).parents("li:last").find('>ul>li'), $(args.element).parents("li:first")[0])) && (this.model.allowDragAndDropAcrossControl || (!this.model.allowDragAndDropAcrossControl && $(target).parents('.e-treeview').is(this.element))))
+                    this._dropAsChildNode($(target).closest('.e-item'), $(args.element), args.event);
+            }
+            else {
+                if (target.nodeName == 'UL')
+                    target = $(target).children()[0];
+                if (target.nodeName != 'LI')
+                    target = $(target).closest('.e-droppable')[0] || $(target).parent();
+                if (target.nodeName == 'LI' && $(target).hasClass('e-dropsibling') && $(target).hasClass('e-droppable')) {
+                    if ($(args.element).parent().parent().has($(target)).length < 1 && $(args.element).parent().parent()[0] != $(target)[0] && (this.model.allowDragAndDropAcrossControl || (!this.model.allowDragAndDropAcrossControl && $(target).parents('.e-treeview').is(this.element))))
+                        this._dropAsSiblingNode($(target), $(args.element), pre, args.event);
+                }
+                else if (target.nodeName == 'A' && $(target).hasClass('e-dropchild') && $(target).hasClass('e-droppable')) {
+                    position = "Over";
+                    if (($(args.element).parent().parent().has($(target)).length == 0) && ($(target).parent().parent().has($(args.element)).length == 0 || this._isDescendant($(target).parents("li:last").find('>ul>li'), $(args.element).parents("li:first")[0])))
+                        this._dropAsChildNode($(target).closest('.e-item'), $(args.element), args.event);
+                }
+            }
+            return position;
         },
 
         _findTarget: function (trgt) {
@@ -1819,17 +2195,14 @@
             });
         },
 
-        _dropAsSublingNode: function (target, element, pre, event) {
+        _dropAsSiblingNode: function (target, element, pre, event) {
             var li = element.parent().parent(), li = $(li), parentNode;
             parentNode = $(element.parents('.e-item')[1]);
-            if ((this.dataSource() instanceof ej.DataManager) && this.model.loadOnDemand && element.parents('.e-item:first').attr('aria-expanded') == "false") 
-                element.parents('.e-item:first').find('div.e-icon') && element.parents('.e-item:first').find('div.e-icon').removeClass();            
             if (!ej.isNullOrUndefined(this.model.fields) && this.dataSource() != null && !(this.dataSource() instanceof ej.DataManager))
                 this._updateDataSource(element.parents('.e-item:first'), $(target), pre, this);
             pre ? li.insertBefore(target) : li.insertAfter(target);
             (!this.model.template) && this._autoGenerateNodes(element.parents('.e-item:first'));
             this._modifyCss(parentNode);
-            this._finalizeEditing(li);
             this._isRender = false;
             this._updateCheckState(li);
             this._updateCheckState(parentNode);
@@ -1842,13 +2215,10 @@
             var li = element.parent().parent(), li = $(li), parentNode;
             parentNode = $(element.parents('.e-item')[1]);
             ($(target).is('UL')) ? $(target).append(li) : this._appendNode(target, li);
-            if ((this.dataSource() instanceof ej.DataManager) && this.model.loadOnDemand && element.parents('.e-item:first').attr('aria-expanded') == "false")                 
-                element.parents('.e-item:first').find('div.e-icon') && element.parents('.e-item:first').find('div.e-icon').removeClass();            
             if (!ej.isNullOrUndefined(this.model.fields) && this.dataSource() != null && !(this.dataSource() instanceof ej.DataManager))
                 this._updateDataSource(element.parents('.e-item:first'), $(target).find("> div > .e-text").first(), "", this);
             (!this.model.template) && this._autoGenerateNodes(element.parents('.e-item:first'));
             this._modifyCss(parentNode);
-            this._finalizeEditing(li);
             this._isRender = false;
             this._updateCheckState(li);
             this._updateCheckState(parentNode);
@@ -1871,8 +2241,9 @@
         _updatePersistProb: function () {
             this._removeField(this._newDataSource, this.model.fields.selected);
             this._removeField(this._newDataSource, this.model.fields.expanded);
-            var sleNodeId = this.getSelectedNode().attr("id");
-            sleNodeId && this._updateField(this._newDataSource, sleNodeId, this.model.fields.selected, true);
+            var sleNodes = this.getSelectedNodes();
+            for (var l = 0, slelen = sleNodes.length; l < slelen; l++)
+                this._updateField(this._newDataSource, $(sleNodes[l]).attr('id'), this.model.fields.selected, true);
             var enodes = this.getExpandedNodes();
             for (var k = 0, nodelen = enodes.length; k < nodelen; k++) {
                 this._updateField(this._newDataSource, $(enodes[k]).attr('id'), this.model.fields.expanded, true);
@@ -1968,6 +2339,7 @@
         },
 
         _findAndUpdate: function (searchId, parentId, obj, index, tree2) {
+            if (ej.isNullOrUndefined(obj)) return;
             if (this._templateType == 1) {
                 for (var i = 0, objlen = obj.length; i < objlen; i++) {
                     if (!ej.isNullOrUndefined(obj[i]) && !ej.isNullOrUndefined(obj[i][this.model.fields.id]) && obj[i][this.model.fields.id].toString() == searchId) {
@@ -2123,22 +2495,11 @@
                     thisObj = element.closest('.e-treeview.e-js').data('ejTreeView');
                     if (thisObj) {
                         isExpanded = this._isNodeExpanded(element);
-                        if (!isExpanded && thisObj.model.loadOnDemand && !(this.dataSource() instanceof ej.DataManager) && element.find('> div > div').first().hasClass('e-plus'))
-                            thisObj._createChildNodesWhenExpand(element);
+                        if (!isExpanded && thisObj.model.loadOnDemand && element.find('> div > div').first().hasClass('e-plus'))
+                            thisObj._createChildNodesWhenExpand(element, null, null, null, outerLi, thisObj);
                     }
-                    outerUl = ej.buildTag("ul.e-treeview-ul", "", {}, { role: "group", style: "display:none" });
-                    $(outerUl).append($(outerLi));
-                    if ($(element.find('div')[1]).length == 0) {
-                        divTag = document.createElement('div');
-                        divTag.setAttribute('role', 'presentation');
-                        divTag.className = 'e-icon e-minus';
-                        $(element.find('div')).append($(divTag));
-                    } else if (!$(element.find('div')[1]).hasClass('e-minus'))
-                        $(element.find('div')[1]).addClass('e-icon e-plus');
-                    if (thisObj && thisObj.model.loadOnDemand && !(this.dataSource() instanceof ej.DataManager) && element.find('ul').length > 0)
-                        element.children('ul').append($(outerLi));
-                    else
-                        element.append($(outerUl));
+                    if (!(this.dataSource() instanceof ej.DataManager && thisObj.model.loadOnDemand && element.find('> div > div').first().hasClass('e-plus')))
+                        this._doAfterExpand(element, outerLi, thisObj);
                 }
                 else
                     $(element.find('ul')[0]).append(outerLi);
@@ -2163,6 +2524,22 @@
             this.model.showCheckbox && this._isCheckedAction();
         },
 
+        _doAfterExpand: function (element, outerLi, thisObj) {
+            var outerUl = ej.buildTag("ul.e-treeview-ul", "", {}, { role: "group", style: "display:none" });
+            $(outerUl).append($(outerLi));
+            if ($(element.find('div')[1]).length == 0) {
+                var divTag = document.createElement('div');
+                divTag.setAttribute('role', 'presentation');
+                divTag.className = 'e-icon e-minus';
+                $(element.find('div')).append($(divTag));
+            } else if (!$(element.find('div')[1]).hasClass('e-minus'))
+                $(element.find('div')[1]).addClass('e-icon e-plus');
+            if (thisObj && thisObj.model.loadOnDemand && element.find('ul').length > 0)
+                element.children('ul').append($(outerLi));
+            else
+                element.append($(outerUl));
+        },
+
         _modifyCss: function (liElement) {
             liElement = $(liElement);
             if (liElement[0] != null && liElement.find('.e-item').length == 0)
@@ -2180,6 +2557,8 @@
             if (!(event.type === "dblclick" && this.model.allowEditing)) {
                 event.preventDefault();
                 selectedNode = (target.is('A')) ? $(target.siblings('div')) : $(target.parent().siblings('div'));
+                if (this.model.fullRowSelect && (target.is('div.e-text-wrap') || target.is('div.e-fullrow')))
+                    selectedNode = target.closest('.e-item').find("> .e-text-wrap > div");
                 liElement = target.closest('.e-item');
                 if (selectedNode.hasClass('e-minus'))
                     this._collpaseNode(liElement);
@@ -2195,11 +2574,10 @@
         _inlineEdit: function (event) {
             event.preventDefault();
             var target = $(event.target);
-            if (!target.hasClass('input-text') && !target.hasClass("e-node-disable") && target.closest('.e-item').hasClass('AllowEdit')) {
+            if (!target.hasClass('input-text') && !target.hasClass("e-node-disable") ) {
                 if (!target.is('A'))
                     target = target.closest('.e-text');
-                if (target.is('A') && !target.hasClass("e-node-disable") && target.closest('.e-item').hasClass('AllowEdit')) {
-                    this.unselectNode(target.closest('.e-item'));
+                if (target.is('A') && !target.hasClass("e-node-disable")) {
                     this._inlineEditAction(target);
                 }
             }
@@ -2220,7 +2598,7 @@
                 var size, textBox = ej.buildTag('Input.input-text#Edit_Input', "", "", { type: 'text', value: $.trim(values.text()).replace(/\n\s+/g, " "), name: 'inplace_value' });
                 textBox.width(values.outerWidth() + 5);
                 textBox.height(values.outerHeight());
-                textBox.addClass("e-tree-input");
+                textBox.addClass("e-tree-input e-textbox");
                 this._beforeEditText = values.text();
                 values[0].lastChild.nodeValue = "";
                 values.addClass('e-editable').append(textBox);
@@ -2230,7 +2608,7 @@
                 this._currentEditableNode = values;
                 this._on(editTextBox, 'keypress', this._editTextBoxKeyPress)
                     ._on(editTextBox, 'keydown', this, this._pressEscKey)
-                    ._on(editTextBox, 'mousedown', this, this._preventPropagation)
+                    ._on(editTextBox, 'mousedown pointerdown MSPointerDown', this, this._preventPropagation)
                     ._on(editTextBox, this.model.expandOn, this, this._preventPropagation)
                     ._on(editTextBox, 'blur', this._focusout);
             }
@@ -2263,12 +2641,6 @@
 
         _focusout: function (e) {
             var editTextBox = $(e.currentTarget), data, element;
-            if (this.getSelectedNode().length == 0) {
-                element = editTextBox.closest('.e-item');
-                this._isRender = false;
-                this._nodeSelectionAction(element);
-                this._isRender = true;
-            }
             this._isTextbox = false;
             data = { id: editTextBox.closest('.e-item').attr('id'), oldText: this._beforeEditText, newText: editTextBox.val() };
             (this._triggerEvent('inlineEditValidation', data)) ? this._cancelAction(editTextBox) : this._saveAction(editTextBox, e);
@@ -2300,6 +2672,10 @@
         _onKeyDown: function (currentEle, focusEle) {
             currentEle.find('> div > .e-text:first').removeClass('e-node-focus');
             focusEle.find('> div > .e-text:first').addClass('e-node-focus');
+            if (this.model.fullRowSelect) {
+                currentEle.removeClass("e-li-focus");
+                focusEle.addClass("e-li-focus");
+            }
         },
 
         _KeyPress: function (e) {
@@ -2311,7 +2687,7 @@
             else code = e.charCode;
             if (proxy.model.allowKeyboardNavigation && (proxy.element.find('#Edit_Input').length < 1) && proxy.element.find(".e-chkbox-wrap.e-focus").length < 1) {
                 var nextElement, selectedItem, liVisible, activeNode;
-                selectedItem = element.find(".e-item > div > .e-text.e-active").closest('.e-item');
+                selectedItem = $(element.find(".e-item > div > .e-text.e-active").closest('.e-item')[0]);
                 liVisible = element.find('.e-item:visible');
                 if (proxy._focusedNode) {
                     activeNode = proxy._focusedNode;
@@ -2326,7 +2702,7 @@
                         proxy._inlineEdit(e);
                     }
                 }
-                if (code == 40 && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+                if (code == 40 && !e.altKey) {
                     e.preventDefault();
                     var ele = (activeNode.length > 0) ? activeNode : selectedItem;
                     var nextEle = this._getNextEle(liVisible, ele);
@@ -2334,7 +2710,7 @@
                     if (nextEle.length > 0)
                         proxy._onKeyDown(activeNode, nextEle);
                 }
-                else if (code == 38 && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+                else if (code == 38 && !e.altKey) {
                     e.preventDefault();
                     var ele = (activeNode.length > 0) ? activeNode : selectedItem;
                     var prevEle = this._getPrevEle(liVisible, ele);
@@ -2342,7 +2718,7 @@
                     if (prevEle.length > 0)
                         proxy._onKeyDown(activeNode, prevEle);
                 }
-                else if ((code == 39 && !this.model.enableRTL && !e.ctrlKey && !e.altKey && !e.shiftKey) || (code == 37 && this.model.enableRTL)) {
+                else if ((code == 39 && !this.model.enableRTL && !e.altKey) || (code == 37 && this.model.enableRTL)) {
                     e.preventDefault();
                     var nextEle, expandIcon;
                     expandIcon = (activeNode.length > 0) ? activeNode.find('> div > div').first() : selectedItem.find('> div > div').first();
@@ -2359,7 +2735,7 @@
                             proxy._onKeyDown(activeNode, nextEle);
                     }
                 }
-                else if ((code == 37 && !this.model.enableRTL && !e.ctrlKey && !e.altKey && !e.shiftKey) || (code == 39 && this.model.enableRTL)) {
+                else if ((code == 37 && !this.model.enableRTL && !e.altKey) || (code == 39 && this.model.enableRTL)) {
                     e.preventDefault();
                     var prevEle, collapseIcon;
                     collapseIcon = (activeNode.length > 0) ? activeNode.find('> div > div').first() : selectedItem.find('> div > div').first();
@@ -2374,7 +2750,7 @@
                         }
                     }
                 }
-                else if (code == 36 && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+                else if (code == 36 && !e.altKey) {
                     e.preventDefault();
                     var firstEle, ele = (activeNode.length > 0) ? activeNode : selectedItem;
                     firstEle = $(liVisible).first();
@@ -2385,7 +2761,7 @@
                         proxy._onKeyDown(ele, firstEle);
                     }
                 }
-                else if (code == 35 && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+                else if (code == 35 && !e.altKey) {
                     e.preventDefault();
                     var lastEle, ele = (activeNode.length > 0) ? activeNode : selectedItem;
                     lastEle = $(liVisible).last();
@@ -2399,8 +2775,11 @@
                 else if (code == 13) {
                     e.preventDefault();
                     var currentEle = (activeNode.length > 0) ? activeNode : selectedItem;
-                    currentEle.find('> div > .e-text').removeClass('e-node-focus');
-                    this._nodeSelectionAction(currentEle);
+                    var angEle = currentEle.find('> div > .e-text');
+                    angEle.removeClass('e-node-focus');
+                    this.model.fullRowSelect && currentEle.removeClass("e-li-focus");
+                    angEle.hasClass('e-active') ? (proxy.model.allowMultiSelection && proxy._nodeUnSelectionAction(currentEle, event)) : proxy._nodeSelectionAction(currentEle, e);
+                    proxy._focusedNode = currentEle;
                 }
                 else if (code == 32) {
                     e.preventDefault();
@@ -2411,11 +2790,12 @@
                             this._nodeUncheck(chkBoxEle);
                         else
                             this._nodeCheck(chkBoxEle);
+                        proxy._focusedNode = currentEle;
                     }
                 }
                 else if (code == 46) {
                     e.preventDefault();
-                    var currentEle = (activeNode.length > 0) ? activeNode : selectedItem;
+                    var currentEle = (this.model.allowMultiSelection) ? element.find(".e-item > div > .e-text.e-active").closest('.e-item') : ((activeNode.length > 0) ? activeNode : selectedItem);
                     (currentEle.length > 0) && this._removeNode(currentEle, e);
                 }
                 else if (e && e.ctrlKey == true) {
@@ -2454,6 +2834,8 @@
                             this._triggerEvent('nodePaste', { target: currentNode, nodeDetails: this._getNodeDetails(currentNode), keyCode: code, event: e });
                         }
                     }
+                    else if (proxy.model.allowMultiSelection)
+                        proxy._focusedNode = activeNode;
                 }
             }
         },
@@ -2501,30 +2883,31 @@
             if (node[0] == null) return;
             if (node[0] != null && node.length > 0) {
                 var parentNode, currentNode, _dataObj, id, liVisible, childNodes, proxy = this, groupedObj;
-                parentNode = node.closest('ul').closest('.e-item');
-                currentNode = node;
-                if (this._triggerEvent('beforeDelete', { target: currentNode, nodeDetails: this._getNodeDetails(currentNode), parentElement: (parentNode[0] != null) ? parentNode : null, parentDetails: this._getNodeDetails(parentNode), event: event })) return;
+                parentNode = $(node[0]).closest('ul').closest('.e-item');
+                currentNode = $(node[0]);
+                if (this._triggerEvent('beforeDelete', { target: currentNode, nodeDetails: this._getNodeDetails(currentNode), parentElement: (parentNode[0] != null) ? parentNode : null, parentDetails: this._getNodeDetails(parentNode), event: event, removedNodes: node })) return;
                 this._isRender = false;
                 if (!ej.isNullOrUndefined(this.dataSource()) && this.dataSource().length > 0) {
                     _dataObj = this.dataSource();
-                    for (var i = 0; i < _dataObj.length; i++) {
-                        id = currentNode.attr("id");
-                        if ((_dataObj[i][this.model.fields.id]).toString() == id) {
-                            groupedObj = this._groupingObjects(_dataObj, function (_dataObj) { return [!ej.isNullOrUndefined(_dataObj) && [_dataObj[proxy.model.fields.parentId]].toString()]; });
-                            _dataObj.splice(i, 1);
-                            this._removeChildNodes(_dataObj, groupedObj, id);
-                            break;
+                    for (var j = 0, len = node.length; j < len; j++) {
+                        var currentNode = $(node[j]);
+                        for (var i = 0; i < _dataObj.length; i++) {
+                            id = currentNode.attr("id");
+                            if ((_dataObj[i][this.model.fields.id]).toString() == id) {
+                                groupedObj = this._groupingObjects(_dataObj, function (_dataObj) { return [!ej.isNullOrUndefined(_dataObj) && [_dataObj[proxy.model.fields.parentId]].toString()]; });
+                                _dataObj.splice(i, 1);
+                                this._removeChildNodes(_dataObj, groupedObj, id);
+                                break;
+                            }
                         }
                     }
                 }
-                if ($(this._liList).index(currentNode) == this.model.selectedNode)
-                    this.model.selectedNode = null;
-                currentNode.remove();
+                node.remove();
                 this._modifyCss(parentNode);
                 this._updateNodes();
                 this._updateCheckState(parentNode);
                 this._isRender = true;
-                if (this._triggerEvent('nodeDelete', { parentElement: (parentNode[0] != null) ? parentNode : null, parentDetails: this._getNodeDetails(parentNode), event: event })) return;
+                if (this._triggerEvent('nodeDelete', { parentElement: (parentNode[0] != null) ? parentNode : null, parentDetails: this._getNodeDetails(parentNode), event: event, removedNodes: node })) return;
                 var proxy = this, _dataObj = this.dataSource();
                 setTimeout(function () {
                     if (proxy.dataSource() != null && !(proxy.dataSource() instanceof ej.DataManager))
@@ -2596,11 +2979,6 @@
                 var editTextBox = $('#Edit_Input')[0], aTag, newText;
             if (editTextBox != null) {
                 var aTag = $(editTextBox).closest('.e-text')[0], newText = editTextBox.value, parent = $(editTextBox).closest('.e-item');
-                if (this.getSelectedNode().length == 0) {
-                    this._isRender = false;
-                    this._nodeSelectionAction(parent);
-                    this._isRender = true;
-                }
                 $(editTextBox).remove();
                 aTag.lastChild.nodeValue = newText;
                 $(aTag).removeClass('e-editable').removeAttr('style');
@@ -2612,6 +2990,8 @@
                 this._focusedNode = ele.closest('.e-item');
                 ele.removeClass('e-node-focus');
             }
+            else if ($(event.target).hasClass("e-active"))
+                this._focusedNode = this.element.find(event.target).closest('.e-item');
         },
 
         _saveAction: function (values, event) {
@@ -2623,6 +3003,7 @@
                 this._updateField(this._newDataSource, parent.attr('id'), this.model.fields.text, newText);
                 this._triggerEvent('nodeEdit', { id: parent.attr('id'), oldText: this._beforeEditText, newText: newText, target: parent, nodeDetails: this._getNodeDetails(parent), event: event });
                 this.element.focus();
+                this._focusedNode = parent;
             }
         },
 
@@ -2631,11 +3012,6 @@
             values.remove();
             aTag.lastChild.nodeValue = this._beforeEditText;
             $(aTag).removeClass('e-node-hover e-editable');
-            if (this.getSelectedNode().length == 0) {
-                this._isRender = false;
-                this.selectNode($(aTag).closest('.e-item'));
-                this._isRender = true;
-            }
             this.element.focus();
         },
 
@@ -2647,6 +3023,28 @@
 
         _mouseLeaveEvent: function (event) {
             $(event.currentTarget).removeClass("e-node-hover");
+        },
+
+        _liMouseEnterEvent: function (event) {
+            this.element.find('.e-node-hover').removeClass("e-node-hover");
+            this.element.find('.e-li-hover').removeClass("e-li-hover");
+            var curLi = $(event.currentTarget).closest('.e-item');
+            var curAng = curLi.find("> div .e-text");
+            if (curAng.length > 0 && !curAng.hasClass("e-node-disable")) {
+                curAng.addClass("e-node-hover");
+                curLi.addClass("e-li-hover");
+            }
+        },
+
+        _liMouseLeaveEvent: function (event) {
+            var curLi = $(event.currentTarget).closest('.e-item');
+            curLi.find("> div .e-text").removeClass("e-node-hover");
+            curLi.removeClass("e-li-hover");
+        },
+
+        _onFocusOutHandler: function (event) {
+            if (!this._isPopup) this._hidePopup();
+            this._isPopup = false;
         },
 
         _createObjectByText: function (text, targetNode) {
@@ -2667,6 +3065,7 @@
             if (ej.isNullOrUndefined(obj.length)) {
                 this._dataSource.push(obj);
                 if (!ej.isNullOrUndefined(this.dataSource())) {
+                    this._setNodeId(obj, this.model.fields);
                     (!ej.isNullOrUndefined(parentId)) && (obj[this.model.fields.parentId] = parentId);
                     _dataObj.push(obj);
                 }
@@ -2675,6 +3074,7 @@
                 this._dataSource = obj;
                 if (!ej.isNullOrUndefined(this.dataSource())) {
                     for (var j = 0; j < obj.length; j++) {
+                        this._setNodeId(obj[j], this.model.fields);
                         if (parentId)
                             obj[j][this.model.fields.parentId] = parentId;
                         else
@@ -2696,6 +3096,20 @@
             if (this.dataSource() != null && !(this.dataSource() instanceof ej.DataManager))
                 this._dataSource = JSON.parse(tempObj);
             return fragmentObj;
+        },
+
+        _setNodeId: function (dataObj, mapper) {
+            var mapId = (mapper && mapper.id) ? mapper.id : this.model.fields.id;
+            if (ej.isNullOrUndefined(dataObj[mapId]) || dataObj[mapId] == "") {
+                dataObj[mapId] = this._id + "_" + this._indexID;
+                this._indexID++;
+            }
+            if (dataObj.hasOwnProperty('child')) {
+                var childObj = dataObj.child;
+                for (var i = 0, len = childObj.length; i < len; i++) {
+                    this._setNodeId(childObj[i], mapper.child);
+                }
+            }
         },
 
         _addExpandedNodes: function (index) {
@@ -2727,7 +3141,7 @@
                 var cookieData = this._getCookies("_persistedValues");
                 if (cookieData) {
                     var parsedData = JSON.parse(cookieData);
-                    (valueType == "selectedNode") ? parsedData[valueType] = (idColl[0]) ? idColl[0] : "" : parsedData[valueType] = idColl;
+                    parsedData[valueType] = idColl;
                     parsedData = this._updatePersistAttr(parsedData);
                     this._setCookies("_persistedValues", JSON.stringify(parsedData));
                 }
@@ -2736,12 +3150,12 @@
 
         _updatePersistAttr: function (parsedData) {
             if (ej.isNullOrUndefined(this._ignoreOnPersist)) {
-                if ($.inArray('selectedNode', this._addToPersist) == -1) delete parsedData.selectedNode;
+                if ($.inArray('selectedNodes', this._addToPersist) == -1) delete parsedData.selectedNodes;
                 if ($.inArray('expandedNodes', this._addToPersist) == -1) delete parsedData.expandedNodes;
                 if ($.inArray('checkedNodes', this._addToPersist) == -1) delete parsedData.checkedNodes;
             }
             else {
-                if ($.inArray('selectedNode', this._ignoreOnPersist) > -1) delete parsedData.selectedNode;
+                if ($.inArray('selectedNodes', this._ignoreOnPersist) > -1) delete parsedData.selectedNodes;
                 if ($.inArray('expandedNodes', this._ignoreOnPersist) > -1) delete parsedData.expandedNodes;
                 if ($.inArray('checkedNodes', this._ignoreOnPersist) > -1) delete parsedData.checkedNodes;
             }
@@ -2817,7 +3231,7 @@
                 this.model.showCheckbox && outerLi.children().find(".nodecheckbox").ejCheckBox({ cssClass: this.model.cssClass, change: this._checkedChange });
                 (afterEle.parents('.e-item:first').length > 0) ? afterEle.parents('.e-item:first').append(outerLi) : this.element.append(outerLi);
                 this.model.showCheckbox && this._isCheckedAction();
-                this._dropAsSublingNode(afterEle, outerLi.find("> div > .e-text"), before, "");
+                this._dropAsSiblingNode(afterEle, outerLi.find("> div > .e-text"), before, "");
                 this._afterInsertingNode(outerLi);
                 this._isRender = true;
                 this._triggerEvent('nodeAdd', { data: txtobj, nodes: outerLi, parentElement: (afterEle[0] != null) ? afterEle : null, parentDetails: this._getNodeDetails(afterEle) });
@@ -2837,7 +3251,7 @@
         },
 
         _checkValidId: function (myid) {
-            return "#" + myid.replace(/(:|\.|\[|\]|,)/g, "\\$1");
+            return (myid[0] == "#") ? myid.replace(/(:|\.|\[|\]|,)/g, "\\$1") : "#" + myid.replace(/(:|\.|\[|\]|,)/g, "\\$1");;
         },
 
         _isTreeElement: function (node) {
@@ -2847,6 +3261,10 @@
         _isUrl: function (url) {
             var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
             return regexp.test(url);
+        },
+
+        _getChildUl: function (ele) {
+            return this.model.fullRowSelect ? ele.children[2] : ele.children[1];
         },
 
         _sendAjaxOptions: function (url, trgt) {
@@ -2903,11 +3321,11 @@
         },
 
         _wireEvents: function () {
-            this._on(this.element, "click", this._ClickEventHandler)
-                ._on(this.element.find(".e-text"), "mouseenter", this._mouseEnterEvent)
-                ._on(this.element.find(".e-text"), "mouseleave", this._mouseLeaveEvent)
-                ._on(this.element, this.model.expandOn, this._expandEventHandler)
-                ._on(this.element, "focus", this._onFocusHandler);
+            this._on(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? "tap" : "click", this._ClickEventHandler)
+                ._on(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? this._touchExpandOn : this.model.expandOn, this._expandEventHandler)
+                ._on(this.element, "focus", this._onFocusHandler)
+                ._on(this.element, "blur", this._onFocusOutHandler);
+            this._wholeRowEvents("_on");
 			this.model.allowEditing && this._allowEditable();
 			this.model.allowDragAndDrop && this._addDragableClass();
 			this.model.showCheckbox && this.element.find('.nodecheckbox').ejCheckBox("enable");
@@ -2915,15 +3333,28 @@
         },
 
         _unWireEvents: function () {
-            this._off(this.element, "click")
-                ._off(this.element.find(".e-text"), "mouseenter")
-                ._off(this.element.find(".e-text"), "mouseleave")
-                ._off(this.element, this.model.expandOn)
-                ._off(this.element, "focus");
+            this._off(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? "tap" : "click")
+                ._off(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? this._touchExpandOn : this.model.expandOn)
+                ._off(this.element, "focus")
+                ._off(this.element, "blur");
+            this._wholeRowEvents("_off");
             this._preventEditable();
             this._preventDraggable();
             this.model.allowKeyboardNavigation && this._off(this.element, 'keydown');
             this.model.showCheckbox && this.element.find('.nodecheckbox').ejCheckBox("disable");
+        },
+
+        _wholeRowEvents: function (action) {
+            if (this.model.fullRowSelect) {
+                this[action](this.element, (this._isDevice && $.isFunction($.fn.touchstart)) ? "touchstart" : "mouseenter", ".e-text-wrap", this._liMouseEnterEvent);
+                this[action](this.element, (this._isDevice && $.isFunction($.fn.touchend)) ? "touchend" : "mouseleave", ".e-text-wrap", this._liMouseLeaveEvent);
+                this[action](this.element, (this._isDevice && $.isFunction($.fn.touchstart)) ? "touchstart" : "mouseenter", ".e-fullrow", this._liMouseEnterEvent);
+                this[action](this.element, (this._isDevice && $.isFunction($.fn.touchend)) ? "touchend" : "mouseleave", ".e-fullrow", this._liMouseLeaveEvent);
+            }
+            else {
+                this[action](this.element, (this._isDevice && $.isFunction($.fn.touchstart)) ? "touchstart" : "mouseenter", ".e-text", this._mouseEnterEvent);
+                this[action](this.element, (this._isDevice && $.isFunction($.fn.touchend)) ? "touchend" : "mouseleave", ".e-text", this._mouseLeaveEvent);
+            }
         },
 
         _enableDragDrop: function () {
@@ -2938,14 +3369,14 @@
             if (!this.model.template) {
                 this.element.find('.e-item').addClass('AllowEdit');
                 this._on($(document), 'click', this._documentClick)
-                    ._on(this.element.find('.e-item > div > .e-text'), 'dblclick', this._inlineEdit);
+                    ._on(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? 'doubletap' : 'dblclick', "a.e-text", this._inlineEdit);
             }
         },
 
         _preventEditable: function () {
             this.element.find('.e-item').removeClass('AllowEdit');
             this._off($(document), 'click')
-                ._off(this.element.find('.e-item > div > .e-text'), 'dblclick');
+                ._off(this.element, (this._isDevice && $.isFunction($.fn.tap)) ? 'doubletap' : 'dblclick', "a.e-text");
         },
 
         _preventDraggable: function () {
@@ -3011,12 +3442,14 @@
             this._init();
         },
 
-        expandAll: function () {
-            this.model.enableMultipleExpand && this._expandAll();
+        expandAll: function (level, excludeHiddenNodes) {
+            if (this.model.enableMultipleExpand)
+                (level > 0) ? this._expandByLevel(this._getElement(), level, excludeHiddenNodes) : this._expandAll(excludeHiddenNodes);
         },
 
-        collapseAll: function () {
-            this.model.enableMultipleExpand && this._collapseAll();
+        collapseAll: function (level, excludeHiddenNodes) {
+            if (this.model.enableMultipleExpand)
+                (level > 0) ? this._collapseByLevel(this._getElement(), level, excludeHiddenNodes) : this._collapseAll(excludeHiddenNodes);
         },
 
         checkAll: function () {
@@ -3028,23 +3461,53 @@
         },
 
         selectNode: function (node) {
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && this._nodeSelectionAction(node);
+            if (node && typeof node == "object" && node.length > 0) {
+                this._unselectAll();
+                this._doSelectNodes(node, true);
+            }
+            else {
+                node = this._getNodeByID(node);
+                this._isTreeElement(node) && this._nodeSelectionAction(node);
+            }
         },
 
         unselectNode: function (node) {
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && this._nodeUnSelectionAction(node);
+            if (node && typeof node == "object" && node.length > 0)
+                this._doUnselectNodes(node);
+            else {
+                node = this._getNodeByID(node);
+                this._isTreeElement(node) && this._nodeUnSelectionAction(node);
+            }
+        },
+
+        selectAll: function () {
+            this.model.allowMultiSelection && this._selectAll();
+        },
+
+        unselectAll: function () {
+            this.model.allowMultiSelection && this._unselectAll();
         },
 
         enableNode: function (node) {
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && this._nodeEnableAction(node);
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.enableNode(node[i]);
+            }
+            else {
+                var item = this._getNodeByID(node);
+                this._isTreeElement(item) && this._nodeEnableAction(item);
+            }
         },
 
         disableNode: function (node) {
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && this._nodeDisableAction(node);
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.disableNode(node[i]);
+            }
+            else {
+                var item = this._getNodeByID(node);
+                this._isTreeElement(item) && this._nodeDisableAction(item);
+            }
         },
 
         addNodes: function (collection, targetNode) {
@@ -3058,7 +3521,7 @@
         addNode: function (newNodeText, targetNode) {
             if (ej.isNullOrUndefined(newNodeText)) return;
             var outerLi = null, innerUl = null, temp, activeNode, id, selectedNode, template;
-            selectedNode = targetNode ? this._getNodeByID(targetNode) : this.getSelectedNode();
+            selectedNode = targetNode ? this._getNodeByID(targetNode) : (this.model.allowMultiSelection ? this.getSelectedNodes() : this.getSelectedNode());
             if (typeof newNodeText == 'object') {
                 if (ej.isNullOrUndefined(newNodeText.length) && !ej.isNullOrUndefined(newNodeText[this.model.fields.parentId]))
                     id = newNodeText[this.model.fields.parentId];
@@ -3066,7 +3529,7 @@
                     id = newNodeText[0][this.model.fields.parentId];
                 if (id) selectedNode = this._getNodeByID(id);
             }
-            selectedNode = (this._isTreeElement(selectedNode)) ? selectedNode : [];
+            selectedNode = (this._isTreeElement(selectedNode)) ? $(selectedNode[0]) : [];
             if (this._triggerEvent('beforeAdd', { data: newNodeText, targetParent: (selectedNode[0] != null) ? selectedNode : null, parentDetails: this._getNodeDetails(selectedNode) })) return;
             (selectedNode.length != 0 && !selectedNode.hasClass('e-node-disable')) && this._expandNode(selectedNode);
             if (typeof newNodeText != 'object')
@@ -3093,8 +3556,14 @@
         },
 
         removeNode: function (node) {
-            node = node ? this._getNodeByID(node) : this.getSelectedNode();
-            this._isTreeElement(node) && this._removeNode(node);
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.removeNode(node[i]);
+            }
+            else {
+                var item = node ? this._getNodeByID(node) : (this.model.allowMultiSelection ? this.getSelectedNodes() : this.getSelectedNode());
+                this._isTreeElement(item) && this._removeNode(item);
+            }
         },
 
         removeAll: function () {
@@ -3104,38 +3573,75 @@
 
         checkNode: function (node) {
             if (!this.model.showCheckbox) return;
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && this._nodeCheck(node.find("> div > .e-chkbox-wrap > .nodecheckbox:first")[0]);
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.checkNode(node[i]);
+            }
+            else {
+                var item = this._getNodeByID(node);
+                this._isTreeElement(item) && this._nodeCheck(item.find("> div > .e-chkbox-wrap > .nodecheckbox:first")[0]);
+            }
         },
 
         uncheckNode: function (node) {
             if (!this.model.showCheckbox) return;
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && this._nodeUncheck(node.find("> div > .e-chkbox-wrap > .nodecheckbox:first")[0]);
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.uncheckNode(node[i]);
+            }
+            else {
+                var item = this._getNodeByID(node);
+                this._isTreeElement(item) && this._nodeUncheck(item.find("> div > .e-chkbox-wrap > .nodecheckbox:first")[0]);
+            }
         },
 
         expandNode: function (node) {
+            if (node && typeof node == "object" && node.length > 0) {
+                this._allowOnDemand = true;
+                this._expandNodes(node, true);
+                this._allowOnDemand = false;
+            }
+            else {
             node = this._getNodeByID(node);
             if (this._isTreeElement(node)) {
                 this._allowOnDemand = true;
                 this._expandNode(node);
                 this._allowOnDemand = false;
             }
+            }
         },
 
         collapseNode: function (node) {
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && this._collpaseNode(node);
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.collapseNode(node[i]);
+            }
+            else {
+                var item = this._getNodeByID(node);
+                this._isTreeElement(item) && this._collpaseNode(item);
+            }
         },
 
         showNode: function (node) {
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && node.css("visibility", "").removeClass('hidden');
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.showNode(node[i]);
+            }
+            else {
+                var item = this._getNodeByID(node);
+                this._isTreeElement(item) && item.css("visibility", "").removeClass('hidden');
+            }
         },
 
         hideNode: function (node) {
-            node = this._getNodeByID(node);
-            this._isTreeElement(node) && node.css("visibility", "hidden").addClass('hidden');
+            if (node && typeof node == "object" && node.length > 0) {
+                for (var i = 0; i < node.length; i++)
+                    this.hideNode(node[i]);
+            }
+            else {
+                var item = this._getNodeByID(node);
+                this._isTreeElement(item) && item.css("visibility", "hidden").addClass('hidden');
+            }
         },
 
         show: function () {
@@ -3203,6 +3709,10 @@
         },
 
         getSelectedNode: function () {
+            return !this.model.allowMultiSelection ? this.element.find('.e-item > div > .e-active').closest('.e-item') : null;
+        },
+
+        getSelectedNodes: function () {
             return this.element.find('.e-item > div > .e-active').closest('.e-item');
         },
 
@@ -3216,21 +3726,19 @@
         },
 
         getExpandedNodesIndex: function () {
-            var enodes = this.getExpandedNodes(), eindex = [];
-            for (var i = 0, len = enodes.length; i < len; i++)
-                eindex.push(this._liList.index(enodes[i]));
-            return eindex;
+            return this._getNodesIndex(this.getExpandedNodes());
         },
 
         getCheckedNodesIndex: function () {
-            var cnodes = this.getCheckedNodes(), cindex = [];
-            for (var i = 0, len = cnodes.length; i < len; i++)
-                cindex.push(this._liList.index(cnodes[i]));
-            return cindex;
+            return this._getNodesIndex(this.getCheckedNodes());
         },
 
         getSelectedNodeIndex: function () {
-            return this._liList.index(this.getSelectedNode());
+            return !this.model.allowMultiSelection ? this._getNodesIndex(this.getSelectedNode()) : null;
+        },
+
+        getSelectedNodesIndex: function () {
+            return this._getNodesIndex(this.getSelectedNodes());
         },
 
         getVisibleNodes: function () {
@@ -3261,6 +3769,12 @@
             node = this._getNodeByID(node);
             if (this._isTreeElement(node))
                 return node.parents('.e-item:first');
+        },
+
+        getChildren: function (node, includeNestedChild) {
+            node = this._getNodeByID(node);
+            if (this._isTreeElement(node))
+                return includeNestedChild ? node.find('.e-item') : node.find('> ul > .e-item');
         },
 
         updateText: function (node, newText) {
@@ -3296,9 +3810,9 @@
                 this._isRender = false;
                 if (this._isTreeElement(target)) {
                     if (target.parents('.e-item:first')[0] == srcNode.parents('.e-item:first')[0] && target.next('.e-item')[0] == null)
-                        this._dropAsSublingNode(target, srcNode.find(" > div > .e-text"), false, "");
+                        this._dropAsSiblingNode(target, srcNode.find(" > div > .e-text"), false, "");
                     else
-                        this._dropAsSublingNode(target, srcNode.find(" > div > .e-text"), true, "");
+                        this._dropAsSiblingNode(target, srcNode.find(" > div > .e-text"), true, "");
                 } else {
                     this._dropAsChildNode(desNode, srcNode.find(" > div > .e-text"), "");
                 }

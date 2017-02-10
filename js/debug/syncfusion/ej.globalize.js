@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.globalize.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -440,6 +440,92 @@ function appendMatchStringCount(preMatch, strings) {
     return quoteCount;
 }
 
+
+function parseDayByInt(value, format, culture, cal) {
+    if (!value) {
+        return null;
+    }
+    var index = 0, valueX = 0, day = null;
+    format = format.split("");
+    length = format.length;
+    var countDays = function (match) {
+        var i = 0;
+        while (format[index] === match) {
+            i++;
+            index++;
+        }
+        if (i > 0) {
+            index -= 1;
+        }
+        return i;
+    },
+    getNumber = function (size) {
+        var rg = new RegExp('^\\d{1,' + size + '}'),
+            match = value.substr(valueX, size).match(rg);
+
+        if (match) {
+            match = match[0];
+            valueX += match.length;
+            return parseInt(match, 10);
+        }
+        return null;
+    },
+    getName = function (names, lower) {
+        var i = 0,
+            length = names.length,
+            name, nameLength,
+            subValue;
+
+        for (; i < length; i++) {
+            name = names[i];
+            nameLength = name.length;
+            subValue = value.substr(valueX, nameLength);
+
+            if (lower) {
+                subValue = subValue.toLowerCase();
+            }
+
+            if (subValue == name) {
+                valueX += nameLength;
+                return i + 1;
+            }
+        }
+        return null;
+    },
+     lowerArray = function (data) {
+         var index = 0,
+             length = data.length,
+             array = [];
+
+         for (; index < length; index++) {
+             array[index] = (data[index] + "").toLowerCase();
+         }
+
+         return array;
+     },
+     lowerInfo = function (localInfo) {
+         var newLocalInfo = {}, property;
+
+         for (property in localInfo) {
+             newLocalInfo[property] = lowerArray(localInfo[property]);
+         }
+
+         return newLocalInfo;
+     };
+    for (; index < length; index++) {
+        ch = format[index];
+        if (ch === "d") {
+            count = countDays("d");
+            if (!cal._lowerDays) {
+                cal._lowerDays = lowerInfo(cal.days);
+            }
+            day = count < 3 ? getNumber(2) : getName(cal._lowerDays[count == 3 ? "namesAbbr" : "names"], true)
+        }
+    }
+    return day;
+}
+
+
 function getFullDateFormat(cal, format) {
     // expands unspecified or single character date formats into the full pattern.
     format = format || "F";
@@ -460,7 +546,7 @@ function getFullDateFormat(cal, format) {
     return format;
 }
 
-function getDateParseRegExp(cal, format) {
+ej.globalize._getDateParseRegExp = function (cal, format) {
     // converts a format string into a regular expression with groups that
     // can be used to extract date fields from a date string.
     // check for a cached parse regex.
@@ -557,9 +643,10 @@ function getParsedDate(value, format, culture) {
     // try to parse the date string by matching against the format string
     // while using the specified culture for date field names.
     value = trim( value );
+    format = trim(format);
     var cal = culture.calendar,
         // convert date formats into regular expressions with groupings.
-        parseInfo = getDateParseRegExp(cal, format),
+        parseInfo = ej.globalize._getDateParseRegExp(cal, format),
         match = new RegExp(parseInfo.regExp).exec(value);
     if (match === null) {
         return null;
@@ -624,8 +711,10 @@ function getParsedDate(value, format, culture) {
                     if ( valueOutOfRange( msec, 0, 999 ) ) return null;
                     break;
                 case dateFormat.DAY_OF_WEEK_THREE_LETTER:
+                    date = parseDayByInt(value, format, culture, cal);
+                    break;
                 case dateFormat.DAY_OF_WEEK_FULL_NAME:
-                    weekDay = getIndexOfDay( cal, matchGroup, clength === 3 );
+                     getIndexOfDay( cal, matchGroup, clength === 3 );
                     if ( valueOutOfRange( weekDay, 0, 6 ) ) return null;
                     break;
                 case dateFormat.TIME_ZONE_OFFSET_FULL:
@@ -856,7 +945,7 @@ function formatDateToCulture(value, format, culture) {
 }
 
 //add new culture into ej 
-ej.globalize.addCulture = function(name, culture){
+ej.globalize.addCulture = function (name, culture) {
     ej.cultures[name] = $.extend(true, $.extend(true, {}, ej.cultures['default'], culture), ej.cultures[name]);
 	ej.cultures[name].calendar = ej.cultures[name].calendars.standard;
 }
@@ -865,11 +954,17 @@ ej.globalize.addCulture = function(name, culture){
 ej.globalize.preferredCulture = function (culture) {
     culture = (typeof culture != "undefined" && typeof culture === typeof this.cultureObject) ? culture.name : culture;
     this.cultureObject = ej.globalize.findCulture(culture);
-    ej.cultures.current = this.cultureObject;
     return this.cultureObject;
 }
+ej.globalize.setCulture = function (culture) {
+	if (ej.isNullOrUndefined(this.globalCultureObject)) this.globalCultureObject = ej.globalize.findCulture(culture);
+	culture = (typeof culture != "undefined" && typeof culture === typeof this.globalCultureObject) ? culture.name : culture;
+    if (culture) this.globalCultureObject = ej.globalize.findCulture(culture);
+    ej.cultures.current = this.globalCultureObject;
+    return this.globalCultureObject;
+}
 ej.globalize.culture=function(name){
-	ej.cultures.current=ej.globalize.findCulture(culture);
+    ej.cultures.current = ej.globalize.findCulture(name);
 }
 
 //return the specified culture or current else default if not found
@@ -912,7 +1007,7 @@ ej.globalize.findCulture = function (culture) {
     return cultureObject;
 }
 //formatting date and number based on given format
-ej.globalize.format = function(value, format, culture) {
+ej.globalize.format = function (value, format, culture) {
     var cultureObject =  ej.globalize.findCulture(culture);
     if (typeof(value) === 'number') {
         value = formatNumberToCulture(value, format, cultureObject);
@@ -940,7 +1035,7 @@ ej.globalize.parseFloat = function(value, radix, culture) {
     var ret = NaN,
         nf = culture.numberFormat,
         npattern = culture.numberFormat.pattern[0];
-
+    value = value.replace(/ /g, '');
     if (value.indexOf(culture.numberFormat.currency.symbol) > -1) {
         // remove currency symbol
         value = value.replace(culture.numberFormat.currency.symbol || "$", "");

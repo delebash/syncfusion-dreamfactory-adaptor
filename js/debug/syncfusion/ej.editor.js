@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.editor.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -40,7 +40,8 @@
         type: "editor",
         angular: {
             require: ['?ngModel', '^?form', '^?ngModelOptions'],
-            requireFormatters: true
+            requireFormatters: true,
+            requireParser:true
         },
 
         defaults: {
@@ -242,19 +243,23 @@
                 this.wrapper.remove();
             }
             if (this._isWatermark) this.element.removeAttr("placeholder");
-            this.element.val("").removeClass('e-input').empty();
+            this.element.val("").removeClass('e-input e-disable').empty();
+            this.element.removeAttr('disabled aria-disabled aria-valuemin aria-valuemax aria-valuenow aria-live');
+            if (!(this._cloneElement).attr('role')) this.element.removeAttr('role');
             this.element.css("display", "block");
         },
 
 
 
         _init: function (options) {
+            this._cloneElement = this.element.clone();
             this._options = ej.isNullOrUndefined(options) ? {} :options;
             if (this.element.is("input") && (this.element.is("input[type=text]") || !this.element.attr('type'))) {
                 this._isWatermark = 'placeholder' in document.createElement('input');
                 this.model.locale = ej.preferredCulture(this.model.locale).name == "en" ? "en-US" : ej.preferredCulture(this.model.locale).name;
                 this._localizedLabels = this._getLocalizedLabels();
                 this.culture = ej.preferredCulture(this.model.locale);
+                this._browsername = ej.browserInfo().name;
                 this._initCustomValue();
                 this._prevSeparator = null;
                 this._checkSeparator(this.model.groupSeparator);
@@ -269,8 +274,8 @@
                     this._setValidation();
                 }
                 this._updateSeparator();
-                if (options && options.value != undefined && options.value != this.element.val()) {
-                    this._trigger("_change", { value: this.element.val() });
+                if (options && options.value != undefined) {
+                    this._trigger("_change", { value: this.model.value });
                 }
             }
             else {
@@ -292,16 +297,17 @@
         _addAttr: function (htmlAttr) {
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
-                if (key == "class") proxy.wrapper.addClass(value);
-                else if (key == "name") proxy.element.attr(key, value);
-                else if (key == "required") proxy.element.attr(key, value);
-                else if (key == "accesskey") proxy._hiddenInput.attr(key, value);
-                else if (key == "disabled" && value == "disabled") proxy.disable();
-                else if (key == "readOnly" && value == "readOnly") proxy._setReadOnly(true);
-                else if (key == "tabindex") {
+                var keyName = key.toLowerCase();
+                if (keyName == "class") proxy.wrapper.addClass(value);
+                else if (keyName == "accesskey") proxy._hiddenInput.attr(key, value);
+                else if (keyName == "disabled" && value == "disabled") proxy.disable();
+                else if (keyName == "readonly" && value == "readOnly") proxy._setReadOnly(true);
+                else if (keyName == "tabindex") {
                     proxy._hiddenInput.attr(key, value);
                     proxy.element.attr(key, value);
                 }
+                else if (keyName == "style" || keyName == "id") proxy.wrapper.attr(key, value);
+                else if (ej.isValidAttr(proxy.element[0], key)) proxy.element.attr(key, value);
                 else proxy.wrapper.attr(key, value);
             });
         },
@@ -336,8 +342,14 @@
             this._localizedFormat();
             this._validateMinMaxValue(true);
             this._updateSymbol(this.model.locale);
-            if(ej.isNullOrUndefined(this.model.value)) value = this.model.value;
-            else value = (this.model.value.toString().indexOf('e') == -1) ? this._removeSeparator(this.model.value) : this._convertToExponetial(this.model.value).unformattedValue;
+            if (ej.isNullOrUndefined(this.model.value)) {
+                value = this.model.value;
+                this.wrapper.removeClass('e-valid');
+            }
+            else {
+                value = (this.model.value.toString().indexOf('e') == -1) ? this._removeSeparator(this.model.value) : this._convertToExponetial(this.model.value).unformattedValue;
+                this.wrapper.addClass('e-valid');
+            }
             this.element.val(value);
         },
 
@@ -383,7 +395,6 @@
             this._hiddenInput.attr('data-role', 'none');
 
             this._hiddenInput[0].tabIndex = this.element[0].tabIndex;
-            this._hiddenInput[0].style.cssText = this.element[0].style.cssText;
             this._hiddenInput.attr("accesskey", this.element[0].accessKey);
             this.element[0].accessKey = "";
 
@@ -393,9 +404,9 @@
                 this._hiddenSpan = ej.buildTag("span.e-input e-placeholder ").insertAfter(this.element);
                 this._hiddenSpan.text(this._localizedLabels.watermarkText);
                 this._hiddenSpan.css("display", "none");
-                this._hiddenSpan.bind("mousedown", $.proxy(this._focusIn, this));
-                this._hiddenSpan.bind('mousewheel', $.proxy(this._mouseWheel, this));
-                this._hiddenSpan.bind('DOMMouseScroll', $.proxy(this._mouseWheel, this));
+                this._on(this._hiddenSpan,"mousedown", this._focusIn);
+                this._on(this._hiddenSpan,'mousewheel', this._mouseWheel);
+                this._on(this._hiddenSpan,'DOMMouseScroll',this._mouseWheel);
             }
             this.model.name = this.element.attr("name") != null ? this.element.attr("name") : (this.model.name != null ? this.model.name : this.element[0].id);
             this.element.attr("name") == null ? this.element.attr("name", this.model.name) : "";
@@ -523,6 +534,7 @@
             this._initCustomValue();
             this._updateSymbol(this.model.locale);
             this._localizedFormat();
+            this._changeWatermark(this.model.watermarkText);
             if (ej.isNullOrUndefined(this.model.value)) value = this.model.value;
             else value = (this.model.value.toString().indexOf('e') == -1) ? this._formatValue(this.model.value, "n",true) : this._convertToExponetial(this.model.value).unformattedValue;
             this.element.val(value);
@@ -648,8 +660,8 @@
                 this._hiddenInput.attr("readonly", true);
             }
             else {
-                this.element.removeAttr("readonly");
-                this._hiddenInput.removeAttr("readonly");
+                this.element.prop("readonly",false);
+                this._hiddenInput.prop("readonly",false);
             }
         },
 
@@ -668,7 +680,10 @@
 
         _changeWatermark: function (text) {
             if (!this.model.enabled) return false;
-            if (this._isWatermark) this._hiddenInput.attr("placeholder", text);
+            if (this._isWatermark) {
+                this._hiddenInput.attr("placeholder", text);
+                this.element.attr("placeholder", text);
+            }
             else this._hiddenSpan.text(text);
         },
 
@@ -677,7 +692,8 @@
             var input = this._textBox;
             try {
                 if (input.setSelectionRange) {
-                    input.setSelectionRange(selectionStart, selectionEnd);
+                    if (this._browsername == "edge")  setTimeout(function () { input.setSelectionRange(selectionStart, selectionEnd) })
+                    else input.setSelectionRange(selectionStart, selectionEnd);
                 }
                 else if (input.createTextRange) {
                     var range = input.createTextRange();
@@ -779,12 +795,13 @@
         enable: function () {
             this.model.enabled = true;
             this.element[0].disabled = false;
-            this.element.removeAttr("disabled");
-            this._hiddenInput.removeAttr("disabled");
+            this.element.prop("disabled",false);
+            this._hiddenInput.prop("disabled", false);
             this.element.removeClass('e-disable').attr({ "aria-disabled": false });
             this._hiddenInput.removeClass('e-disable').attr({ "aria-disabled": false });
             this.wrapper.find(".e-select").removeClass('e-disable').attr({ "aria-disabled": false });
             this.wrapper.find(".e-select span.e-icon.e-arrow").removeClass('e-disable');
+            this.wrapper.removeClass('e-disable-wrap');
         },
 
 
@@ -797,6 +814,7 @@
             this._hiddenInput.addClass('e-disable').attr({ "aria-disabled": true });
             this.wrapper.find(".e-select").addClass('e-disable').attr({ "aria-disabled": true });
             this.wrapper.find(".e-select span.e-icon.e-arrow").addClass('e-disable');
+            this.wrapper.addClass('e-disable-wrap');
         },
 
 
@@ -818,7 +836,21 @@
             this[action](this.spinDown, "mousedown mouseup touchstart touchend", this._spinDownClick);
         },
 
+        _isIE8: function () {
+            var _ie8 = false, browserInfo = ej.browserInfo();
+            if (browserInfo.name == 'msie' && browserInfo.version == "8.0") {
+                _ie8 = true;
+            }
+            return _ie8;
+        },
+
         _spinUpClick: function (event) {
+            var isNotLeftClick = false;
+            if (event.button)
+                isNotLeftClick = this._isIE8() ? event.button != 1 : event.button != 0;
+            else if (event.which)
+                isNotLeftClick = (event.which == 3); //for Opera
+            if (isNotLeftClick) return;
             var self = this;
             event.preventDefault();
             clearTimeout(this._timeout);
@@ -841,6 +873,12 @@
         },
 
         _spinDownClick: function (event) {
+            var isNotLeftClick = false;
+            if (event.button)
+                isNotLeftClick = this._isIE8() ? event.button != 1 : event.button != 0;
+            else if (event.which)
+                isNotLeftClick = (event.which == 3); //for Opera
+            if (isNotLeftClick) return;
             var self = this;
             event.preventDefault();
             clearTimeout(this._timeout);
@@ -1103,8 +1141,14 @@
                 this._preVal = currVal;
                 this.model.value = this._checkNumValue(this._formatValue(this._preVal, "n", false));
                 this._updateHiddenField();
-                if (ej.isNullOrUndefined(this.model.value)) value = this.model.value;
-                else value = (this.model.value.toString().indexOf('e') == -1) ? this._removeSeparator(this.model.value) : this._convertToExponetial(this.model.value).unformattedValue;
+                if (ej.isNullOrUndefined(this.model.value)) {
+                    value = this.model.value;
+                    this.wrapper.removeClass('e-valid');
+                }
+                else {
+                    value = (this.model.value.toString().indexOf('e') == -1) ? this._removeSeparator(this.model.value) : this._convertToExponetial(this.model.value).unformattedValue;
+                    this.wrapper.addClass('e-valid');
+                }
                 this.element.val(value);
                 this.element.attr('aria-valuenow', value);
                 this._updateSeparator();

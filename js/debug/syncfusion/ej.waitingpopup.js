@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.waitingpopup.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -40,6 +40,8 @@
 
             target: null,
 
+            appendTo: null,
+
             showImage: true,
 
             htmlAttributes: {},
@@ -60,11 +62,9 @@
             showImage: "boolean",
             cssClass: "string"
         },
-		
 		_isTargetVisible: function(){
 			return this.element.css('display') != 'none';
 		},
-
         show: function () {
 			if(this._isTargetVisible()){
 				this._refreshPanel();
@@ -130,7 +130,19 @@
         _init: function () {
 			this._initialize();
 			this._render();
+			this._wireEvents();
         },
+
+        _wireEvents: function () {
+            $(window).on('resize', $.proxy(this._resizeHandler, this));
+        },
+        _unwireEvents: function () {
+            $(window).off("resize", $.proxy(this._resizeHandler, this));
+        },
+
+        _resizeHandler: function () {
+            this.refresh();
+         },
 
         _setModel: function (options) {
             var option;
@@ -142,6 +154,12 @@
                     case "showOnInit": this._setVisibility(options[option]); break;
                     case "showImage": this._showImage(options[option]); this._setContentPosition(); break;
                     case "target": this.model.target = options[option]; this._setTarget(); this.refresh(); break;
+                    case "appendTo": this.model.appendTo = options[option]; this._setTarget();
+                        if (!ej.isNullOrUndefined(this.model.appendTo) && this.model.appendTo != "document" && this.model.appendTo != "window")
+                            this.maindiv.appendTo($(this.model.appendTo));
+                        else
+                            $('body').append(this.maindiv);
+                        this.refresh(); break;
                     case "template":
                         this.maindiv.empty();
                         if (options[option]) {
@@ -168,6 +186,7 @@
         },
         _destroy: function () {
             this.maindiv.remove();
+			this._unwireEvents();
         },
 
         _initialize: function () {
@@ -181,7 +200,7 @@
 
         _render: function () {
             this._setTarget();
-            var oldWrapper = $("#" + this.element.context.id + "_WaitingPopup").get(0);
+            var oldWrapper = $("#" + this.element[0].id + "_WaitingPopup").get(0);
             if (oldWrapper)
                 $(oldWrapper).remove();
             this.maindiv = ej.buildTag("div.e-waitpopup-pane e-widget " + this.model.cssClass + "#" + this.element[0].id + "_WaitingPopup");
@@ -194,7 +213,10 @@
                     this._generateTextTag(this.model.text);
                 }
             }
-            $('body').append(this.maindiv);
+            if (!ej.isNullOrUndefined(this.model.appendTo) && this.model.appendTo != "document" && this.model.appendTo != "window")
+                this.maindiv.appendTo($(this.model.appendTo));
+            else
+                $('body').append(this.maindiv);
             this._setVisibility(this.model.showOnInit);
             this._addAttr(this.model.htmlAttributes);
         },
@@ -213,9 +235,17 @@
             });
         },
 
-
-        _setPanelPosition: function () {
+        _setPanelPosition: function () {			 
             var location = ej.util.getOffset(this.targetElement);
+			if(this.model.appendTo != null && $(this.model.appendTo).length >0) {				
+				if ((this.targetElement.css("position") == "relative" || this.targetElement.css("position") == "absolute") && this.targetElement[0] === $(this.model.appendTo)[0] ) {					
+					location = {left:0, top:0};														
+				}
+				else{
+					location.left -= this.targetElement.offsetParent().offset().left;
+					location.top -= this.targetElement.offsetParent().offset().top;
+				}
+			}
             this.maindiv.css({
                 "position": "absolute",
                 "left": Math.ceil(location.left) + "px",

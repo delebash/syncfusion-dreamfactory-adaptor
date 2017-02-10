@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.splitter.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -108,6 +108,8 @@
                     case "htmlAttributes": this._addAttr(options[option]); break;
                     case "orientation": this._refreshSplitter("orientation", options[option]); break;
                     case "properties": this._refreshSplitter("properties", options[option]); break;
+                    case "width": this.model.width = options[option]; this._setHeightWidth(); break;
+                    case "height": this.model.height = options[option]; this._setHeightWidth(); break;
                 }
             }
         },
@@ -138,6 +140,7 @@
         addItem: function (content, property, index) {
             var paneCount = this.panes.length;
             index = this._getNumber(index);
+			 var totalSize = this.element[this.containerCss]();
             if (ej.isNullOrUndefined(index)) index = paneCount;
             if (index < 0 || index > paneCount) return "";
             var property = this._getPaneProperty(property), paneDiv, paneDivSize, requiredSize;
@@ -145,21 +148,28 @@
             paneDiv = ej.buildTag("div.e-pane e-" + this.model.orientation.substr(0, 1) + "-pane");
             this.element.append(paneDiv[this.containerCss](property.paneSize));
             paneDivSize = property.paneSize = paneDiv[this.containerCss]();
+			 if(paneCount==0) this.panes.push(paneDiv);	
             paneDiv.remove();
-            var start = index, end = paneCount, i, j, insert, before, direction = 2, getters = {}, taken = 0, canInsert = false;
+            var start = index, end = (paneCount>0)?paneCount:this.panes.length, i, j, insert, before, direction = 2, getters = {}, taken = 0, canInsert = false;
             requiredSize = paneDivSize + this._bar;
 
             for (j = 0; j < direction; j++) {
                 for (i = start; i < end; i++) {
                     var _paneSize = $(this.panes[i])[this.containerCss]();
-                    var availableSpace = _paneSize - this.model.properties[i].minSize;
+					 var minSize=(!ej.isNullOrUndefined(this.model.properties[i]))?(this.model.properties[i].minSize): property.minSize;
+                    var availableSpace = _paneSize - minSize;
                     if (availableSpace >= requiredSize - taken) {
                         getters[i] = _paneSize - (requiredSize - taken);
                         canInsert = true;
                         break;
                     }
+					else if((paneCount==0)&&(availableSpace>=0)){
+						  getters[i] = minSize;
+                        taken += availableSpace;
+						canInsert=true;
+					}
                     else if (availableSpace > 0) {
-                        getters[i] = this.model.properties[i].minSize;
+                        getters[i] = minSize;
                         taken += availableSpace;
                     }
                 }
@@ -169,6 +179,8 @@
             if (!canInsert) return "";
             for (var pos in getters)
                 $(this.panes[pos])[this.containerCss](getters[pos]);
+			if(paneCount<=0) paneDiv.append($(this.panes[index]));
+			else{
             if (index == paneCount) {
                 insert = "insertBefore", before = 1;
                 paneDiv.insertAfter($(this.panes[index - 1]));
@@ -177,10 +189,14 @@
                 insert = "insertAfter", before = 0;
                 paneDiv.insertBefore($(this.panes[index]));
             }
+			 }
             this.model.properties.splice(index, 0, property);
+			 if(paneCount==0)this.element.append(paneDiv[this.containerCss](totalSize));			
+			 if(paneCount>0){
             this.panes.splice(index, 0, paneDiv);
             var splitBar = this._createSplitBar(index - before);
             splitBar[insert](paneDiv);
+			 }
             paneDiv.append(content);
             this._updateModel();
             return paneDiv;
@@ -191,7 +207,7 @@
             var paneCount = this.panes.length - 1;
             index = this._getNumber(index);
             if (ej.isNullOrUndefined(index)) index = paneCount;
-            if (index < 0 || index > paneCount || paneCount < 1) return null;
+            if (index < 0 || index > paneCount || paneCount < 0) return null;
             var targetPane, nextPane, splitbars, removedSize;
             targetPane = $(this.panes[index]);
             removedSize = targetPane[this.containerCss]() + this._bar;
@@ -210,9 +226,9 @@
             this._updateModel();
         },
         _checkMinMaxSize: function (property) {
-            if (property.paneSize < property.minSize)
+            if ((!ej.isNullOrUndefined(property.minSize))&&(property.paneSize < property.minSize))
                 property.paneSize = property.minSize;
-            if (property.paneSize > property.maxSize)
+            if ((!ej.isNullOrUndefined(property.maxSize))&&(property.paneSize > property.maxSize))
                 property.paneSize = property.maxSize;
             return property;
         },
@@ -371,12 +387,26 @@
         },
 
         _setDimentions: function () {
+			var parentObj = this._getParentObj(),_width = parseInt(this.model.width), _height = parseInt(this.model.height);
+			if (isNaN(this.model.width) && (this.model.width.indexOf("%") > 0))
+                _width = (this.model.isResponsive) ? this._convertToPixel(parentObj.innerWidth(), _width):this.model.width;
+            if (isNaN(this.model.height) && (this.model.height.indexOf("%") > 0))
+                _height = (this.model.isResponsive) ? this._convertToPixel(parentObj.innerHeight(), _height):this.model.height;
             if (this.model.height)
-                this.element.css("height", this.model.height);
+                this.element.css("height",_height);
             if (this.model.width)
-                this.element.css("width", this.model.width);
+                this.element.css("width",_width );
         },
 
+        _setHeightWidth: function () {
+   		    this._setDimentions();
+            this._setPanesSize();
+            this._getPanesPercent();
+        },
+
+         _getParentObj: function () {
+            return this.element.parent();
+        },
         _checkProperties: function () {
             if (this.model.enableRTL) this._rtl(this.model.enableRTL);
             this._prevSize = this.element[this.containerCss]();
@@ -409,7 +439,7 @@
             totalPaneSize = 0,
             totalSize = this.element[attr](),
             remainZero = false,
-            bar = this._bar,
+            bar = this._bar=($(this.element).find(">.e-splitbar").length>0)?parseInt($(this.element).find(">.e-splitbar").css(attr)):this._bar,
             zerothPanes = [],
             panLength, j, paneCount = this.panes.length;
 
@@ -608,7 +638,7 @@
                     this.shadowBar.addClass("e-end-indicaton");
                 }
             }
-            if (PaneMax2 != null) {
+            else if (PaneMax2 != null) {
                 if (shadowbarPos < nextPaneRange - PaneMax2) {
                     this.resizedPosition = nextPaneRange - PaneMax2;
                     this.shadowBar.addClass("e-end-indicaton");
@@ -662,7 +692,7 @@
                 if (prevPaneSize < this.oldPaneSize[nextPaneIndex]) {
                     $target.addClass("e-end-indicaton");
                     this._inMovement = false;
-                    $(document).bind("mouseup", $.proxy(this._mouseUpOnArrow, this));
+                    $(document).on("mouseup", $.proxy(this._mouseUpOnArrow, this));
                     return false;
                 }
                 else {
@@ -740,7 +770,7 @@
                 if (nextPaneSize < this.oldPaneSize[prevPaneIndex]) {
                     $target.addClass("e-end-indicaton");
                     this._inMovement = false;
-                    $(document).bind("mouseup", $.proxy(this._mouseUpOnArrow, this));
+                    $(document).on("mouseup", $.proxy(this._mouseUpOnArrow, this));
                     return false;
                 }
                 else {
@@ -790,7 +820,7 @@
 
         _mouseUpOnArrow: function (event) {
             this.element.find(".e-end-indicaton").removeClass("e-end-indicaton");
-            $(document).unbind("mouseup", $.proxy(this._mouseUpOnArrow, this));
+            $(document).off("mouseup", $.proxy(this._mouseUpOnArrow, this));
         },
 
         _keydownOnDivider: function (e) {
@@ -844,13 +874,13 @@
                 if (!$(e.target).hasClass("e-hover")) {
                     $(e.target).addClass("e-hover");
                     if (this.model.allowKeyboardNavigation)
-                        $(document).bind("keydown", { target: e.target }, $.proxy(this._keydownOnDivider, this));
+                        $(document).on("keydown", { target: e.target }, $.proxy(this._keydownOnDivider, this));
                 }
             }
             else {
                 this.element.children(".e-splitbar.e-hover").removeClass("e-hover");
                 this._mouseUpOnDivider();
-                $(document).unbind("keydown", $.proxy(this._keydownOnDivider, this));
+                $(document).off("keydown", $.proxy(this._keydownOnDivider, this));
             }
         },
 
@@ -861,9 +891,9 @@
                 this._overlayElement = ej.buildTag('div.e-pane-overlay');
                 if (!$target.hasClass("e-hover")) $target.focus();
                 this.element.find(".e-pane").not(".e-splitter").append(this._overlayElement);
-                $(document).bind(ej.eventType.mouseMove, { target: event.target }, $.proxy(this._mouseMoveOnDivider, this));
-                $(document).bind(ej.eventType.mouseUp, $.proxy(this._mouseUpOnDivider, this));
-                $(document).bind("mouseleave", $.proxy(this._mouseUpOnDivider, this));
+                $(document).on(ej.eventType.mouseMove, { target: event.target }, $.proxy(this._mouseMoveOnDivider, this));
+                $(document).on(ej.eventType.mouseUp, $.proxy(this._mouseUpOnDivider, this));
+                $(document).on("mouseleave", $.proxy(this._mouseUpOnDivider, this));
             }
             else if ($target.hasClass("e-expand") || $target.hasClass("e-collapse")) {
                 $target.parent().focus();
@@ -887,9 +917,9 @@
         _mouseUpOnDivider: function (event) {
             this._paneResize();
             this.element.find(".e-pane").not(".e-splitter").find(".e-pane-overlay").remove();
-            $(document).unbind(ej.eventType.mouseMove, $.proxy(this._mouseMoveOnDivider, this));
-            $(document).unbind(ej.eventType.mouseUp, $.proxy(this._mouseUpOnDivider, this));
-            $(document).unbind("mouseleave", $.proxy(this._mouseUpOnDivider, this));
+            $(document).off(ej.eventType.mouseMove, $.proxy(this._mouseMoveOnDivider, this));
+            $(document).off(ej.eventType.mouseUp, $.proxy(this._mouseUpOnDivider, this));
+            $(document).off("mouseleave", $.proxy(this._mouseUpOnDivider, this));
             // sets shadowBar null after removing shadowBar element
             this.shadowBar = null;
         },
@@ -916,11 +946,11 @@
         },
 
         _wireEvents: function (boolean) {
-            if (boolean) $(window).bind('resize', $.proxy(this._windowResized, this));
+            if (boolean) $(window).on('resize', $.proxy(this._windowResized, this));
         },
 
         _unWireEvents: function () {
-            $(window).unbind('resize', $.proxy(this._windowResized, this));
+            $(window).off('resize', $.proxy(this._windowResized, this));
         }
     });
 

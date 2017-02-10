@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.olap.base.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -28,20 +28,22 @@
             this._cTotIndexInfo = null,
             this._rTotIndexInfo = null;
             this._kpi = null;
+            this._rowCount = 0;
+            this._colCount = 0;
+            this._isPaging = false;
         },
         _initControlProperties: function(controlObj)
         {
-            controlObj._drilledCellSet = [];
+            controlObj._drilledCellSet = (controlObj.model.enablePaging || controlObj.model.enableVirtualScrolling) ? (ej.isNullOrUndefined(controlObj._drilledCellSet) ? [] : controlObj._drilledCellSet) : [];
             controlObj.XMLACellSet = null;
-            controlObj._fieldData = {};
-            if(controlObj.pluginName == "ejPivotGrid")
+            if (ej.isNullOrUndefined(controlObj._fieldData) || (!ej.isNullOrUndefined(controlObj._fieldData) && ej.isNullOrUndefined(controlObj._fieldData.hierarchy)))
                 this._getFieldItemsInfo(controlObj);
             this._currIndex = {};
             this._isRowDrilled = false;
             this._isColDrilled = false;
         },
         getJSONData: function (args, dataSource, controlObj) {
-            if (args.action && args.action == "initialLoad") {
+            if (args.action && (args.action == "initialLoad" || args.action == "navPaging")) {
                 this._initControlProperties(controlObj);
                 this._applyTrim(controlObj);
             }
@@ -53,32 +55,44 @@
                 controlObj._createGroupingBar(dataSource);
             }
             
-
+            this._isPaging = (this.olapCtrlObj.model.enablePaging || this.olapCtrlObj.model.enableVirtualScrolling) ? true : false;
             if(dataSource.MDXQuery)
                 parsedMDX = dataSource.MDXQuery;
             else
-                parsedMDX = this._getParsedMDX(dataSource, dataSource.cube);
+                parsedMDX = this._getParsedMDX(dataSource, dataSource.cube, args.action && args.action != "navPaging" && this._isPaging && !ej.isNullOrUndefined(this.olapCtrlObj.model.dataSource.pagerOptions) ? true : false);
 
             var conStr = this._getConnectionInfo(this.olapCtrlObj.model.dataSource.data);
             pData = "<Envelope xmlns=\"http://schemas.xmlsoap.org/soap/envelope/\"> <Header></Header> <Body> <Execute xmlns=\"urn:schemas-microsoft-com:xml-analysis\"> <Command> <Statement> " + parsedMDX + " </Statement> </Command> <Properties> <PropertyList> <Catalog>" + dataSource.catalog + "</Catalog> <LocaleIdentifier>"+conStr.LCID+"</LocaleIdentifier> </PropertyList> </Properties></Execute> </Body> </Envelope>";
-            if (args.action == "drilldown") {
+            if (args.action == "drilldown" && !this._isPaging) {
                 this.olapCtrlObj.doAjaxPost("POST", conStr.url, { XMLA: pData }, this._onDemandExpand, null, args);
             }
             else
-                this.olapCtrlObj.doAjaxPost("POST", conStr.url, { XMLA: pData }, this._generateJSONData, null, args);
+                this.olapCtrlObj.doAjaxPost("POST", conStr.url, { XMLA: pData }, (args.action && args.action != "navPaging" && this._isPaging && !ej.isNullOrUndefined(this.olapCtrlObj.model.dataSource.pagerOptions) ? this._generatePagingData : this._generateJSONData), null, args);
         },
-        _getParsedMDX : function(olapReport, cube){
+        _getParsedMDX: function (olapReport, cube, refPaging) {
             if (olapReport != undefined) {
                 var mdxQuery = "", rowQuery, columnQuery, slicerQuery;
                 rowQuery = ej.olap._mdxParser._getRowMDX(olapReport);
                 columnQuery = ej.olap._mdxParser._getcolumnMDX(olapReport);
-                rowQuery = rowQuery.length > 0 ? ",NON EMPTY(" + rowQuery + ")\n dimension properties MEMBER_TYPE,CHILDREN_CARDINALITY, PARENT_UNIQUE_NAME  ON ROWS" : "";
+                rowQuery = rowQuery.length > 0 ? (this._isPaging && !refPaging) ? "(" + rowQuery + ")" : "NON EMPTY(" + rowQuery + ")" : "";
+                columnQuery = columnQuery.length > 0 ? (this._isPaging && !refPaging) ? "(" + columnQuery + ")" : "NON EMPTY(" + columnQuery + ")" : "";
+                if (this._isPaging && !refPaging && !ej.isNullOrUndefined(this.olapCtrlObj.model.dataSource.pagerOptions)) {
+                    var pagingQuery = this._getPagingQuery(rowQuery, columnQuery);
+                    rowQuery = pagingQuery.rowQuery;
+                    columnQuery = pagingQuery.columnQuery;
+                }
                 slicerQuery = ej.olap._mdxParser._getSlicerMDX(olapReport, this.olapCtrlObj);
-                mdxQuery = "\nSelect \nNON EMPTY(" + (columnQuery == "" ? "{}" : columnQuery) + ")\ndimension properties MEMBER_TYPE,CHILDREN_CARDINALITY, PARENT_UNIQUE_NAME  ON COLUMNS \n" + rowQuery + "\n " + ej.olap._mdxParser._getIncludefilterQuery(olapReport, cube, this.olapCtrlObj) + slicerQuery + "\n CELL PROPERTIES VALUE, FORMAT_STRING, FORMATTED_VALUE \n ";
+                mdxQuery = "\nSelect \n" + (columnQuery == "" ? "{}" : columnQuery) + "\ndimension properties MEMBER_TYPE,CHILDREN_CARDINALITY, PARENT_UNIQUE_NAME  ON COLUMNS \n" + (rowQuery == "" ? "" : "," + rowQuery + "\ndimension properties MEMBER_TYPE,CHILDREN_CARDINALITY, PARENT_UNIQUE_NAME  ON ROWS") + "\n " + ej.olap._mdxParser._getIncludefilterQuery(olapReport, cube, this.olapCtrlObj) + slicerQuery + "\n CELL PROPERTIES VALUE, FORMAT_STRING, FORMATTED_VALUE \n ";
                 if (columnQuery == "")
                     mdxQuery.replace(/NON EMPTY/g, " ")
             }
             return mdxQuery;
+        },
+        _getPagingQuery: function (rowQuery, columnQuery) {
+            var categCurrPage = (Math.ceil(this._colCount / this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize) < parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.categoricalCurrentPage) || parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.categoricalCurrentPage) == 0) ? ((Math.ceil(this._colCount / this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize) < parseInt(this.olapCtrlObj._categCurrentPage) && this._colCount > 0) ? Math.ceil(this._colCount / this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize) : this.olapCtrlObj._categCurrentPage) : parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.categoricalCurrentPage);
+            var seriesCurrPage = (Math.ceil(this._rowCount / this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize) < parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.seriesCurrentPage) || parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.seriesCurrentPage) == 0) ? ((Math.ceil(this._rowCount / this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize) < parseInt(this.olapCtrlObj._seriesCurrentPage) && this._rowCount > 0) ? Math.ceil(this._rowCount / this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize) : this.olapCtrlObj._seriesCurrentPage) : parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.seriesCurrentPage);
+            var rowQueryCpy = rowQuery;
+            return { rowQuery: rowQuery != "" ? ("SUBSET({NONEMPTY(" + rowQuery + (columnQuery != "" ? "," + columnQuery : "") + ")}," + (((seriesCurrPage == 0 ? 1 : seriesCurrPage) - 1) * (this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize)) + "," + this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize + ")") : "", columnQuery: columnQuery != "" ? ("SUBSET({NONEMPTY(" + columnQuery + (rowQueryCpy != "" ? "," + rowQueryCpy : "") + ")}," + (((categCurrPage == 0 ? 1 : categCurrPage) - 1) * (this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize)) + "," + this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize + ")") : "" };
         },
         _getAxisElementsUName : function(axisElements){		
             var elementsName = "";
@@ -88,32 +102,61 @@
             }
             return elementsName;
         },
-        _generateJSONData: function (customArgs, args) {
-            var tranposeEngine = [], jsonObj = [];
-            if ($(args).find("Error").length > 0)
-            {
+        _generatePagingData: function (customArgs, args) {
+            if ($(args).find("Error").length > 0) {
                 this.olapCtrlObj._createErrorDialog($(args).find("faultstring").text(), customArgs.action);
+                return false;
+            }
+            var XMLACellSet = $(args).find("Axes, CellData");
+            this._rowCount = XMLACellSet.find("Axis[name|='Axis1'] Tuple").length;
+            this._colCount = XMLACellSet.find("Axis[name|='Axis0'] Tuple").length;
+
+            var parsedMDX = this._getParsedMDX(this.olapCtrlObj.model.dataSource, this.olapCtrlObj.model.dataSource.cube, false);
+            var conStr = this._getConnectionInfo(this.olapCtrlObj.model.dataSource.data);
+            this.olapCtrlObj.doAjaxPost("POST", conStr.url, { XMLA: ej.olap._mdxParser.getSoapMsg(parsedMDX, this.olapCtrlObj.model.dataSource.data, this.olapCtrlObj.model.dataSource.catalog) }, this._generateJSONData, null, customArgs);
+        },
+        _generateJSONData: function (customArgs, args) {
+            this.olapCtrlObj.model.dataSource = this._OlapDataSource;
+            if (this._isPaging && customArgs.action == "drilldown")
+                this._onDemandExpand(customArgs, args);
+            var tranposeEngine = [], jsonObj = [];
+            if ($(args).find("Error").length > 0) {
+                ej.Pivot._createErrorDialog($(args).find("faultstring").text(), "Error", this.olapCtrlObj);
                 return false;
             }
             $(args).find("Axis[name|='SlicerAxis']").remove();
             this.olapCtrlObj.XMLACellSet = $(args).find("Axes, CellData");
             var axis0Tuples, axis1Tuples, temp, testData = [], cellData;
-            if(customArgs == "onDemandDrill")
+            if (customArgs == "onDemandDrill")
                 this.olapCtrlObj.XMLACellSet = args;
             axis0Tuples = $(this.olapCtrlObj.XMLACellSet).find("Axis[name|='Axis0'] Tuple");
             axis1Tuples = $(this.olapCtrlObj.XMLACellSet).find("Axis[name|='Axis1'] Tuple");
             if (axis0Tuples.length > 0) {
                 cellData = $(this.olapCtrlObj.XMLACellSet).find("CellData Cell");
-                this._columnHeaders = this._getHeaderCollection(axis0Tuples, "colheader");
                 this._rowHeaders = this._getHeaderCollection(axis1Tuples, "rowheader");
+                this._columnHeaders = this._getHeaderCollection(axis0Tuples, "colheader");
                 this._valueCells = this._getValueCells(cellData, axis0Tuples.length);
                 indexRCell = this._measureDt.axis == 'rowheader' ? (ej.sum(this._rowHeaders.maxLvlLen) + 1) : ej.sum(this._rowHeaders.maxLvlLen);
                 indexCCell = this._measureDt.axis == 'colheader' ? (ej.sum(this._columnHeaders.maxLvlLen) + 1) : ej.sum(this._columnHeaders.maxLvlLen);
+                if (this._isPaging)
+                {
+                    for (var rCnt = 0; rCnt < this._rowHeaders.headers.length; rCnt++) {
+                        for (var cCnt = 0; cCnt < this._columnHeaders.headers.length; cCnt++) {
+                            if (ej.isNullOrUndefined(this._valueCells[rCnt]))
+                            {
+                                this._valueCells[rCnt] = [];
+                                this._valueCells[rCnt][cCnt] = { FormatString: "#,#", Value: "" };
+                            }
+                            else if (ej.isNullOrUndefined(this._valueCells[rCnt][cCnt])) {
+                                this._valueCells[rCnt][cCnt] = { FormatString: "#,#", Value: "" };
+                            }
+                        }
+                    }
+                }
                 this._populateEngine(this._rowHeaders.headers, this._columnHeaders.headers, this._valueCells);
                 $(this.olapCtrlObj).find(".pivotGridTable").remove();
-
+                this.olapCtrlObj._measureDt = this._measureDt;
                 var rowLenth = this._rowHeaders.headers.length + indexCCell, colLength = this._columnHeaders.headers.length + indexRCell;
-                //if (colLength == 1 && rowLenth == 1)
                 if (this.pivotEngine.length > 1)
                     rowLenth = this.pivotEngine.length;
                 for (var rCnt = 0; rCnt < rowLenth ; rCnt++) {
@@ -159,36 +202,79 @@
                     else
                         break;
                 }
+            }
                 this.olapCtrlObj["_pivotRecords"] = { records: jsonObj, rowCount: _rowCount };
                 if (!(typeof (this.olapCtrlObj.model.dataSource.data) == "string") || this.olapCtrlObj.pluginName == "ejPivotGrid")
                     this._renderPivotGrid(customArgs, jsonObj);
-                else
+                else if ((!(typeof (this.olapCtrlObj.model.dataSource.data) == "string") || this.olapCtrlObj.pluginName == "ejPivotChart") || (!(typeof (this.olapCtrlObj.model.dataSource.data) == "string") || this.olapCtrlObj.pluginName == "ejPivotGauge") || (!(typeof (this.olapCtrlObj.model.dataSource.data) == "string") || this.olapCtrlObj.pluginName == "ejPivotTreeMap"))
                     this.olapCtrlObj.generateJSON({ baseObj: this }, tranposeEngine);
-            }
-            else if (this.olapCtrlObj.pluginName == "ejPivotGrid")
-                this._renderPivotGrid(customArgs, jsonObj);
+                else {
+                    this._renderPager(customArgs);
+                    this.olapCtrlObj.generateJSON({ baseObj: this, tranposeEngine: tranposeEngine, jsonObj: jsonObj });
+                }
             this._columnHeaders = this._rowHeaders = this._valueCells = this.pivotEngine = []; this._cBIndx = this._rBIndx = null; this._measureDt = { axis: "", posision: null },
             this._cTotIndexInfo = this._rTotIndexInfo = null;
-            //return tranposeEngine;
+        },
+        _renderPager: function (customArgs) {
+            if (this._isPaging && customArgs.action != "navPaging") {
+                if (!ej.isNullOrUndefined(this.olapCtrlObj.model.dataSource.pagerOptions)) {
+                    var categCurrPage = (Math.ceil(this._colCount / this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize) < parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.categoricalCurrentPage) || parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.categoricalCurrentPage) == 0) ? (Math.ceil(this._colCount / this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize) < parseInt(this.olapCtrlObj._categCurrentPage) ? Math.ceil(this._colCount / this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize) : this.olapCtrlObj._categCurrentPage) : parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.categoricalCurrentPage);
+                    var seriesCurrPage = (Math.ceil(this._rowCount / this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize) < parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.seriesCurrentPage) || parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.seriesCurrentPage) == 0) ? (Math.ceil(this._rowCount / this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize) < parseInt(this.olapCtrlObj._seriesCurrentPage) ? Math.ceil(this._rowCount / this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize) : this.olapCtrlObj._seriesCurrentPage) : parseInt(this.olapCtrlObj.model.dataSource.pagerOptions.seriesCurrentPage);
+                    if (this.olapCtrlObj.model.enablePaging) {
+                        var pageSettings = { CategorialCurrentPage: categCurrPage, CategorialPageSize: this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize, SeriesCurrentPage: seriesCurrPage, SeriesPageSize: this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize };
+                        var headerCount = { Column: this._colCount, Row: this._rowCount };
+                        this.olapCtrlObj._pagerObj.element.css("opacity", "1");
+                        this.olapCtrlObj._pagerObj.element.find(".pagerTextBox").removeAttr('disabled');
+                        this.olapCtrlObj._pagerObj._unwireEvents();
+                        this.olapCtrlObj._pagerObj._wireEvents();
+                        this.olapCtrlObj._pagerObj.initPagerProperties(headerCount, pageSettings);
+                    }
+                    else if (this.olapCtrlObj.model.enableVirtualScrolling) {
+                        this.olapCtrlObj._categPageCount = Math.ceil(this._colCount / this.olapCtrlObj.model.dataSource.pagerOptions.categoricalPageSize);
+                        this.olapCtrlObj._seriesPageCount = Math.ceil(this._rowCount / this.olapCtrlObj.model.dataSource.pagerOptions.seriesPageSize);
+                    }
+                    this.olapCtrlObj.model.dataSource.pagerOptions.categoricalCurrentPage = this.olapCtrlObj.model.dataSource.pagerOptions.seriesCurrentPage = 0;
+                    this.olapCtrlObj._categCurrentPage = categCurrPage;
+                    this.olapCtrlObj._seriesCurrentPage = seriesCurrPage;
+                    if (!ej.isNullOrUndefined(this.olapCtrlObj._pivotGrid)) {
+                        this.olapCtrlObj._pivotGrid._categCurrentPage = categCurrPage;
+                        this.olapCtrlObj._pivotGrid._seriesCurrentPage = seriesCurrPage;
+                        this.olapCtrlObj._pivotGrid._categPageCount = this.olapCtrlObj._categPageCount;
+                        this.olapCtrlObj._pivotGrid._seriesPageCount = this.olapCtrlObj._seriesPageCount;
+                    }
+                }
+                else if (this.olapCtrlObj.model.enablePaging) {
+                    var pageSettings = { CategorialCurrentPage: 1, CategorialPageSize: 1, SeriesCurrentPage: 1, SeriesPageSize: 1 };
+                    var headerCount = { Column: 1, Row: 1 };
+                    this.olapCtrlObj._pagerObj.initPagerProperties(headerCount, pageSettings);
+                    this.olapCtrlObj._pagerObj.element.css("opacity", "0.5");
+                    this.olapCtrlObj._pagerObj.element.find(".pagerTextBox").attr('disabled', 'disabled');
+                    this.olapCtrlObj._pagerObj._unwireEvents();
+                }
+            }
         },
         _renderPivotGrid: function (customArgs,jsonObj) {
             this.olapCtrlObj._dataModel = "XMLA";
             this.olapCtrlObj.setJSONRecords(JSON.stringify(jsonObj));
             this.olapCtrlObj.setOlapReport(this.olapCtrlObj.model.dataSource);
+            this._renderPager(customArgs);
             if (this.olapCtrlObj.model.enableGroupingBar)
                 this.olapCtrlObj._createGroupingBar(this.olapCtrlObj.model.dataSource);
-            this.olapCtrlObj.renderControlFromJSON(jsonObj);
-            if (customArgs.action && customArgs.action == "initialLoad") {
+            if (this.olapCtrlObj.model.layout != null && this.olapCtrlObj.layout().toLowerCase() == ej.PivotGrid.Layout.ExcelLikeLayout)
+                this.olapCtrlObj.excelLikeLayout(jsonObj);
+            else
+                this.olapCtrlObj.renderControlFromJSON(jsonObj);
+            if (customArgs.action && (customArgs.action == "initialLoad" || customArgs.action == "navPaging")) {
                 this.olapCtrlObj._trigger("renderSuccess", this.olapCtrlObj);
-                this.olapCtrlObj._fieldData = { hierarchy: this.olapCtrlObj._fieldData.hierarchy };
+                this.olapCtrlObj._fieldData = { hierarchy: this.olapCtrlObj._fieldData.hierarchy, measures: this.olapCtrlObj._fieldData.measures};
             }
-            if (this.olapCtrlObj.pluginName == "ejPivotGrid")
-                this.olapCtrlObj._ogridWaitingPopup.hide();
+            //if (this.olapCtrlObj.pluginName == "ejPivotGrid")
+            //    this.olapCtrlObj._ogridWaitingPopup.hide();
         },
-        _onDemandExpand : function(customArgs, args){
-            var drillCellSet = args, repItms, prevItems,childPos = "", tempCellSet =this.olapCtrlObj.XMLACellSet, indxHeads, tPColCnt = 0, dCLen, dRLen,
-                colLen = $(this.olapCtrlObj.XMLACellSet).find("Axis[name='Axis0'] Tuple").length, rowLen = $(this.olapCtrlObj.XMLACellSet).find("Axis[name='Axis1'] Tuple").length, cellIndx, 
-		        drilledVCellsln = 0 , tVCells = 0;
+        _onDemandExpand: function (customArgs, args) {
+            var drillCellSet = args, repItms, prevItems, childPos = "", tempCellSet = this.olapCtrlObj.XMLACellSet, indxHeads, tPColCnt = 0, dCLen, dRLen,
+                colLen = $(this.olapCtrlObj.XMLACellSet).find("Axis[name='Axis0'] Tuple").length, rowLen = $(this.olapCtrlObj.XMLACellSet).find("Axis[name='Axis1'] Tuple").length, cellIndx,
+		        drilledVCellsln = 0, tVCells = 0;
             rowLen = rowLen ? rowLen : 1;
             drilledVCellsln = $(args).find("CellData Cell").length;
             tVCells = $(this.olapCtrlObj.XMLACellSet).find("CellData Cell").length;
@@ -203,9 +289,9 @@
 		    else
 		        selFTup = drilledCCells[0];
 		    childPos = itmUName = $(selFTup).find("Member:nth-child(" + (itmPos + 1) + ") PARENT_UNIQUE_NAME").text();
-            for (var itmCnt = itmPos+1; itmCnt > 0; itmCnt--) {
+            for (var itmCnt = itmPos + 1; itmCnt > 0; itmCnt--) {
                 tempCellSet = $(tempCellSet).find("Tuple Member:nth-child(" + itmCnt + ") UName:contains('" + itmUName + "')").parents('tuple');
-                itmUName = $(selFTup).find("Member:nth-child(" + (itmCnt-1) + ") UName").text();
+                itmUName = $(selFTup).find("Member:nth-child(" + (itmCnt - 1) + ") UName").text();
                 prevMem = itmUName + prevMem;
             }
             childPos = prevMem + childPos;
@@ -218,7 +304,7 @@
             childPos = childPos + " !#" + customArgs.cellInfo.axis
             if (!this.olapCtrlObj._drilledCellSet[0] || !totDEle) {
                 this.olapCtrlObj._drilledCellSet[0] = [];
-                this.olapCtrlObj._drilledCellSet[0][0] = { key: childPos, repItms:repItms, cSet: $(args).find("Axes, CellData").clone(true) };
+                this.olapCtrlObj._drilledCellSet[0][0] = { key: childPos, repItms: repItms, cSet: $(args).find("Axes, CellData").clone(true) };
                 canBreak = true;
             }
             else {
@@ -246,16 +332,17 @@
                 this.olapCtrlObj._drilledCellSet[totDEle] = [];
                 this.olapCtrlObj._drilledCellSet[totDEle].push({ key: childPos, repItms: repItms, cSet: $(args).find("Axes, CellData").clone(true) });
             }
-            if(customArgs.cellInfo.axis == "rowheader"){
-                var tuples = $(args).find("Axis[name|='Axis1'] Tuple");
-                this._insertCellSet("rowheader", tempCellSet, drilledRCells, drilledCCells, dRLen, colLen,dCLen, cellIndx,args);
+            if (!this._isPaging) {
+                if (customArgs.cellInfo.axis == "rowheader") {
+                    var tuples = $(args).find("Axis[name|='Axis1'] Tuple");
+                    this._insertCellSet("rowheader", tempCellSet, drilledRCells, drilledCCells, dRLen, colLen, dCLen, cellIndx, args);
+                }
+                else {
+                    var tuples = $(args).find("Axis[name|='Axis1'] Tuple");
+                    this._insertCellSet("colheader", tempCellSet, drilledCCells, drilledRCells, rowLen, colLen, dCLen, cellIndx, args);
+                }
+                this._generateJSONData("onDemandDrill", this.olapCtrlObj.XMLACellSet);
             }
-            else{
-                var tuples = $(args).find("Axis[name|='Axis1'] Tuple");
-                this._insertCellSet("colheader", tempCellSet, drilledCCells, drilledRCells, rowLen, colLen,dCLen, cellIndx,args);
-            }
-		    
-            this._generateJSONData("onDemandDrill", this.olapCtrlObj.XMLACellSet);
         },
        
         _insertCellSet : function(axis, drilledSet, tuples, drilledCells, rowLen, colLen,dCLen, cellIndx,args){
@@ -315,7 +402,7 @@
             this._setCellOrdinal(this.olapCtrlObj.XMLACellSet[1]);
         },
         _clearDrilledCellSet: function () {
-            var drillCells = this.olapCtrlObj._drilledCellSet, prevItm="", axis ="", drillMem;
+            var drillCells =  $.extend([], this.olapCtrlObj._drilledCellSet), prevItm="", axis ="", drillMem;
             for (var len = 0; len < drillCells.length; len++) {
                 prevItm = drillCells[len][0].key.split("!#");
                 if (prevItm.length)
@@ -374,12 +461,12 @@
                     }
                 }
                 else {
-                    colLen = rHeads.length;
+                    colLen = rHeads.length; var rowLen = cHeads.length;
                     while (remEl > 0) {
                         $($(this.olapCtrlObj.XMLACellSet).find("Axis[name|='Axis0'] Tuple")[remIndx]).remove();
                         remEl--;
                     }
-                    for (var remCel = 0; remCel < colLen; remCel++) {
+                    for (var remCel = 0; remCel < rowLen; remCel++) {
                         removeEl = $($(this.olapCtrlObj.XMLACellSet).find("CellData Cell")).splice(((colLen * remCel) - (remCel * lenthSHds)) + remIndx, lenthSHds);
                         $(removeEl).remove();
                     }
@@ -521,218 +608,104 @@
             var measureCnt = 1;
             if(axis.indexOf(this._OlapDataSource.values[0].axis.substring(0,3)) > -1)
                 measureCnt = this._measureDt.measureCount = this._OlapDataSource.values[0].measures.length;
-            if (!this._OlapDataSource._enableBasicEngine) {
+            if (!this._OlapDataSource._enableBasicEngine && !this._isPaging) {
                 
                 var totItems = { headers: [], indxInfo: [] }, items = tempIndx, itemsCnt = tempIndx.length, totCnt = totItems.length, spanCnt = [], leafNodCmp = [], leafNodLen = 0, subPos = [], isSubTRem = false;
-                try{
-                    for(var hCnt=0; hCnt < itemsCnt; hCnt++)
+                try {
+                    for (var hCnt = 0; hCnt < itemsCnt; hCnt++)
                     {
-                        if (cnt == 0)
-                            leafNodLen = leafNodCmp.length;
-                        else
-                            leafNodLen = leafNodCmp.length;
-                        while (hCnt < itemsCnt && headerCollection.indxInfo[hCnt - leafNodLen].type == "total")
+                        if (hCnt < itemsCnt && headerCollection.indxInfo[hCnt].type == "total")
                         {
-                            totItems.indxInfo.push(headerCollection.indxInfo.splice(hCnt - leafNodLen, 1)[0]);
+                            totItems.indxInfo.push(headerCollection.indxInfo.splice(hCnt, 1)[0]);
                             totItems.headers.push(headerCollection.headers.splice(hCnt,1)[0]);
-                            itemsCnt--; totCnt++; 					
+                            itemsCnt--; hCnt--; 					
                         }	
-                        if (hCnt == 0 && this._measureDt.axis == axis && measureCnt > 2)
+                    }
+                    var hlen = headerCollection.headers[0].length, insertCnt = 0, measUd = 0;
+                    if (this._measureDt.posision == hlen - 1 && this._measureDt.axis == axis)
+                        measUd = 1;
+                    itemsCnt = headerCollection.headers.length;
+                    for (var hCnt = 0; hCnt <= itemsCnt; hCnt++) {
+                        var prevMem = null, nextMem = null, currentMem = null, members = null;
+                        members = this._updateMemberVariables(headerCollection.headers, prevMem, nextMem, currentMem, hCnt);
+                        prevMem = members.prev; nextMem = members.next; currentMem = members.cur;
+                        members = null;
+                        for (var cnt = hlen - 2 - measUd; cnt >= 0; cnt--)
                         {
-                            totItems.indxInfo.reverse();
-                            totItems.headers.reverse();
-                        }
-                        if(( hCnt+1 < itemsCnt) || (hCnt+1 == itemsCnt)){
-                            var hlen = headerCollection.headers[hCnt].length, insertCnt =0, measUd = 0;
-                            if(cnt == hlen-1 && maxLvlLen[maxLvlLen.length-1] == 0)
-                                hlen -= 1;
-                            if (this._measureDt.posision == hlen - 1 && this._measureDt.axis == axis)
-                                measUd = 1;
-                            var cnt = 0, isLeafSum = false;
-                            nextLevel:
-                            for(; cnt < hlen-1 - measUd; cnt++)
-                            {
-                                //region: morethan one count
-                                var skipMeas = 1;
-                                if(headerCollection.headers[hCnt][cnt+1]!= undefined && cnt+1 < hlen-1 && headerCollection.headers[hCnt][cnt+1].LName.toLowerCase().indexOf("[measures]")!=-1)
-                                    skipMeas = 2;
-                                if( subPos[cnt] == undefined)
-                                    subPos[cnt] = 0;
-                                else if (hCnt != 0 && headerCollection.headers[hCnt][cnt].UName != headerCollection.headers[hCnt - 1][cnt].UName && headerCollection.headers[hCnt][cnt].PUName != headerCollection.headers[hCnt - 1][cnt].UName)
-                                {
-                                    if(subPos[cnt]!= undefined)
-                                        subPos[cnt] = hCnt;isSubTRem =true;					
-                                }
-                                if (hCnt > 0 && headerCollection.headers[hCnt - 1] != undefined && headerCollection.headers[hCnt][cnt].LNum < headerCollection.headers[hCnt - 1][cnt].LNum) {
-                                    var pUname = headerCollection.headers[hCnt - 1][cnt].PUName;
-                                    for (var tI = headerCollection.headers[hCnt][cnt].LNum; tI <= headerCollection.headers[hCnt - 1][cnt].LNum; tI++)
-                                        $.grep(totItems.headers, function (ele, indx) {
-                                            if (ele != undefined && ele[cnt].UName == pUname) {
-                                                pUname = ele[cnt].PUName;
-                                                headerCollection.headers.splice(hCnt, 0, totItems.headers.splice(indx, 1)[0]);
-                                                headerCollection.indxInfo.splice(hCnt - leafNodCmp.length, 0, totItems.indxInfo.splice(indx, 1)[0]);
-                                                itemsCnt++; totCnt--; hCnt++;
-                                                if (isSubTRem)
-                                                    subPos[cnt]++;
-                                            }
-                                        });
-                                    isSubTRem = false;
-                                }
-                                if (headerCollection.headers[hCnt + 1] != undefined && headerCollection.headers[hCnt + 1][cnt].LNum > 1 && headerCollection.headers[hCnt][cnt].LNum < headerCollection.headers[hCnt + 1][cnt].LNum )
-                                {
-                                    var remIt =0, trem=0; tlen = totItems.headers.length;
-                                    var pUname = headerCollection.headers[hCnt+1][cnt].PUName;
-                                    for(var ind = 0; ind < tlen; ind++)
-                                    {	
-                                        if(totItems.headers[ind] != undefined && totItems.headers[ind][cnt].UName == pUname && totItems.headers[ind][cnt+skipMeas]!= undefined && totItems.headers[ind][cnt+skipMeas].LNum != 0){
-                                            totItems.headers.splice(ind,1);
-                                            totItems.indxInfo.splice(ind- leafNodCmp.length, 1);
-                                            totCnt--;	
-                                            ind--;tlen--;
-										
-                                        }
-                                    }
-                                    for (var sT = subPos[cnt]; sT <= hCnt ; sT++)
-                                    {
-                                        var tCnt = subPos[cnt];
-                                        if(headerCollection.headers[tCnt][cnt+skipMeas]!= undefined && (cnt+skipMeas == hlen-1 || headerCollection.headers[tCnt][cnt+skipMeas].LName.toLowerCase().indexOf("[measures]")!= -1  ) || ( headerCollection.headers[tCnt][cnt+skipMeas].LName.indexOf("[(All)]") == -1 && headerCollection.headers[tCnt][cnt+skipMeas].LNum != 0)){
-                                            headerCollection.indxInfo.splice(tCnt- leafNodCmp.length,1);
-                                            headerCollection.headers.splice(tCnt,1);itemsCnt--; remIt++;
-                                        }
-                                    }
-                                    if(hCnt+1 >= remIt){
-                                        hCnt -= remIt-1;
-                                        while(hCnt < itemsCnt && headerCollection.indxInfo[hCnt - leafNodCmp.length].type == "total")
-                                        {
-                                            totItems.indxInfo.push(headerCollection.indxInfo.splice(hCnt- leafNodCmp.length,1)[0]);
-                                            totItems.headers.push(headerCollection.headers.splice(hCnt,1)[0]);
-                                            itemsCnt--; totCnt++; 					
-                                        }
-                                    }
-                                }
+                            var isDif = this._comparePrevMembers(headerCollection.headers, itemsCnt, hCnt, cnt, hlen, -2);
+                            if (hCnt == itemsCnt || (hCnt > 0 && ((prevMem && prevMem[cnt].UName != currentMem[cnt].UName) || (prevMem[cnt].UName == currentMem[cnt].UName && isDif)))) {
 
-                                
-                                if (headerCollection.headers[hCnt + 1] && headerCollection.headers[hCnt][cnt].LNum < headerCollection.headers[hCnt + 1][cnt].LNum && headerCollection.headers[hCnt][cnt].UName == headerCollection.headers[hCnt + 1][cnt].PUName) {
-                                    cnt--;
-                                    continue nextLevel; 
+                                //Removing additional total here
+                                if (currentMem && prevMem[cnt].UName == currentMem[cnt].PUName) {
+                                    var remLen = this._removeSubtotalMembers(headerCollection, hCnt, cnt);
+                                    hCnt -= remLen;
+                                    itemsCnt -= remLen;
+                                    members = this._updateMemberVariables(headerCollection.headers, prevMem, nextMem, currentMem, hCnt);
+                                    prevMem = members.prev; nextMem = members.next; currentMem = members.cur;
+                                    members = null;
                                 }
-                                if (cnt +1 == hlen - 1 - measUd && headerCollection.headers[hCnt + 1] && headerCollection.headers[hCnt + 1][cnt + 1] && headerCollection.headers[hCnt][cnt + 1].LNum > 1 && headerCollection.headers[hCnt][cnt + 1].LNum > headerCollection.headers[hCnt + 1][cnt + 1].LNum) {
-                                    isLeafSum = true;
-                                }
-                                //end region: morethan one count
-                                
-                                var innerFlag = this._comparePrevMembers(headerCollection.headers, itemsCnt, hCnt, cnt, hlen, insertCnt);
-                                if ((hCnt + 1 + insertCnt == itemsCnt) || (headerCollection.headers[hCnt + 1 + insertCnt] != undefined && headerCollection.headers[hCnt][cnt].UName != headerCollection.headers[hCnt + 1 + insertCnt][cnt].UName && 
-                                    !(headerCollection.headers[hCnt][cnt].LNum < headerCollection.headers[hCnt + 1 + insertCnt][cnt].LNum && headerCollection.headers[hCnt][cnt].UName == headerCollection.headers[hCnt + 1 + insertCnt][cnt].PUName)) || innerFlag)
-                                {
-                                   
-                                    var remIndx = [], uniquVal = headerCollection.headers[hCnt][cnt].UName, start;
-                                    if (hCnt + 1 + insertCnt == itemsCnt)
-                                        start = headerCollection.headers[hCnt][cnt].LNum;
-                                    else
-                                        start = headerCollection.headers[hCnt + 1 + insertCnt][cnt].LNum;
-                                    for (var i = start; i <= headerCollection.headers[hCnt][cnt].LNum; i++)
-                                    $.grep(totItems.headers, function (ele, indx) {
-                                        if (uniquVal == ele[cnt].UName && totItems.indxInfo[indx].totLvl == (cnt + skipMeas)
-                                            || headerCollection.headers[hCnt + 1 + insertCnt] != undefined && headerCollection.headers[hCnt][cnt].UName != headerCollection.headers[hCnt + 1 + insertCnt][cnt].UName && headerCollection.headers[hCnt][cnt].PUName == ele[cnt].UName && totItems.indxInfo[indx].totLvl == (cnt + skipMeas) && innerFlag) {
-                                            uniquVal = ele[cnt].PUName;
-                                            remIndx.push(indx);
-                                            return ele;
+                                else {
+                                    var findParent = prevMem, headers, totCnt = 0, collection, start = 0, end = 0;
+                                    if (prevMem)
+                                        end = prevMem[cnt].LNum;
+                                    if (currentMem)
+                                        start = currentMem[cnt].LNum;
+                                    var isParent = false;
+                                    for (var ttLn = start; ttLn <= end; ttLn++) {
+                                        collection = this._getSummaryHeaders(findParent, totItems, cnt, isParent, measUd);
+                                        totCnt = collection.headers.length;
+                                        while (collection.headers.length > 0) {
+                                            headerCollection.headers.splice(hCnt, 0, collection.headers.pop());
+                                            headerCollection.indxInfo.splice(hCnt, 0, collection.indexInfo.pop());
                                         }
-                                    });
-                                    if (innerFlag) {
-                                        remIndx.reverse(); innerFlag = false;
+                                        isParent = true;
+                                        hCnt += totCnt; itemsCnt += totCnt;
+                                        findParent = headerCollection.headers[hCnt-1];
                                     }
-                                    while (remIndx.length > 0) {
-                                        var remLn = remIndx.length - 1, remVal = remIndx[remIndx.length - 1];
-                                        while (remLn >= 0)
-                                        {
-                                            if (remVal < remIndx[remLn])
-                                                remIndx[remLn]--;
-                                            remLn--;
-                                        }
-                                        headerCollection.headers.splice(hCnt+1, 0,totItems.headers.splice(remIndx[remIndx.length-1],1)[0]);
-                                        headerCollection.indxInfo.splice(hCnt+1- leafNodCmp.length, 0,totItems.indxInfo.splice(remIndx[remIndx.length-1], 1)[0]);
-                                        insertCnt++; remIndx.pop();
-                                        itemsCnt++;
-                                        if(isSubTRem)
-                                            subPos[cnt]++;
-                                    }
-                                    isSubTRem = false;
-                                    spanCnt[cnt] = 0;
+                                
                                 }
-						
-                                if(spanCnt[cnt] == undefined )
-                                    spanCnt[cnt] = 0;
-                                else
-                                    spanCnt[cnt]++;
                             }
-                            var nextMem = this._findNextMember(headerCollection.headers, hCnt, cnt), prevMem = this._findPreviousMember(headerCollection.headers, hCnt - 1, cnt);
-
-                            if (hCnt >= measureCnt && (cnt == hlen - 1 - measUd && maxLvlLen[cnt] > 1)) {
-                                if (hCnt > 0 && headerCollection.headers[hCnt] != undefined && headerCollection.headers[hCnt - 1][cnt].LNum != 0 && headerCollection.headers[hCnt - 1][cnt].LNum < headerCollection.headers[hCnt][cnt].LNum) {
-                                    for (var len = prevMem; len < 0; len++) {
-                                        headerCollection.indxInfo[(hCnt + len) - leafNodCmp.length].lnum = headerCollection.headers[hCnt + len][cnt].LNum;
-                                        headerCollection.indxInfo[(hCnt + len) - leafNodCmp.length].type = "total";
-                                        leafNodCmp.push(headerCollection.indxInfo.splice((hCnt + len) - leafNodCmp.length, 1)[0]);
-                                    }
-                                }
-                                if (hCnt != 0 && headerCollection.headers[hCnt] != undefined && headerCollection.headers[hCnt][cnt].LNum != 0 && headerCollection.headers[hCnt - 1][cnt].LNum > headerCollection.headers[hCnt][cnt].LNum || isLeafSum) {
-                                    var incr = 0, startVal, endVal;
-                                    if (isLeafSum)
-                                    {
-                                        incr = 1;
-                                        startVal = headerCollection.headers[hCnt+1][cnt].LNum;
-                                        endVal = headerCollection.headers[hCnt][cnt].LNum;
-                                    }
+                        }
+                        if (hCnt == itemsCnt && totItems.headers.length > 0)
+                        {
+                            var incCount = 0;
+                            while (totItems.headers.length > 0) {
+                                headerCollection.headers.splice(hCnt, 0, totItems.headers.pop());
+                                headerCollection.indxInfo.splice(hCnt, 0, totItems.indxInfo.pop());
+                                itemsCnt++; incCount++;
+                            }
+                            hCnt += incCount;
+                        }
+                    }
+                    var cnt = 0, isLeafSum = false, parentUN = "";
+                    leafNodCmp = { headers: [], indxInfo: [] }; cnt = hlen - 1 - measUd;
+                    itemsCnt = headerCollection.headers.length;
+                    for (var hCnt = 0; hCnt < itemsCnt; hCnt++) {
+                        var nextMem, prevMem = this._findPreviousMember(headerCollection.headers, hCnt - 1, cnt), parentUN;
+                        if (hCnt > 0 && headerCollection.headers[hCnt - 1][cnt].UName != headerCollection.headers[hCnt][cnt].UName && (cnt == hlen - 1 - measUd && maxLvlLen[cnt] > 1)) {
+                            if (hCnt > 0 && headerCollection.headers[hCnt] != undefined && headerCollection.headers[hCnt - 1][cnt].LNum != 0 && headerCollection.headers[hCnt - 1][cnt].UName == headerCollection.headers[hCnt][cnt].PUName) {
+                                for (var len = prevMem; len < 0; len++) {
+                                    headerCollection.indxInfo[(hCnt + len)].lnum = headerCollection.headers[hCnt + len][cnt].LNum;
+                                    headerCollection.indxInfo[(hCnt + len)].type = "total";
+                                    leafNodCmp.indxInfo.push(headerCollection.indxInfo.splice((hCnt + len) , 1)[0]);
+                                    leafNodCmp.headers.push(headerCollection.headers.splice((hCnt + len), 1)[0]);
+                                    if (hCnt + 1 == itemsCnt)
+                                        parentUN = headerCollection.headers[hCnt][cnt].PUName;
                                     else {
-                                        startVal = headerCollection.headers[hCnt][cnt].LNum;
-                                        endVal = headerCollection.headers[hCnt - 1][cnt].LNum;
+                                        hCnt--; itemsCnt--;
                                     }
-                                    if (startVal != 1 && leafNodCmp.length)
-                                        for (var ord = startVal; ord < endVal && leafNodCmp.length; ord++) {
-                                            var levNum = leafNodCmp[leafNodCmp.length - 1].lnum;
-                                            while (leafNodCmp.length && levNum == leafNodCmp[leafNodCmp.length - 1].lnum) {
-                                                headerCollection.indxInfo.splice((hCnt + incr) - leafNodCmp.length, 0, leafNodCmp.splice(leafNodCmp.length - 1, 1)[0]);
-                                                if (axis == this._measureDt.axis && this._measureDt.measureCount > 1)
-                                                    incr--;
-                                            }
-                                        }
-                                    else if (!isLeafSum) {
-                                        while (leafNodCmp.length > 0) {
-                                            headerCollection.indxInfo.splice((hCnt + incr) - leafNodCmp.length, 0, leafNodCmp.splice(leafNodCmp.length - 1, 1)[0]);
-                                            if (axis == this._measureDt.axis && this._measureDt.measureCount > 1)
-                                                incr--;
-                                        }
-                                    }
-                                    if(isLeafSum)
-                                        isLeafSum = false
-
-                                }
-                                else if (headerCollection.indxInfo[hCnt + 1 - leafNodCmp.length] && leafNodCmp.length && headerCollection.indxInfo[hCnt + 1 - leafNodCmp.length].type == "total") {
-                                    while (leafNodCmp.length > 0)
-                                        headerCollection.indxInfo.splice((hCnt + 1 - leafNodCmp.length), 0, leafNodCmp.splice(leafNodCmp.length - 1, 1)[0]);
                                 }
                             }
-                     
-                            if(insertCnt>0){
-                                hCnt+= insertCnt; insertCnt = 0;}
+                            if (hCnt != 0 && headerCollection.headers[hCnt] != undefined && headerCollection.headers[hCnt - 1][cnt].LNum > headerCollection.headers[hCnt][cnt].LNum || isLeafSum) {
+                                var remIndx = [], retObj = this._insertSummaryHeaders(headerCollection, leafNodCmp, remIndx, hCnt, cnt, hlen, insertCnt, parentUN, isSubTRem, subPos);
+                                    itemsCnt = retObj.itmCnt, hCnt = retObj.hCnt, insertCnt = retObj.insCnt, subPos[cnt] = retObj.subPos;
+                            }
                         }
-                    
-                        if (hCnt + 1 == itemsCnt) {
-                            if (leafNodCmp.length && headerCollection.headers[hCnt][cnt].LNum != 1)
-                                while (leafNodCmp.length > 0)
-                                    headerCollection.indxInfo.splice((hCnt + 1 - leafNodCmp.length), 0, leafNodCmp.splice(leafNodCmp.length - 1, 1)[0]);
-
-                            $.grep(totItems.indxInfo, function (ele, indx) {
-                                headerCollection.headers.splice(hCnt + 1, 0, totItems.headers.splice(0, 1)[0]);
-                                headerCollection.indxInfo.splice(hCnt + 1 - leafNodCmp.length, 0, totItems.indxInfo.splice(0, 1)[0]);
-                            });
-                        }
+                       
                     }
                 }
                 catch (ex) {
-                    this.olapCtrlObj._ogridWaitingPopup.hide();
+                    this.olapCtrlObj._waitingPopup.hide();
                 }
             }
             if(axis =="rowheader")
@@ -740,25 +713,121 @@
             else 
                 this._cBIndx = tempIndx;
              
-           // if (headerCollection.maxLvlLen[cnt] > 1 && axis == this._measureDt.axis)
-            if (headerCollection.maxLvlLen[cnt] > 1 )
-                headerCollection.headers = this._drillOrderHeaderCollection(headerCollection.indxInfo, axisData, axis);
             return headerCollection;
         },
-        _insertSummaryHeaders: function (headerCollection,totItems, remIndx, hCnt, tempCmplength) {
-            while (remIndx.length > 0) {
-                headerCollection.headers.splice(hCnt + 1, 0, totItems.headers.splice(remIndx[remIndx.length - 1], 1)[0]);
-                headerCollection.indxInfo.splice(hCnt + 1 - tempCmplength, 0, totItems.indxInfo.splice(remIndx[remIndx.length - 1], 1)[0]);
-                remIndx.pop();
+        _insertSummaryHeaders: function (headerCollection, leafNodCmp, remIndx, hCnt, cnt, hlen, insertCnt, parentUN, isSubTRem, subPos) {
+            var ln = 0, remIndx = [], start, endLp, itemsCnt, uniqueNM = "", insertCnt = 0;
+
+            if (headerCollection.headers[hCnt - 1])
+                parentUN = headerCollection.headers[hCnt - 1][cnt].PUName;
+            itemsCnt = headerCollection.headers.length;
+            start = headerCollection.headers[hCnt][cnt].LNum;
+            endLp = headerCollection.headers[hCnt - 1][cnt].LNum;
+            var innerFlag = this._comparePrevMembers(headerCollection.headers, itemsCnt, hCnt, cnt, hlen, insertCnt);
+            for (lev = start; lev < endLp; lev++) {
+                $.grep(leafNodCmp.headers, function (ele, indx) {
+                    if (parentUN == ele[cnt].UName || headerCollection.headers[hCnt + 1 + insertCnt] != undefined && headerCollection.headers[hCnt][cnt].UName != headerCollection.headers[hCnt + 1 + insertCnt][cnt].UName && headerCollection.headers[hCnt][cnt].PUName == ele[cnt].UName && innerFlag) {
+                        uniqueNM = ele[cnt].PUName;
+                        remIndx.push(indx);
+                    }
+                });
+                parentUN = uniqueNM;
+                if (innerFlag) {
+                    remIndx.reverse(); innerFlag = false;
+                }
+                while (remIndx.length > 0) {
+                    var remLn = remIndx.length - 1, remVal = remIndx[remIndx.length - 1];
+                    headerCollection.headers.splice(hCnt, 0, leafNodCmp.headers.splice(remIndx[remIndx.length - 1], 1)[0]);
+                    headerCollection.indxInfo.splice(hCnt, 0, leafNodCmp.indxInfo.splice(remIndx[remIndx.length - 1], 1)[0]);
+                    while (remLn >= 0) {
+                        if (remVal < remIndx[remLn])
+                            remIndx[remLn]--;
+                        remLn--;
+                    }
+                    remIndx.pop();
+                    itemsCnt++;  insertCnt++;
+                    if (isSubTRem)
+                        subPos[cnt]++;
+                }
+                if(insertCnt > 0)
+                {
+                    hCnt += insertCnt;
+                    insertCnt = 0;
+                }
             }
+            return { itmCnt: itemsCnt, hCnt: hCnt, insCnt: insertCnt, subPos: subPos[cnt] };
         },
-        _comparePrevMembers: function (headers,itemsCnt, hCnt, cnt, hlen, insertCnt) {
-            if (cnt > 0 && hCnt + 1 + insertCnt < itemsCnt)
-                for (var prv = cnt - 1; prv <= 0; prv--)
+        _comparePrevMembers: function (headers, itemsCnt, hCnt, cnt, hlen, insertCnt) {
+            var isDiff = false;
+            if (cnt > 0 && hCnt < itemsCnt && hCnt + 1 + insertCnt >= 0 && hCnt + 1 + insertCnt < itemsCnt) {
+                for (var prv = cnt - 1; prv >= 0; prv--)
                     if (headers[hCnt][prv].UName != headers[hCnt + 1 + insertCnt][prv].UName)
-                        return true;
+                        isDiff = true;
+            }
+            return isDiff;
+        },
+        _updateMemberVariables: function(headers, prevMem, nextMem, currentMem, hCnt){
+            if (headers[hCnt])
+                currentMem = headers[hCnt];
+            if (headers[hCnt + 1])
+                nextMem = headers[hCnt + 1];
+            else
+                nextMem = null;
+            if (headers[hCnt - 1])
+                prevMem = headers[hCnt - 1];
+            else
+                prevMem = null;
+            return {cur: currentMem, prev: prevMem, next:nextMem};
+        },
+        _removeSubtotalMembers: function (headerCollection, hCnt, cnt)
+        {
+            var remLn = hCnt - 1, uname = headerCollection.headers[remLn][cnt].UName;
+            while (headerCollection.headers[remLn] && headerCollection.headers[remLn][cnt].UName == uname)
+            {
+                headerCollection.indxInfo.splice(remLn, 1);
+                headerCollection.headers.splice(remLn, 1);
+                remLn--;
+            }
+            return (hCnt - (remLn + 1));
+        },
+        _getSummaryHeaders: function (prevMem, totHeaders, cnt, isParent, measUd) {
+            var ttHeaders = totHeaders.headers, prev = prevMem, elCnt = cnt, header, rinfo = [],info = [], indInfo = totHeaders.indxInfo, totInfo;
+
+            //Matched totals
+            totInfo = $.grep(ttHeaders, function (ele, index) {
+                var isMatch = false;
+                for (var ln = elCnt; ln >= 0; ln--) {
+                    if (ele[ln].UName == prev[ln].UName || (isParent && ln == elCnt  && ele[ln].UName == prev[ln].PUName)) {
+                        if (ln == 0) {
+                            isMatch = true;
+                            info.push(indInfo[index]);
+                        }
+                    }
                     else
-                        return false;
+                        break;
+                }
+                return isMatch;
+            });
+
+            //Remaining items
+            totHeaders.headers = $.grep(ttHeaders, function (ele, index) {
+                var isMatch = true;
+                for (var ln = elCnt; ln >= 0; ln--) {
+                    if (ele[ln].UName == prev[ln].UName || (isParent && ln == elCnt && ele[ln].UName == prev[ln].PUName)) {
+                        if (ln == 0) {
+                            isMatch = false;
+
+                        }
+                    }
+                    else
+                        break;
+                }
+                if (isMatch)
+                    rinfo.push(indInfo[index]);
+                return isMatch;
+            });
+            totHeaders.indxInfo = rinfo;
+            return { headers: totInfo, indexInfo: info  };
         },
         _drillOrderHeaderCollection: function (headersInfo, axisData, curAxis) {
             var orderInfo = headersInfo, selectedHeaders, headerData = axisData, axis = curAxis, rowCnt = 0, currentObj = this;
@@ -794,8 +863,9 @@
         },
         _loadKpi: function (args, successMethod, customArgs) {
             customArgs = { action: "loadFieldElements" };
+            var conStr = this._getConnectionInfo(args.data);
             var pData = "<Envelope xmlns=\"http://schemas.xmlsoap.org/soap/envelope/\"><Header/><Body><Discover xmlns=\"urn:schemas-microsoft-com:xml-analysis\"><RequestType>MDSCHEMA_KPIS</RequestType><Restrictions><RestrictionList><CATALOG_NAME>" + args.catalog + "</CATALOG_NAME><CUBE_NAME>" + args.cube + "</CUBE_NAME></RestrictionList></Restrictions><Properties><PropertyList><Catalog>" + args.catalog + "</Catalog></PropertyList></Properties></Discover></Body></Envelope>";
-            this.olapCtrlObj.doAjaxPost("POST", args.data, { XMLA: pData }, this._loadKpiSuccess, null, customArgs);
+            this.olapCtrlObj.doAjaxPost("POST", conStr.url, { XMLA: pData }, this._loadKpiSuccess, null, customArgs);
         },
         _loadKpiSuccess: function (customArgs, args) {
             this._kpi = args;
@@ -826,7 +896,7 @@
             this._valueCells[rCnt] = [];
             this._fillAllValueCells();
             cellData = $(this.olapCtrlObj.XMLACellSet).find("CellData Cell");
-            if (this._OlapDataSource._enableBasicEngine)
+            if (this._OlapDataSource._enableBasicEngine || this._isPaging)
                 for (var cLen = 0; cLen < cellData.length; cLen++) {
                     if (cCnt < colLen) {
                         this._valueCells[rCnt][cCnt] = { Value: ($(cellData[cLen]).find("FmtValue")[0] ? $(cellData[cLen]).find("FmtValue").text() : ""), FormatString: ($(cellData[cLen]).find("FormatString")[0] ? $(cellData[cLen]).find("FormatString").text() : "") };
@@ -975,7 +1045,7 @@
             return "1" + Array(index + 1).join("0");
         },
         _populateEngine: function (rwHeaders, colHeaders, valueCells) {
-            var  rLen = rwHeaders.length, cLen = colHeaders.length, rILen = rLen ? rwHeaders[0].length : rLen, cILen = cLen ? colHeaders[0].length : cLen, rIndex, cIndex,
+            var rLen = rwHeaders.length, cLen = colHeaders.length, rILen = rLen ? rwHeaders[0].length : rLen, cILen = cLen ? colHeaders[0].length : cLen, rIndex, cIndex, headerEngine = [],
             vRLen = valueCells.length, vCLen = valueCells[0].length;
             try{
                 this.pivotEngine = [];
@@ -1025,27 +1095,126 @@
                     }
                 }
 
+                headerEngine = $.extend(true, [], this.pivotEngine);
                 rILen = this._measureDt.axis == 'rowheader' ? (indexRCell + 1) : indexRCell;
                 cILen = indexCCell ? indexCCell : cILen;
                 for (var rCnt = 0; rCnt < vRLen; rCnt++) {
                     if (this.pivotEngine[rCnt + cILen] != undefined)
                         rILen = this.pivotEngine[rCnt + cILen].length;
                     for (var cCnt = 0; cCnt < vCLen; cCnt++) {
-                        if (this.pivotEngine[rCnt + cILen] == undefined)
-                            this.pivotEngine[rCnt + cILen] = [];
-                        var cssName = this._setClassName(valueCells[rCnt][cCnt]);
-                        valueCells[rCnt][cCnt].CSS = cssName;
-                        if (cssName.indexOf("kpiiconvalue") > -1 && ( !this.olapCtrlObj.pluginName === "ejPivotGauge" || this.olapCtrlObj.pluginName == "ejPivotGrid"))
-                            valueCells[rCnt][cCnt].Value = "";
-                        else if(cssName.indexOf("kpiiconvalue") > -1)
-                            valueCells[rCnt][cCnt].Value = parseInt(valueCells[rCnt][cCnt].Value);
-                        this.pivotEngine[rCnt + indexCCell][cCnt + indexRCell] = valueCells[rCnt][cCnt];
+                        if (!ej.isNullOrUndefined(valueCells[rCnt][cCnt])) {
+                            if (this.pivotEngine[rCnt + cILen] == undefined)
+                                this.pivotEngine[rCnt + cILen] = [];
+                            var cssName = this._setClassName(valueCells[rCnt][cCnt]);
+                            valueCells[rCnt][cCnt].CSS = cssName;
+                            if (cssName.indexOf("kpiiconvalue") > -1 && (!this.olapCtrlObj.pluginName === "ejPivotGauge" || this.olapCtrlObj.pluginName == "ejPivotGrid"))
+                                valueCells[rCnt][cCnt].Value = "";
+                            else if (cssName.indexOf("kpiiconvalue") > -1)
+                                valueCells[rCnt][cCnt].Value = parseInt(valueCells[rCnt][cCnt].Value);
+                            this.pivotEngine[rCnt + indexCCell][cCnt + indexRCell] = valueCells[rCnt][cCnt];
+                        }
                     }
                 }
                 var test = $.grep(this.pivotEngine, function (value, index) {
                     var temp = value;
                     return temp;
                 });
+                if (this._isPaging) {
+                    if (!ej.isNullOrUndefined(this.olapCtrlObj._pagingSavedObjects.curDrilledItem.uniqueName) && this.olapCtrlObj._pagingSavedObjects.curDrilledItem.action == "collapse") {
+                        $.each(this.olapCtrlObj._pagingSavedObjects.drillEngine, function (i, v) {
+                            if (v.UName == (ej.olap.base.olapCtrlObj._pagingSavedObjects.curDrilledItem.uniqueName.split("::")[0]).split("amp;").join("")) {
+                                ej.olap.base.olapCtrlObj._pagingSavedObjects.drillEngine.splice(i, 1);
+                                return false;
+                            }
+                        })
+                    }
+                    else if (!ej.isNullOrUndefined(this.olapCtrlObj._pagingSavedObjects.curDrilledItem.index)) {
+                        this.olapCtrlObj._pagingSavedObjects.drillEngine.push(this.olapCtrlObj._pagingSavedObjects.savedHdrEngine[parseInt(this.olapCtrlObj._pagingSavedObjects.curDrilledItem.index.split(',')[1])][parseInt(this.olapCtrlObj._pagingSavedObjects.curDrilledItem.index.split(',')[0])]);
+                        this.olapCtrlObj._pagingSavedObjects.drillEngine[this.olapCtrlObj._pagingSavedObjects.drillEngine.length - 1].ChildCount = -1;
+                    }
+                    else if (!ej.isNullOrUndefined(this.olapCtrlObj._pagingSavedObjects.curDrilledItem.uniqueName)) {
+                        $.each(this.olapCtrlObj._pagingSavedObjects.savedHdrEngine, function (rI, row) {
+                            $.each(row, function (cI, column) {
+                                if (!ej.isNullOrUndefined(column) && column.UName == (ej.olap.base.olapCtrlObj._pagingSavedObjects.curDrilledItem.uniqueName.split("::")[0]).split("amp;").join("")) {
+                                    ej.olap.base.olapCtrlObj._pagingSavedObjects.drillEngine.push(ej.olap.base.olapCtrlObj._pagingSavedObjects.savedHdrEngine[rI][cI]);
+                                    return false;
+                                }
+                            })
+                        })
+                        this.olapCtrlObj._pagingSavedObjects.drillEngine[this.olapCtrlObj._pagingSavedObjects.drillEngine.length - 1].ChildCount = -1;
+                    }
+                    $.map(this.olapCtrlObj._pagingSavedObjects.drillEngine, function (value) {
+                        var inColAxis = $.map(ej.olap.base.olapCtrlObj.model.dataSource.columns, function (cField) {
+                            return cField.fieldName == value.HUName ? true : false;
+                        })
+                        value.CSS = inColAxis[0] ? "colheader" : "rowheader";
+                    })
+                    this.olapCtrlObj._pagingSavedObjects.curDrilledItem = {};
+
+                    for (var rCnt = this.pivotEngine[0][0].RowSpan - 2; rCnt >= 0; rCnt--) {
+                        var UName = "empty";
+                        for (cCnt = 1; cCnt < this.pivotEngine[this.pivotEngine[0][0].RowSpan - 1].length ; cCnt++) {
+                            if (ej.isNullOrUndefined(this.pivotEngine[rCnt])) {
+                                this.pivotEngine[rCnt] = [];
+                            }
+                            if (!ej.isNullOrUndefined(this.pivotEngine[rCnt + 1]) && ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt]) && !ej.isNullOrUndefined(this.pivotEngine[rCnt + 1][cCnt])) {
+                                this.pivotEngine[rCnt][cCnt] = $.grep(this.olapCtrlObj._pagingSavedObjects.drillEngine, function (v) {
+                                    return v.UName == ej.olap.base.pivotEngine[rCnt + 1][cCnt].PUName;
+                                })[0];
+                                if (!ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt])) {
+                                    if (!ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt - 1]) && this.pivotEngine[rCnt][cCnt - 1].UName == this.pivotEngine[rCnt][cCnt].UName)
+                                        this.pivotEngine[rCnt][cCnt].ColSpan = this.pivotEngine[rCnt][cCnt - 1].ColSpan + 1;
+                                    else
+                                        this.pivotEngine[rCnt][cCnt].ColSpan = 1;
+                                    this.pivotEngine[rCnt][cCnt].RowSpan = 1;
+                                    UName = this.pivotEngine[rCnt][cCnt].UName;
+                                }
+                            }
+                        }
+                        var colSpan = 1;
+                        for (cCnt = this.pivotEngine[this.pivotEngine[0][0].RowSpan - 1].length - 2; cCnt > 0 ; cCnt--) {
+                            if (!ej.isNullOrUndefined(this.pivotEngine[rCnt]) && !ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt]) && !ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt + 1]) && this.pivotEngine[rCnt][cCnt + 1].UName == this.pivotEngine[rCnt][cCnt].UName) {
+                                this.pivotEngine[rCnt][cCnt].ColSpan == this.pivotEngine[rCnt][cCnt + 1].ColSpan;
+                                colSpan++;
+                            }
+                            else if (!ej.isNullOrUndefined(this.pivotEngine[rCnt]) && !ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt + 1])) {
+                                this.pivotEngine[rCnt][cCnt + 1].ColSpan = colSpan == 1 ? this.pivotEngine[rCnt][cCnt + 1].ColSpan : colSpan;
+                                colSpan = 1;
+                            }
+                        }
+                    }
+
+                    for (var rCnt = this.pivotEngine[0][0].RowSpan; rCnt < this.pivotEngine.length; rCnt++) {
+                        var PUName = "empty";
+                        for (cCnt = this.pivotEngine[0][0].ColSpan - 1; cCnt >= 0; cCnt--) {
+                            if (!ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt]))
+                                PUName = this.pivotEngine[rCnt][cCnt].PUName;
+                            else {
+                                if (!ej.isNullOrUndefined(this.pivotEngine[rCnt - 1][cCnt]) && this.pivotEngine[rCnt - 1][cCnt].UName == PUName) {
+                                    this.pivotEngine[rCnt][cCnt] = $.grep(this.olapCtrlObj._pagingSavedObjects.drillEngine, function (v) {
+                                        return v.UName == PUName;
+                                    })[0];
+                                    if (!ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt])) {
+                                        this.pivotEngine[rCnt][cCnt].RowSpan = this.pivotEngine[rCnt - 1][cCnt].RowSpan + 1;
+                                        this.pivotEngine[rCnt][cCnt].ColSpan = 1;
+                                        PUName = this.pivotEngine[rCnt][cCnt].PUName;
+                                    }
+                                }
+                                else {
+                                    this.pivotEngine[rCnt][cCnt] = $.grep(this.olapCtrlObj._pagingSavedObjects.drillEngine, function (v) {
+                                        return v.UName == PUName;
+                                    })[0];
+                                    if (!ej.isNullOrUndefined(this.pivotEngine[rCnt][cCnt])) {
+                                        this.pivotEngine[rCnt][cCnt].RowSpan = 1;
+                                        this.pivotEngine[rCnt][cCnt].ColSpan = 1;
+                                        PUName = this.pivotEngine[rCnt][cCnt].PUName;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    this.olapCtrlObj._pagingSavedObjects.savedHdrEngine = headerEngine;
+                }
             }
             catch (ex) {
                 this.olapCtrlObj._ogridWaitingPopup.hide();
@@ -1089,6 +1258,8 @@
                         if (rwHeaders[rCnt - 1] && rSpanCalc[cCnt][temLvl] && (rwHeaders[rCnt][cCnt].LNum != 0 && rwHeaders[rCnt - 1][cCnt].PUName == rwHeaders[rCnt][cCnt].UName || (cCnt + measUd == rILen - 1 && rwHeaders[rCnt - 1][cCnt].LNum < rwHeaders[rCnt][cCnt].LNum))) {
                             tempSpan = rSpanCalc[cCnt][temLvl];
                             this.pivotEngine[rCnt + cILen - tempSpan][cCnt + temLvl - 1 + levPos] = (rwHeaders[rCnt][cCnt]);
+                            if (cCnt + measUd != rILen - 1)
+                                this.pivotEngine[rCnt + cILen][cCnt + temLvl - 1 + levPos] = (rwHeaders[rCnt][cCnt]);
                             if (!isNamedSets)
                                 this.pivotEngine[rCnt + cILen - tempSpan][cCnt + temLvl - 1 + levPos].ChildCount = -1;
                             this.pivotEngine[rCnt + cILen - tempSpan][cCnt + temLvl - 1 + levPos].ColSpan = 1;
@@ -1148,7 +1319,7 @@
                                 if (!(this._measureDt.measureCount > 1 && curAxis == this._measureDt.axis))
                                     rSpanCalc[cCnt][lLen]++;
                             }
-                            if (totIndexInfo[rCnt].type != "total") {                               
+                            if (!(rwHeaders[rCnt][cCnt].UName.indexOf("Measures") != -1 && this._isPaging) && totIndexInfo[rCnt].type != "total") {
                                 if (!(rwHeaders[rCnt - 1] && rwHeaders[rCnt - 1][cCnt].UName == rwHeaders[rCnt][cCnt].UName)) {
                                     
                                     this.pivotEngine[rCnt + cILen][cCnt + lLen - 1 + levPos] = (rwHeaders[rCnt][cCnt]);
@@ -1166,12 +1337,15 @@
                                 if ((rwHeaders[rCnt][cCnt - 1] && rwHeaders[rCnt][cCnt - 1].LName.toLowerCase().indexOf("[measures]") == -1 || this._measureDt.axis != curAxis) && (cCnt > totIndexInfo[rCnt].totLvl || (cCnt == rILen - 1 && (lLen > totIndexInfo[rCnt].totLvl && totIndexInfo[rCnt].totLvl != 0)) || (totIndexInfo[rCnt].totLvl == 0 && lLen - 1 > totIndexInfo[rCnt].totLvl)))
                                     break;
                                 var tempColSpan = 1, tmpLvl = 1, sumCnt = 0;
-                                while (rwHeaders[rCnt - tmpLvl][cCnt] && rwHeaders[rCnt - tmpLvl][cCnt].LNum == 0)
+                                while (rwHeaders[rCnt - tmpLvl][cCnt] && rwHeaders[rCnt - tmpLvl][cCnt].LNum == 0 && !rwHeaders[rCnt][cCnt].LName.toLowerCase().indexOf("[measures]") > -1)
                                 {
-                                    tmpLvl++; sumCnt++;
+                                    if (rwHeaders[rCnt][cCnt - 1] && rwHeaders[rCnt - tmpLvl + 1][cCnt - 1].UName != rwHeaders[rCnt - tmpLvl][cCnt - 1].UName) {
+                                        sumCnt++;
+                                }
+                                    tmpLvl++;
                                 }
 
-                                if (this._measureDt.axis == curAxis) {
+                                if (0) { // inside the condtion - this._measureDt.axis == curAxis
                                     var spnWtMsr = 0, initVal, endVal; isBreak = false;
                                     sumCnt = 0;
                                     if (cCnt < this._measureDt.posision) {
@@ -1192,18 +1366,44 @@
                                     }
                                     tempColSpan = spnWtMsr;
                                 }
-                                else if (rwHeaders[rCnt][cCnt].LNum == 0) {
-                                    if (rCnt != 0 && rwHeaders[rCnt][cCnt - 1] && maxLvlLen[cCnt - 1] > 1 && rwHeaders[rCnt][cCnt - 1].LNum < rwHeaders[rCnt - 1][cCnt - 1].LNum)
+                                else if (rwHeaders[rCnt][cCnt].LNum == 0 && !rwHeaders[rCnt][cCnt].LName.toLowerCase().indexOf("[measures]") > -1) { // inside the condtion - rwHeaders[rCnt][cCnt].LNum == 0
+
+                                    var prev = 0, corColPos = 0;
+                                    if (rCnt > 0 && cCnt > 0 && rwHeaders[rCnt][cCnt].LName.indexOf("(All)") > -1 && rwHeaders[rCnt][cCnt - 1] && maxLvlLen[cCnt - 1] > 1)
+                                        prev = this._findPreviousMember(rwHeaders, rCnt, cCnt - 1);
+                                    if (rCnt != 0 && rwHeaders[rCnt][cCnt - 1] && maxLvlLen[cCnt - 1] > 1 && rwHeaders[rCnt + prev] && rwHeaders[rCnt][cCnt - 1].LNum < rwHeaders[rCnt + prev][cCnt - 1].LNum)
                                         sumCnt = maxLvlLen[cCnt - 1] - rwHeaders[rCnt][cCnt - 1].LNum;
-                                    if (curAxis == "rowheader")
+                                    if (curAxis == "rowheader") {
                                         tempColSpan = indexRCell - spanLvlPos + sumCnt;
-                                    else if (curAxis == "colheader")
+                                        corColPos = indexRCell - tempColSpan;
+                                    }
+                                    else if (curAxis == "colheader") {
                                         tempColSpan = indexCCell - spanLvlPos + sumCnt;
+                                        corColPos = indexCCell - tempColSpan;
+                                    }
                                     if ((maxLvlLen.length != 1 && cCnt == rILen - 1) || (maxLvlLen.length > 1 && cCnt < rILen - 1))
                                         isBreak = true;
-                                }
                            
+                                    if (this._measureDt.axis == curAxis) {
+                                        tempColSpan -= 1;
+                                    }
+                                    var preLlen, maxLn, cspan = 1;
+                                    if (rCnt != 0 && rwHeaders[rCnt][cCnt - 1])
+                                        preLlen = rwHeaders[rCnt][cCnt - 1].LNum + 1;
+                                    var incr = 1, prev = rCnt + cILen;
                                 this.pivotEngine[rCnt + cILen][cCnt + lLen - 1 + levPos - sumCnt] = { CSS: "summary " + summaryAxis, Value: "Total", ColSpan: tempColSpan, RowSpan: 1, HUName: "", LName: "", UName: "", LNum: "", MemberType: "", ChildCount: "" };
+                                    
+                                    // Below commentted lines are used for total spanning in row
+
+                                    //while (this.pivotEngine[rCnt + cILen - incr][cCnt + lLen - 1 + levPos] && this.pivotEngine[rCnt + cILen - incr][cCnt + lLen - 1 + levPos].CSS.indexOf("summary") > -1
+                                    //&& this.pivotEngine[rCnt + cILen - incr][cCnt + lLen - 1 + levPos].ColSpan == tempColSpan)
+                                    //{
+                                    //    incr++;
+                                    //}
+                                    //if (incr > 1)
+                                    //    this.pivotEngine[rCnt + cILen - incr + 1][cCnt + lLen - 1 + levPos].RowSpan = incr;
+                            }
+                                //this.pivotEngine[rCnt + cILen][cCnt + lLen - 1 + levPos - sumCnt] = { CSS: "summary " + summaryAxis, Value: "Total", ColSpan: tempColSpan, RowSpan: 1, HUName: "", LName: "", UName: "", LNum: "", MemberType: "", ChildCount: "" };
                             }
                             else if (rwHeaders[rCnt][cCnt].LName.toLowerCase().indexOf("[measures]") != -1) {
                                 if (!(rwHeaders[rCnt - 1] && rwHeaders[rCnt - 1][cCnt].UName == rwHeaders[rCnt][cCnt].UName))
@@ -1380,79 +1580,156 @@
             else if (captionInfo.length==0)
                 fieldItem["fieldCaption"] = fieldName;
             return fieldItem;
-        }
-
+        },
+        clearDrilledItems: function (dataSource, args,ctrlObj) {
+            var action = args.action;
+            dataSource.rows = $.grep(dataSource.rows, function (value) {
+                (value.filterItems != undefined && action != "filtering") ? delete value.filterItems : value;
+                (value.filterItems != undefined && action != "advancedFilter") ? delete value.advancedFilter : value;
+                (value.drilledItems != undefined) ? delete value.drilledItems : value; return value;
+            });
+            dataSource.columns = $.grep(dataSource.columns, function (value) {
+                (value.filterItems != undefined && action != "filtering") ? delete value.filterItems : value;
+                (value.filterItems != undefined && action != "advancedFilter") ? delete value.advancedFilter : value;
+                (value.drilledItems != undefined) ? delete value.drilledItems : value; return value;
+            });
+            dataSource.filters = $.grep(dataSource.filters, function (value) {
+                (value.filterItems != undefined && action != "filtering") ? delete value.filterItems : value;
+                (value.filterItems != undefined && action != "advancedFilter") ? delete value.advancedFilter : value;
+                (value.drilledItems != undefined) ? delete value.drilledItems : value; return value;
+            });
+            if (action != "filtering") {
+                ctrlObj._currentReportItems = $.map(ctrlObj._currentReportItems, function (obj, index)
+                {
+                    if (!(ej.isNullOrUndefined(obj.dataSrc))) {
+                        if ((obj.dataSrc.cube == dataSource.cube)) {
+                            if (!(obj.dataSrc.reportName == dataSource.reportName))
+                                return obj;
+                        }
+                        else
+                            return obj;
+                    }
+                });
+                if (!ej.isNullOrUndefined(ctrlObj._schemaData))
+                    ctrlObj._schemaData.element.find(".filter").remove();
+            }
+           ej.olap.base._clearDrilledCellSet();
+            return dataSource;
+        },
        
     },
     ej.olap._mdxParser =
         {
             _getRowMDX: function (olapReport) {
 
-                var rowElements = $(olapReport)[0].rows; rowQuery = "", measureQuery = "", updateQuery = [], isSorted = false;
+                var rowElements = $(olapReport)[0].rows; rowQuery = "", measureQuery = "", updateQuery = [], isSorted = false, isDrilled = false;
                 var isMeasureAxis = olapReport["values"].length > 0 && olapReport["values"][0]["measures"] != undefined && olapReport["values"][0]["axis"] ==ej.olap.AxisName.Row;
                 if (rowElements.length > 0) {
+                    isDrilled = ej.isNullOrUndefined(rowElements[0].drillCellInfo) ? false : true;
                     for (var i = 0; i < rowElements.length; i++) {
 
-                        var isNamedSet = (ej.isNullOrUndefined(rowElements[i]["isNamedSets"]) || !rowElements[i]["isNamedSets"]) ? false : true, dimensionQuery = "";
+                        var isNamedSet = (ej.isNullOrUndefined(rowElements[i]["isNamedSets"]) || !rowElements[i]["isNamedSets"]) ? false : true, dimensionQuery = "", p_dimensionQuery = "";
 
                         if (rowElements[i].fieldName != undefined && !isNamedSet) {
 
-                            dimensionQuery = this._getDimensionQuery(rowElements[i], olapReport, "rows", i);
+                            dimensionQuery = this._getDimensionQuery(rowElements[i], olapReport, "rows", i, false);
                             updateQuery.push(dimensionQuery.replace(/["'\(\)]/g, "").replace(/["'\{\}]/g, "").replace(/\levels0/g, "levels(0)"));
+
+                            if (ej.olap.base._isPaging && isDrilled) {
+                                p_dimensionQuery = this._getDimensionQuery(rowElements[i], olapReport, "rows", i, true);
+                            }
 
                             if (rowElements[i]["sortOrder"] && rowElements[i]["sortOrder"]!=ej.olap.SortOrder.None) {
                                 var sortOrder = rowElements[i]["sortOrder"] == ej.olap.SortOrder.Ascending ? "asc" : "desc"; isSorted = true;
-                                rowQuery = rowQuery + (i > 0 ? "*" : "") + "{ORDER({HIERARCHIZE({" + dimensionQuery + "})}," + rowElements[i].fieldName + ".CurrentMember.MEMBER_CAPTION," + sortOrder + ")}";
+                                rowQuery = rowQuery + (i > 0 ? "*" : "") + "{ORDER({HIERARCHIZE({" + ((ej.olap.base._isPaging && isDrilled) ? p_dimensionQuery : dimensionQuery) + "})}," + rowElements[i].fieldName + ".CurrentMember.MEMBER_CAPTION," + sortOrder + ")}";
                             }
                             else
-                                rowQuery = rowQuery + (i > 0 ? "*" : "") + "{HIERARCHIZE({({" + dimensionQuery + "})})}";
+                                rowQuery = rowQuery + (i > 0 ? "*" : "") + "{HIERARCHIZE({({" + ((ej.olap.base._isPaging && isDrilled) ? p_dimensionQuery : dimensionQuery) + "})})}";
                         }
                         else if (isNamedSet) {
                             rowQuery = i > 0 ? rowQuery + "*" + "{" + rowElements[i].fieldName + "}" : "{" + rowElements[i].fieldName + "}";
                         }
                     }
 
-                    rowQuery = (!isSorted ? " HIERARCHIZE " : " ") + "( {" + this._updateOlapReport($(olapReport)[0].rows, rowQuery, "rows", updateQuery) + "})";
+                    if (ej.olap.base._isPaging) {
+                        this._updateOlapReport($(olapReport)[0].rows, rowQuery, "rows", updateQuery)
+                    }
+                    rowQuery = (!isSorted ? " HIERARCHIZE " : " ") + "( {" + (ej.olap.base._isPaging ? rowQuery : this._updateOlapReport($(olapReport)[0].rows, rowQuery, "rows", updateQuery)) + "})";
                 }
                 if(isMeasureAxis){
                     measureQuery = ej.olap._mdxParser._getMeasuresQuery(olapReport);
-                    rowQuery = rowQuery != "" ? rowQuery + ((rowQuery != "" && measureQuery != "") ? "," : "") + measureQuery : measureQuery;
+                    rowQuery = rowQuery != "" ? (ej.olap.base._isPaging ? rowQuery.slice(0, -1) : rowQuery) + ((rowQuery != "" && measureQuery != "") ? (ej.olap.base._isPaging ? "*" : ",") : "") + measureQuery : (ej.olap.base._isPaging ? (measureQuery != "" ? "(" : "") : "") + measureQuery;
+                }
+                if (ej.olap.base._isPaging) {
+                    rowQuery = rowQuery != "" ? (measureQuery == "" ? (rowQuery[rowQuery.length - 1] != "}" ? rowQuery.slice(0, -1) : rowQuery) + this._getDrilledSection(olapReport, $.extend(true, {}, rowElements), "row", measureQuery) + ")" : rowQuery + this._getDrilledSection(olapReport, $.extend(true, {}, rowElements), "row", measureQuery) + ")") : "";
                 }
                 return rowQuery;
             },
 
             _getcolumnMDX: function (olapReport) {
 
-                var colElements = $(olapReport)[0].columns, columnQuery = "", updateQuery = [], isSorted = false;
+                var colElements = $(olapReport)[0].columns, columnQuery = "", measureQuery = "", updateQuery = [], isSorted = false, isDrilled = false;
                 var isMeasureAxis = olapReport["values"].length > 0 && olapReport["values"][0]["measures"] != undefined && olapReport["values"][0]["axis"] ==ej.olap.AxisName.Column;
                 if (colElements.length > 0) {
+                    isDrilled = ej.isNullOrUndefined(colElements[0].drillCellInfo) ? false : true;
                     for (var i = 0; i < colElements.length; i++) {
-                        var isNamedSet = (ej.isNullOrUndefined(colElements[i]["isNamedSets"]) || !colElements[i]["isNamedSets"]) ? true : false, isSorted = false, dimensionQuery = "";
+                        var isNamedSet = (ej.isNullOrUndefined(colElements[i]["isNamedSets"]) || !colElements[i]["isNamedSets"]) ? true : false, isSorted = false, dimensionQuery = "", p_dimensionQuery = "";
 
                         if (colElements[i].fieldName != undefined && isNamedSet) {
 
-                            dimensionQuery = this._getDimensionQuery(colElements[i], olapReport, "columns", i);
+                            dimensionQuery = this._getDimensionQuery(colElements[i], olapReport, "columns", i, false);
                             updateQuery.push(dimensionQuery.replace(/["'\(\)]/g, "").replace(/["'\{\}]/g, ""));
+
+                            if (ej.olap.base._isPaging && isDrilled) {
+                                p_dimensionQuery = this._getDimensionQuery(colElements[i], olapReport, "columns", i, true);
+                            }
 
                             if (colElements[i]["sortOrder"] && colElements[i]["sortOrder"] != ej.olap.SortOrder.None) {
                                 var sortOrder = colElements[i]["sortOrder"] == ej.olap.SortOrder.Ascending ? "asc" : "desc", isSorted = true;;
-                                columnQuery = columnQuery + (i > 0 ? "*" : "") + "{ ORDER ({HIERARCHIZE ({" + dimensionQuery + "})}," + colElements[i].fieldName + ".CurrentMember.MEMBER_CAPTION," + sortOrder + ")}";
+                                columnQuery = columnQuery + (i > 0 ? "*" : "") + "{ ORDER ({HIERARCHIZE ({" + ((ej.olap.base._isPaging && isDrilled) ? p_dimensionQuery : dimensionQuery) + "})}," + colElements[i].fieldName + ".CurrentMember.MEMBER_CAPTION," + sortOrder + ")}";
                             }
                             else
-                                columnQuery = columnQuery + (i > 0 ? "*" : "") + "{" + dimensionQuery + "}";
+                                columnQuery = columnQuery + (i > 0 ? "*" : "") + "{" + ((ej.olap.base._isPaging && isDrilled) ? p_dimensionQuery : dimensionQuery) + "}";
                         }
                         else
                             columnQuery = i > 0 ? columnQuery + "*" + "{" + colElements[i].fieldName + "}" : "{" + colElements[i].fieldName + "}";
                     }
-                    columnQuery = (!isSorted ? " HIERARCHIZE " : " ") + "( {" + this._updateOlapReport(colElements, columnQuery, "columns", updateQuery) + "})";
+                    if (ej.olap.base._isPaging && isDrilled) {
+                        this._updateOlapReport($(olapReport)[0].columns, columnQuery, "columns", updateQuery)
+                    }
+                    columnQuery = (!isSorted ? " HIERARCHIZE " : " ") + "( {" + (ej.olap.base._isPaging ? columnQuery : this._updateOlapReport(colElements, columnQuery, "columns", updateQuery)) + "})";
                 }
          
                 if (isMeasureAxis) {
                     measureQuery = ej.olap._mdxParser._getMeasuresQuery(olapReport);
-                
-                    columnQuery = columnQuery != "" ? columnQuery + ((columnQuery != "" && measureQuery != "") ? "," : "") + measureQuery : measureQuery;
+                    columnQuery = columnQuery != "" ? ((ej.olap.base._isPaging ? columnQuery.slice(0, -1) : columnQuery) + ((columnQuery != "" && measureQuery != "") ? (ej.olap.base._isPaging ? "*" : ",") : "") + measureQuery) : (ej.olap.base._isPaging ? (measureQuery != "" ? "(" : "") : "") + measureQuery;
+                }
+                if (ej.olap.base._isPaging) {
+                    columnQuery = columnQuery != "" ? (measureQuery == "" ? (columnQuery[columnQuery.length - 1] != "}" ? columnQuery.slice(0, -1) : columnQuery) + this._getDrilledSection(olapReport, $.extend(true, {}, colElements), "column", measureQuery) + ")" : columnQuery + this._getDrilledSection(olapReport, $.extend(true, {}, colElements), "column", measureQuery) + ")") : "";
                 }
                 return columnQuery;
+            },
+
+            _getDrilledSection: function (olapReport, reportElements, axis, measureQuery) {
+                var query = "", reportElements = reportElements;
+                $.each(reportElements, function (index, val) {
+                    if (!ej.isNullOrUndefined(val.drilledItems)) {
+                        $.each(val.drilledItems, function (dindex, dval) {
+                            var aQuery = "", sQuery = "";
+                            $.each(dval, function (curIndex, curValue) {
+                                aQuery = aQuery == "" ? ("{" + curValue + "}") : (aQuery + "*" + "{" + curValue + "}");
+                                curValue = curIndex == index ? curValue.replace(".children", "") : curValue;
+                                sQuery = sQuery == "" ? ("{" + curValue + "}") : (sQuery + "*" + "{" + curValue + "}");
+                            })
+                            if (measureQuery != "") {
+                                aQuery = aQuery + "*" + measureQuery;
+                                sQuery = sQuery + "*" + measureQuery;
+                            }
+                            query = query == "" ? "+{" + aQuery + "}" + "-{" + sQuery + "}" : query + "+{" + aQuery + "}" + "-{" + sQuery + "}";
+                        })
+                    }
+                })
+                return query;
             },
 
             _getSortedMembers: function (obj, reportInfo) {
@@ -1523,7 +1800,7 @@
                     if (drilledInfo[i].length != report.length) {
                         var temp = $.map(report, function (obj, index) {
                             if (obj.fieldName != undefined && obj.fieldName != drilledInfo[i][[drilledInfo[i].length - 1]].split(".").splice(0, 2).join("."))
-                                return { uniqueName: "DrillDownLevel(" + $.trim(obj.fieldName) + ")", fieldName: $.trim(obj.fieldName) };
+                                return { uniqueName: ej.olap.base._isPaging ? "(" + $.trim(obj.fieldName) + ").children" : "DrillDownLevel(" + $.trim(obj.fieldName) + ")", fieldName: $.trim(obj.fieldName) };
                         });
                         for (var j = 0; j < temp.length; j++) {
                             var pos = this._getItemPosition(report, temp[j].fieldName)[0];
@@ -1538,17 +1815,36 @@
                 return "(" + mdx + ")," + query
             },
 
+			_createDrillThroughQuery: function (text, args) {
+			    if (args.model.operationalMode == ej.PivotGrid.OperationalMode.ServerMode) {
+			        args._waitingPopup.show();
+			        args.doAjaxPost("POST", args.model.url + "/" + args.model.serviceMethodSettings.drillThroughDataTable, JSON.stringify({ "currentReport": ($(args.element).parents(".e-pivotclient").length > 0 || $(args.element).length > 0) ? args.currentReport : JSON.parse(args.getOlapReport()).Report, "layout": args.model.layout, "cellPos": "", "selectorValue": text }), function (args) {
+			            this._trigger("drillThrough", { element: args.element, data: args });
+			        });
+			        args._waitingPopup.hide();
+			    }
+			    else {
+			        var measureGrpName = args.measureGrp, measure = "";
+			        var drillQuery = "DRILLTHROUGH Select(" + args._colHeader.join() + "," + args._rowHeader.join() + ") on 0 from [" + args.model.dataSource.cube + "] RETURN";
+			        $.map(args._fieldData.measures, function (obj, index) { if (obj.pid == measureGrpName) measure += measure == "" ? "[" + measureGrpName + "]." + obj.id.split(".")[1] : ",[" + measureGrpName + "]." + obj.id.split(".")[1] })
+			        drillQuery += (text != "" && !ej.isNullOrUndefined(text)) ? " " + measure + "," + text : " " + measure;
+			        drillQuery = drillQuery.replace(/&/g, "&amp;");
+			        var conStr = args._getConnectionInfo(args.model.dataSource.data);
+			        pData = "<Envelope xmlns=\"http://schemas.xmlsoap.org/soap/envelope/\"> <Header></Header> <Body> <Execute xmlns=\"urn:schemas-microsoft-com:xml-analysis\"> <Command> <Statement> " + drillQuery + " </Statement> </Command> <Properties> <PropertyList> <Catalog>" + args.model.dataSource.catalog + "</Catalog> </PropertyList> </Properties></Execute> </Body> </Envelope>";
+			        args.doAjaxPost("POST", conStr.url, { XMLA: pData }, ej.Pivot._generateDrillData, null, { pvtGridObj: args, action: "loadFieldElements" });
+			    }
+            },
 
-            _getDimensionQuery: function (dimElement, report, axis, index) {
+			_getDimensionQuery: function (dimElement, report, axis, index, isDrillOnPaging) {
 
                 var dimQuery = "";
-                if (dimElement["drillCellInfo"] != undefined) {
+                if (dimElement["drillCellInfo"] != undefined && !isDrillOnPaging) {
                     dimQuery = "{(" + dimElement["drillCellInfo"].uniqueName + ")}";
                     delete dimElement.drillCellInfo;
                 }
                 else {
                     if (ej.isNullOrUndefined(dimElement.hasAllMember) || !dimElement.hasAllMember) {
-                        dimQuery = "DrillDownlevel((" + $.trim(dimElement.fieldName) + "))";
+                        dimQuery = ej.olap.base._isPaging ? "((" + $.trim(dimElement.fieldName) + ").children)" : "DrillDownlevel((" + $.trim(dimElement.fieldName) + "))";
                     }
                     else
                         dimQuery = "((" + $.trim(dimElement.fieldName) + ").levels(0).members)";
@@ -1576,6 +1872,9 @@
             },
 
             updateDrilledReport: function (args, currentAxis, pvtGridObj) {
+                if (ej.olap.base._isPaging && !ej.isNullOrUndefined(pvtGridObj._pagingSavedObjects.curDrilledItem)) {
+                    pvtGridObj._pagingSavedObjects.curDrilledItem = args;
+                }
                 var me = ej.olap._mdxParser, reportItem = null, cellInfo, fieldItems, prevItems = "", preRepItm = "", reportInfo, axis;
                 cellInfo = this._splitCellInfo(args.uniqueName);
                 cellInfo.targetUName = args.uniqueName,
@@ -1592,10 +1891,10 @@
                     reportItem.drilledItems != undefined ? reportItem.drilledItems : reportItem["drilledItems"] = [];
                     ej.olap.base._currIndex = { axis: (currentAxis == "rowheader") ? "rows" : "columns", Index: reportInfo[0].index };
 
-                    if (pvtGridObj.pluginName == "ejPivotChart" || pvtGridObj.pluginName == "ejPivotTreeMap") {
+                    if (pvtGridObj.pluginName == "ejPivotChart" || pvtGridObj.pluginName == "ejPivotTreeMap" || ej.isNullOrUndefined(args.index)) {
                         cellInfo.cellIndex = currentIndex.length > 0 ? "" : args.index;
                         cellInfo.axis = axis = currentAxis;
-                        (currentAxis == "rowheader") ? ej.olap.base._isColDrilled = ((args["action"] != undefined && args.action == "collapse") ? false : true) : ej.olap.base._isRowDrilled = ((args["action"] != undefined && args.action == "collapse") ? false : true);
+                        (currentAxis != "rowheader") ? ej.olap.base._isColDrilled = ((args["action"] != undefined && args.action == "collapse") ? false : true) : ej.olap.base._isRowDrilled = ((args["action"] != undefined && args.action == "collapse") ? false : true);
                         for (var i = 0; i < pvtGridObj.model.dataSource.rows.length; i++) {
                             if (args.seriesInfo[i] == args.uniqueName)
                                 break;
@@ -1672,8 +1971,15 @@
                     }
                     else if (args.action) {
                         var drilledMem = ej.olap.base._getDrilledMemeber({ item: cellInfo });
-                        if (drilledMem.length)
+                        if (drilledMem.length && !ej.olap.base._isPaging)
                             ej.olap.base._onDemandCollapse({ drilledMembers: drilledMem }, axis);
+                        else {
+                            while (drilledMem.length != 0) {
+                                ej.olap.base.olapCtrlObj.model.dataSource = ej.olap._mdxParser._clearCollapsedItems(axis, drilledMem[drilledMem.length - 1], ej.olap.base.olapCtrlObj.model.dataSource);
+                                drilledMem = drilledMem.splice(0, drilledMem.length - 1);
+                            }
+                            ej.olap.base.getJSONData(args, ej.olap.base.olapCtrlObj.model.dataSource, ej.olap.base.olapCtrlObj);
+                        }
                     }
                     else {
                         var clonedEl = $(args.drilledMember).clone(true);
@@ -1755,13 +2061,16 @@
                 columnFilter = $.map($(report.columns), function (field, i) { if (field.filterItems != undefined) return [field.filterItems.values]; });
 
                 for (var i = 0; i < report.filters.length; i++) {
-                    var filterElements = report.filters, me = this;
+                    var filterElements = report.filters, me = this ,isFound=false;
                     $.map(report.columns, function (value, index) {
                         if (me._getDimensionUniqueName(value.fieldName, fieldData) == me._getDimensionUniqueName(filterElements[i].fieldName, fieldData)) {
-                            if (filterElements[i].filterItems != undefined)
+                            if (filterElements[i].filterItems != undefined) {
                                 columnFilter.push(filterElements[i].filterItems.values);
+                                isFound = true;
+                            }
                         }
                     });
+                    if(!isFound)
                     $.map(report.rows, function (value, index) {
                         if (me._getDimensionUniqueName(value.fieldName, fieldData) == me._getDimensionUniqueName(filterElements[i].fieldName, fieldData)) {
                             if (filterElements[i].filterItems != undefined)
@@ -1865,6 +2174,37 @@
                     if (obj.fieldName != undefined && $.trim(obj.fieldName) == $.trim(element))
                     { return index; }
                 })
+            },
+
+            getAllMember: function (dataSource, fieldName, controlObj) {
+                var mdxQuery = "select {" + fieldName + "} dimension properties CHILDREN_CARDINALITY on 0 from [" + $.trim(dataSource.cube) + "]";
+                var xmla = ej.olap._mdxParser.getSoapMsg(mdxQuery, dataSource.data, dataSource.catalog);
+                var conStr = ej.olap.base._getConnectionInfo(dataSource.data);
+                controlObj.doAjaxPost("POST", conStr.url, { XMLA: xmla }, controlObj._generateAllMember, null, { action: "loadFieldElements" });
+            },
+
+            getMembers: function (dataSource, fieldName, controlObj) {
+                var reportItem = ej.Pivot.getReportItemByFieldName(fieldName, dataSource).item;
+                var mdxQuery = "select {" + ((reportItem> 0 && reportItem["hasAllMember"]) ? fieldName + ".levels(0).members" : fieldName + ".children") + "} dimension properties CHILDREN_CARDINALITY on 0 from [" + $.trim(dataSource.cube) + "]";
+                var xmla = ej.olap._mdxParser.getSoapMsg(mdxQuery, dataSource.data, dataSource.catalog);
+                var conStr = ej.olap.base._getConnectionInfo(dataSource.data);
+                if (!ej.isNullOrUndefined(controlObj.model.pivotControl) && controlObj.model.pivotControl.model.enableMemberEditorPaging) {
+                    this._memberCount = controlObj.doAjaxPost("POST", conStr.url, { XMLA: xmla }, controlObj._generateMembers, null, { action: "loadFieldElements" });
+                    mdxQuery = "WITH SET [AllDimensions] as {" + ((reportItem > 0 && reportItem["hasAllMember"]) ? fieldName + ".levels(0).members" : fieldName + ".children") + "} SELECT { Subset([AllDimensions]," + controlObj.model.pivotControl._memberPageSettings.startPage + "," + controlObj.model.pivotControl.model.memberEditorPageSize + ")} DIMENSION PROPERTIES MEMBER_UNIQUE_NAME on 0, {} ON 1 from [" + $.trim(dataSource.cube) + "]";
+                    xmla = ej.olap._mdxParser.getSoapMsg(mdxQuery, dataSource.data, dataSource.catalog);
+                }
+                controlObj.doAjaxPost("POST", conStr.url, { XMLA: xmla }, controlObj._generateMembers, null, { action: "fetchMembers" });
+            },
+            getChildren: function (dataSource, memberUQName, controlObj) {
+                var mdxQuery = "select {" + memberUQName + ".children} dimension properties CHILDREN_CARDINALITY on 0 from [" + dataSource.cube + "]";
+                var xmlaData = ej.olap._mdxParser.getSoapMsg(mdxQuery, dataSource.data, dataSource.catalog);
+                var conStr = ej.olap.base._getConnectionInfo(dataSource.data);
+                controlObj.doAjaxPost("POST", conStr.url, { XMLA: xmlaData }, ej.Pivot.generateChildMembers, null, { action: "nodeExpand", currentNode: memberUQName });
+            },
+            getSoapMsg: function (mdx, url, catlogName) {
+                var conStr = ej.olap.base._getConnectionInfo(url);
+                var xmlMsg = "<Envelope xmlns=\"http://schemas.xmlsoap.org/soap/envelope/\"> <Header></Header> <Body> <Execute xmlns=\"urn:schemas-microsoft-com:xml-analysis\"> <Command> <Statement> " + mdx + " </Statement> </Command> <Properties> <PropertyList> <Catalog>" + catlogName + "</Catalog> <LocaleIdentifier>" + conStr.LCID + "</LocaleIdentifier></PropertyList> </Properties> </Execute> </Body> </Envelope>";
+                return xmlMsg
             }
         },
    
@@ -1914,6 +2254,7 @@
         Row: "rows",
         Column: "columns"
     };
-})(jQuery, Syncfusion);;
+})(jQuery, Syncfusion);
+;
 
 });

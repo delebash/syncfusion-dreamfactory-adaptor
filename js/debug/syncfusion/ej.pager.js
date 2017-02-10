@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.pager.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -31,7 +31,8 @@
             enableRTL: false,
             totalRecordsCount: null,
             totalPages: null,
-            customText:""
+            customText: "",
+            showPageInfo: true
         },
 
         // constructor function
@@ -61,10 +62,9 @@
         },
         renderPager: function () {
             var $pagerContainer = ej.buildTag('div.e-pagercontainer', "", {}, { unselectable: "on" });
-            var $parentMsgBar = ej.buildTag('div.e-parentmsgbar');
             this._renderPagerContainer($pagerContainer);
-            this._renderMsgBar($parentMsgBar);
-            this.element.append($pagerContainer).append($parentMsgBar).addClass(this.model.enableRTL ? "e-pager e-rtl" : "e-pager");
+            this.element[0].appendChild($pagerContainer[0]);
+            this._pageInfo();
             this.model.enableExternalMessage && this._renderPagerMessage();
         },
         _queryStringValue: function () {
@@ -87,10 +87,10 @@
             this._renderForwardPager($pagerContainer);
             this._renderForwardButton($pagerContainer);
         },
-        _renderMsgBar: function ($ParentMsgBar) {
+        _renderMsgBar: function () {
             var $msgBar = ej.buildTag('span.e-pagermsg', String.format(this.localizedLabels.pagerInfo, this.model.currentPage, this.model.totalPages || 0, this.model.totalRecordsCount || 0));
-            $ParentMsgBar.append($msgBar);
-            $ParentMsgBar.css("text-align", ej.TextAlign.Right);
+            this._parentMsgBar.appendChild($msgBar[0]);
+            this._parentMsgBar.style.textAlign = ej.TextAlign.Right;
         },
         _renderpreviousPager: function ($pagerContainer) {
             this._$PP = ej.buildTag('a.e-link e-nextprevitemdisabled e-disable e-spacing e-PP', "...", {}, { title: this.localizedLabels.previousPagerTooltip, role: "link" });
@@ -101,13 +101,13 @@
             $pagerContainer.append(this._$NP);
         },
         _renderBackwardButton: function ($pagerContainer) {
-            this._$first = ej.buildTag('div.e-first e-icon e-mediaback  e-firstpagedisabled e-disable', "", {}, { unselectable: "on", title: this.localizedLabels.firstPageTooltip });
-            this._$prev = ej.buildTag('div.e-prev e-icon e-arrowheadleft-2x  e-prevpagedisabled e-disable', "", {}, { unselectable: "on", title: this.localizedLabels.previousPageTooltip });
+            this._$first = ej.buildTag('div.e-firstpage e-icon e-mediaback  e-firstpagedisabled e-disable', "", {}, { unselectable: "on", title: this.localizedLabels.firstPageTooltip });
+            this._$prev = ej.buildTag('div.e-prevpage e-icon e-arrowheadleft-2x  e-prevpagedisabled e-disable', "", {}, { unselectable: "on", title: this.localizedLabels.previousPageTooltip });
             $pagerContainer.append(this._$first);
             $pagerContainer.append(this._$prev);
         },
         _renderNumericItem: function ($pagerContainer) {
-            var $numericContainer = ej.buildTag('div.e-numericcontainer e-default', "", {}, { unselectable: "on", id: "NumericContainer" });
+            var $numericContainer = ej.buildTag('div.e-numericcontainer e-default', "", {}, { unselectable: "on" });
             this._renderNumericLinks($numericContainer,this.model.pageCount);
             $pagerContainer.append($numericContainer);
         },
@@ -242,7 +242,18 @@
                 return false;
             this._pagerClickHandler(e);
         },
-
+        _pageInfo: function ($pagerContainer) {
+            if (this.model.showPageInfo && !this._parentMsgBar) {
+                this._parentMsgBar = document.createElement("div");
+                this._parentMsgBar.className += "e-parentmsgbar";
+                this._renderMsgBar();
+                this.element[0].appendChild(this._parentMsgBar);
+                this.element[0].className += this.model.enableRTL ? " e-pager e-rtl" : " e-pager";
+            } else {
+                this._parentMsgBar && this._parentMsgBar.remove();
+                this._parentMsgbar = null;
+            }
+        },
         _pagerClickHandler: function (e) {
             this._prevPageNo = this.model.currentPage;
             var $target = $(e.target);
@@ -341,10 +352,13 @@
             for (var prop in options) {
                 switch (prop) {
                     case "pageCount":
-                        this._renderNumericLinks(this.element.find("#NumericContainer"));
+                        this._renderNumericLinks(this.element.find(".e-numericcontainer"));
                         break;
                     case "enableExternalMessage":
                         this._renderPagerMessage();
+                        break;
+                    case "showPageInfo":
+                        this._pageInfo();
                         break;
                 }
             }

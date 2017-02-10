@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.captcha.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -109,8 +109,8 @@
         },
 
         _initialize: function () {
-            $("#" + this._id + "_RefreshButton").ejButton({ size: "normal", showRoundedCorner: true, contentType: "imageonly", prefixIcon: "e-captcha e-reload", type: "button" });
-            $("#" + this._id + "_PlayAudio").ejButton({ size: "normal", showRoundedCorner: true, contentType: "imageonly", prefixIcon: "e-captcha e-volume-up", type: "button" });
+            $("#" + this._id + "_RefreshButton").ejButton({ size: "normal", showRoundedCorner: true, contentType: "imageonly", prefixIcon: "e-icon e-captcha e-reload", type: "button" });
+            $("#" + this._id + "_PlayAudio").ejButton({ size: "normal", showRoundedCorner: true, contentType: "imageonly", prefixIcon: "e-icon e-captcha e-volume-up", type: "button" });
             this._control = $("#" + this._id).get(0);
             if (!this.model.targetInput)
                 this.model.targetInput = this._id + "_ValidText";
@@ -123,9 +123,11 @@
             this._audioButton = $("#" + this._id + "_PlayAudio").get(0);
             this._audioPluginObject = null;
             this._audioType = "audio/wav";
-            this._submitButton = $("#" + this.model.targetButton).get(0);
-            if (!this._submitButton)
-                this._submitButton = $("[id$='" + this.model.targetButton + "']").get(0);
+			if(!ej.isNullOrUndefined(this.model.targetButton) &&  !(this.model.targetButton === "")){
+				this._submitButton = $("#" + this.model.targetButton).get(0);
+				if (!this._submitButton)
+					this._submitButton = $("[id$='" + this.model.targetButton + "']").get(0);
+			}
             this._hiddenField = $("#" + this._id + "_Hidden").get(0);
 
             if (this._audioObject) {
@@ -151,11 +153,11 @@
 
         _unwireEvents: function () {
             if (this._audioButton)
-                $(this._audioButton).unbind('click', this._PlayAudioDelegate);
+                $(this._audioButton).off('click', this._PlayAudioDelegate);
             if (this._submitButton)
-                $(this._submitButton).unbind('click', this._FormSubmitDelegate);
+                $(this._submitButton).off('click', this._FormSubmitDelegate);
             if (this._refreshButton)
-                $(this._refreshButton).unbind('click', this._CaptchaRefreshDelegate);
+                $(this._refreshButton).off('click', this._CaptchaRefreshDelegate);
         },
 
 

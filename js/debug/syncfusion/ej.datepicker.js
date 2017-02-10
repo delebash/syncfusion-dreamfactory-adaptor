@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.datepicker.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","jquery-easing","./../common/ej.core","./../common/ej.touch"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.touch"], fn) : fn();
 })
 (function () {
 	
@@ -125,10 +125,12 @@
             validationMessage: null,
 
             allowEdit: true,
+
             tooltipFormat: "ddd MMM dd yyyy",
+
             allowDrillDown: true,
 
-            blackoutDates:[],
+            blackoutDates: [],
 
             beforeDateCreate: null,
 
@@ -145,7 +147,11 @@
             focusOut: null,
 
             beforeOpen: null,
-            beforeClose:null,
+
+            beforeClose: null,
+
+            navigate: null,
+
             create: null,
 
             destroy: null
@@ -195,12 +201,15 @@
                         break;
                     case "displayInline":
                         this._setDisplayInline(jsondata[key]);
-                        if (!this.model.allowEdit && !jsondata[key] && this._isInputBox())                            
-                            this.element.bind("mousedown", $.proxy(this._showDatePopUp, this));
+                        if (!this.model.allowEdit && !jsondata[key] && this._isInputBox())
+                            this.element.on("mousedown", $.proxy(this._showDatePopUp, this));
                         break;
                     case "value":
+                        if (ej.isPlainObject(jsondata[key])) jsondata[key] = null;
                         if (ej.isNullOrUndefined(jsondata["minDate"]) && ej.isNullOrUndefined(jsondata["maxDate"])) {
                             this._setDateValue(jsondata[key]);
+                            if (this._specificFormat())
+                                this._stopRefresh = true;
                             jsondata[key] = this.model.value;
                         }
                         else
@@ -252,7 +261,7 @@
                         this.model.dateFormat = ((ej.isNullOrUndefined(this._options.dateFormat)) && (this.model.dateFormat === this.culture.calendar.patterns.d))
                             ? '' : this.model.dateFormat;
                         this._setCulture(jsondata[key]);
-                        if(this.model.value)this._setDateValue(this.model.value);
+                        if (this.model.value) this._setDateValue(this.model.value);
                         jsondata[key] = this.model.locale;
                         callRefresh = start = true;
                         break;
@@ -325,10 +334,10 @@
                         if (parseInt(jsondata[key]) < 0 || parseInt(jsondata[key]) > 6) {
                             jsondata[key] = this.culture.calendar.firstDay;
                             initial = -1;
-                        } 
+                        }
                         this.model.startDay = jsondata[key];
-                        if (ej.isNullOrUndefined(this._options)) this._options = {};                        
-                        this._options["startDay"] = initial;                      
+                        if (ej.isNullOrUndefined(this._options)) this._options = {};
+                        this._options["startDay"] = initial;
                         callRefresh = start = true;
                         break;
                     case "startLevel":
@@ -359,7 +368,7 @@
                     case "blackoutDates":
                         this.model.blackoutDates = jsondata[key];
                         this._initDisableObj(this.model.blackoutDates);
-                        callRefresh = start = true;                        
+                        callRefresh = start = true;
                         break;
                 }
             }
@@ -373,7 +382,7 @@
 
             if (callRefresh && (this.isValidState || this.model.displayInline))
                 this._refreshDatepicker();
-            if(start)this._startLevel(this.model.startLevel);
+            if (start) this._startLevel(this.model.startLevel);
             this._triggerChangeEvent();
             this._checkErrorClass();
         },
@@ -381,7 +390,7 @@
 
         _destroy: function () {
             if (this.model.displayInline)
-                $(window).unbind("resize", $.proxy(this._OnWindowResize, this));
+                $(window).off("resize", $.proxy(this._OnWindowResize, this));
             if (this._isOpen)
                 this.hide();
             this.sfCalendar.remove();
@@ -389,17 +398,20 @@
                 this.element.insertAfter(this.wrapper);
                 this.wrapper.remove();
             }
-            this.element.removeClass('e-datepicker e-input');
+			this._cloneElement.removeClass("e-js e-input").removeClass(ej.util.getNameSpace(this.sfType));
+            this._cloneElement.insertAfter(this.element);
+            this.element.remove();
         },
 
         _init: function (options) {
             this._options = options;
+            this._cloneElement = this.element.clone();
             this._dt_drilldown = false;
             this._ISORegex();
             this._initDisableObj(this.model.blackoutDates);
             this.animation = {
-                open: { type: "easeOutQuad", duration: 200 },
-                close: { type: "easeOutQuad", duration: 100 }
+                open: { duration: 200 },
+                close: { duration: 100 }
             };
             this._animating = false;
             this._isSupport = document.createElement("input").placeholder == undefined ? false : true;
@@ -500,7 +512,7 @@
                 this.isValidState = true;
                 if (date == "") {
                     this.element.val("");
-                    this.model.value = "";
+                    this.model.value = null;
                 } else {
                     this.model.value = date;
                     this._preTxtValue = this.element.val(this._formatter(this.model.value, this.model.dateFormat));
@@ -508,12 +520,12 @@
             }
             else {
                 (typeof date === "string" && this.model.enableStrictMode) ? this.element.val(value) : this.element.val("");
-                this.model.value = "";
+                this.model.value = null;
                 this.isValidState = (this.element.val() == "") ? true : false;
             }
             this._removeWatermark();
         },
-        _ensureValue:function(){
+        _ensureValue: function () {
             var dateValue = this._parseDate(this.element.val(), this.model.dateFormat);
             if (this.model.value)
                 this._setDateValue(this.model.value);
@@ -525,18 +537,18 @@
             if (this.element.is(":input")) {
                 if (bool) {
                     if (!this.model.readOnly) this.element.attr("readonly", false);
-                    this.element.unbind("mousedown", $.proxy(this._showDatePopUp, this));
+                    this.element.off("mousedown", $.proxy(this._showDatePopUp, this));
                 }
                 else {
                     if (!this.model.readOnly) this.element.attr("readonly", "readonly");
-                    if (!this.model.displayInline) this.element.bind("mousedown", $.proxy(this._showDatePopUp, this));
+                    if (!this.model.displayInline) this.element.on("mousedown", $.proxy(this._showDatePopUp, this));
                 }
                 this[action](this.element, "blur", this._onFocusOut);
                 this[action](this.element, "focus", this._onFocusIn);
                 this[action](this.element, "keydown", this._onKeyDown);
             }
         },
-        _allowQuickPick: function (value) {           
+        _allowQuickPick: function (value) {
             $('.e-datepicker-headertext', this.sfCalendar)[value ? "on" : "off"]("click", $.proxy(this._forwardNavHandler, this));
         },
         _setRestrictDateState: function (value) {
@@ -574,12 +586,12 @@
         _addAttr: function (htmlAttr) {
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
-                if (key == "required") proxy.element.attr(key, value);
-                else if (key == "name") proxy.element.attr(key, value);
-                else if (key == "class") proxy.wrapper.addClass(value);
-                else if (key == "disabled" && value == "disabled") proxy.disable();
-                else if (key == "readOnly" && value == "readOnly") proxy.model.readOnly = true;
-				else if(key=="tabindex") proxy.element.attr(key,value);
+                var keyName = key.toLowerCase();
+                if (keyName == "class") proxy.wrapper.addClass(value);
+                else if (keyName == "disabled" && value == "disabled") proxy.disable();
+                else if (keyName == "readOnly" && value == "readOnly") proxy.model.readOnly = true;
+                else if (keyName == "style" || keyName == "id") proxy.wrapper.attr(key, value);
+                else if (ej.isValidAttr(proxy.element[0], key)) proxy.element.attr(key, value);
                 else proxy.wrapper.attr(key, value);
 
             });
@@ -722,12 +734,20 @@
             }
         },
 
-        _refreshDatepicker: function () {            
+        _refreshDatepicker: function () {
+            if (this._stopRefresh) {
+                this._stopRefresh = false
+                return;
+            }
             var _currentVal = this.element.val();
             //  For checking the year maximum range....
-            var currentValue = this._parseDate(_currentVal, this.model.dateFormat);
+            if (this._specificFormat() && this._formatter(this._preValue, this.model.dateFormat, this.model.locale) != _currentVal)
+                var currentValue = this._parseDate(_currentVal, true);
+            else var currentValue = this._parseDate(_currentVal);
             currentValue = this._validateYearValue(currentValue);
             this._setDateValue(currentValue);
+            if (this._specificFormat() && this._compareDate(this.model.value, this._calendarDate))
+                this.element.val(_currentVal)
             $(".e-datepicker-headertext", this.sfCalendar).text(this._formatter(this._calendarDate, this.model.headerFormat));
             this._resizeCalender();
             this._dateValue = new Date(this._calendarDate.toString());
@@ -781,7 +801,7 @@
             if (isDisplayInline) {
                 this.show();
                 this._off(this.dateIcon, "mousedown", this._showDatePopUp);
-                this.element.unbind("mousedown", $.proxy(this._showDatePopUp, this));
+                this.element.off("mousedown", $.proxy(this._showDatePopUp, this));
             }
             else if (this._isInputBox()) this._renderDateIcon(this.model.showPopupButton, false);
         },
@@ -792,17 +812,20 @@
                 if (!this.model.displayInline) this.hide();
             }
             else if (this.model.allowEdit)
-                $(this.element).removeAttr("readonly");
-            
+                $(this.element).prop("readonly", false);
+
         },
-        _checkDateObject: function (date) {
+        _checkDateObject: function (date, val) {
             if (!date || (typeof JSON === "object" && JSON.stringify(date) === "{}")) return date = null;
             else if (!(date instanceof Date)) {
-                var val = this._parseDate(date);
+                if (this._specificFormat())
+                    var val = this._parseDate(date, true);
+                else
+                    var val = this._parseDate(date, val);
                 date = val ? val : (val = this._checkJSONString(date)) ? val : null;
             }
             if (!isNaN(Date.parse(date))) {
-                 this._dateValue = this._calendarDate = this._zeroTime(date)
+                this._dateValue = this._calendarDate = this._zeroTime(date)
                 if (this._validateDate(date))
                     return this._dateValue;
             }
@@ -812,13 +835,13 @@
             // Validate the string value
             if (!isNaN(Date.parse(date))) {
                 if ((new Date(date).toJSON() === date) || (new Date(date).toDateString() === date) || (new Date(date).toGMTString() === date) ||
-                    (new Date(date).toISOString() === date) || (new Date(date).toLocaleString() === date) || 
+                    (new Date(date).toISOString() === date) || (new Date(date).toLocaleString() === date) ||
                     (new Date(date).toString() === date) || (new Date(date).toUTCString() === date))
                     return new Date(date);
                 else if (typeof date == "string") return this._dateFromISO(date);
             } else if (this._extISORegex.exec(date) || this._basicISORegex.exec(date)) return this._dateFromISO(date);
         },
-        _dateFromISO:function(date){
+        _dateFromISO: function (date) {
             var result = this._extISORegex.exec(date) || this._basicISORegex.exec(date), dateFormat = '', timeFormat = '', zeroFormat = '', format;
             if (result) {
                 for (var i = 0; i < this._dates.length; i++) {
@@ -855,7 +878,7 @@
                 return new Date(val[0], val[1], val[2], val[3], val[4], val[5]);
             }
         },
-        _checkLiteral:function(str){
+        _checkLiteral: function (str) {
             char = str.toLowerCase();
             return (char == 't' || char == 'z' || char == ':' || char == '-') ? true : false;
         },
@@ -870,7 +893,7 @@
         },
         _stringToObject: function (value) {
             if (typeof value === "string") {
-                var val = ej.parseDate(value, this.model.dateFormat,this.model.locale);
+                var val = ej.parseDate(value, this.model.dateFormat, this.model.locale);
                 value = (val != null) ? val : new Date(value);
             }
             return value;
@@ -940,7 +963,7 @@
                 if (!ej.isNullOrUndefined(this._options.buttonText))
                     this._localizedLabels.buttonText = this._options.buttonText;
             }
-            this._localizedLabelToModel();            
+            this._localizedLabelToModel();
         },
 
         _localizedLabelToModel: function () {
@@ -978,8 +1001,8 @@
                 winLeftWidth = $(document).scrollLeft() + $(window).width() - left;
                 winRightWidth = $(document).scrollLeft() + left + elementObj.width();
                 if (this.model.enableRTL || popupWidth > winLeftWidth && (popupWidth < left + elementObj.outerWidth()) && !ej.isNullOrUndefined(this.wrapper))
-                    left += this.wrapper.width() - this.sfCalendar.width();                
-                if (popupWidth > winRightWidth) left = pos.left;                      
+                    left += this.wrapper.width() - this.sfCalendar.width();
+                if (popupWidth > winRightWidth) left = pos.left;
                 this.sfCalendar.css({
                     "left": left + "px",
                     "top": topPos + "px",
@@ -1009,10 +1032,10 @@
                 this.model.maxDate = (new Date('12/31/2099')); // using the JS Date.parse function which expects mm/dd/yyyy
             }
         },
-        _setDateValue: function (date) {
-            var newDate = this._checkDateObject(date);
+        _setDateValue: function (date, val) {
+            var newDate = this._checkDateObject(date, val);
             if (newDate != null) {
-                this.isValidState = true;               
+                this.isValidState = true;
                 this.model.value = new Date(newDate.toString());
                 this._validateMinMaxDate();
                 this._preTxtValue = this.element.val(this._formatter(this.model.value, this.model.dateFormat));
@@ -1023,7 +1046,7 @@
                     date = this._formatter(date, this.model.dateFormat);
                 }
                 (this.model.enableStrictMode) ? this.element.val(date) : this.element.val(null);
-                this.model.value = null;
+                this.model.value = null; //updating model value as null to avoid the recursive call to this method
                 this._triggerChangeEvent();
                 this.isValidState = (this.element.val() == "" || ej.isNullOrUndefined(this.element.val())) ? true : false;
             }
@@ -1031,8 +1054,8 @@
         },
         _updateInputVal: function () {
             var val = this._validateValue();
-            if ((val != null||!this.model.enableStrictMode) && this.sfCalendar.find('.e-datepicker-days').is(':visible'))             
-                    this._refreshDatepicker();            
+            if ((val != null || !this.model.enableStrictMode) && this.sfCalendar.find('.e-datepicker-days').is(':visible'))
+                this._refreshDatepicker();
         },
         _validateInputVal: function () {
             var val = this._validateValue();
@@ -1041,7 +1064,7 @@
                     if (val <= this.model.maxDate && val >= this.model.minDate)
                         this.isValidState = true;
                     else {
-                        this.model.value = "";
+                        this.model.value = null;
                         this.isValidState = true;
                     }
                 }
@@ -1049,7 +1072,9 @@
         },
 
         _validateValue: function () {
-            var value = this._parseDate(this.element.val());
+            if (this._specificFormat() && this.element.val() != this._formatter(this._preValue, this.model.dateFormat, this.model.locale))
+                var value = this._parseDate(this.element.val(), true);
+            else var value = this._parseDate(this.element.val());
             return this._validateYearValue(value);
         },
         _getSeparator: function () {
@@ -1080,9 +1105,13 @@
             var newFormat = this._checkFormat(format);
             return ej.format(date, newFormat, this.model.locale);
         },
-        _parseDate: function (date) {
+        _parseDate: function (date, type) {
             var newFormat = this._checkFormat(this.model.dateFormat);
-            return ej.parseDate(date, newFormat, this.model.locale);
+            DateValue = date
+            if ((this._specificFormat()) && DateValue != undefined && date != "" && type != true && !(ej.format(ej.parseDate(DateValue, newFormat, this.model.locale), this.model.dateFormat, this.model.locale) == DateValue)) {
+                return this._dateValue;
+            }
+            else return ej.parseDate(date, newFormat, this.model.locale);
         },
         _checkFormat: function (format) {
             var proxy = this;
@@ -1107,10 +1136,6 @@
             newDate.setMinutes(0);
             newDate.setHours(0);
             return newDate;
-        },
-        //Convert date object to specific format
-        _formatDate: function (date) {
-            return this._formatter(date, this.Date.format);
         },
 
         _getDaysInMonth: function (date) {
@@ -1142,7 +1167,7 @@
         _isSpecialDates: function (dates) {
             if (this.model.specialDates) {
                 for (var i = 0; i < this.model.specialDates.length; i++) {
-                    if (this.model.specialDates[i]) {
+                    if (this.model.specialDates[i] && this.model.specialDates[i][this._mapField._date]) {
                         if (dates.getDate() == this.model.specialDates[i][this._mapField._date].getDate() && dates.getMonth() == this.model.specialDates[i][this._mapField._date].getMonth() && dates.getFullYear() == this.model.specialDates[i][this._mapField._date].getFullYear()) {
                             this._getIndex = i;
                             return true;
@@ -1153,7 +1178,7 @@
             return false;
         },
         _getMapper: function () {
-            var mapper = this.model.fields, mapFld = { _date: null, _tooltip: null, _icon: null ,_custom: null};
+            var mapper = this.model.fields, mapFld = { _date: null, _tooltip: null, _icon: null, _custom: null };
             mapFld._date = (mapper && mapper.date) ? mapper["date"] : "date";
             mapFld._tooltip = (mapper && mapper.tooltip) ? mapper["tooltip"] : "tooltip";
             mapFld._icon = (mapper && mapper.iconClass) ? mapper["iconClass"] : "iconClass";
@@ -1304,13 +1329,28 @@
         },
 
         _previousNextHandler: function (event) {
-            if (this.model.readOnly || !this.model.enabled) return false;
+            if (this.model.readOnly || !this.model.enabled || $(event.target).hasClass("e-disable")) return false;
             event.preventDefault();
+            var prevTable = $("table", this.sfCalendar), navFrom;
+            navFrom = this._navigateFrom(prevTable);
             var element = ($(event.target).is('a')) ? $(event.target.parentNode) : $(event.target);
             var progress = element.hasClass('e-prev') ? true : false;
             this._processNextPrevDate(progress);
+            var currentTable = $("table", this.sfCalendar), tClassName, navTo;
+            tClassName = currentTable.get(0).className;
+            switch (tClassName) {
+                case "e-dp-viewdays": navTo = "month"; break;
+                case "e-dp-viewmonths": navTo = "year"; break;
+                case "e-dp-viewyears": navTo = "decade"; break;
+                case "e-dp-viewallyears": navTo = "century"; break;
+            }
+            this._trigger("navigate", { date: this._dateValue, value: this._formatter(this._dateValue, this.model.dateFormat), navigateTo: navTo, navigateFrom: navFrom });
         },
         _processNextPrevDate: function (progress) {
+			if (this._DRPdisableFade) {
+            s = new Date(this.sfCalendar.find("td.current-month").attr("date"));
+            this._dateValue = s;
+			}
             if (progress && this.sfCalendar.find(".e-arrow-sans-left").hasClass("e-disable")) return false;
             else if (!progress && this.sfCalendar.find(".e-arrow-sans-right").hasClass("e-disable")) return false;
 
@@ -1334,7 +1374,7 @@
                     this._addMonths(this._dateValue, (progress ? -step : step));
                     if (this._clickedDate)
                         this._calendarDate = this._clickedDate;
-                    this._dateValue = this._dateValue < this.model.minDate ? new Date(this.model.minDate.toString()) :this._dateValue; 
+                    this._dateValue = this._dateValue < this.model.minDate ? new Date(this.model.minDate.toString()) : this._dateValue;
                     this._dateValue = this._dateValue > this.model.maxDate ? new Date(this.model.maxDate.toString()) : this._dateValue;
                     this._renderCalendar(this, this._dateValue);
                     $('.e-datepicker-headertext', this.sfCalendar).text(this._formatter(this._dateValue, this.model.headerFormat));
@@ -1396,7 +1436,7 @@
                     $(".e-datepicker-headertext", this.sfCalendar).text((setYear + 1) + ' - ' + (setYear + 10));
                     $('tbody,tr.e-week-header', currentTable).not('.e-datepicker-years').hide();
                     $($(currentTable).find('.e-datepicker-years')).show();
-                    this._addFocus('year', this._hoverYear);
+                    this._addFocus('year', this._hoverYear + (!($('.e-year-first.e-hidedate').length) ? 0 : -1));
                     this._checkArrows(setYear + 1, setYear + 10);
                     break;
                 case 'e-dp-viewallyears':
@@ -1418,14 +1458,15 @@
                         } else
                             this._flag = true;
                     }
-                    this._dateValue.setFullYear(headYears + (progress ? -10 : 10));
+                    this._dateValue.setFullYear((!(this._lastHoveredYear) ? this._dateValue.getFullYear() : this._lastHoveredYear) + (progress ? -100 : 100));
+                    this._lastHoveredYear = this._dateValue.getFullYear();
                     this._renderCalendar(this, this._dateValue);
                     var setYear = parseInt(this._dateValue.getFullYear()) - ((parseInt(this._dateValue.getFullYear()) % 100) + 1);
                     temp = parseFloat($('td.e-allyear-last', currentTable.get(0)).prev().text().split('-')[1]);
                     $('.e-datepicker-headertext', this.sfCalendar).text((setYear + 1) + ' - ' + temp);
                     $('tbody,tr.e-week-header', currentTable).not('.e-datepicker-allyears').hide();
                     $($(currentTable).find('.e-datepicker-allyears')).show();
-                    this._addFocus('allyear', this._hoverAllYear);
+                    this._addFocus('allyear', this._hoverAllYear + (!($('.e-allyear-first.e-hidedate').length) ? 0 : -1));
                     this._checkArrows(setYear + 1, temp);
                     break;
             }
@@ -1447,9 +1488,9 @@
             if (!cell) cell = items.last();
             this.sfCalendar.find('table td').removeClass("e-state-hover");
             $(cell).addClass("e-state-hover");
-            this._setActiveState(selection);           
+            this._setActiveState(selection);
             return index;
-        },       
+        },
         _setActiveState: function (selection) {
             if (!(this.model.value instanceof Date)) return;
             var items = this.sfCalendar.find('tbody tr td.e-current-' + selection), cell, proxy = this;
@@ -1521,25 +1562,31 @@
             if (event) event.preventDefault();
 
             var currentTable = $("table", this.sfCalendar);
-            var tclassName = $("table", this.sfCalendar).get(0).className, proxy = this, headerTxt;
+            var tclassName = $("table", this.sfCalendar).get(0).className, proxy = this, headerTxt, navTo;
+            navFrom = this._navigateFrom(currentTable);
             switch (tclassName) {
                 case 'e-dp-viewdays':
                     this._hoverMonth = this._getDateObj(currentTable.find(".e-state-hover")).getMonth() ||
                                 this._getDateObj(currentTable.find(".e-active")).getMonth() || 0;
-                    this._startLevel("year");
+                    if (this._DRPdisableFade) {
+                        this._renderCalendar(this, this._calendarDate);
+                        $('.e-datepicker-headertext', this.sfCalendar).text(this._formatter(this._dateValue, this.model.headerFormat));
+                    }
+                    this._startLevel("year"); navTo = "year";
                     this._addFocus('month', this._hoverMonth);
                     break;
                 case 'e-dp-viewmonths':
                     headerTxt = this._getHeaderTxt();
-                    this._startLevel("decade");
+                    this._startLevel("decade"); navTo = "decade";
                     this._hoverYear = this._setFocusByName('year', headerTxt);
                     break;
                 case 'e-dp-viewyears':
                     headerTxt = this._getHeaderTxt();
-                    this._startLevel("century");
+                    this._startLevel("century"); navTo = "century";
                     this._hoverAllYear = this._setFocusByName('allyear', headerTxt);
                     break;
             }
+            if (navFrom != "century") this._trigger("navigate", { date: this._dateValue, value: this._formatter(this._dateValue, this.model.dateFormat), navigateTo: navTo, navigateFrom: navFrom });
             this._layoutChanged();
         },
         _cellSelection: function () {
@@ -1580,11 +1627,21 @@
             });
             cell = allValues[index];
             if (cell) {
-                if ($(cell).hasClass('e-'+name+'-last'))
+                if ($(cell).hasClass('e-' + name + '-last'))
                     this._processNextPrevDate(false)
-                else if ($(cell).hasClass('e-'+name+'-first'))
+                else if ($(cell).hasClass('e-' + name + '-first'))
                     this._processNextPrevDate(true);
-            }           
+            }
+        },
+        _navigateFrom: function (prevTable) {
+            var tPrevClassName = prevTable.get(0).className, navFrom;
+            switch (tPrevClassName) {
+                case "e-dp-viewdays": navFrom = "month"; break;
+                case "e-dp-viewmonths": navFrom = "year"; break;
+                case "e-dp-viewyears": navFrom = "decade"; break;
+                case "e-dp-viewallyears": navFrom = "century"; break;
+            }
+            return navFrom;
         },
         _backwardNavHandler: function (event) {
             this._animating = true;
@@ -1596,22 +1653,26 @@
             }
             else element = event;
             var cTable = $("table", this.sfCalendar), temp;
-            var tclassName = $("table", this.sfCalendar).get(0).className, proxy = this;
+            var tclassName = $("table", this.sfCalendar).get(0).className, proxy = this, navTo;
+            navFrom = this._navigateFrom(cTable);
             switch (tclassName) {
                 case 'e-dp-viewmonths':
                     cTable.removeClass("e-dp-viewmonths").addClass("e-dp-viewdays");
-                    this._dateValue = new Date(this._dateValue.getFullYear(), parseInt($(element).attr('index')), 1);
+                    this._lastHoveredMonth = parseInt($(element).attr('index'));
+                    this._dateValue = new Date(this._dateValue.getFullYear(), this._lastHoveredMonth, this._dateValue.getDate());
+                    if (this._DRPdisableFade) this._trigger("_month_Loaded", { currentTarget: event.currentTarget });
                     this._renderCalendar(this, this._dateValue);
                     $('tbody', cTable).not('.e-datepicker-days,.e-week-header').hide();
                     $($(cTable).find('.e-datepicker-days,.e-week-header')).fadeIn("fast", function () {
                         proxy._addFocus('day', proxy._hoverDate || 0);
                         proxy._animating = false;
                     });
-                    $('.e-datepicker-headertext', this.sfCalendar).text(this._formatter(this._dateValue, this.model.headerFormat));
+                    $('.e-datepicker-headertext', this.sfCalendar).text(this._formatter(this._dateValue, this.model.headerFormat)); navTo = "month";
                     break;
                 case 'e-dp-viewyears':
                     cTable.removeClass("e-dp-viewyears").addClass("e-dp-viewmonths");
-                    this._dateValue.setFullYear(parseInt(element.text()));
+                    this._lastHoveredYear = parseInt(element.text());
+                    this._dateValue.setFullYear(this._lastHoveredYear);
                     this._renderCalendar(this, this._dateValue);
                     $('tbody,tr.e-week-header', cTable).not('.e-datepicker-months').hide();
                     if (ej.isNullOrUndefined(this._hoverMonth) && !ej.isNullOrUndefined(this._dateValue)) this._hoverMonth = this._dateValue.getMonth();
@@ -1621,7 +1682,7 @@
                     });
                     temp = element.text();
                     $('.e-datepicker-headertext', this.sfCalendar).text(temp);
-                    this._checkArrows(temp, temp);
+                    this._checkArrows(temp, temp); navTo = "year";
                     break;
                 case 'e-dp-viewallyears':
                     var headYears = element.text().split('-');
@@ -1635,7 +1696,8 @@
                         proxy._animating = false;
                     });
                     $('.e-datepicker-headertext', this.sfCalendar).text(headYears[0] + ' - ' + headYears[1]);
-                    this._checkArrows(headYears[0], headYears[1]);
+                    this._checkArrows(headYears[0], headYears[1]); navTo = "decade";
+                    this._dateValue = new Date(this._dateValue.setFullYear(parseInt($.trim(headYears[0])) + ((!this._lastHoveredYear) ? this._dateValue.getFullYear() % 10 : this._lastHoveredYear % 10)));
                     break;
                 default:
                     this._clearSelected();
@@ -1649,6 +1711,7 @@
                     this._animating = false;
                     break;
             }
+            if (navFrom != "month") this._trigger("navigate", { date: this._dateValue, value: this._formatter(this._dateValue, this.model.dateFormat), navigateTo: navTo, navigateFrom: navFrom });
             this._layoutChanged();
         },
 
@@ -1703,15 +1766,15 @@
             var calendarTable = this.sfCalendar;
             switch (depth) {
                 case "year":
-                    $(calendarTable.find('.e-current-year,.e-current-allyear')).bind("click", $.proxy(this._backwardNavHandler, this));
+                    $(calendarTable.find('.e-current-year,.e-current-allyear')).on("click", $.proxy(this._backwardNavHandler, this));
                     this._on($('.e-current-month', this.sfCalendar), "click", $.proxy(this._onDepthSelectHandler, this));
                     break;
                 case "decade":
-                    $(calendarTable.find('.e-current-allyear')).bind("click", $.proxy(this._backwardNavHandler, this));
-                    $('.e-current-year', this.sfCalendar).bind("click", $.proxy(this._onDepthSelectHandler, this));
+                    $(calendarTable.find('.e-current-allyear')).on("click", $.proxy(this._backwardNavHandler, this));
+                    $('.e-current-year', this.sfCalendar).on("click", $.proxy(this._onDepthSelectHandler, this));
                     break;
                 case "century":
-                    $(calendarTable.find('.e-current-allyear')).bind("click", $.proxy(this._onDepthSelectHandler, this));
+                    $(calendarTable.find('.e-current-allyear')).on("click", $.proxy(this._onDepthSelectHandler, this));
                     break;
                 case "month":
                     this._on(calendarTable.find('.current-month,.other-month,.e-current-month,.e-current-year,.e-current-allyear'), "click", $.proxy(this._backwardNavHandler, this));
@@ -1774,11 +1837,11 @@
                 for (var j = 0; j < 4; j++) {
                     var td = $(dc('td'));
                     td.attr((this._isIE8) ? { 'unselectable': 'on' } : {});
-                    if (year == 0)                     
+                    if (year == 0)
                         td.addClass('e-year-first e-current-year ');
-                     else if (year == 11)                      
+                    else if (year == 11)
                         td.addClass('e-year-last e-current-year ');
-                     else
+                    else
                         td.addClass('e-current-year e-state-default');
                     if (years[year] < this.model.minDate.getFullYear() || years[year] > this.model.maxDate.getFullYear()) {
                         td.addClass('e-hidedate');
@@ -1808,11 +1871,11 @@
                 for (var j = 0; j < 4; j++) {
                     var td = $(document.createElement('td'));
                     td.attr((this._isIE8) ? { 'unselectable': 'on' } : {});
-                    if (year == 0)                       
+                    if (year == 0)
                         td.addClass('e-allyear-first e-current-allyear ');
-                     else if (year == 11)                      
+                    else if (year == 11)
                         td.addClass('e-allyear-last e-current-allyear ');
-                     else
+                    else
                         td.addClass('e-current-allyear e-state-default');
                     if (parseInt(years[year].split('-\n')[1]) < this.model.minDate.getFullYear() || parseInt(years[year].split('-\n')[0]) > this.model.maxDate.getFullYear()) {
                         td.addClass('e-hidedate');
@@ -1895,9 +1958,9 @@
                             'role': 'gridcell'
                         }).attr((this._isIE8) ? { 'unselectable': 'on' } : {})
                         .addClass((thisMonth ? 'current-month e-state-default ' : 'other-month e-state-default ') +
-                            (this._isWeekend(currentDate) ? (this._ejHLWeekEnd ? 'e-dp-weekend e-week-end ' : (this.model.highlightWeekend ? 'e-week-end ' : '')) : 'e-week-day ') +                           
+                            (this._isWeekend(currentDate) ? (this._ejHLWeekEnd ? 'e-dp-weekend e-week-end ' : (this.model.highlightWeekend ? 'e-week-end ' : '')) : 'e-week-day ') +
                             (thisMonth && currentDate.getTime() == newdate.getTime() ? 'today ' : ''));
-                     
+
                     d.find('span:first-of-type').addClass((checkSpecialDate ? (this.model.specialDates[index][this._mapField._icon] ? 'e-special-date-icon ' + this.model.specialDates[index][this._mapField._icon] + ' ' : 'e-special-day') : ''));
                     d.addClass(checkSpecialDate ? (this.model.specialDates[index][this._mapField._custom] ? this.model.specialDates[index][this._mapField._custom] : '') : '');
                     if (disable) this._disableDates({ date: currentDate, element: d });
@@ -1935,14 +1998,20 @@
                         }
                         if (_last) this._tempMaxDate = currentDate;
                     }
-                    this._trigger("beforeDateCreate", { date: currentDate, element: d });
+                    this._trigger("beforeDateCreate", { date: currentDate, value: this._formatter(currentDate, this.model.dateFormat), element: d });
                     r.append(d);
                     currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1, 0, 0, 0);
                 }
                 tbody.append(r);
             }
             calendarTable.append(tbody);
-            (this._isIE8 || this._isIE7) ? $(tbody).css("display", "block") : $(tbody).fadeIn("fast");
+				if (this._DRPdisableFade) {
+                $(tbody).css("display", "block");
+                $(tbody).css({ display: "table-row-group", "vertical-align": "middle", "border-color": "inherit" });
+				}
+				else {
+			      (this._isIE8 || this._isIE7) ? $(tbody).css("display", "block") : $(tbody).fadeIn("fast");
+				}
             if (this.model.startLevel === this.model.depthLevel)
                 this._depthLevel(this.model.depthLevel);
             else if (this.model.depthLevel != "month" && this.model.depthLevel != "") {
@@ -1966,13 +2035,13 @@
             this._checkDateArrows();
         },
 
-        _checkDisableRange:function(value){
-            if (!ej.isNullOrUndefined(this._disableCollection[value.getFullYear()])) 
+        _checkDisableRange: function (value) {
+            if (!ej.isNullOrUndefined(this._disableCollection[value.getFullYear()]))
                 if (jQuery.inArray(value.getMonth(), this._disableCollection[value.getFullYear()]) !== -1)
-                    return true;            
-             return false;
+                    return true;
+            return false;
         },
-        _initDisableObj:function(disableDates){
+        _initDisableObj: function (disableDates) {
             this._disableCollection = {};
             for (i = 0; i < this.model.blackoutDates.length; i++) {
                 var dateObj = this._checkInstanceType(this.model.blackoutDates[i]);
@@ -1985,11 +2054,11 @@
             }
         },
 
-        _disableDates: function (args) {           
+        _disableDates: function (args) {
             for (i = 0; i < this.model.blackoutDates.length; i++) {
                 var dateObj = this._checkInstanceType(this.model.blackoutDates[i]);
-                    if (dateObj && +args.date === +dateObj)
-                        args.element.removeClass('current-month').addClass('e-hidedate');                
+                if (dateObj && +args.date === +dateObj)
+                    args.element.removeClass('current-month').addClass('e-hidedate');
             }
         },
 
@@ -1997,7 +2066,7 @@
             if (this._animating) return false;
             if ((this._isOpen) && (e.keyCode == 37 || e.keyCode == 38 || e.keyCode == 39 || e.keyCode == 40 || e.keyCode == 13 || e.keyCode == 36 || e.keyCode == 35)) {
                 e.preventDefault && e.preventDefault();
-                if (e.altKey && e.keyCode == 13) { this._setCurrDate(e); return false; }
+                if (e.altKey) { if (e.keyCode == 13) { this._setCurrDate(e); return false; } else return; }
                 var t = { row: null, col: null };
 
                 t.col = this.sfCalendar.find('tbody tr td.e-state-hover').index();
@@ -2031,7 +2100,7 @@
                     next.addClass("e-state-hover");
                 }
             }
-            else if (!this.model.displayInline && (e.keyCode == 27 || e.keyCode == 9)) { this.hide();  }
+            else if (!this.model.displayInline && (e.keyCode == 27 || e.keyCode == 9)) { this.hide(); }
             else if (e.altKey && e.keyCode == 40) { this.show(); return false; }
         },
         _changeRowCol: function (t, key, rows, cols, target, ctrlKey) {
@@ -2056,10 +2125,8 @@
             switch (key) {
                 case 36:
                     return this.sfCalendar.find(eleClass + ':first');
-                    break;
                 case 35:
                     return this.sfCalendar.find(eleClass + ':last');
-                    break;
                 case 38:
                     if (ctrlKey && this.model.allowDrillDown) {
                         this._forwardNavHandler();
@@ -2080,7 +2147,6 @@
                         cell = this.sfCalendar.find(eleClass + ':nth-child(' + t.col + '):last');
                     }
                     return cell;
-                    break;
                 case 37:
                     if (ctrlKey) {
                         this._processNextPrevDate(true);
@@ -2104,7 +2170,6 @@
                         cell = this.sfCalendar.find(eleClass + ':last');
                     }
                     return cell;
-                    break;
                 case 39:
                     if (ctrlKey) {
                         this._processNextPrevDate(false);
@@ -2128,7 +2193,6 @@
                         cell = this.sfCalendar.find(eleClass + ':first');
                     }
                     return cell;
-                    break;
                 case 40:
                     if (!ctrlKey) {
                         if (t.row < rows) {
@@ -2147,7 +2211,6 @@
                             cell = this.sfCalendar.find(eleClass + ':nth-child(' + t.col + '):first');
                         }
                         return cell;
-                        break;
                     }
                 case 13:
                     var tclassName = $("table", this.sfCalendar).get(0).className, ele, element;
@@ -2244,14 +2307,14 @@
             if (this._trigger("beforeOpen", { element: this.sfCalendar, events: e })) return false;
             this.sfCalendar.attr({ 'aria-hidden': 'false' });
             proxy._isOpen = true;
-            this.sfCalendar.slideDown(this.model.enableAnimation ? this.animation.open.duration : 0, this.animation.open.type, function () {
+            this.sfCalendar.slideDown(this.model.enableAnimation ? this.animation.open.duration : 0, function () {
                 if (proxy.model && !proxy.model.displayInline)
-                    $(document).bind("mousedown", $.proxy(proxy._onDocumentClick, proxy));
+                    $(document).on("mousedown", $.proxy(proxy._onDocumentClick, proxy));
             });
             this._updateInputVal();
             this._refreshLevel(previous);
-            this._trigger("open", { prevDate: this._prevDate, value: this._formatter(this.model.value, this.model.dateFormat) });
-            $(window).bind("resize", $.proxy(this._OnWindowResize, this));
+            this._trigger("open", { prevDate: previous, date: this.model.value, value: this._formatter(this.model.value, this.model.dateFormat) });
+            $(window).on("resize", $.proxy(this._OnWindowResize, this));
             if (!this.model.displayInline)
                 this._on(ej.getScrollableParents(this.wrapper), "scroll", this.hide);
             this._isInputBox() && this.wrapper.addClass("e-active");
@@ -2264,14 +2327,17 @@
             var proxy = this;
             this._popupOpen = false;
             this.sfCalendar.attr({ 'aria-hidden': 'true' });
-            this.sfCalendar.slideUp(this.model.enableAnimation ? this.animation.close.duration : 0, this.animation.close.type , function () {
+            if (this._popClose && e != undefined && e.type != "click") {
+                return;
+            }
+            this.sfCalendar.slideUp(this.model.enableAnimation ? this.animation.close.duration : 0, function () {
                 proxy._isOpen = false;
-                $(document).unbind("mousedown", $.proxy(proxy._onDocumentClick, proxy));
+                $(document).off("mousedown", $.proxy(proxy._onDocumentClick, proxy));
                 proxy._setWaterMark();
             });
             if (this.element.val() != "") this._validateInputVal();
-            this._trigger("close", { prevDate: this._prevDate, value: this._formatter(this.model.value, this.model.dateFormat) });
-            $(window).unbind("resize", $.proxy(this._OnWindowResize, this));
+            this._trigger("close", { prevDate: this._prevDate, date: this.model.value, value: this._formatter(this.model.value, this.model.dateFormat) });
+            $(window).off("resize", $.proxy(this._OnWindowResize, this));
             this._off(ej.getScrollableParents(this.wrapper), "scroll", this.hide);
             this._isInputBox() && this.wrapper.removeClass("e-active");
         },
@@ -2280,12 +2346,12 @@
         enable: function () {
             this.model.enabled = true;
             this.element.removeClass('e-disable').attr({ "aria-disabled": false });
-			this.element.removeAttr("disabled");
+            this.element.prop("disabled", false);
             if (this.dateIcon) this.dateIcon.removeClass('e-disable').attr({ "aria-disabled": false });
             if (this._isIE8 && this.dateIcon) this.dateIcon.children().removeClass("e-disable");
-            this.element.removeAttr("disabled");
+            this.element.prop("disabled", false);
             if (!this._isSupport)
-                this._hiddenInput.removeAttr("disabled");
+                this._hiddenInput.prop("disabled", false);
             this.sfCalendar.removeClass('e-disable').attr({ "aria-disabled": false });
         },
 
@@ -2293,7 +2359,7 @@
         disable: function () {
             this.model.enabled = false;
             this.element.addClass('e-disable').attr({ "aria-disabled": true });
-			this.element.attr("disabled","disabled");
+            this.element.attr("disabled", "disabled");
             if (this.dateIcon) this.dateIcon.addClass('e-disable').attr({ "aria-disabled": true });
             if (this._isIE8 && this.dateIcon) this.dateIcon.children().addClass("e-disable");
             this.element.attr("disabled", "disabled");
@@ -2312,6 +2378,10 @@
             this._allowQuickPick(this.model.allowDrillDown);
             this._on($('.e-next', this.sfCalendar), "click", $.proxy(this._previousNextHandler, this));
             this._on($('.e-prev', this.sfCalendar), "click", $.proxy(this._previousNextHandler, this));
+            if (!this.model.displayInline) {
+                this.sfCalendar.on("mouseenter touchstart", $.proxy(function () { this._popClose = true; }, this));
+                this.sfCalendar.on("mouseleave touchend", $.proxy(function () { this._popClose = false; }, this));
+            }
 
             if (this.element.is(":input") && (this.model.allowEdit)) {
                 this._on(this.element, "blur", this._onFocusOut);
@@ -2321,7 +2391,7 @@
 
             if (!this.model.allowEdit) {
                 this.element.attr("readonly", "readonly");
-                this.element.bind("mousedown", $.proxy(this._showDatePopUp, this));
+                this.element.on("mousedown", $.proxy(this._showDatePopUp, this));
             }
 
             if (this.model.showFooter)
@@ -2331,10 +2401,15 @@
         _bindDateButton: function () {
             this._on(this.dateIcon, "mousedown", this._showDatePopUp);
             if (this.model.allowEdit)
-                this.element.unbind("mousedown", $.proxy(this._showDatePopUp, this));
+                this.element.off("mousedown", $.proxy(this._showDatePopUp, this));
         },
         _bindInputEvent: function () {
             this._off(this.dateIcon, "mousedown", this._showDatePopUp);
+        },
+
+        _specificFormat: function () {
+            var parseInfo = ej.globalize._getDateParseRegExp(ej.globalize.findCulture(this.model.locale).calendar, this.model.dateFormat);
+            return ($.inArray("dddd", parseInfo.groups) > -1 || $.inArray("ddd", parseInfo.groups) > -1)
         },
 
         _onFocusOut: function (e) {
@@ -2345,11 +2420,16 @@
             if ((!this._isOpen || this.model.displayInline) && !this._setWaterMark() && !this._compareDate(this._preValue, this._parseDate(this.element.val(), this.model.dateFormat))) this._updateInputVal();
             if ((!this._isOpen || this.model.displayInline)) this._refreshLevel(previous);
             if (this.element.val() != "" && (!this._isOpen || this.model.displayInline)) { this._validateInputVal(); }
-            this.element.unbind("keydown", $.proxy(this._keyboardNavigation, this));
+            this.element.off("keydown", $.proxy(this._keyboardNavigation, this));
             if (!this.model.showPopupButton) this._off(this.element, "click", this._elementClick);
             var _currentVal = this.element.val();
             var data = { prevDate: this._prevDate, value: _currentVal };
-            this._setDateValue(_currentVal);
+            if (this._specificFormat()) {
+                if (this._prevDate != _currentVal)
+                    this._setDateValue(_currentVal, true);
+            }
+            else
+                this._setDateValue(_currentVal);
             if (!this.model.value) this._clearSelected();
             this._trigger("focusOut", data);
             this._checkErrorClass();
@@ -2365,10 +2445,10 @@
             if (this.model.readOnly)
                 return;
             if (!this._isSupport) this._hiddenInput.css("display", "none");
-            this.element.bind("keydown", $.proxy(this._keyboardNavigation, this));
+            this.element.on("keydown", $.proxy(this._keyboardNavigation, this));
             if (!this.model.showPopupButton && !this.model.readOnly) this.show(e);
             if (!this.model.showPopupButton) this._on(this.element, "click", this._elementClick);
-            this._trigger("focusIn", { value: this.model.value });
+            this._trigger("focusIn", { date: this.model.value, value: this._formatter(this.model.value, this.model.dateFormat) });
         },
         _elementClick: function (e) {
             if (!this._popupOpen) this.show(e);
@@ -2393,7 +2473,14 @@
         _validateOnFocusOut: function (val, e) {
             var dateVal = this._preValue != null ? this._calendarDate : this._preValue;
             var calenderDate = this._formatter(dateVal, this.model.dateFormat);
-            var currDate = this._formatter(this._parseDate(this._formatter(new Date(), "MM/dd/yyyy")), this.model.dateFormat);
+            if (this._specificFormat() && (val > this.model.minDate) && (val < this.model.maxDate)) {
+                if (val == null) this.model.value = dateVal
+                else {
+                    this.model.value = val;
+                    var currDate = this._formatter(val, this.model.dateFormat, this.model.locale);
+                }
+            }
+            else var currDate = this._formatter(this._parseDate((this._formatter(new Date(), "MM/dd/yyyy"))), this.model.dateFormat);
             var dateChange = false, valueExceed = false;
             if (val != null && !this.model.enableStrictMode) {
                 if (ej.isNullOrUndefined(this.model.value))
@@ -2414,7 +2501,7 @@
                     this.isValidState = true;
                 }
                 if (dateChange) this.element.val(this._formatter(val, this.model.dateFormat));
-                if (!this._compareDate(this._preValue, this._parseDate(this.element.val(), this.model.dateFormat))) this._triggerChangeEvent(e);
+                if (!this._compareDate(this._preValue, this._parseDate(this.element.val(), true))) this._triggerChangeEvent(e);
             }
             else if (val == null && !this.model.enableStrictMode) {
                 if (this._preTxtValue == null || this.element.val() == "") {
@@ -2480,30 +2567,35 @@
                     this.isValidState = false;
                 }
             }
-            
+
             return result;
         },
 
         _triggerChangeEvent: function (e) {
+            var currentValue;
             var _currentVal = this.element.val() == "" ? null : this.element.val();
             this._prevDate = this._formatter(this._preValue, this.model.dateFormat);
             var data = { prevDate: this._prevDate, value: _currentVal, isInteraction: !!e };
-            var currentValue = this._parseDate(_currentVal, this.model.dateFormat);
+            if (this._specificFormat() && e != undefined && e.type == "keydown" && this._formatter(this._preValue, this.model.dateFormat, this.model.locale) != this.element.val())
+                currentValue = this._parseDate(this.element.val(), true);
+            else if ((this._specificFormat() && e != undefined && e.type == "blur"))
+                currentValue = this.model.value;
+            else currentValue = this._parseDate(_currentVal);
             currentValue = this._validateYearValue(currentValue);
             if (!this._validateDate(currentValue)) currentValue = null;
             if (!this._compareDate(this._preValue, currentValue)) {
                 this._preValue = this.model.value = currentValue;
-                data.value = this._formatDate(this.model.value, this.model.format);
-                if(this.model.value) this._clickedDate = this.model.value;
-                if (this.model.displayInline && !this._isInputBox()) this._hiddenInput.attr('value', _currentVal);              
+                data.value = this._formatter(this.model.value, this.model.dateFormat);
+                if (this.model.value) this._clickedDate = this._calendarDate = this.model.value;
+                if (this.model.displayInline && !this._isInputBox()) this._hiddenInput.attr('value', _currentVal);
                 if (!this.model.value && !this.model.enableStrictMode) this._setDateValue(this.model.value);
                 data.value = _currentVal;
                 this._trigger("_change", data);
-                data.value = this._formatDate(this.model.value, this.model.format);
-                this._trigger("change", data);               
+                data.value = this._formatter(this.model.value, this.model.dateFormat);
+                this._trigger("change", data);
                 this._checkErrorClass();
             }
-            else if (this.element.val() != this._prevDate) {
+            else if (!(this.element.val() == "" && this._prevDate == null) && this.element.val() != this._prevDate) {
                 data.value = this.element.val();
                 this._trigger("_change", data);
             }
@@ -2512,7 +2604,7 @@
         _triggerSelectEvent: function (e) {
             var val = this.element.val();
             if (this._parseDate(val)) {
-                var data = { prevDate: this._prevDate, value: val, isSpecialDay: this._isSpecialDates(this.model.value) };               
+                var data = { prevDate: this._prevDate, date: this.model.value, value: val, isSpecialDay: this._isSpecialDates(this.model.value) };
                 if (this._prevDate != val) {
                     if (this._parseDate(data.value) && (this.model.value >= this.model.minDate && this.model.value <= this.model.maxDate)) {
                         this._cancelValue = this._trigger("select", data);
@@ -2525,8 +2617,8 @@
         _onDocumentClick: function (e) {
             if (this.model) {
                 if (!$(e.target).is(this.popup) && !$(e.target).parents(".e-popup").is(this.popup) &&
-                    !$(e.target).is(this.wrapper) && !$(e.target).parents(".e-datewidget").is(this.wrapper)) {                   
-                        this.hide(e);
+                    !$(e.target).is(this.wrapper) && !$(e.target).parents(".e-datewidget").is(this.wrapper)) {
+                    this.hide(e);
                 }
                 else if ($(e.target).is(this.popup) || $(e.target).parents(".e-popup").is(this.popup)) {
                     e.preventDefault();
@@ -2539,7 +2631,7 @@
         },
 
         _showDatePopUp: function (e) {
-            var isRightClick = false;         
+            var isRightClick = false;
             if (e.button)
                 isRightClick = (e.button == 2);
             else if (e.which)
@@ -2585,8 +2677,8 @@
             if (this.model.readOnly || !this.model.enabled) return false;
             if (e && ($(e.target).hasClass("e-disable") || $(e.target).hasClass("e-hidedate"))) return false;
             if (e && e.type) e.preventDefault();
-            this.model.value = this._parseDate(this.element.val());
-
+            if (this._specificFormat()) this._prevDate = this.element.val();
+            else this.model.value = this._parseDate(this.element.val());
             this._prevDate = this._formatter(this.model.value, this.model.dateFormat);
             this._setDateValue(this._dateValue);
             this._triggerSelectEvent(e);
@@ -2611,13 +2703,13 @@
                 else this.wrapper.addClass("e-error").attr('aria-invalid', "true");
             }
         },
-         _getLocalizedLabels: function(){
+        _getLocalizedLabels: function () {
             return ej.getLocalizedConstants(this.sfType, this.model.locale);
         }
     });
-    
-    ej.DatePicker.Locale = ej.DatePicker.Locale || {} ;
-    
+
+    ej.DatePicker.Locale = ej.DatePicker.Locale || {};
+
     ej.DatePicker.Locale['default'] = ej.DatePicker.Locale['en-US'] = {
         watermarkText: "Select date",
         buttonText: 'Today'

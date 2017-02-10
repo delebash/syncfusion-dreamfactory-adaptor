@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.data.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -61,7 +61,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                     crossDomain: dataSource.crossDomain,
                     jsonp: dataSource.jsonp,
                     dataType: dataSource.dataType,
-                    offline: dataSource.offline !== undefined ? dataSource.offline : dataSource.adaptor == "remoteSaveAdaptor" ? false : dataSource.url ? false : true,
+                    offline: dataSource.offline !== undefined ? dataSource.offline : dataSource.adaptor == "remoteSaveAdaptor" || dataSource.adaptor instanceof ej.remoteSaveAdaptor ? false : dataSource.url ? false : true,
                     requiresFormat: dataSource.requiresFormat
                 };
             } else if (dataSource.jquery || isHtmlElement(dataSource)) {
@@ -143,15 +143,21 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                     }, this);
                 }
             } else {
-                nextTick(function () {
-                    var res = this.executeLocal(query);
-                    args = this._getDeferedArgs(query, res, args);
-                    deffered.resolveWith(this, [args]);
-                }, this);
+				if(!ej.isNullOrUndefined(this.dataSource.async) && this.dataSource.async == false)
+					this._localQueryProcess(query, args, deffered);
+				else{
+					nextTick(function () {
+						this._localQueryProcess(query, args, deffered);
+					}, this);
+				}
             }
-
             return deffered.promise();
         },
+		_localQueryProcess: function(query, args, deffered){
+			var res = this.executeLocal(query);
+			args = this._getDeferedArgs(query, res, args);
+			deffered.resolveWith(this, [args]);
+		},
         _getDeferedArgs: function (query, result, args) {
             if (query._requiresCount) {
                 args.result = result.result;
@@ -603,8 +609,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
                 if (!(value instanceof Date))
                     continue;
-
-                val[prop] = new Date(+value - (ej.serverTimezoneOffset * 3600000));
+                val[prop] = new Date(+value + (ej.serverTimezoneOffset * 60 * 60 * 1000));
             }
 
             return val;
@@ -829,13 +834,14 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             return this.sortBy(fieldName, ej.sortOrder.Descending);
         },
 		
-        group: function (fieldName) {
+        group: function (fieldName,fn) {
             this.sortBy(fieldName, null, true);
 
             this.queries.push({
                 fn: "onGroup",
                 e: {
-                    fieldName: fieldName
+                    fieldName: fieldName,
+                    fn: fn
                 }
             });
             return this;
@@ -1158,10 +1164,11 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 if (data["aggregates"]) args.aggregates = data.aggregates;
                 if (data["result"]) data = data.result;
                 for (var i = 0; i < groups.length; i++){
-                    var level=null;
-                    if(!ej.isNullOrUndefined(groupDs))
-                        groupDs = ej.group(groupDs, groups[i]);
-                    data = ej.group(data, groups[i], pvt.aggregates,level,groupDs);
+                    var level = null;
+                    var format = getColFormat(groups[i], query.queries);
+                    if (!ej.isNullOrUndefined(groupDs))
+                        groupDs = ej.group(groupDs, groups[i], null, format);
+                    data = ej.group(data, groups[i], pvt.aggregates, format, level, groupDs);
                 }
                 if (args.count != undefined)
                     args.result = data;
@@ -1475,6 +1482,8 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 val = "datetime'" + p.replacer(val).toJSON() + "'";
 
             if (type === "string") {
+				if(val.indexOf("'") != -1)
+                    val = val.replace(new RegExp(/'/g),"''");
                 val = "'" + val + "'";
 
                 if (requiresCast) {
@@ -1545,9 +1554,9 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             if (e.name instanceof Array) {
                 for (var i = 0; i < e.name.length; i++)
                     res.push(this._p(e.name[i]));
-            } else
+            } else {
                 res.push(this._p(e.name) + (e.direction === "descending" ? " desc" : ""));
-
+            }
             return res.join(",");
         },
         onSortBy: function (e) {
@@ -1643,8 +1652,10 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             }
             if (pvt && pvt.groups && pvt.groups.length) {
                 var groups = pvt.groups;
-                for (var i = 0; i < groups.length; i++)
-                    data = ej.group(data, groups[i], pvt.aggregates);
+                for (var i = 0; i < groups.length; i++) {
+                    var format = getColFormat(groups[i], query.queries)
+                    data = ej.group(data, groups[i], pvt.aggregates, format);
+                }
             }
             return isNull(count) ? data : { result: data, count: count, aggregates: aggregateResult };
         },
@@ -1723,6 +1734,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 req += oData.changeSetContent + "\n\n";
                 req += "DELETE ";
                 req += e.url + "(" + arr[i][e.key] + ") HTTP/1.1\n";
+                req += "If-Match : * \n"
                 req += "Accept: " + oData.accept + "\n";
                 req += "Content-Id: " + this.pvt.changeSet++ + "\n";
                 req += oData.batchChangeSetContentType + "\n";
@@ -1757,6 +1769,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 req += oData.changeSetContent + "\n\n";
                 req += "PUT ";
                 req += e.url + "(" + arr[i][e.key] + ")" + " HTTP/1.1\n";
+                req += "If-Match : * \n"
                 req += "Accept: " + oData.accept + "\n";
                 req += "Content-Id: " + this.pvt.changeSet++ + "\n";
                 req += oData.batchChangeSetContentType + "\n\n";
@@ -1799,7 +1812,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 val = pred.value,
                 isDate = val instanceof Date;               
             ej.data.odUniOperator["contains"] = "contains";
-                returnValue = this.base.onPredicate.call(this, pred, query, requiresCast);
+            returnValue = ej.ODataAdaptor.prototype.onPredicate.call(this, pred, query, requiresCast);
             ej.data.odUniOperator["contains"] = "substringof";
                 if (isDate)
                     returnValue = returnValue.replace(/datetime'(.*)'$/, "$1");
@@ -1816,6 +1829,27 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 		},
         beforeSend: function (dm, request, settings) {
  
+        },
+        processQuery: function (ds, query) {
+            var digitsWithSlashesExp = /\/[\d*\/]*/g;
+            var poppedExpand = "";
+            for (var i = query._expands.length - 1; i > 0; i--) {
+                if (poppedExpand.indexOf(query._expands[i]) >= 0) { // If current expand is child of previous
+                    query._expands.pop(); // Just remove it because its in the expand already
+                }
+                else {
+                    if (digitsWithSlashesExp.test(query._expands[i])) { //If expanded to subentities
+                        poppedExpand = query._expands.pop();
+                        var r = poppedExpand.replace(digitsWithSlashesExp, "($expand="); //Rewrite into odata v4 expand
+                        for (var j = 0; j < poppedExpand.split(digitsWithSlashesExp).length - 1; j++) {
+                            r = r + ")"; // Add closing brackets
+                        }
+                        query._expands.unshift(r); // Add to the front of the array
+                        i++;
+                    }
+                }
+            }
+            return ej.ODataAdaptor.prototype.processQuery.apply(this, [ds, query]);
         },
         processResponse: function (data, ds, query, xhr, request, changes) {
             var pvt = request && request.ejPvtData;
@@ -1851,7 +1885,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             if (query && query._requiresCount)
                 if ('@odata.count' in data) count = data['@odata.count'];
 
-           data = data.value;
+            data = ej.isNullOrUndefined(data.value) ? data : data.value;
            if (pvt && pvt.aggregates && pvt.aggregates.length) {
                var agg = pvt.aggregates, args = {}, fn, res = {};
                for (var i = 0; i < agg.length; i++) {
@@ -1863,8 +1897,10 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
            }
             if (pvt && pvt.groups && pvt.groups.length) {
                 var groups = pvt.groups;
-                for (var i = 0; i < groups.length; i++)
-                    data = ej.group(data, groups[i], pvt.aggregates);
+                for (var i = 0; i < groups.length; i++) {
+                    var format = getColFormat(groups[i], query.queries);
+                    data = ej.group(data, groups[i], pvt.aggregates, format);
+                }
             }
             return isNull(count) ? data : { result: data, count: count, aggregates: aggregateResult };
         },
@@ -1968,7 +2004,8 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                     agg.push({ type: tmp.type, field: getValue(tmp.field, query) });
                 }
             }
-            return ej.group(ds, getValue(e.fieldName, query), agg);
+            var format = getColFormat(e.fieldName, query.queries);
+            return ej.group(ds, getValue(e.fieldName, query), agg, format);
         },
         onPage: function (ds, e, query) {
             var size = getValue(e.pageSize, query),
@@ -2001,18 +2038,18 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
         remove: function (dm, keyField, value, tableName) {
             var ds = dm.dataSource.json, i;
             if (typeof value === "object")
-                value = value[keyField];
+                value = ej.getObject(keyField, value);
             for (i = 0; i < ds.length; i++) {
-                if (ds[i][keyField] === value) break;
+                if (ej.getObject(keyField, ds[i]) === value) break;
             }
 
             return i !== ds.length ? ds.splice(i, 1) : null;
         },
         update: function (dm, keyField, value, tableName) {
-            var ds = dm.dataSource.json, i, key = value[keyField];
+            var ds = dm.dataSource.json, i, key = ej.getObject(keyField, value);
 
             for (i = 0; i < ds.length; i++) {
-                if (ds[i][keyField] === key) break;
+                if (ej.getObject(keyField, ds[i]) === key) break;
             }
 
             return i < ds.length ? $.extend(ds[i], value) : null;
@@ -2179,8 +2216,10 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 }
                 if (pvt && pvt.groups && pvt.groups.length) {
                     var groups = pvt.groups;
-                    for (var i = 0; i < groups.length; i++)
-                        data = ej.group(data, groups[i], pvt.aggregates);
+                    for (var i = 0; i < groups.length; i++) {
+                        var format = getColFormat(groups[i], query.queries);
+                        data = ej.group(data, groups[i], pvt.aggregates, format);
+                    }
                 }
                 return isNull(count) ? data : { result: data, count: count, aggregates: aggregateResult };
             }
@@ -2962,7 +3001,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             return newData;
         },
 
-        group: function (jsonArray, field,agg, /* internal */ level,groupDs) {
+        group: function (jsonArray, field, agg, format,/* internal */ level,groupDs) {
             level = level || 1;
 
             if (jsonArray.GROUPGUID == ej.pvt.consts.GROUPGUID) {
@@ -2971,11 +3010,11 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                         var indx = -1;
                         var temp = $.grep(groupDs,function(e){return e.key==jsonArray[j].key});
                         indx = groupDs.indexOf(temp[0]);
-                        jsonArray[j].items = ej.group(jsonArray[j].items, field, agg, jsonArray.level + 1,groupDs[indx].items);
+                        jsonArray[j].items = ej.group(jsonArray[j].items, field, agg, format, jsonArray.level + 1, groupDs[indx].items);
                         jsonArray[j].count = groupDs[indx].count;
                     }
                     else{
-                        jsonArray[j].items = ej.group(jsonArray[j].items, field, agg, jsonArray.level + 1);
+                        jsonArray[j].items = ej.group(jsonArray[j].items, field, agg, format, jsonArray.level + 1);
                         jsonArray[j].count = jsonArray[j].items.length;
                     }  
                 }
@@ -2993,6 +3032,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
             for (var i = 0; i < jsonArray.length; i++) {
                 var val = getVal(jsonArray, field, i);
+                if (!ej.isNullOrUndefined(format)) val = format(val, field);
 
                 if (!grouped[val]) {
                     grouped[val] = {
@@ -3631,8 +3671,8 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 						if(navigator.userAgent.indexOf("MSIE 9.0") != -1)
 							xdr.onprogress = function() {};
                         xdr.open(options.type, options.url);
-                        //xdr.send(userOptions.data);
-                        xdr.send();
+                        xdr.send(userOptions.data);
+                        //xdr.send();
                     },
                     abort: function () {
                         if (xdr) {
@@ -3675,7 +3715,14 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
         }
         return ej.mergeSort(ds, field, comparer);
     };
-
+    var getColFormat = function (field, query) {
+        var grpQuery = $.grep(query, function (args) { return args.fn == "onGroup" });
+        for (var grp = 0; grp < grpQuery.length; grp++) {
+            if (ej.getObject("fieldName", grpQuery[grp].e) == field) {
+                return ej.getObject("fn", grpQuery[grp].e);
+            }
+        }
+    };
     var fastSort = function(ds, field, isDesc){
         var old = Object.prototype.toString;
         Object.prototype.toString = (field.indexOf('.') === -1) ? function(){

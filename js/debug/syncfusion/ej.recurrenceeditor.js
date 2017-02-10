@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.recurrenceeditor.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.globalize","jsrender","./../common/ej.core","./../common/ej.scroller","./ej.button","./ej.checkbox","./ej.datepicker","./ej.dropdownlist","./ej.togglebutton","./ej.radiobutton","./ej.editor"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","jsrender","./../common/ej.core","./../common/ej.scroller","./ej.button","./ej.checkbox","./ej.datepicker","./ej.dropdownlist","./ej.togglebutton","./ej.radiobutton","./ej.editor"], fn) : fn();
 })
 (function () {
 	
@@ -36,6 +36,11 @@ var RecurrenceEditor = (function (_super) {
             cssClass: "",
             change: null,
             create: null
+        };
+        this.dataTypes = {
+            frequencies: "array",
+            enableSpinners: "boolean",
+            enableRTL: "boolean",
         };
         this.rootCSS = "e-recurrenceeditor";
         this.PluginName = "ejRecurrenceEditor";
@@ -150,10 +155,10 @@ var RecurrenceEditor = (function (_super) {
     RecurrenceEditor.prototype._initializePrivateProperties = function () {
         this._rRule = {};
         this.flag = true;
+        this._subControlChange = false;
         this._culture = ej.preferredCulture(this.model.locale);
-        this._firstDayOfWeek = (this.model.firstDayOfWeek != null) ? (typeof this.model.firstDayOfWeek == "string") ? this._culture.calendar.days.names.toString().toLowerCase().split(",").indexOf(this.model.firstDayOfWeek.toString().toLowerCase()) : this._culture.calendar.firstDay : this.model.firstDayOfWeek;
-        if (this.model.firstDayOfWeek == null)
-            this._firstDayOfWeek = this._culture.calendar.firstDay;
+        this._dayNamesArray = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+        this._firstDayOfWeek = (this.model.firstDayOfWeek != null) ? (typeof this.model.firstDayOfWeek == "string") ? this._dayNamesArray.indexOf(this.model.firstDayOfWeek.toString().toLowerCase()) : this.model.firstDayOfWeek : this._culture.calendar.firstDay;
         this._monthNames = this._culture.calendar.months.names;
         this._pattern = this._culture.calendar.patterns;
         this._browserInfo = ej.browserInfo();
@@ -161,25 +166,15 @@ var RecurrenceEditor = (function (_super) {
         this._dayNames = [];
         this._dayShortNames = [];
         this._dayFullNames = [];
-        if (!ej.isNullOrUndefined(this._firstDayOfWeek) && this._firstDayOfWeek != 0) {
-            for (var i = this._firstDayOfWeek; i < this._culture.calendar.days.names.length + this._firstDayOfWeek; i++) {
-                if (i < this._culture.calendar.days.names.length) {
-                    this._dayFullNames.push(this._culture.calendar.days.names[i]);
-                    this._dayShortNames.push(this._culture.calendar.days.namesAbbr[i]);
-                    this._dayNames.push(this._dayNamesValue[i]);
-                }
-                else {
-                    this._dayFullNames.push(this._culture.calendar.days.names[i - 7]);
-                    this._dayShortNames.push(this._culture.calendar.days.namesAbbr[i - 7]);
-                    this._dayNames.push(this._dayNamesValue[i - 7]);
-                }
-            }
-        }
-        else {
-            this._dayNames = this._culture.calendar.days.namesShort;
-            this._dayShortNames = this._culture.calendar.days.namesAbbr;
-            this._dayFullNames = this._culture.calendar.days.names;
-        }
+        var index = this._firstDayOfWeek;
+        do {
+            if (index > 6)
+                index = 0;
+            this._dayFullNames.push(this._culture.calendar.days.names[index]);
+            this._dayShortNames.push(this._culture.calendar.days.namesAbbr[index]);
+            this._dayNames.push(this._dayNamesValue[index]);
+            index++;
+        } while (this._dayNames.length < 7);
         this._mediaQuery = false;
     };
     RecurrenceEditor.prototype._currentDateFormat = function (option) {
@@ -202,10 +197,10 @@ var RecurrenceEditor = (function (_super) {
         }
     };
     RecurrenceEditor.prototype._renderRecurrenceEditor = function () {
-        this._recurrenceLayout = ej.buildTag('div.e-recurrenceeditor#' + this._id + 'recurrenceeditor', "", {}, {});
+        this._recurrenceLayout = ej.buildTag('div#' + this._id + 'recurrenceeditor', "", {}, {});
         if (this.model.enableRTL)
             this._recurrenceLayout.addClass('e-rtl');
-        var $recurWind = "<table style='width:100%'><tr><td style='width:20%'><div class='e-textlabel'>" + this._getLocalizedLabels("Repeat") + ":</div></td><td><input class='e-recurrencetype' id='recurrencetype' type='text' name='RecurrenceType' value='' /></td></tr></table><div id='recurtypelist'><ul>";
+        var $recurWind = "<table style='width:100%'><tr><td style='width:20%'><div class='e-textlabel'>" + this._getLocalizedLabels("Repeat") + ":</div></td><td><input class='e-recurrencetype' id='" + this._id + "_recurrenceType' type='text' name='RecurrenceType' value='' /></td></tr></table><div id='" + this._id + "_recurtypelist'><ul>";
         for (var type = 0; type < this.model.frequencies.length; type++) {
             $recurWind += "<li>" + this._getLocalizedLabels(this.model.frequencies[type]) + "</li>";
         }
@@ -213,7 +208,7 @@ var RecurrenceEditor = (function (_super) {
         this.element.append(this._recurrenceLayout.append($recurWind));
         this._renderRecurrenceContent();
         this._initialSubControlRender = true;
-        this._recurrenceLayout.find('.e-recurrencetype').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: "recurtypelist", width: "100%", change: $.proxy(this._recurrenceTypeChange, this), cssClass: this.model.cssClass });
+        this._recurrenceLayout.find('.e-recurrencetype').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: this._id + "_recurtypelist", width: "33%", change: $.proxy(this._recurrenceTypeChange, this), cssClass: this.model.cssClass });
         this._recurrenceLayout.find('.e-recurrencetype').ejDropDownList({ selectedItemIndex: this.model.selectedRecurrenceType });
     };
     RecurrenceEditor.prototype._renderRecurrenceContent = function () {
@@ -224,8 +219,8 @@ var RecurrenceEditor = (function (_super) {
         this._recurrenceContent = ej.buildTag('div.e-recurrencecontent#' + this._id + 'recurrencecontent', "", {}, {});
         if (this._mediaQuery) {
             var $recurCont = "<form id='" + this._id + "_recurrenceForm'><table class='e-table' width='100%' cellpadding='7'><tbody>";
-            $recurCont += "<tr id='" + this._id + "_every' style='display:none'><td width='16%' id='everylabel' class='e-textlabel'>" + this._getLocalizedLabels("Every") + ":</td><td id='everycount' class='e-tdpadding'><table><tr><td><div class='e-floatleft'><input id='recurevery' class='recurevery' type='text' /></div></td>" +
-                "<td><div id='" + this._id + "_recurtypes' class='e-appcheckbox'>" + this._getLocalizedLabels("RecurrenceDay") + "</div></td></tr></table></td></tr>";
+            $recurCont += "<tr id='" + this._id + "_every' style='display:none'><td width='16%' id='everylabel' class='e-textlabel'>" + this._getLocalizedLabels("Every") + ":</td><td id='everycount' class='e-tdpadding'><table><tr><td><div class='e-floatleft'><input id='" + this._id + "_recurevery' class='recurevery' type='text' /></div></td>" +
+                "<td><div id='" + this._id + "_recurtypes' class='e-appcheckbox e-labelcursor'>" + this._getLocalizedLabels("RecurrenceDay") + "</div></td></tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_weekly' class='" + this._id + "_weekly' style='display:none'><td colspan='2' id='weeklabel' class='e-textlabel'><div>" + this._getLocalizedLabels("RepeatOn") + ":</div></td></tr><tr class='" + this._id + "_weekly' style='display:none'>" +
                 "<td colspan='2' id='weekcount'><table class='e-table' cellpadding='3'><tr>";
             for (var weekcount = 0; weekcount < this._dayShortNames.length; weekcount++) {
@@ -233,60 +228,60 @@ var RecurrenceEditor = (function (_super) {
             }
             $recurCont += "</tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_monthly' class='" + this._id + "_monthly' style='display:none'><td colspan='2' id='monthlabel' class='e-recurendslabel'><div class='e-recurendsalign'>" + this._getLocalizedLabels("RepeatBy") + ":</div></td></tr><tr class='" + this._id + "_monthly' style='display:none'>" +
-                "<td colspan='2' id='monthcount'><table class='e-table' cellpadding='3'><tr id='monthdaytr'><td><div><input id='" + this._id + "monthday' class='monthdaytype' name='monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "monthday'>" + this._getLocalizedLabels("Day") + "</label></div></td>" +
-                "<td><div><input id='monthdate' class='monthdate' type='text'/></div></td></tr>" +
-                "<tr id='monthweekdaytr'><td><div><input id='" + this._id + "monthon' class='monthposition' name='monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "monthon'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
-                "<td><div><input id='monthsrt' class='monthsrt' type='text' name='monthsrt' value=''/><div id='monthsrtlist'><ul>";
+                "<td colspan='2' id='monthcount'><table class='e-table' cellpadding='3'><tr id='monthdaytr'><td><div><input id='" + this._id + "_monthday' class='monthdaytype' name='" + this._id + "_monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "_monthday'>" + this._getLocalizedLabels("Day") + "</label></div></td>" +
+                "<td><div><input id='" + this._id + "_monthdate' class='monthdate' type='text'/></div></td></tr>" +
+                "<tr id='monthweekdaytr'><td><div><input id='" + this._id + "_monthon' class='monthposition' name='" + this._id + "_monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "_monthon'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
+                "<td><div><input id='" + this._id + "_monthsrt' class='monthsrt' type='text' name='monthsrt' value=''/><div id='" + this._id + "_monthsrtlist'><ul>";
             for (var day = 0; day < startday.length; day++) {
                 $recurCont += "<li>" + startday[day] + "</li>";
             }
             $recurCont += "</div></div></td>";
-            $recurCont += "<td><div class='e-appcheckbox'><input id='monthsrtday' class='e-monthsrtday monthsrtday' type='text' name='monthsrtday' value=''/>" +
-                "<div id='monthsrtdaylist'><ul>";
+            $recurCont += "<td><div class='e-appcheckbox e-labelcursor'><input id='" + this._id + "_monthsrtday' class='e-monthsrtday monthsrtday' type='text' name='monthsrtday' value=''/>" +
+                "<div id='" + this._id + "_monthsrtdaylist'><ul>";
             for (var monthday = 0; monthday < this._dayFullNames.length; monthday++) {
                 $recurCont += "<li>" + this._dayFullNames[monthday] + "</li>";
             }
             $recurCont += "</div></div></td></tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_yearly' class='" + this._id + "_yearly' style='display:none'><td colspan='2' id='yearlabel' class='e-recurendslabel'><div class='e-recurendsalign'>" + this._getLocalizedLabels("RepeatBy") + ":</div></td></tr><tr class='" + this._id + "_yearly' style='display:none'>" +
                 "<td colspan='2' id='yearcount' ><table class='e-table' cellpadding='3'><tr id='yeardaytr'>" +
-                "<td><div><input id='" + this._id + "yearday' class='yearrecurday' name='yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "yearday'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
-                "<td><div class='e-controlalign'><input id='yearmonth' class='yearmonth' type='text' name='yearmonth' value=''/></div></td>" +
-                "<div id='yearmonthlist'><ul>";
+                "<td><div><input id='" + this._id + "_yearday' class='yearrecurday' name='" + this._id + "_yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "_yearday'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
+                "<td><div class='e-controlalign'><input id='" + this._id + "_yearmonth' class='yearmonth' type='text' name='yearmonth' value=''/></div></td>" +
+                "<div id='" + this._id + "_yearmonthlist'><ul>";
             for (var monthcount = 0; monthcount < (this._monthNames.length - 1); monthcount++) {
                 $recurCont += "<li>" + this._monthNames[monthcount] + "</li>";
             }
-            $recurCont += "</ul></div><td><input id='yeardate' class='yeardate' text='text'/></td></tr>" +
-                "<tr id='yearweekdaytr'><td><div><input id='" + this._id + "yearother' class='yearrecurposi' name='yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "yearother'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
-                "<td><div><input id='yearsrt' class='yearsrt' type='text' name='yearsrt' value=''/><div id='yearsrtlist'><ul>";
+            $recurCont += "</ul></div><td><input id='" + this._id + "_yeardate' class='yeardate' text='text'/></td></tr>" +
+                "<tr id='yearweekdaytr'><td><div><input id='" + this._id + "_yearother' class='yearrecurposi' name='" + this._id + "_yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "_yearother'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
+                "<td><div><input id='" + this._id + "_yearsrt' class='yearsrt' type='text' name='yearsrt' value=''/><div id='" + this._id + "_yearsrtlist'><ul>";
             for (var yearstartday = 0; yearstartday < startday.length; yearstartday++) {
                 $recurCont += "<li>" + startday[yearstartday] + "</li>";
             }
-            $recurCont += "</ul></div></div></td><td><div class='e-controlalign'><input id='yearsrtday' class='yearsrtday' type='text' name='yearsrtday' value=''/>" +
-                "<div id='yearsrtdaylist'><ul>";
+            $recurCont += "</ul></div></div></td><td><div class='e-controlalign'><input id='" + this._id + "_yearsrtday' class='yearsrtday' type='text' name='yearsrtday' value=''/>" +
+                "<div id='" + this._id + "_yearsrtdaylist'><ul>";
             for (var yearweek = 0; yearweek < this._dayFullNames.length; yearweek++) {
                 $recurCont += "<li>" + this._dayFullNames[yearweek] + "</li>";
             }
-            $recurCont += "</ul></div></div></td><td><div><span>" + this._getLocalizedLabels("OfEvery") + "</span></div></td></tr><tr><td></td><td><div><input id='yearsrtmonth' class='yearsrtmonth' type='text' name='yearsrtmonth' value=''/>" +
-                "<div id='yearsrtmonthlist'><ul>";
+            $recurCont += "</ul></div></div></td><td><div><span>" + this._getLocalizedLabels("OfEvery") + "</span></div></td></tr><tr><td></td><td><div><input id='" + this._id + "_yearsrtmonth' class='yearsrtmonth' type='text' name='yearsrtmonth' value=''/>" +
+                "<div id='" + this._id + "_yearsrtmonthlist'><ul>";
             for (var yearmonth = 0; yearmonth < (this._monthNames.length - 1); yearmonth++) {
                 $recurCont += "<li>" + this._monthNames[yearmonth] + "</li>";
             }
             $recurCont += "</ul></div></div></td></tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_startson' ><td colspan='2' id='startsonlabel' class='e-textlabel'>" + this._getLocalizedLabels("StartsOn") + ":</td></tr><tr>" +
-                "<td colspan='2' id='startsoncount'><input id='recurstartdate' class='recurstartdate' type='text' name='RecurStartDate' value=''/></td></tr>";
+                "<td colspan='2' id='startsoncount'><input id='" + this._id + "_recurstartdate' class='recurstartdate' type='text' name='RecurStartDate' value=''/></td></tr>";
             $recurCont += "<tr id='" + this._id + "_endson' ><td colspan='2' id='endsonlabel' class='e-recurendslabel'><div class='e-recurendsalign'>" + this._getLocalizedLabels("Ends") + ":</div></td></tr><tr>" +
-                "<td colspan='2' id='endsoncount'><table class='e-table' cellpadding='3'><tr id='endsonnever'><td><div><input id='repeatendnever' class='recurends e-recurnoend' type='radio' name='repeatend' value='Never'/><label class='e-textmargin' for='repeatendnever'>" + this._getLocalizedLabels("Never") + "</label></div></td></tr>" +
-                "<tr id='endsonafter'><td><div><input id='" + this._id + "repeatendafter' class='recurends e-recurafter' type='radio' name='repeatend'/><label class='e-textmargin' for='" + this._id + "repeatendafter'>" + this._getLocalizedLabels("After") + "</label>" +
-                "</div></td><td><div><input id='dailyoccurance' class='recurcount' type='text'/></div></td>" +
-                "<td><span style='" + margin + ": -80px;'>" + this._getLocalizedLabels("Occurrence") + "</span></td></tr>" +
-                "<tr id='endsonuntil'><td><div><input id='" + this._id + "repeatendon' class='recurends e-recuruntil' type='radio' name='repeatend'/><label class='e-textmargin' for='" + this._id + "repeatendon'>" + this._getLocalizedLabels("On") + "</label></div></td>" +
-                "<td><input id='daily' class='e-until until' type='text' name='daily' value=''/></td></tr>  </table></td></tr>";
+                "<td colspan='2' id='endsoncount'><table class='e-table' cellpadding='3'><tr id='endsonnever'><td><div><input id='" + this._id + "_repeatendnever' class='recurends e-recurnoend' type='radio' name='" + this._id + "_repeatend' value='Never'/><label class='e-textmargin' for='" + this._id + "_repeatendnever'>" + this._getLocalizedLabels("Never") + "</label></div></td></tr>" +
+                "<tr id='endsonafter'><td><div><input id='" + this._id + "_repeatendafter' class='recurends e-recurafter' type='radio' name='" + this._id + "_repeatend'/><label class='e-textmargin' for='" + this._id + "_repeatendafter'>" + this._getLocalizedLabels("After") + "</label>" +
+                "</div></td><td><div><input id='" + this._id + "_recurcount' class='recurcount' type='text'/></div></td>" +
+                "<td><span class='e-labelcursor' style='" + margin + ": -80px;'>" + this._getLocalizedLabels("Occurrence") + "</span></td></tr>" +
+                "<tr id='endsonuntil'><td><div><input id='" + this._id + "_repeatendon' class='recurends e-recuruntil' type='radio' name='" + this._id + "_repeatend'/><label class='e-textmargin' for='" + this._id + "_repeatendon'>" + this._getLocalizedLabels("On") + "</label></div></td>" +
+                "<td><input id='" + this._id + "_daily' class='e-until until' type='text' name='daily' value=''/></td></tr>  </table></td></tr>";
             $recurCont += "<tr style='display:none'><td><span class='e-textlabel'>Summary:</span></td><td><span class=e-recurRule></span></td></tr></tbody></table></form>";
         }
         else {
             var $recurCont = "<form id='" + this._id + "_recurrenceForm'><table class='e-table' width='100%' cellpadding='7'><tbody>";
-            $recurCont += "<tr id='" + this._id + "_every' style='display:none'><td width='20%' id='everylabel' class='e-textlabel'>" + this._getLocalizedLabels("Every") + ":</td><td id='everycount' class='e-tdpadding'><table><tr><td><div class='e-floatleft'><input id='recurevery' class='recurevery' type='text' /></div></td>" +
-                "<td><div id='" + this._id + "_recurtypes' class='e-appcheckbox'>" + this._getLocalizedLabels("RecurrenceDay") + "</div></td></tr></table></td></tr>";
+            $recurCont += "<tr id='" + this._id + "_every' style='display:none'><td width='20%' id='everylabel' class='e-textlabel'>" + this._getLocalizedLabels("Every") + ":</td><td id='everycount' class='e-tdpadding'><table><tr><td><div class='e-floatleft'><input id='" + this._id + "_recurevery' class='recurevery' type='text' /></div></td>" +
+                "<td><div id='" + this._id + "_recurtypes' class='e-appcheckbox e-labelcursor'>" + this._getLocalizedLabels("RecurrenceDay") + "</div></td></tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_weekly' class='" + this._id + "_weekly' style='display:none'><td id='weeklabel' class='e-textlabel'><div>" + this._getLocalizedLabels("RepeatOn") + ":</div></td>" +
                 "<td id='weekcount'><table class='e-table' cellpadding='3'><tr>";
             for (var weekcount = 0; weekcount < this._dayShortNames.length; weekcount++) {
@@ -294,54 +289,54 @@ var RecurrenceEditor = (function (_super) {
             }
             $recurCont += "</tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_monthly' class='" + this._id + "_monthly' style='display:none'><td id='monthlabel' class='e-recurendslabel'><div class='e-recurendsalign'>" + this._getLocalizedLabels("RepeatBy") + ":</div></td>" +
-                "<td id='monthcount'><table class='e-table' cellpadding='3'><tr id='monthdaytr'><td><div><input id='" + this._id + "monthday' class='monthdaytype' name='monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "monthday'>" + this._getLocalizedLabels("Day") + "</label></div></td>" +
-                "<td><div><input id='monthdate' class='monthdate' type='text'/></div></td></tr>" +
-                "<tr id='monthweekdaytr'><td><div><input id='" + this._id + "monthon' class='monthposition' name='monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "monthon'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
-                "<td><div><input id='monthsrt' class='monthsrt' type='text' name='monthsrt' value=''/><div id='monthsrtlist'><ul>";
+                "<td id='monthcount'><table class='e-table' cellpadding='3'><tr id='monthdaytr'><td><div><input id='" + this._id + "_monthday' class='monthdaytype' name='" + this._id + "_monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "_monthday'>" + this._getLocalizedLabels("Day") + "</label></div></td>" +
+                "<td><div><input id='" + this._id + "_monthdate' class='monthdate' type='text'/></div></td></tr>" +
+                "<tr id='monthweekdaytr'><td><div><input id='" + this._id + "_monthon' class='monthposition' name='" + this._id + "_monthday' type='radio'/><label class='e-textmargin' for='" + this._id + "_monthon'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
+                "<td><div><input id='" + this._id + "_monthsrt' class='monthsrt' type='text' name='monthsrt' value=''/><div id='" + this._id + "_monthsrtlist'><ul>";
             for (var day = 0; day < startday.length; day++) {
                 $recurCont += "<li>" + startday[day] + "</li>";
             }
             $recurCont += "</div></div></td>";
-            $recurCont += "<td><div class='e-appcheckbox'><input id='monthsrtday' class='e-monthsrtday monthsrtday' type='text' name='monthsrtday' value=''/>" +
-                "<div id='monthsrtdaylist'><ul>";
+            $recurCont += "<td><div class='e-appcheckbox e-labelcursor'><input id='" + this._id + "_monthsrtday' class='e-monthsrtday monthsrtday' type='text' name='monthsrtday' value=''/>" +
+                "<div id='" + this._id + "_monthsrtdaylist'><ul>";
             for (var monthday = 0; monthday < this._dayFullNames.length; monthday++) {
                 $recurCont += "<li>" + this._dayFullNames[monthday] + "</li>";
             }
             $recurCont += "</div></div></td></tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_yearly' class='" + this._id + "_yearly' style='display:none'><td id='yearlabel' class='e-recurendslabel'><div class='e-recurendsalign'>" + this._getLocalizedLabels("RepeatBy") + ":</div></td>" +
                 "<td id='yearcount' ><table class='e-table' cellpadding='3'><tr id='yeardaytr'>" +
-                "<td><div><input id='" + this._id + "yearday' class='yearrecurday' name='yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "yearday'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
-                "<td><div class='e-controlalign'><input id='yearmonth' class='yearmonth' type='text' name='yearmonth' value=''/></div></td>" +
-                "<div id='yearmonthlist'><ul>";
+                "<td><div><input id='" + this._id + "_yearday' class='yearrecurday' name='" + this._id + "_yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "_yearday'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
+                "<td><div class='e-controlalign'><input id='" + this._id + "_yearmonth' class='yearmonth' type='text' name='yearmonth' value=''/></div></td>" +
+                "<div id='" + this._id + "_yearmonthlist'><ul>";
             for (var monthcount = 0; monthcount < (this._monthNames.length - 1); monthcount++) {
                 $recurCont += "<li>" + this._monthNames[monthcount] + "</li>";
             }
-            $recurCont += "</ul></div><td><input id='yeardate' class='yeardate' text='text'/></td></tr>" +
-                "<tr id='yearweekdaytr'><td><div><input id='" + this._id + "yearother' class='yearrecurposi' name='yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "yearother'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
-                "<td><div><input id='yearsrt' class='yearsrt' type='text' name='yearsrt' value=''/><div id='yearsrtlist'><ul>";
+            $recurCont += "</ul></div><td><input id='" + this._id + "_yeardate' class='yeardate' text='text'/></td></tr>" +
+                "<tr id='yearweekdaytr'><td><div><input id='" + this._id + "_yearother' class='yearrecurposi' name='" + this._id + "_yearday' type='radio'/><label class='e-textmargin' for='" + this._id + "_yearother'>" + this._getLocalizedLabels("The") + "</label></div></td>" +
+                "<td><div><input id='" + this._id + "_yearsrt' class='yearsrt' type='text' name='yearsrt' value=''/><div id='" + this._id + "_yearsrtlist'><ul>";
             for (var yearstartday = 0; yearstartday < startday.length; yearstartday++) {
                 $recurCont += "<li>" + startday[yearstartday] + "</li>";
             }
-            $recurCont += "</ul></div></div></td><td><div class='e-controlalign'><input id='yearsrtday' class='yearsrtday' type='text' name='yearsrtday' value=''/>" +
-                "<div id='yearsrtdaylist'><ul>";
+            $recurCont += "</ul></div></div></td><td><div class='e-controlalign'><input id='" + this._id + "_yearsrtday' class='yearsrtday' type='text' name='yearsrtday' value=''/>" +
+                "<div id='" + this._id + "_yearsrtdaylist'><ul>";
             for (var yearweek = 0; yearweek < this._dayFullNames.length; yearweek++) {
                 $recurCont += "<li>" + this._dayFullNames[yearweek] + "</li>";
             }
-            $recurCont += "</ul></div></div></td><td><div><span>" + this._getLocalizedLabels("OfEvery") + "</span></div></td><td><div><input id='yearsrtmonth' class='yearsrtmonth' type='text' name='yearsrtmonth' value=''/>" +
-                "<div id='yearsrtmonthlist'><ul>";
+            $recurCont += "</ul></div></div></td><td><div><span>" + this._getLocalizedLabels("OfEvery") + "</span></div></td><td><div><input id='" + this._id + "_yearsrtmonth' class='yearsrtmonth' type='text' name='yearsrtmonth' value=''/>" +
+                "<div id='" + this._id + "_yearsrtmonthlist'><ul>";
             for (var yearmonth = 0; yearmonth < (this._monthNames.length - 1); yearmonth++) {
                 $recurCont += "<li>" + this._monthNames[yearmonth] + "</li>";
             }
             $recurCont += "</ul></div></div></td></tr></table></td></tr>";
             $recurCont += "<tr id='" + this._id + "_startson' style='display:none'><td width='20%' id='startsonlabel' class='e-textlabel'>" + this._getLocalizedLabels("StartsOn") + ":</td>" +
-                "<td id='startsoncount'><input id='recurstartdate' class='recurstartdate' type='text' name='RecurStartDate' value=''/></td></tr>";
+                "<td id='startsoncount'><input id='" + this._id + "_recurstartdate' class='recurstartdate' type='text' name='RecurStartDate' value=''/></td></tr>";
             $recurCont += "<tr id='" + this._id + "_endson' style='display:none'><td id='endsonlabel' class='e-recurendslabel'><div class='e-recurendsalign'>" + this._getLocalizedLabels("Ends") + ":</div></td>" +
-                "<td id='endsoncount'><table class='e-table' cellpadding='3'><tr id='endsonnever'><td><div><input id='repeatendnever' class='recurends e-recurnoend' type='radio' name='repeatend' value='Never'/><label class='e-textmargin' for='repeatendnever'>" + this._getLocalizedLabels("Never") + "</label></div></td></tr>" +
-                "<tr id='endsonafter'><td><div><input id='" + this._id + "repeatendafter' class='recurends e-recurafter' type='radio' name='repeatend'/><label class='e-textmargin' for='" + this._id + "repeatendafter'>" + this._getLocalizedLabels("After") + "</label>" +
-                "</div></td><td><div><input id='dailyoccurance' class='recurcount' type='text'/></div></td>" +
-                "<td><span style='" + margin + ": -80px;'>" + this._getLocalizedLabels("Occurrence") + "</span></td></tr>" +
-                "<tr id='endsonuntil'><td><div><input id='" + this._id + "repeatendon' class='recurends e-recuruntil' type='radio' name='repeatend'/><label class='e-textmargin' for='" + this._id + "repeatendon'>" + this._getLocalizedLabels("On") + "</label></div></td>" +
-                "<td><input id='daily' class='e-until until' type='text' name='daily' value=''/></td></tr>  </table></td></tr>";
+                "<td id='endsoncount'><table class='e-table' cellpadding='3'><tr id='endsonnever'><td><div><input id='" + this._id + "_repeatendnever' class='recurends e-recurnoend' type='radio' name='" + this._id + "_repeatend' value='Never'/><label class='e-textmargin' for='" + this._id + "_repeatendnever'>" + this._getLocalizedLabels("Never") + "</label></div></td></tr>" +
+                "<tr id='endsonafter'><td><div><input id='" + this._id + "_repeatendafter' class='recurends e-recurafter' type='radio' name='" + this._id + "_repeatend'/><label class='e-textmargin' for='" + this._id + "_repeatendafter'>" + this._getLocalizedLabels("After") + "</label>" +
+                "</div></td><td><div><input id='" + this._id + "_recurcount' class='recurcount' type='text'/></div></td>" +
+                "<td><span class='e-labelcursor' style='" + margin + ": -80px;'>" + this._getLocalizedLabels("Occurrence") + "</span></td></tr>" +
+                "<tr id='endsonuntil'><td><div><input id='" + this._id + "_repeatendon' class='recurends e-recuruntil' type='radio' name='" + this._id + "_repeatend'/><label class='e-textmargin' for='" + this._id + "_repeatendon'>" + this._getLocalizedLabels("On") + "</label></div></td>" +
+                "<td><input id='" + this._id + "_daily' class='e-until until' type='text' name='daily' value=''/></td></tr>  </table></td></tr>";
             $recurCont += "<tr style='display:none'><td><span class='e-textlabel'>Summary:</span></td><td><span class=e-recurRule></span></td></tr></tbody></table></form>";
         }
         this._recurrenceLayout.append(this._recurrenceContent.append($recurCont));
@@ -350,40 +345,40 @@ var RecurrenceEditor = (function (_super) {
     RecurrenceEditor.prototype._renderControls = function () {
         var control = this._recurrenceContent;
         control.find('.weekdays').ejCheckBox({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, change: $.proxy(this._weeklyClick, this) });
-        control.find('.monthsrt').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: "monthsrtlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._monthSrt, this) });
-        control.find('.monthsrtday').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: "monthsrtdaylist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._monthSrt, this) });
-        control.find('.yearsrt').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: "yearsrtlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearsrt, this) });
-        control.find('.yearmonth').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: "yearmonthlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearmonth, this) });
-        control.find('.yearsrtday').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: "yearsrtdaylist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearsrt, this) });
-        control.find('.yearsrtmonth').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: "yearsrtmonthlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearsrt, this) });
+        control.find('.monthsrt').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: this._id + "_monthsrtlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._monthSrt, this) });
+        control.find('.monthsrtday').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: this._id + "_monthsrtdaylist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._monthSrt, this) });
+        control.find('.yearsrt').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: this._id + "_yearsrtlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearsrt, this) });
+        control.find('.yearmonth').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: this._id + "_yearmonthlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearmonth, this) });
+        control.find('.yearsrtday').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: this._id + "_yearsrtdaylist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearsrt, this) });
+        control.find('.yearsrtmonth').ejDropDownList({ enableRTL: this.model.enableRTL, targetID: this._id + "_yearsrtmonthlist", width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._yearsrt, this) });
         control.find('.recurstartdate').ejDatePicker({ buttonText: "Today", startDay: this._firstDayOfWeek, enableRTL: this.model.enableRTL, locale: this.model.locale, cssClass: this.model.cssClass, dateFormat: this.model.dateFormat, value: this.model.startDate, minDate: this.model.minDate, maxDate: this.model.maxDate, change: $.proxy(this._startDateChange, this) });
         control.find('.until').ejDatePicker({ buttonText: "Today", startDay: this._firstDayOfWeek, enableRTL: this.model.enableRTL, locale: this.model.locale, cssClass: this.model.cssClass, dateFormat: this.model.dateFormat, change: $.proxy(this._recurUntil, this) });
-        control.find('.recurcount').ejNumericTextbox({ enableRTL: this.model.enableRTL, showSpinButton: this.model.enableSpinners, name: "dailyoccurance", minValue: 1, value: 10, width: "65px", decimalPlaces: 0, cssClass: this.model.cssClass, change: $.proxy(this._recurCount, this) });
+        control.find('.recurcount').ejNumericTextbox({ enableRTL: this.model.enableRTL, showSpinButton: this.model.enableSpinners, name: "recurcount", minValue: 1, value: 10, width: "65px", decimalPlaces: 0, cssClass: this.model.cssClass, change: $.proxy(this._recurCount, this) });
         control.find('.recurevery').ejNumericTextbox({ enableRTL: this.model.enableRTL, showSpinButton: this.model.enableSpinners, name: "recurevery", minValue: 1, value: 1, decimalPlaces: 0, width: "100px", cssClass: this.model.cssClass, change: $.proxy(this._everyCount, this) });
         control.find('.monthdate').ejNumericTextbox({ enableRTL: this.model.enableRTL, showSpinButton: this.model.enableSpinners, name: "monthdate", minValue: 1, decimalPlaces: 0, maxValue: 31, value: 1, width: "70px", cssClass: this.model.cssClass, change: $.proxy(this._monthDate, this) });
         control.find('.yeardate').ejNumericTextbox({ enableRTL: this.model.enableRTL, showSpinButton: this.model.enableSpinners, name: "yeardate", minValue: 1, decimalPlaces: 0, maxValue: 31, value: 1, width: "70px", cssClass: this.model.cssClass, change: $.proxy(this._yearmonth, this) });
-        control.find('.dailyrecurtype').ejRadioButton({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, change: $.proxy(this._recurEndChange, this) });
-        control.find('.e-dailyeveryday').ejRadioButton({ enableRTL: this.model.enableRTL, checked: true, cssClass: this.model.cssClass });
         control.find('.recurends').ejRadioButton({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, change: $.proxy(this._recurEndChange, this) });
-        control.find('.monthposition').ejRadioButton({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, change: $.proxy(this._recurEndChange, this) });
-        control.find('.monthdaytype').ejRadioButton({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, change: $.proxy(this._recurEndChange, this) });
+        control.find('.monthposition,.monthdaytype').ejRadioButton({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, change: $.proxy(this._recurEndChange, this) });
         control.find('.yearrecurposi,.yearrecurday').ejRadioButton({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, change: $.proxy(this._recurEndChange, this) });
     };
     RecurrenceEditor.prototype._recurrenceTypeChange = function (args) {
         this._recurrenceType(args);
         if (this._rRuleFreq != "")
             this.closeRecurPublic();
-        if (this._rRuleFreq != "") {
-            this._trigger("change", { recurrenceRule: this._recRule });
+        if (this._rRuleFreq == "") {
+            this._recRule = undefined;
         }
+        this._trigger("change", { recurrenceRule: this._recRule });
     };
     RecurrenceEditor.prototype._recurrenceType = function (args) {
         this._rRuleFreq = "";
         var _rule = "";
         var strDate = ($.type(this.model.startDate) == "string") ? this._dateConvert(this.model.startDate) : this.model.startDate;
         if (this.flag) {
+            this._subControlChange = true;
             this._recurrenceContent.find('.until').ejDatePicker({ value: new Date(new Date(strDate.toDateString()).setDate(new Date(strDate.toDateString()).getDate() + 7 * 10)) });
-            this._recurrenceContent.find(".e-recurnoend").ejRadioButton({ checked: false });
+            this._subControlChange = false;
+            this._recurrenceContent.find(".e-recurnoend").ejRadioButton({ checked: true });
             this.flag = false;
         }
         !this._mediaQuery && this._recurrenceContent.find("#" + this._id + "_startson,#" + this._id + "_endson").css("display", "table-row");
@@ -398,29 +393,28 @@ var RecurrenceEditor = (function (_super) {
                     this._recurrenceContent.css("display", "block");
                     this._recurrenceContent.find("#" + this._id + "_recurtypes").get(0).innerHTML = this._getLocalizedLabels("RecurrenceDay");
                     this._recurrenceContent.find("." + this._id + "_weekly,." + this._id + "_monthly,." + this._id + "_yearly").css("display", "none");
-                    this._recurrenceContent.find("#" + this._id + "dailyrecur").css("display", "table-row");
                     this._rRuleFreq = "DAILY";
                     _rule = this._getLocalizedLabels("RecurrenceDay").toLowerCase();
                     break;
                 case this._getLocalizedLabels("Weekly"):
                     this._recurrenceContent.css("display", "block");
                     this._recurrenceContent.find("#" + this._id + "_recurtypes").get(0).innerHTML = this._getLocalizedLabels("RecurrenceWeek");
-                    var curDay = this._dayShortNames.indexOf(ej.format(strDate, "ddd"));
+                    var curDay = this._dayShortNames.indexOf(ej.format(strDate, "ddd", this.model.locale));
                     this._initialSubControlRender = true;
                     this._recurrenceContent.find(".e-weekly" + this._dayNames[curDay]).ejCheckBox({ checked: true });
                     _rule = this._getLocalizedLabels("RecurrenceWeek").toLowerCase() + " " + this._getLocalizedLabels("On").toLowerCase() + " " + this._dayFullNames[strDate.getDay()];
                     this._rRuleFreq = "WEEKLY";
-                    this._recurrenceContent.find("." + this._id + "_monthly,." + this._id + "_yearly,#" + this._id + "dailyrecur").css("display", "none");
+                    this._recurrenceContent.find("." + this._id + "_monthly,." + this._id + "_yearly").css("display", "none");
                     this._recurrenceContent.find("." + this._id + "_weekly").css("display", "table-row");
                     break;
                 case this._getLocalizedLabels("Monthly"):
                     this._recurrenceContent.css("display", "block");
                     this._recurrenceContent.find("#" + this._id + "_recurtypes").get(0).innerHTML = this._getLocalizedLabels("RecurrenceMonth");
-                    this._recurrenceContent.find("." + this._id + "_weekly,." + this._id + "_yearly,#" + this._id + "dailyrecur").css("display", "none");
+                    this._recurrenceContent.find("." + this._id + "_weekly,." + this._id + "_yearly").css("display", "none");
                     this._recurrenceContent.find("." + this._id + "_monthly").css("display", "table-row");
                     this._initialSubControlRender = true;
                     this._recurrenceContent.find('.monthdate').ejNumericTextbox({ value: strDate.getDate() });
-                    this._recurrenceContent.find('.monthsrtday').ejDropDownList({ selectedItemIndex: this._dayNames.indexOf((ej.format(strDate, "ddd").substr(0, 2)).toUpperCase()) });
+                    this._recurrenceContent.find('.monthsrtday').ejDropDownList({ selectedItemIndex: this._dayNames.indexOf((ej.format(strDate, "ddd", "en-US").substr(0, 2)).toUpperCase()) });
                     this._recurrenceContent.find('.monthsrt').ejDropDownList({ selectedItemIndex: this._getWeekIndex(strDate) });
                     this._recurrenceContent.find('.monthdaytype').ejRadioButton({ checked: true });
                     this._rRuleFreq = "MONTHLY";
@@ -429,12 +423,12 @@ var RecurrenceEditor = (function (_super) {
                 case this._getLocalizedLabels("Yearly"):
                     this._recurrenceContent.css("display", "block");
                     this._recurrenceContent.find("#" + this._id + "_recurtypes").get(0).innerHTML = this._getLocalizedLabels("RecurrenceYear");
-                    this._recurrenceContent.find("." + this._id + "_weekly,." + this._id + "_monthly,#" + this._id + "dailyrecur").css("display", "none");
+                    this._recurrenceContent.find("." + this._id + "_weekly,." + this._id + "_monthly").css("display", "none");
                     this._recurrenceContent.find("." + this._id + "_yearly").css("display", "table-row");
                     this._initialSubControlRender = true;
                     this._recurrenceContent.find('.yearmonth').ejDropDownList({ selectedItemIndex: strDate.getMonth() });
                     this._recurrenceContent.find('.yeardate').ejNumericTextbox({ value: strDate.getDate() });
-                    this._recurrenceContent.find('.yearsrtday').ejDropDownList({ selectedItemIndex: this._dayNames.indexOf((ej.format(strDate, "ddd").substr(0, 2)).toUpperCase()) });
+                    this._recurrenceContent.find('.yearsrtday').ejDropDownList({ selectedItemIndex: this._dayNames.indexOf((ej.format(strDate, "ddd", "en-US").substr(0, 2)).toUpperCase()) });
                     this._recurrenceContent.find('.yearsrtmonth').ejDropDownList({ selectedItemIndex: strDate.getMonth() });
                     this._recurrenceContent.find('.yearsrt').ejDropDownList({ selectedItemIndex: this._getWeekIndex(strDate) });
                     this._recurrenceContent.find('.yearrecurday').ejRadioButton({ checked: true });
@@ -444,7 +438,7 @@ var RecurrenceEditor = (function (_super) {
                 case this._getLocalizedLabels("EveryWeekDay"):
                     this._recurrenceContent.css("display", "block");
                     this._rRuleFreq = "WEEKDAYS";
-                    this._recurrenceContent.find("." + this._id + "_weekly,." + this._id + "_yearly,#" + this._id + "dailyrecur,#" + this._id + "_every,." + this._id + "_monthly").css("display", "none");
+                    this._recurrenceContent.find("." + this._id + "_weekly,." + this._id + "_yearly,#" + this._id + "_every,." + this._id + "_monthly").css("display", "none");
                     _rule = args.text;
                     break;
             }
@@ -471,30 +465,47 @@ var RecurrenceEditor = (function (_super) {
             this._stringGenerate();
     };
     RecurrenceEditor.prototype._monthSrt = function () {
-        this._recurrenceContent.find("#" + this._id + "monthon").ejRadioButton("option", "checked", true);
+        this._subControlChange = true;
+        this._recurrenceContent.find("#" + this._id + "_monthon").ejRadioButton("option", "checked", true);
+        this._subControlChange = false;
         if (!this._initialSubControlRender)
             this._stringGenerate();
     };
     RecurrenceEditor.prototype._yearsrt = function () {
-        this._recurrenceContent.find("#" + this._id + "yearother").ejRadioButton("option", "checked", true);
+        this._subControlChange = true;
+        this._recurrenceContent.find("#" + this._id + "_yearother").ejRadioButton("option", "checked", true);
+        this._subControlChange = false;
         if (!this._initialSubControlRender)
             this._stringGenerate();
     };
     RecurrenceEditor.prototype._yearmonth = function () {
-        this._recurrenceContent.find("#" + this._id + "yearday").ejRadioButton("option", "checked", true);
+        this._subControlChange = true;
+        this._recurrenceContent.find("#" + this._id + "_yearday").ejRadioButton("option", "checked", true);
+        this._subControlChange = false;
         if (!this._initialSubControlRender)
             this._stringGenerate();
     };
     RecurrenceEditor.prototype._startDateChange = function (args) {
-        this._recurrenceContent.find(".until").ejDatePicker("option", "value", new Date(args.model.value.setDate(args.model.value.getDate() + 7 * 10)));
+        this.model.startDate = new Date(args.model.value);
+        if (!this._recurrenceContent.find("#" + this._id + "_repeatendon").ejRadioButton("model.checked") || (this.model.startDate > this._recurrenceContent.find(".until").ejDatePicker("option", "value"))) {
+            this._subControlChange = true;
+            this._recurrenceContent.find(".until").ejDatePicker("option", "value", new Date(new Date(args.model.value).setDate(args.model.value.getDate() + 7 * 10)));
+        }
+        this._subControlChange = false;
+        if (!this._initialSubControlRender)
+            this._stringGenerate();
     };
-    RecurrenceEditor.prototype._recurUntil = function () {
-        this._recurrenceContent.find("#" + this._id + "repeatendon").ejRadioButton("option", "checked", true);
+    RecurrenceEditor.prototype._recurUntil = function (args) {
+        if (this._subControlChange)
+            return;
+        this._subControlChange = true;
+        this._recurrenceContent.find("#" + this._id + "_repeatendon").ejRadioButton("option", "checked", true);
+        this._subControlChange = false;
         if (!this._initialSubControlRender)
             this._stringGenerate();
     };
     RecurrenceEditor.prototype._recurCount = function (args) {
-        this._recurrenceContent.find("#" + this._id + "repeatendafter").ejRadioButton("option", "checked", true);
+        this._recurrenceContent.find("#" + this._id + "_repeatendafter").ejRadioButton("option", "checked", true);
         if (!this._initialSubControlRender)
             this._stringGenerate();
     };
@@ -503,11 +514,13 @@ var RecurrenceEditor = (function (_super) {
             this._stringGenerate();
     };
     RecurrenceEditor.prototype._monthDate = function () {
-        this._recurrenceContent.find("#" + this._id + "monthday").ejRadioButton("option", "checked", true);
+        this._recurrenceContent.find("#" + this._id + "_monthday").ejRadioButton("option", "checked", true);
         if (!this._initialSubControlRender)
             this._stringGenerate();
     };
     RecurrenceEditor.prototype._recurEndChange = function () {
+        if (this._subControlChange)
+            return;
         if (!this._initialSubControlRender)
             this._stringGenerate();
     };
@@ -607,13 +620,15 @@ var RecurrenceEditor = (function (_super) {
             convertedDate = null;
         return convertedDate;
     };
-    RecurrenceEditor.prototype.recurrenceDateGenerator = function (recurrenceString, strDate) {
+    RecurrenceEditor.prototype.recurrenceDateGenerator = function (recurrenceString, strDate, recurExDate) {
         var RecDateCollection = [], weeklyRule = recurrenceString.split(';');
         this._recurDates = {};
-        var day_start = strDate, _count = 0;
+        var day_start = new Date(strDate), _count = 0;
         var rincrDate, ractualDate, rcurrentDate, recurEndDate;
         rcurrentDate = new Date(day_start);
-        this.recurrenceRuleSplit(recurrenceString, null);
+        if (ej.isNullOrUndefined(recurExDate))
+            recurExDate = null;
+        this.recurrenceRuleSplit(recurrenceString, recurExDate);
         if (ej.isNullOrUndefined(this._rRule.recurEditId)) {
             var byDay = "", _interval = ej.isNullOrUndefined(this._rRule.interval) ? 1 : this._rRule.interval;
             !ej.isNullOrUndefined(this._rRule.weekDays) && (byDay = this._rRule.weekDays.split(','));
@@ -678,7 +693,7 @@ var RecurrenceEditor = (function (_super) {
             while (day_start <= recurEndDate) {
                 ((this._rRule.freq == "MONTHLY" || this._rRule.freq == "YEARLY") && !ej.isNullOrUndefined(this._rRule.setPositions)) && (day_start = this._dayOfWeekInMonth(day_start, this._rRule.weekDays, this._rRule.setPositions));
                 if (!ej.isNullOrUndefined(this._rRule.exDate)) {
-                    if (this._rRule.exDate.indexOf(ej.format(new Date(day_start), this._pattern.d)) == -1) {
+                    if (this._rRule.exDate.indexOf(ej.format(new Date(day_start), this._pattern.d, this.model.locale)) == -1) {
                         var i = 2;
                     }
                 }
@@ -738,6 +753,13 @@ var RecurrenceEditor = (function (_super) {
         this._rRule = {};
         _ruleExdate = exDate;
         var _rule, _ruleExdate, _rRuleSplit = rRule.split(";");
+        if (!ej.isNullOrUndefined(exDate) && !ej.isNullOrUndefined(_ruleExdate.split(","))) {
+            var _exDates = _ruleExdate.split(",");
+            this._rRule.exDate = [];
+            for (var i = 0; i < _exDates.length; i++) {
+                this._rRule.exDate[i] = _exDates[i];
+            }
+        }
         for (var r = 0; r < _rRuleSplit.length; r++) {
             _rule = _rRuleSplit[r].split("=");
             switch ($.trim(_rule[0]).toUpperCase()) {
@@ -803,7 +825,7 @@ var RecurrenceEditor = (function (_super) {
     RecurrenceEditor.prototype.setDefaultValues = function () {
         var strDate = this.model.startDate.toString();
         this._recurrenceLayout.find('.e-recurrencetype').ejDropDownList({ selectedItemIndex: 0 });
-        this._recurrenceLayout.find('#recurrencetype').ejDropDownList({ selectedItemIndex: 1 });
+        this._recurrenceLayout.find('.e-recurrencetype').ejDropDownList({ selectedItemIndex: 1 });
         this.element.find(".recurstartdate").ejDatePicker({ value: new Date(strDate) });
         this.element.find('.e-until').ejDatePicker({ value: new Date(new Date(strDate).setDate(new Date(strDate).getDate() + 7 * 10)) });
         this.element.find(".e-recurnoend").ejRadioButton({ checked: true });
@@ -811,7 +833,7 @@ var RecurrenceEditor = (function (_super) {
     RecurrenceEditor.prototype.showRecurrenceSummary = function (appId) {
         for (var i = 0; i < this._dayNames.length; i++)
             this._dayNames[i] = this._dayNames[i].toUpperCase();
-        var _recurRule = "", _recurOpt = "", _recurType = this.element.find('#recurrencetype');
+        var _recurRule = "", _recurOpt = "", _recurType = this.element.find('#' + this._id + '_recurrenceType');
         _recurRule = ej.isNullOrUndefined(this._rRule.interval) ? this._getLocalizedLabels("Every") + " " : this._getLocalizedLabels("Every") + " " + this._rRule.interval + " ";
         switch (this._rRule.freq) {
             case "DAILY":
@@ -874,7 +896,7 @@ var RecurrenceEditor = (function (_super) {
         else if (!ej.isNullOrUndefined(this._rRule.until)) {
             this.element.find(".e-recuruntil").ejRadioButton({ checked: true });
             this.element.find('.e-until').ejDatePicker({ value: new Date(this._rRule.until) });
-            _recurRule += " " + this._getLocalizedLabels("Until").toLowerCase() + " " + ej.format(new Date(this._rRule.until), this._datepattern());
+            _recurRule += " " + this._getLocalizedLabels("Until").toLowerCase() + " " + ej.format(new Date(this._rRule.until), this._datepattern(), this.model.locale);
         }
         else
             this.element.find(".e-recurnoend").ejRadioButton({ checked: true });
@@ -882,6 +904,7 @@ var RecurrenceEditor = (function (_super) {
     };
     RecurrenceEditor.prototype.getRecurrenceRule = function () {
         this.closeRecurPublic();
+        return this._recRule;
     };
     RecurrenceEditor.prototype.closeRecurPublic = function () {
         var recurEditValue = this._rRuleFreq;
@@ -897,10 +920,18 @@ var RecurrenceEditor = (function (_super) {
                 break;
             case "WEEKLY":
                 var _weekChkList = this.element.find("input.weekdays");
-                var _dayName = "", _byDay = "";
+                var _dayName = "", _byDay = "", checked = "", checkedNames = "";
                 for (var i = 0; i < _weekChkList.length; i++) {
                     $(_weekChkList[i]).ejCheckBox("model.checked") == true ? _weekRule += (_weekRule != "" ? "," : "") + this._dayNames[i].toUpperCase() : "";
                     $(_weekChkList[i]).ejCheckBox("model.checked") == true ? _dayName += (_dayName != "" ? ", " : "") + this._dayShortNames[i] : "";
+                }
+                for (var c = 0; c < this._dayNamesValue.length; c++) {
+                    if (checked.indexOf(this._dayNamesValue[c]) != -1) {
+                        _weekRule += (_weekRule != "" ? "," : "") + this._dayNamesValue[c];
+                    }
+                    if (checkedNames.indexOf(this._culture.calendar.days.namesAbbr[c]) != -1) {
+                        _dayName += (_dayName != "" ? "," : "") + this._culture.calendar.days.namesAbbr[c];
+                    }
                 }
                 if (_weekRule == "") {
                     var date = this.element.find('.recurstartdate').ejDatePicker("model.value");
@@ -925,7 +956,7 @@ var RecurrenceEditor = (function (_super) {
                 }
                 break;
             case "YEARLY":
-                if (this.element.find("#" + this._id + "yearday").ejRadioButton("model.checked")) {
+                if (this.element.find("#" + this._id + "_yearday").ejRadioButton("model.checked")) {
                     var _monthIndex = this.element.find('.yearmonth').ejDropDownList("selectedItemIndex");
                     var _monthDate = this._findInterval(this.element.find('.yeardate'));
                     recurRules = "FREQ=" + recurEditValue + ";BYMONTHDAY=" + _monthDate + ";BYMONTH=" + (_monthIndex + 1) + ";INTERVAL=" + interval;

@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.pivottreemap.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.data","./../common/ej.touch","./ej.waitingpopup","./../datavisualization/ej.treemap"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.data","./../common/ej.touch","./ej.waitingpopup","./../datavisualization/ej.treemap","./ej.pivot.common"], fn) : fn();
 })
 (function () {
 	
@@ -40,6 +40,7 @@
             isResponsive: false,
             dataSource: {
                 data: null,
+                isFormattedValues: false,
                 columns: [],
                 cube: "",
                 catalog: "",
@@ -58,7 +59,8 @@
             load: null,
             renderComplete: null,
             renderFailure: null,
-            renderSuccess: null
+            renderSuccess: null,
+            beforePivotEnginePopulate: null
         }),
 
         dataTypes: {
@@ -81,7 +83,7 @@
         },
 
         setJsonRecords: function (value) {
-            this._JSONRecords = $.parseJSON(value);
+            this._JSONRecords = JSON.parse(value);
         },
 
         _init: function () {
@@ -128,8 +130,6 @@
                 this.element.ejWaitingPopup({ showOnInit: true });
                 this._waitingPopup = this.element.data("ejWaitingPopup");
             }
-            if (this.model.beforeServiceInvoke != null)
-                this._trigger("beforeServiceInvoke", { action: this._currentAction, element: this.element, customObject: this.model.customObject });
             var serializedCustomObject = JSON.stringify(this.model.customObject);
             if (this.model.dataSource.data == null && this.model.url == "" && this.model.dataSource.cube == "") {
                 this.renderTreeMapFromJSON(null);
@@ -138,6 +138,8 @@
             };
             if ((this.model.dataSource.data == null && this.model.url != "") || (this.model.dataSource.data != null && this.model.url != "" && this.model.operationalMode == ej.PivotTreeMap.OperationalMode.ServerMode)) {
                 this.model.operationalMode = ej.PivotTreeMap.OperationalMode.ServerMode;
+                if (this.model.beforeServiceInvoke != null)
+                    this._trigger("beforeServiceInvoke", { action: this._currentAction, element: this.element, customObject: serializedCustomObject});
                 if (this.model.customObject != "" && this.model.customObject != null && this.model.customObject != undefined)
                     this.doAjaxPost("POST", this.model.url + "/" + this.model.serviceMethodSettings.initialize, JSON.stringify({ "action": "initialize", "currentReport": this.model.currentReport, "customObject": serializedCustomObject }), this.renderControlSuccess);
                 else
@@ -147,8 +149,10 @@
                 this.model.operationalMode = ej.PivotTreeMap.OperationalMode.ClientMode;
                 if (this.model.dataSource.rows.length > 1)
                     this.model.dataSource.rows = [this.model.dataSource.rows[this.model.dataSource.rows.length - 1]];
-                if (this.model.dataSource.cube != "")
+                if (this.model.dataSource.cube != "") {
+                    this._trigger("beforePivotEnginePopulate", { treeMapObject: this });
                     ej.olap.base.getJSONData({ action: "initialLoad" }, this.model.dataSource, this);
+                }
             }
         },
 
@@ -378,14 +382,13 @@
 
         _wireEvents: function () {
             if (typeof (oclientProxy) == "undefined")
-                $(window).bind('resize', $.proxy(this._reSizeHandler, this));
+                $(window).on('resize', $.proxy(this._reSizeHandler, this));
             this._on(this.element, "click", ".drillItem", this._drillTreeMap);
         },
 
         _drillTreeMap: function (event) {
             var memberInfo = null;
             if (event.type == "treeMapGroupSelected") {
-                if (event.selectedGroups.length == 0) return;
                 if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null) {
                     if ($("#" + oclientProxy._id + "_maxView")[0])
                         $("#" + oclientProxy._id + "_maxView").ejWaitingPopup({ showOnInit: true });
@@ -394,6 +397,13 @@
                 }
                 else
                     ptreemapProxy._waitingPopup.show();
+                if (event.selectedGroups.length == 0) {
+                    if (typeof oclientWaitingPopup != 'undefined' && oclientWaitingPopup != null)
+                        $("#" + oclientProxy._id + "_maxView")[0] != (undefined || null) ? $("#" + oclientProxy._id + "_maxView").ejWaitingPopup({ showOnInit: false }) : oclientWaitingPopup.hide();
+                    else
+                        ptreemapProxy._waitingPopup.hide();
+                    return;
+                }
                 ptreemapProxy._currentAction = "drilldown";                
                 ptreemapProxy._selectedItem = event.selectedGroups[0].header;
                 for (var j = 0; j < ptreemapProxy._treeMapDatasource.length; j++) {
@@ -450,7 +460,7 @@
                     if (ptreemapProxy.getJsonRecords().treemapLabels[0].indexOf("~~") >= 0) {
                         ptreemapProxy._selectedItem = $(event.target).text();
                         for (var i = 0; i < ptreemapProxy.getJsonRecords().labelTags.length; i++) {
-                            if (ptreemapProxy.getJsonRecords().labelTags[i].split("::")[2] == ptreemapProxy._selectedItem) {
+                            if (ptreemapProxy.getJsonRecords().labelTags[i].split("::")[2] == ptreemapProxy._selectedItem && ptreemapProxy.getJsonRecords().labelTags[i].split("::")[ptreemapProxy.getJsonRecords().labelTags[i].split("::").length - 1] == 1) {
                                 ptreemapProxy._selectedTagInfo = ptreemapProxy.getJsonRecords().labelTags[i];
                                 if (ptreemapProxy.model.operationalMode == ej.PivotTreeMap.OperationalMode.ClientMode)
                                     memberInfo = ptreemapProxy.getJsonRecords().drillTags[i];
@@ -503,7 +513,7 @@
         },
 
         _unWireEvents: function () {
-            $(window).unbind('resize', $.proxy(this._reSizeHandler, this));
+            $(window).off('resize', $.proxy(this._reSizeHandler, this));
             this._off(this.element, "click", ".drillItem", this._drillTreeMap);
         },
 
@@ -546,7 +556,7 @@
                             oclientProxy.reports = msg.reports;
                     }
                 }
-                if (this.model.afterServiceInvoke != null) {
+                if (this.model.afterServiceInvoke != null && this.model.operationalMode == ej.PivotTreeMap.OperationalMode.ServerMode) {
                     var eventArgs;
                     if (this._currentAction != "initialize")
                         eventArgs = { action: this._currentAction, element: this.element, customObject: this.model.customObject };
@@ -585,6 +595,9 @@
                     oclientProxy.otreemapObj._startDrilldown = false;
             }
             catch (err) {
+            }
+            if (!ej.isNullOrUndefined(msg.Exception)) {
+                this._createErrorDialog(msg,"Exception",this);
             }
         },
 
@@ -812,7 +825,6 @@
         ClientMode: "clientmode",
         ServerMode: "servermode"
     };
-
 })(jQuery, Syncfusion);;
 
 });

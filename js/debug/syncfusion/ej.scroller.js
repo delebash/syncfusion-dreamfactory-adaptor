@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.scroller.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -240,13 +240,29 @@
                         return;
                 }
             }
-            this.value(pixel);
+            if (this._scrollData.enableRTL && (e == "mousemove" || e == "touchmove") && ej.browserInfo().name != "msie") 
+                this.value(-dS.scrollable + pixel);              
+            else {
+                if (this._scrollData.enableRTL && (e == "mousemove" || e == "touchmove") && ej.browserInfo().name == "msie")  this.value(-1 * pixel);              
+                else this.value(pixel);
+            }
             if (this.content().length > 0) {
                 if (this.model.orientation === ej.ScrollBar.Orientation.Horizontal) {
-                    var left = (this.element.find('.e-hhandlespace').width() - this.element.find('.e-hhandle').outerWidth());
-                    pixel = left < ((pixel - this.model.minimum) / this._scrollData.onePx) ? left : ((pixel - this.model.minimum) / this._scrollData.onePx);
-                    if (this._scrollData.enableRTL) pixel = pixel > 0 ? 0 : pixel;
-                    this.content()[0].style.left = pixel + "px";
+                        var left = (this.element.find('.e-hhandlespace').width() - this.element.find('.e-hhandle').outerWidth());
+                        pixel = left < ((pixel - this.model.minimum) / this._scrollData.onePx) ? left : ((pixel - this.model.minimum) / this._scrollData.onePx);
+                        if (this._scrollData.enableRTL && (e == "mousemove" || e == "touchmove") && ej.browserInfo().name != "msie") {
+                            pixel = left - pixel;
+                            pixel > 0 ? pixel = pixel * -1 : pixel;                           
+                        }
+                        if (this._scrollData.enableRTL && (e == "mousemove" || e == "touchmove") && ej.browserInfo().name == "msie") pixel = -pixel;       
+                        this._scrollData.enableRTL && pixel > 0 && !this._scrollData._scrollleftflag ? pixel = 0 : pixel             
+                        if (this._scrollData._scrollleftflag) {
+                           
+                            pixel > 0 ? pixel = pixel * -1 : pixel;
+                            this.value(pixel);
+                        }
+                        this.content()[0].style.left = pixel + "px";
+                        this._scrollData._scrollleftflag = false;
                 }
                 else {
                     var top = (this.element.find('.e-vhandlespace').height() - this.element.find('.e-vhandle').outerHeight());
@@ -434,6 +450,8 @@
 
             autoHide: false,
 
+            animationSpeed: 600,
+
             width: 0,
 
             scrollOneStepBy: 57,
@@ -569,8 +587,8 @@
 
         _ensureScrollers: function () {
             var jqVersion = $.fn.jquery, height, width;
-            this.model.height = typeof this.model.height == "string" && this.model.height.indexOf("px") != -1 ? parseInt(this.model.height) : this.model.height;
-            this.model.width = typeof this.model.width == "string" && this.model.width.indexOf("px") != -1 ? parseInt(this.model.width) : this.model.width;
+          this._eleHeight=  this.model.height = typeof this.model.height == "string" && this.model.height.indexOf("px") != -1 ? parseInt(this.model.height) : this.model.height;
+          this._eleWidth=  this.model.width = typeof this.model.width == "string" && this.model.width.indexOf("px") != -1 ? parseInt(this.model.width) : this.model.width;
             if (this.model.height) {
                 this.element.height(this.model.height);
             }
@@ -618,7 +636,7 @@
                     this.content()[height](ElementHeight - (this._hScroll && !this.model.autoHide ? this.model.scrollerSize : 0));
                     var ElementWidth = rect.width - (this["border_left"] + this["border_right"] + this["padding_left"] + this["padding_right"]);
                     this.content()[width](ElementWidth - (this._vScroll && !this.model.autoHide ? this.model.scrollerSize : 0));
-                    if ((isNaN(this._eleWidth) && (this._eleWidth.indexOf("%") > 0)) && (isNaN(this._eleHeight) && (this._eleHeight.indexOf("%") > 0))) $(window).bind('resize', $.proxy(this._resetScroller, this));
+                    if ((isNaN(this._eleWidth) && (this._eleWidth.indexOf("%") > 0)) && (isNaN(this._eleHeight) && (this._eleHeight.indexOf("%") > 0))) $(window).on('resize', $.proxy(this._resetScroller, this));
                 } else
                     this.content().removeClass("e-content");
                 this._setDimension();
@@ -650,16 +668,15 @@
         },
 
         isVScroll: function () {
+            //To avoid unnecessarilly render the vertical scrollbar for 1 or 2 px difference range.
+            var border = 2;
             if (!ej.isNullOrUndefined(this.model.height) && typeof this.model.height === "string" && this.model.height.indexOf("%") != -1)
-                return this.content()[0].scrollHeight > this.element.outerHeight(); //this._convertPercentageToPixel(parseInt(this._eleHeight), this.element.parent().height());
-            else {
-                if (this.model.height > 0) {
-                    if (this.content()[0].scrollHeight > this.model.height) return true;
-                    else if (this.isHScroll() && this.content()[0].scrollHeight > this.model.height - this.model.scrollerSize) return true;
-                    return false;
-                }
-                return false;
+                return this.content()[0].scrollHeight > this.element.outerHeight(); //this._convertPercentageToPixel(parseInt(this._eleHeight), this.element.parent().height());        
+            else if (this.model.height > 0){
+                if((this.content()[0].scrollHeight > this.model.height)) return true;
+                else if(this.isHScroll()) if((this.content()[0].scrollHeight == this.model.height || (this.content()[0].scrollHeight > this.model.height - (this.model.scrollerSize - border)))) return true;
             }
+            return false;
         },
         _setModel: function (option) {
             for (var prop in option) {
@@ -678,17 +695,20 @@
                         this._hScrollbar.value(0);
                     }
                 } else if (prop === "scrollLeft") {
-                    if (parseFloat(option[prop]) < 0) option[prop] = 0;
+                    if (parseFloat(option[prop]) < 0 || !this._hScroll) option[prop] = 0;
                     this._externalCall = true;
                     if (this._hScrollbar) option[prop] = parseFloat(option[prop]) > this._hScrollbar._scrollData.scrollable ? this._hScrollbar._scrollData.scrollable : parseFloat(option[prop]);
                     this._setScrollLeftValue(parseFloat(option[prop]));
                     this["scrollLeft"](option[prop]);
+                    if (this._hScrollbar && !(this._hScrollbar._scrollData._scrollleftflag && this.model.enableRTL))
+                    this.scrollX(option[prop]);
                 } else if (prop === "scrollTop") {
                     if (this._vScrollbar) option[prop] = parseFloat(option[prop]) > this._vScrollbar._scrollData.scrollable ? this._vScrollbar._scrollData.scrollable : parseFloat(option[prop]);
-                    if (parseFloat(option[prop]) < 0) option[prop] = 0;
+                    if (parseFloat(option[prop]) < 0 || !this._vScroll) option[prop] = 0;
                     this._externalCall = true;
                     this.content().scrollTop(parseFloat(option[prop]));
                     this["scrollTop"](option[prop]);
+                    this.scrollY(option[prop]);
                 } else if (prop === "touchScroll") {
                     if (!this.model.enableTouchScroll)
                         this._off(this.content(), "mousedown touchstart");
@@ -809,12 +829,12 @@
         _autohide: function(){
             if (this.model.autoHide) {
                 this.element.addClass("e-autohide");
-                this._on(this.element, "mouseenter mouseleave", this._scrollerHover);
+                this._on(this.element, "mouseenter mouseleave touchstart touchend", this._scrollerHover);
                 this.content().siblings(".e-scrollbar.e-js").hide();
             }
             else {
                 this.element.removeClass("e-autohide");
-                this._off(this.element, "mouseenter mouseleave", this._scrollerHover);
+                this._off(this.element, "mouseenter mouseleave touchstart touchend", this._scrollerHover);
                 this.content().siblings(".e-scrollbar.e-js").show();
             }
         },
@@ -884,7 +904,7 @@
             }
             else
                 this.content().scrollLeft(scrollLeftValue);
-            if ((this.scrollTop() && this._vScrollbar == null) || (this._vScrollbar !== null && this._vScrollbar._scrollData != null && !this._vScrollbar._scrollData.skipChange))
+            if ((this.scrollTop() && this._vScrollbar == null) || (this._vScrollbar !== null && (this._vScrollbar && this._vScrollbar._scrollData != null) && !this._vScrollbar._scrollData.skipChange))
                 this.content().scrollTop(this.scrollTop());
 
             if (this._vScrollbar) {
@@ -938,9 +958,9 @@
             return !this._changeTop(d, (action.indexOf(iChar) < 0 ? -1 : 1) * (action[0] !== "p" ? 1 : 3) * d.scrollOneStepBy, "key");
         },
 
-        scrollY: function (pixel, noAnimation, animationSpeed, source, e) {
-                this._externalCall = true;
-            if (noAnimation) {
+        scrollY: function (pixel, disableAnimation, animationSpeed, source, e) {
+            if (pixel === "") return;
+            if (disableAnimation) {
                 var e = { source: source || "custom", scrollData: this._vScrollbar ? this._vScrollbar._scrollData : null, scrollTop: pixel, originalEvent: e };
                 if (this._trigger("scroll", e)) return;
                 pixel = e.scrollTop;
@@ -957,17 +977,18 @@
             if (this._trigger("scroll", { source: source || "custom", scrollData: this._vScrollbar ? this._vScrollbar._scrollData : null, scrollTop: pixel, originalEvent: e })) return;
         },
 
-        scrollX: function (pixel, noAnimation, animationSpeed, source, e) {
+        scrollX: function (pixel, disableAnimation, animationSpeed, source, e) {         
+            if (pixel === "") return;
             if (this._hScrollbar) pixel = parseFloat(pixel) > this._hScrollbar._scrollData.scrollable ? this._hScrollbar._scrollData.scrollable : parseFloat(pixel)
             this._externalCall = true;
             var browserName = ej.browserInfo().name;
             if (this.model.enableRTL && browserName != "mozilla") {
                 if (pixel < 0) pixel = Math.abs(pixel);
                 var content = this.model.targetPane != null ? this.content().find(this.model.targetPane)[0] : this.content()[0];
-                if (browserName == "chrome" || browserName == "webkit") pixel = content.scrollWidth - content.clientWidth - pixel;
+                if (e != "mousemove" && e != "touchmove" && (browserName != "msie")) if (browserName != "msie") pixel = this._hScrollbar._scrollData.scrollable - pixel;
             }
             this.scrollLeft(pixel);
-            if (noAnimation) {
+            if (disableAnimation) {
                 if (this._trigger("scroll", { source: source || "custom", scrollData: this._hScrollbar ? this._hScrollbar._scrollData : null, scrollLeft: pixel, originalEvent: e }))
                     return;
                 if (this.model.targetPane != null && this.content().find(this.model.targetPane).length)
@@ -1030,6 +1051,8 @@
         },
 
         _mouseWheel: function (e) {
+			 if (this._vScrollbar && e.ctrlKey )
+                    return;
             if (!this._vScrollbar && !e.shiftKey )
                     return;
             if (!e.data || !this.model.enabled) return;
@@ -1047,8 +1070,11 @@
             if (this._browser == "mozilla")
                 e.axis == e.HORIZONTAL_AXIS ? data = this._scrollXdata : this._scrollYdata;
             else if (this._browser == "msie") {
-                e.deltaX ? data = this._scrollXdata : this._scrollYdata;
-                delta = e.deltaX / 120;
+                if ((e.type == "wheel")) delta = e.deltaX / 120;
+                if ((e.type == "mousewheel" && e.shiftKey)) {
+                    data = this._scrollXdata;
+                    e.preventDefault ? e.preventDefault() : (e.returnValue = false);
+                }
             }
             else if (this._wheelx && e.wheelDeltaX != 0 && e.wheelDeltaY == 0 && this._scrollXdata)
                 data = this._scrollXdata;
@@ -1081,9 +1107,9 @@
             }, 250));
         },
         _scrollerHover: function (e) {
-            if (e.type == "mouseenter" && !this.content().siblings().is(":visible"))
+            if ((e.type == "mouseenter" || e.type == "touchstart") && !this.content().siblings().is(":visible"))
                 this.content().siblings().css("display", "block");
-            else if (e.type == "mouseleave")
+            else if (e.type == "mouseleave" || e.type == "touchend")
                 this.content().siblings().hide();
         },
 
@@ -1091,6 +1117,7 @@
             if (!e.data) return;
             var d = e.data.d;
             if (e.type === "mouseup" || e.type === "touchend" || (!e.toElement && !e.relatedTarget)) {
+			    this.content().css("cursor", "default");
                 this._off($(document), "mousemove touchmove");
                 this._off($(document), "mouseup touchend", this._mouseUp);
                 d.fromScroller = false;
@@ -1105,10 +1132,14 @@
         },
 
         _mouseDownOnContent: function (down) {
+            this._velocity = 0;
             if (!this.model.enabled) return;
             var d = down.data.d;
             this._evtData = down.data;
-            var scrollObj = d.handler === "e-vhandle" ? this.element.find('.' + d.handler).closest('.e-scrollbar') : this.element.find('.' + d.handler).closest('.e-scrollbar');            
+            this._startX = (down.clientX != undefined) ? down.clientX : down.originalEvent.changedTouches[0][d.clientXy];
+            this._startY = (down.clientY != undefined) ? down.clientY : down.originalEvent.changedTouches[0][d.clientXy];
+            this._timeStart = down.timeStamp || Date.now();
+            var scrollObj = d.handler === "e-vhandle" ? this.element.find('.' + d.handler).closest('.e-scrollbar') : this.element.find('.' + d.handler).closest('.e-scrollbar');
             this._bindBlurEvent(scrollObj, down);
             if (this._trigger("thumbStart", { originalEvent: down, scrollData: d }))
                 return;
@@ -1117,6 +1148,11 @@
             var prevY = null, skip = 1, min = 5, direction;
             this._document = $(document); this._window = $(window);
             this._mouseMove = function (move) {
+                this._relDisX = ((move.clientX != undefined) ? this._startx = move.clientX : this._startx = move.originalEvent.changedTouches[0][d.clientXy]) - this._startX;
+                this._relDisY = ((move.clientY != undefined) ? this._starty = move.clientY : this._starty = move.originalEvent.changedTouches[0][d.clientXy]) - this._startY;
+                this._duration = (move.timeStamp || Date.now()) - this._timeStart;
+                this._velocityY = Math.abs(this._relDisY) / this._duration;
+                this._velocityX = Math.abs(this._relDisX) / this._duration;
                 move.preventDefault();
                 if (move.target.tagName.toLowerCase() === "iframe") {
                     move.type = "mouseup";
@@ -1135,13 +1171,44 @@
                     if (skip == 0) prevY = pageXY;
 
                     if (sTop >= 0 && sTop <= d.scrollable && direction === d.position) {
-                        this["scroll" + d.xy](sTop, true, "", "thumb");
-                        if (d.xy === "X")
-                            this._hScrollbar["scroll"](sTop, "thumb", true);
-                        else if (!ej.isNullOrUndefined(this._vScrollbar))
-                            this._vScrollbar["scroll"](sTop, "thumb", true);
-                        this.content().css("cursor", "pointer");
-                        this._trigger("thumbMove", { originalEvent: move, scrollData: d });
+                        var top = this._velocityY > 0.5 && this._duration < 50 && d.position == "Top";
+                        var left = this._velocityX > 0.5 && this._duration < 50 && d.position == "Left";
+                        var swipeXY = ((this._velocityY > 0.5) || (this._velocityX > 0.5)) && this._duration < 50;
+                        if (swipeXY) {
+                            if (top) {
+                                sTop = Math.abs(this._relDisY) + (this._duration * this._velocityY);
+                                if (this._startY > this._starty) {
+                                    sTop += this.scrollTop();
+                                    if (sTop > d.scrollable) sTop = d.scrollable;
+                                }
+                                else {
+                                    if (sTop < this.scrollTop()) sTop = Math.abs(sTop - this.scrollTop());
+                                }
+                                if (this.scrollTop() <= d.scrollable) this["scrollY"](sTop, false, this.model.animationSpeed, "thumb");
+                            }
+                            else if (left) {
+                                sTop = Math.abs(this._relDisX);
+                                if (this._startX > this._startx) {
+                                    sTop += this.scrollLeft();
+                                    if (sTop > d.scrollable) sTop = d.scrollable;
+                                }
+                                else {
+                                    sTop -= this.scrollLeft();
+                                    sTop = Math.abs(sTop);
+                                    if (sTop > d.scrollable || sTop >= this.scrollLeft()) sTop = 0;
+                                }
+                                if (this.scrollLeft() <= d.scrollable) this["scrollX"](sTop, false, this.model.animationSpeed, "thumb");
+                            }
+                        }
+                        else {
+                            this["scroll" + d.xy](sTop, true, "", "thumb",move.type);
+                            if (d.xy === "X")
+                                this._hScrollbar["scroll"](sTop, "thumb", true,move.type);
+                            else if (!ej.isNullOrUndefined(this._vScrollbar))
+                                this._vScrollbar["scroll"](sTop, "thumb", true,move.type);
+                            this.content().css("cursor", "pointer");
+                            this._trigger("thumbMove", { originalEvent: move, scrollData: d });
+                        }
                     }
                 }
                 if (prevY == null) prevY = pageXY;
@@ -1158,7 +1225,7 @@
                 var d = dS[i];
                 if (!d || d.skipChange) continue;
                 if(!this._externalCall) d.dimension === "height" ? this.scrollTop(e.target[d.scrollVal]) : this.scrollLeft(e.target[d.scrollVal])
-                if (this.model.targetPane != null && i == 1 && this.content().find(this.model.targetPane).length)
+                if (this.model && this.model.targetPane != null && i == 1 && this.content().find(this.model.targetPane).length)
                     d.sTop = this.content().find(this.model.targetPane)[0][d.scrollVal];
                 else d.scrollVal == "scrollTop" ? d.sTop = this.scrollTop() : d.sTop = this.scrollLeft();
                 this[d.scrollVal](d.sTop);
@@ -1167,7 +1234,7 @@
                     var content = this.content()[0];
                     if (this._rtlScrollLeftValue && content.scrollWidth - content.clientWidth != this._rtlScrollLeftValue)
                         this._rtlScrollLeftValue = content.scrollWidth - content.clientWidth;
-                    d.sTop = (ej.browserInfo().name != "mozilla" && this.model.enableRTL) ? (this._rtlScrollLeftValue == 0 ? (d.sTop * -1) : (d.sTop - this._rtlScrollLeftValue)) : d.sTop;
+                    d.sTop = (this.model && ej.browserInfo().name != "mozilla" && this.model.enableRTL && !this._hScrollbar._scrollData._scrollleftflag) ? (this._rtlScrollLeftValue == 0 ? (d.sTop * -1) : (d.sTop - this._rtlScrollLeftValue)) : d.sTop;
                     this._hScrollbar["scroll"](d.sTop, "", true);
                 } else
                     this._vScrollbar["scroll"](d.sTop, "", true);

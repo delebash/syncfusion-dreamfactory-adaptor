@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.rating.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -226,10 +226,12 @@
         _addAttr: function (htmlAttr) {
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
-                if (key == "class") proxy._mainDiv.addClass(value);
-                else if (key == "name") proxy.element.attr(key, value);
-                else if (key == "readonly") proxy.model.readOnly = value;
-                else if (key == "disabled" && value == "disabled") proxy._enabledAction(false);
+				var keyName = key.toLowerCase();
+                if (keyName == "class") proxy._mainDiv.addClass(value);
+                else if (keyName == "readonly") proxy.model.readOnly = value;
+                else if (keyName == "disabled" && value == "disabled") proxy._enabledAction(false);
+                else if (keyName == "style") proxy._mainDiv.attr(key, value);
+				else if (ej.isValidAttr(proxy.element[0], key)) proxy.element.attr(key, value);
                 else proxy._mainDiv.attr(key, value)
             });
         },
@@ -430,7 +432,7 @@
                         $(this._shapes[i]).css({ width: "0px" });
                 }
                 $(element).css({ width: option.shapeWidth + "px" });
-                this.toolTipValue = index;
+				this.toolTipValue = (this.model.minValue + (this._shapes.index(element) + 1)) * this.model.incrementStep;
             }
             else {
                 for (var i = 0; i < this._shapes.length; i++) {
@@ -440,7 +442,7 @@
                         $(this._shapes[i]).css({ height: "0px" });
                 }
                 $(element).css({ height: option.shapeHeight + "px" });
-                this.toolTipValue = index;
+				this.toolTipValue = (this.model.minValue + (this._shapes.index(element) + 1)) * this.model.incrementStep;
             }
         },
 
@@ -552,7 +554,6 @@
                     else
                         position = e.offsetY + 1;
                 }
-                this.toolTipValue = (this.model.minValue + (this._shapes.index(element) + 1)) * this.model.incrementStep;
                 if (this.model.precision == ej.Rating.Precision.Exact)
                     this._fillExactPrecision(element, position);
                 else if (this.model.precision == ej.Rating.Precision.Half)
@@ -614,13 +615,11 @@
         },
 
         _unWireEvents: function () {
-            this._mainDiv.find("li").unbind("mouseenter touchmove");
-            this._mainDiv.find("li").unbind("mouseleave touchend");
-            this._mainDiv.unbind("mousedown");
+            this._mainDiv.find("li").off("mouseenter touchmove");
+            this._mainDiv.find("li").off("mouseleave touchend");
+            this._mainDiv.off("mousedown");
             if (this.model.precision !== ej.Rating.Precision.Full) {
-                this._mainDiv.find("li").unbind(ej.eventType.mouseMove);
-			$(window).unbind('resize', $.proxy(this._reSizeHandler, this));
-			
+			    this._mainDiv.find("li").off(ej.eventType.mouseMove);			
             }
         },
 

@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.button.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -105,6 +105,7 @@
         },
 
         _init: function () {
+            this._cloneElement = this.element.clone();
             this._initialize();
             this._render();
             this._controlStatus(this.model.enabled);
@@ -121,7 +122,10 @@
         },
 
         _destroy: function () {
-            this.element.removeClass(this.model.cssClass + " e-btn e-select e-disable e-corner e-widget");
+            this.element.removeClass(this.model.cssClass + "e-ntouch e-btn e-select e-disable e-corner e-widget").removeAttr("role aria-describedby aria-disabled");
+            this.element.removeClass("e-btn-" + this.model.size);
+            this.model.contentType && this.model.contentType != "textonly" ? this.element.append(this._cloneElement.text()) && this.imgtxtwrap[0].remove() : "";
+            
         },
 
 
@@ -255,6 +259,7 @@
         },
 
         _initialize: function () {
+            if(!ej.isTouchDevice()) this.element.addClass("e-ntouch");
             if (this.element.is("input")) {
                 this.buttonType = "inputButton";
             }
@@ -300,8 +305,8 @@
             /*Image and Text*/
             this.textspan = ej.buildTag('span.e-btntxt', this.model.text);
             if (this.model.contentType.indexOf("image") > -1) {
-                this.majorimgtag = ej.buildTag('span.e-icon ' + this.model.prefixIcon);
-                this.minorimgtag = ej.buildTag('span.e-icon ' + this.model.suffixIcon);
+                this.majorimgtag = ej.buildTag('span').addClass(this.model.prefixIcon);
+                this.minorimgtag = ej.buildTag('span').addClass(this.model.suffixIcon);
                 this.imgtxtwrap = ej.buildTag('div');
             }
 
@@ -355,15 +360,17 @@
 
         _btnMouseClickEvent: function (e) {
             var self = this;
+            if(!self.model.enabled) return false;
             if (!self.element.hasClass("e-disable")) {
                 // here aregument 'e' used in serverside events 
-                var args = { status: self.model.enabled, e: e };
+                var args = { target: e.currentTarget, e : e , status:self.model.enabled};
                 self._trigger("click", args);
             } 
         },
 
         _btnRepatMouseClickEvent: function (e) {
             var self = this;
+            if(!self.model.enabled) return false;
             if (!self.element.hasClass("e-disable")) {
                 var args = { status: self.model.enabled };
                 if ((e.button == 0) || (e.which == 1)) {

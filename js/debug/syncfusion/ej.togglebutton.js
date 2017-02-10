@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.togglebutton.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -329,6 +329,7 @@
             this.wrapper = $('<span id="' + this.element[0].id + '-wrapper" class="e-tbtn-wrap e-widget"></span>');
             this.labelFinder.append(this.element);
             this.buttontag = ej.buildTag('button.e-togglebutton e-btn e-tbtn ' + this.model.cssClass + ' e-select', "", {}, { "role": "button", "tabindex": 0, "type": this.model.type, "data-role": "none" });
+            if (!ej.isTouchDevice()) this.buttontag.addClass("e-ntouch");
             $(this.labelFinder).wrap(this.wrapper);
             this.buttontag.insertAfter(this.labelFinder);
             if (ej.util.isNullOrUndefined(this.model.activeText)) {
@@ -365,8 +366,10 @@
             this.imgtxtwrap = ej.buildTag('div');
             this.defaulttxtspan = ej.buildTag('span.e-btntxt' + '#' + this.element[0].id + 'textstatic',(this.toggleState() ? this.model.activeText : this.model.defaultText));
             if (this.model.contentType.indexOf("image") > -1) {
-                this.defMainIcon = ej.buildTag('span.e-icon ' + (this.toggleState() ? this.model.activePrefixIcon : this.model.defaultPrefixIcon) + '#' + this.element[0].id + 'mainiconstatic');
-                this.defMiniIcon = ej.buildTag('span.e-icon ' + (this.toggleState() ? this.model.activeSuffixIcon : this.model.defaultSuffixIcon) + '#' + this.element[0].id + 'miniconstatic');
+                this.defMainIcon = ej.buildTag('span ' + '#' + this.element[0].id + 'mainiconstatic');
+                this.defMiniIcon = ej.buildTag('span ' + '#' + this.element[0].id + 'miniconstatic');
+                (this.toggleState() ? this.defMainIcon.addClass(this.model.activePrefixIcon) : this.defMainIcon.addClass(this.model.defaultPrefixIcon));
+                (this.toggleState() ? this.defMiniIcon.addClass(this.model.activeSuffixIcon) : this.defMiniIcon.addClass(this.model.defaultSuffixIcon))
             }
             if (this.model.contentType == ej.ContentType.TextAndImage) {
                 switch (this.model.imagePosition) {
@@ -407,7 +410,7 @@
                 this.element.attr("checked", "checked");
             } else {
                 this._toggleButtonStatus(value);
-                this.element.removeAttr("checked");
+                this.element.prop("checked",false);
             }
         },
 
@@ -421,6 +424,7 @@
         },
 
         _tglebtnclicked: function (e) {
+            if (this.model.preventToggle && !this.model.enabled) return false;
             if (!this.model.preventToggle) {
                 if (!this.buttontag.hasClass("e-disable")) {
                     this.toggleState(this.toggleState() ? false : true);

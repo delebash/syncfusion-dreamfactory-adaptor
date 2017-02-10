@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.ribbon.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -161,6 +161,8 @@
 
                             quickAccessMode: "none",
 
+                            isMobileOnly:"false",
+
                             customToolTip: {
 
                                 title: null,
@@ -247,6 +249,8 @@
 
             tabRemove: null,
 
+            load:null,
+
             beforeTabRemove: null,
 
             tabCreate: null,
@@ -285,6 +289,10 @@
             showQAT: false,
 
             showBelowQAT: false,
+			
+			enableOnDemand :false,
+			
+			collapsible :false,
 
             locale: "en-US",
 
@@ -298,6 +306,11 @@
             disabledItemIndex: "data",
             enabledItemIndex: "data",
             selectedItemIndex: "number",
+			applicationTab: {
+                backstageSettings: {
+                    pages: "array"
+                }
+            }
         },
 
         _destroy: function () {
@@ -307,20 +320,25 @@
                 appTabMenu.data('ejMenu').destroy();
             this.element.find(".e-rbncustomelement,.e-backstagetabarea,.e-gallerymenu").hide();
             galleryMenu = this.element.find(".e-gallerymenu");
-            for (var i = 0; i < galleryMenu.length; i++)
+            var gallen = galleryMenu.length;
+            for (var i = 0; i < gallen; i++)
                 galleryMenu.eq(i).data('ejMenu').destroy();
             this.element.find(".e-rbncustomelement,.e-backstagetabarea,.e-gallerymenu").appendTo(this.element.parent());
-            ddlPopup = $('.e-rbn-ddl.e-dropdownlist:visible');
-            for (var i = 0; i < ddlPopup.length; i++) {
+            ddlPopup = $('.e-rbn-ddl.e-ddl').find('.e-dropdownlist');
+            var ddlPopuplen=ddlPopup.length;
+            for (var i = 0; i < ddlPopuplen; i++) {
                 ddlPopup.eq(i).data('ejDropDownList').destroy();
                 ddlPopup.siblings('ul').appendTo(this.element.parent());
             }
-            splitPopup = $('.e-rbn-splitbtn.e-splitbutton:visible');
-            for (var i = 0; i < splitPopup.length; i++) {
+            splitPopup = $('.e-rbn-splitbtn.e-splitbutton');
+            var splitPopuplen = splitPopup.length;
+            for (var i = 0; i < splitPopuplen; i++) {
                 splitPopup.eq(i).data('ejSplitButton').destroy();
                 splitPopup.siblings('ul').appendTo(this.element.parent());
             }
             this.element.children().remove();
+			if(this.element.hasClass('e-ribwithout-apptab'))
+			 this.element.removeClass('e-ribwithout-apptab')
         },
         _tags: [{
             tag: "applicationTab.backstageSettings.pages", attr: ["id", "text", "itemType", "contentID", "enableSeparator"]
@@ -329,7 +347,7 @@
 		    tag: "tabs", attr: ["id", "text", [{
 		        tag: "groups", attr: ["text", "alignType", "type", "contentID", [{
 		            tag: "content", attr: ["defaults.type", "defaults.width", "defaults.height", "defaults.isBig", [{
-		                tag: "groups", attr: ["id", "columns", "itemHeight", "itemWidth", "expandedColumns", "contentID", "text", "type", "toolTip", "quickAccessMode", "width",
+		                tag: "groups", attr: ["id", "columns", "itemHeight", "itemWidth", "expandedColumns", "contentID", "text", "type", "toolTip","isMobileOnly", "quickAccessMode", "width",
                         "enableSeparator",
 					"buttonSettings.contentType", "buttonSettings.type", "buttonSettings.imagePosition", "buttonSettings.prefixIcon", "buttonSettings.click", "buttonSettings.width", "buttonSettings.cssClass", "buttonSettings.enabled", "buttonSettings.showRoundedCorner", "buttonSettings.enableRTL", "buttonSettings.repeatButton", "buttonSettings.size", "buttonSettings.height", "buttonSettings.text", "buttonSettings.timeInterval", "buttonSettings.create", "buttonSettings.click", "buttonSettings.destroy", "splitButtonSettings.contentType", "splitButtonSettings.prefixIcon", "splitButtonSettings.targetID",
                         "splitButtonSettings.buttonMode", "splitButtonSettings.arrowPosition", "splitButtonSettings.type", "splitButtonSettings.click",
@@ -381,11 +399,45 @@
 		    }]
 		    ]
 		}],
+        _ribbonRerender: function () {
+            var model = this.model, element = this.element, i, contentDiv;
+            contentDiv = this.element.find('.e-content.e-content-item');
+            if (this.element.find('.e-collapse-content').length > 0) {
+                var contentlen=contentDiv.length;
+                for (i = 0; i < contentlen; i++) {
+                    if (contentDiv.eq(i).hasClass('e-active-content') && contentDiv.eq(i).hasClass('e-collapse-content')) {
+                        this._selectedItemIndex = i;
+                        this._isCollapsed = true;
+                        break;
+                    }
+                }
+            }
+            if (this._isCollapsed) {
+                model.selectedItemIndex = this._selectedItemIndex;
+                model._isCollapsed = true;
+            }
+            else
+                model._isCollapsed = false;
+            if (this.element.data("ejTab")) {
+                this.element.data("ejTab")._destroy();
+                this.element = element, this.model = model;
+            }
+            this.element.ejRibbon("destroy").ejRibbon(model);
+            this.model = model;
+            this.element = element;
+            if (this.model._isCollapsed)
+                this.collapse();
+        },
         _setModel: function (options) {
             for (var key in options) {
                 switch (key) {
+				    case "applicationTab":
+					    if(!ej.isNullOrUndefined(options.applicationTab.backstageSettings) && !ej.isNullOrUndefined(options.applicationTab.backstageSettings.pages))
+					     this.model.applicationTab.backstageSettings.pages=options.applicationTab.backstageSettings.pages;
+					    this._createApplicationTab();
+						break;
                     case "selectedItemIndex":
-                        if (this.model.selectedItemIndex > 0 && this._tabObj.model.disabledItemIndex.indexOf(this.model.selectedItemIndex) === -1 && this._ribbonTabs.eq(this.model.selectedItemIndex).is(':visible'))
+                        if (this.model.selectedItemIndex > 0 && this._tabObj.model.disabledItemIndex.indexOf(this.model.selectedItemIndex) === -1 && (this._ribbonTabs.eq(this.model.selectedItemIndex).is(':visible') || (this._responsiveTabText.eq(!ej.isNullOrUndefined(ej.isNullOrUndefined(this.model.applicationTab)) ? this.model.selectedItemIndex - 1 : this.model.selectedItemIndex).is(":visible"))))
                             this._tabObj.option({ selectedItemIndex: this.model.selectedItemIndex });
                         break;
                     case "disabledItemIndex":
@@ -419,7 +471,8 @@
                         this._conTabsRemove();
                         this._tabObj.option({ enabledItemIndex: this.model.enabledItemIndex });
                         this._contextualTabs();
-                        for (var i = 0; i < this.model.enabledItemIndex.length; i++) {
+                        var enableItemLen = this.model.enabledItemIndex.length;
+                        for (var i = 0; i < enableItemLen; i++) {
                             this._tabText.eq(this.model.enabledItemIndex[i]).parent().removeClass("e-disable");
                             this._tabText.eq(this.model.enabledItemIndex[i]).parent().css("position", "");
                             conParent = this._ribbonTabs.eq(this.model.enabledItemIndex[i]).parent().parent();
@@ -428,7 +481,8 @@
                             if (this.model.enabledItemIndex[i] == this._tabObj.model.selectedItemIndex)
                                 this.element.find("#" + this._id + "_disabled").hide();
                         }
-                        for (var j = 0; j < conTabs.length; j++) {
+                        var conTabsLen=conTabs.length;
+                        for (var j = 0; j < conTabsLen; j++) {
                             if ($(conTabs[j]).hasClass('e-disable'))
                                 $(conTabs[j]).parents(".e-contextliset").addClass('e-disable');
                         }
@@ -455,32 +509,7 @@
                         break;
                     case "locale":
                         this.model.locale = options[key];
-                        var model = this.model, element = this.element, i, contentDiv;
-                        contentDiv = this.element.find('.e-content.e-content-item');
-                        if (this.element.find('.e-collapse-content').length > 0) {
-                            for (i = 0; i < contentDiv.length; i++) {
-                                if (contentDiv.eq(i).hasClass('e-active-content') && contentDiv.eq(i).hasClass('e-collapse-content')) {
-                                    this._selectedItemIndex = i;
-                                    this._isCollapsed = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (this._isCollapsed) {
-                            model.selectedItemIndex = this._selectedItemIndex;
-                            model._isCollapsed = true;
-                        }
-                        else
-                            model._isCollapsed = false;
-                        if (this.element.data("ejTab")) {
-                            this.element.data("ejTab")._destroy();
-                            this.element = element, this.model = model;
-                        }
-                        this.element.ejRibbon("destroy").ejRibbon(model);
-                        this.model = model;
-                        this.element = element;
-                        if (this.model._isCollapsed)
-                            this.collapse();
+                        this._ribbonRerender();
                         break;
                 }
             }
@@ -488,6 +517,7 @@
 
 
         _setTabContentHeight: function () {
+            this.element.find(".e-ribGroupContent").height("auto");
             var maxGrpHeight = 0, tabContent = this.element.find('.e-content.e-content-item'), ctrlSeparatorCol, ctrlSeparatorLen, ribParent;
             ribParent = $("#" + this._id).parents();
             $(tabContent).addClass('e-content-show');
@@ -513,6 +543,7 @@
 
         _init: function () {
             if (!ej.isNullOrUndefined(this.element)) {
+                this._trigger("load");
                 this._render();
                 this._wireEvents();
             }
@@ -532,11 +563,14 @@
                 this.element.addClass('e-rbnwithqat');
             }
             this._initPrivateProperties();
-            this._groupingControls();
+            this.model.enableOnDemand ? (!this.model.collapsible ? (this._groupContent(), this.element.find(".e-header").addClass("e-rbnondemand"), this._createQAT()) : this._createQAT()) : this._groupingControls();
             this._initial = true;
             this._customization();
             this._initialRender = true;
+            if (this.model.collapsible)
+                this.collapse();
             this._ribbonResponsive();
+            this._responsiveTabText = this.element.find(".e-responsivetabheader li");
             if (this._phoneMode)
                 this._ribbonWindowResize();
             this._tabObj.initialRender = false;
@@ -561,32 +595,33 @@
             toolTipDiv.append(title);
             toolTipDiv.append(description);
             this.element.append(toolTipDiv);
-            if (this._applicationTab.hasClass('e-active')) {
-                this._applicationTab.removeClass("e-active");
-                this.element.find('.e-content.e-content-item').remove();
-                this._tabUl.find('.e-expandcollapse').remove();
-            }
+            if (this._applicationTab.hasClass('e-active') && !ej.isNullOrUndefined(this.model.tabs[0].id)) {
+			 this._applicationTab.removeClass("e-active");
+             this.element.find('.e-content.e-content-item').remove();
+             this._tabUl.find('.e-expandcollapse').remove();
+           }
             var emptyTabContent = this.element.find('.e-empty-content'), firstGroupDiv = this.element.find('.e-groupdiv').eq(0);
             if ($(emptyTabContent).length > 0 && $(firstGroupDiv).length > 0)
                 $(emptyTabContent).height($(firstGroupDiv).parent().height());
             this.element.find(".e-rbncustomelement,.e-backstagetabarea,.e-gallerymenu").show();
-            this._createQuickAccessBar();
+            if (!this.model.enableOnDemand) this._createQuickAccessBar();
         },
         _createQuickAccessBar: function () {
             if (this.model.showQAT) {
-                var qatSplitBtnDiv = ej.buildTag("div.e-splitbtnqatdiv").attr('title', this.localizedLabels.CustomizeQuickAccess), qatSplitBtn = ej.buildTag("button#" + this._id + "_" + "qatsplitbtn").addClass("e-splitbtnqat"), qatPopup;
+                var qatSplitBtnDiv = ej.buildTag("div.e-splitbtnqatdiv").attr('title', this.localizedLabels.CustomizeQuickAccess), qatSplitBtn = ej.buildTag("button#" + this._id + "_" + "qatsplitbtn").addClass("e-splitbtnqat e-rbn-button"), qatPopup;
                 qatSplitBtnDiv.append(qatSplitBtn.ejButton({
                     size: "normal",
                     type: "button",
                     contentType: "imageonly",
                     height: 30,
                     width: 14,
-                    prefixIcon: "e-ribbon e-qatexpand",
+                    prefixIcon: "e-icon e-ribbon e-qatexpand",
                     click: $.proxy(this._onQatExpandBtnClick, this)
                 }));
                 this._qAccessBar.append(qatSplitBtnDiv);
                 qatPopup = ej.buildTag("ul.e-rbnqatmenu", "<div>" + this.localizedLabels.CustomizeQuickAccess + "</div>").click($.proxy(this._onQatMenuClick, this));
-                for (var i = 0; i < this._qatControlsName.length; i++) {
+                var qatColtrolLen = this._qatControlsName.length;
+                for (var i = 0; i < qatColtrolLen; i++) {
                     var qatPopupEle = ej.buildTag("li#" + this._qatControlsName[i].id + "_menuli" + ".e-qatmenuli e-removemenuli", "<p>" + this._qatControlsName[i].text + "</p>").appendTo(qatPopup).attr("title", this.localizedLabels.RemoveFromQuickAccessToolbar);
                     if (this._qatControlsName[i].qAccess == "menu")
                         qatPopupEle.addClass('e-addmenuli').removeClass('e-removemenuli').attr("title", this.localizedLabels.AddToQuickAccessToolbar);
@@ -668,7 +703,7 @@
                 controlOffset.left = controlOffset.left + cntOverflow - this.element.offset().left;
             else
                 controlOffset.left = controlOffset.left - this.element.offset().left;
-            activeContent = this.element.find('.e-active-content');
+            activeContent = this.element.find('.e-active-content').eq(0);
             if (activeContent.is(":visible"))
                 ribHeight = this._tabUl.height() + activeContent.height();
             else
@@ -726,9 +761,24 @@
             toolTipDiv.find('.e-tooltiptitle').children().remove();
             toolTipDiv.find('.e-tooltipdesc').children().remove();
         },
+        _responsiveScrollRemove: function () {
+            var scroll = this.element.find(".e-active-content .e-responsiveScroll");
+            var contentScroll = this.element.find(".e-rescontentScroll");
+            if (contentScroll.length > 0) {
+                contentScroll.data("ejScroller")._destroy();
+                contentScroll.parent().append(contentScroll.find("div:first").children());
+                contentScroll.remove();
+            }
+            if (scroll.length > 0) {
+                scroll.data("ejScroller")._destroy();
+                this.element.find(".e-active-content").append(scroll.find("div:first").children());
+                scroll.remove();
+            }
+        },
         _onGroupClick: function (args) {
             this._toolTipCustomization(args), parentElem = $(args.target).parents('.e-resizebtnselect');
             this.element.find('.e-resizebtnselect').removeClass('e-resizebtnselect e-active');
+            var resizeDiv = $(args.target).parents('.e-resizediv');
             if ($(args.target).hasClass('e-resizebtnselect'))
                 $(args.target).removeClass('e-resizebtnselect e-active');
             else {
@@ -742,14 +792,125 @@
                         $(args.target).addClass('e-resizebtnselect e-active');
                 }
             }
-            if (this.model.showQAT) {
+            if (this.model.showQAT && !$(args.target).parents(".e-mobdiv").length > 0) {
                 if ($(args.target).hasClass('e-togglebutton e-btn') || $(args.target).parents('.e-togglebutton.e-btn').length > 0) {
                     var tBtnId, target = $(args.target);
                     if ($(args.target).parents('.e-togglebutton.e-btn').length > 0)
                         target = $(args.target).parents('.e-togglebutton.e-btn');
-                    tBtnId = target.parent().find("input").attr("id") + "_qatEle"
+                    if (this._QATclick)
+                        tBtnId = target.parent().find("input").attr("id") + "_mobEle";
+                    else
+                        tBtnId = target.parent().find("input").attr("id") + "_qatEle";
                     if ($('.e-ribbon.e-rbnwithqat').find("#" + tBtnId).length > 0)
                         this._rbnToggleBtnCustomization(args, tBtnId);
+                }
+            }
+            if (!this._phoneMode) {
+                if (resizeDiv.length <= 0) {
+                    if ($(args.target).hasClass('e-resizebtn'))
+                        resizeDiv = $(args.target);
+                    else if (!ej.isNullOrUndefined($(args.target).parents('.e-resizebtn')))
+                        resizeDiv = $(args.target).parents('.e-resizebtn');
+                }
+                if (this.element.find('.e-resizediv').is(':visible') && this.element.find('.e-resizediv .e-gallexpandcontent').is(':visible')) {
+                    if ($(args.target).hasClass('e-gallerymoveicon') || $(args.target).hasClass('e-gallerymovediv') || $(args.target).hasClass('e-expgallerydiv') || $(args.target).hasClass('e-scrollbar') || $(args.target).parents().hasClass('e-scrollbar'))
+                        expClick = args.target;
+                    else if ($(args.target).parents().hasClass('e-gallerymenu')) {
+                        if ($(args.target).hasClass('e-haschild') || $(args.target).hasClass('aschild') || $(args.target).hasClass('e-arrows'))
+                            expClick = args.target;
+                    }
+                    if (ej.isNullOrUndefined(expClick)) {
+                        this._ribbonGalleryShow();
+                        this.element.find('.e-resizediv').show().css('visibility', '');
+                        this.element.find('.e-resizediv .e-gallexpandcontent').hide().css('visibility', '');
+                    }
+                }
+                else if (resizeDiv.length <= 0) {
+                    if ((!$(args.target).parents(".e-content").length > 0 && $(args.target).parents(".e-rbn-ddl").length > 0) || $(args.target).parents(".e-rbn-splitbtn").length > 0 || $(args.target).parents(".e-presetWrapper").length > 0 || $(args.target).parents(".e-ribbonpopup").length > 0 || $(args.target).parents('.e-colorpicker.e-ribbon:visible').length > 0)
+                        return false;
+                    else
+                        this._resizeDivHide();
+                }
+                else {
+                    if ($(resizeDiv).hasClass('e-resizebtn')) {
+                        if (this.element.find('.e-resizediv').is(":visible")) {
+                            if (resizeDiv.parent().siblings('.e-contentbottom').length <= 0)
+                                this._resizeDivHide();
+                            else {
+                                this._resizeDivHide();
+                                this._resizeDivShow(resizeDiv);
+                            }
+                        }
+                        else
+                            this._resizeDivShow(resizeDiv);
+                    }
+                }
+            }
+            if (this._phoneMode) {
+                var activeContent = this.element.find(".e-active-content");
+                var target = args.target;
+                if ($(target).hasClass("e-groupresponsive e-ribdownarrow")) {
+                    activeContent.removeClass("e-responsiveheight e-rbnmobheader e-responsiveToolbarScroll");
+                    if (!ej.isNullOrUndefined(this._responsiveHeight))
+                        var scrollHeightCheck = activeContent.find(".e-respmobcontent").length > 0 ? activeContent.outerHeight() - activeContent.find(".e-respmobcontent").outerHeight() > this._responsiveHeight : activeContent.outerHeight() > this._responsiveHeight;
+                        if (scrollHeightCheck) {
+                            var div = ej.buildTag("div#" + this._id + "_responsiveScroller").addClass("e-responsiveScroll").append(ej.buildTag("div"));
+                            if (activeContent.find(".e-respmobcontent").length > 0)
+                                div.find("div").append(activeContent.children().eq(0).siblings());
+                            else
+                                div.find("div").append(activeContent.children());
+                            activeContent.append(div);
+                            activeContent.find(".e-responsiveScroll").ejScroller({ height: this._responsiveHeight, scrollerSize: 8, buttonSize: 0 });
+                        }
+                    $(target).removeClass("e-ribdownarrow").addClass("e-ribuparrow");
+                    $(target).parents(".e-groupdiv").find(".e-ribdownarrow").removeClass("e-ribdownarrow").addClass("e-ribuparrow");
+                }
+                else if ($(target).hasClass("e-groupresponsive e-ribuparrow")) {
+                    activeContent.addClass("e-responsiveheight e-rbnmobheader");
+                    if (activeContent.find(".e-resptoolbarScroll").length > 0)
+                        activeContent.addClass("e-responsiveToolbarScroll");
+                    this._responsiveScrollRemove();
+                    $(target).removeClass("e-ribuparrow").addClass("e-ribdownarrow");
+                }
+                else if (this.element.find(".e-responsivecontent").is(":hidden")) {
+                    if ($(target).hasClass("e-resizebtn") || $(target).parents(".e-resizebtn").length > 0 || $(target).hasClass("e-groupresponsive e-ribrightarrow") || $(target).hasClass("e-ribrightdivarrow")){
+                        if ($(target).hasClass("e-resizebtn")) {
+                            this._responsiveTarget = $(target).parents(".e-groupdiv");
+                            this._responsiveContent = $(target).parent().siblings();
+                        }
+                        else if ($(target).parents(".e-resizebtn").length > 0) {
+                            this._responsiveTarget = $(target).parents(".e-resizebtn").parents(".e-groupdiv");
+                            this._responsiveContent = $(target).parents(".e-resizebtn").parent().siblings();
+                        }
+                        else if ($(target).hasClass("e-groupresponsive e-ribrightarrow") || $(target).hasClass("e-ribrightdivarrow")) {
+                            var resParent = $(target).parents(".e-resizegroupdiv").find(".e-resizebtn")
+                            if (resParent.length > 0) {
+                                this._responsiveTarget = resParent.parents(".e-groupdiv");
+                                this._responsiveContent = resParent.parent().siblings();
+                            }
+                        }
+                    var resizeContent = this._responsiveContent.eq(0).removeClass("e-reshide");
+                    var responsivecontent = this.element.find(".e-content.e-responsivecontent");
+                    responsivecontent.children().not(".e-responsiveback").remove();
+                    responsivecontent.append(resizeContent);
+                    this.element.find(".e-restopbackcontent").text(this._responsiveTarget.find(".e-resizebtn .e-btntxt").text());
+                    var gallery = responsivecontent.find(".e-ribbongallery");
+                    if (gallery.length > 0) {
+                        var expcolumns = this._responsiveGallery;
+                        var rowLen = Math.floor(gallery.find('.e-galleryrow').children().length / expcolumns);
+                        if (gallery.find('.e-galleryrow').children().length % expcolumns > 0)
+                            ++rowLen;
+                        for (var m = 1; m <= rowLen; m++) {
+                            var galleryExpanderRow = ej.buildTag("div#" + gallery.attr("id") + "_galleryExpanderRow_" + m).addClass('e-galleryexpanderrow').click({ model: gallery }, $.proxy(this._onGalleryItemClick, this));
+                            for (var n = 0; n < expcolumns; n++)
+                                gallery.find('.e-galleryrow').children().eq(0).appendTo(galleryExpanderRow);
+                            galleryExpanderRow.appendTo(responsivecontent.parent().find('.e-expandercontent'));
+                        }
+                        gallery.hide();
+                        responsivecontent.parent().find(".e-gallexpandcontent").show();
+                    }
+                    this._responsiveContentShow(responsivecontent);
+                }
                 }
             }
             if ($(args.target).parents('.e-ribbongallerycontrol').length === 0) {
@@ -764,6 +925,29 @@
                     }
                 }
             }
+
+        },
+        goToMainContent: function () {
+            var responsiveBackstage = this.element.find(".e-responsivebackstage"), respTabHeader = this.element.find(".e-responsivetabheader"), args = {};
+            var content = this.element.find(".e-active-content");
+            var responsebackstage = this.element.find(".e-responsivebackstage");
+            var respBackStageContent = this.element.find(".e-responsivebackstagecontent");
+            respTabHeader.removeClass("e-resshow");
+            if (responsiveBackstage.is(":visible"))
+                responsiveBackstage.removeClass("e-backstageshowanimate");
+            if (respBackStageContent.is(":visible")) 
+                respBackStageContent.hide();
+            if (this.element.find(".e-responsivecontent").is(":visible"))
+                this._responsiveContentBack();
+            if (!content.hasClass("e-responsiveheight")) {
+                content.addClass("e-responsiveheight e-rbnmobheader");
+                this._responsiveScrollRemove();
+                content.find(".e-groupresponsive.e-ribuparrow").removeClass("e-ribuparrow").addClass("e-ribdownarrow");
+                args.type = "collapse";
+                this._trigger("collapse", args);
+            }
+            if (respTabHeader.hasClass("e-resshow"))
+                respTabHeader.removeClass("e-resshow");
         },
         _onResizeDivClick: function (args) {
             this._toolTipCustomization(args);
@@ -776,6 +960,20 @@
                     this._rbnToggleBtnCustomization(args, tBtnId);
                 }
             }
+            if (this._phoneMode) {
+                if ($(args.target).hasClass('e-togglebutton e-btn') || $(args.target).parents('.e-togglebutton.e-btn').length > 0) {
+                    var tBtnId, target = $(args.target);
+                    if ($(args.target).parents('.e-togglebutton.e-btn').length > 0)
+                        target = $(args.target).parents('.e-togglebutton.e-btn');
+                    tBtnId = target.parent().find("input").not(".e-active").attr("id") + "_mobEle"
+                    this._rbnToggleBtnCustomization(args, tBtnId);
+                }
+                if ($(args.target).hasClass("e-ribleftarrow")) {
+                    this._responsiveContentBack();
+                }
+            }
+            args.targetElement = "resizedGroup";
+            this._trigger("groupClick", args);
         },
         _toolTipCustomization: function (args) {
             var control = $(args.target).parents('.e-controlpadding');
@@ -788,28 +986,35 @@
             }
         },
         _onTabClick: function (args) {
-            var expandCollapse = this.element.find('.e-rarrowup-2x'), active = this.element.find('li.e-active');
+            if(this.model.enableOnDemand) this._groupContent(args);
+            var expandCollapse = this.element.find('.e-rarrowup-2x'), active = this._tabUl.find('li.e-active');
             var collapse = this.element.find('.e-collapseactive'), aTag, href;
-            var activeContent = this.element.find('.e-active-content');
+            var activeContent = this.element.find('.e-active-content').eq(0);
             if (this._phoneMode) {
+                this._responsiveScrollRemove();
+                this.element.find(".e-mobribgroupactive").removeClass("e-mobribgroupactive");
                 var tabactiveIndex = args.activeIndex;
-                var ribActiveContent = this.element.find(".e-active-content");
-                var tab = this._tabUl.children(".e-tab").index(this._tabUl.find("li.e-active"));
+                var ribActiveContent = this.element.find(".e-content.e-content-item").eq(tabactiveIndex);
+                var tab = this._tabUl.children(".e-tab").index(args.activeHeader);
                 if (ej.isNullOrUndefined(this.model.applicationTab)) {
                     --args.activeIndex; --args.prevActiveIndex;
                 }
-                this.element.find(".e-content").eq(args.prevActiveIndex).removeClass("e-responsiveheight e-rbnmobheader");
-                this.element.find(".e-content").eq(args.activeIndex).addClass("e-responsiveheight e-rbnmobheader");
+                this.element.find(".e-content.e-content-item").eq(args.prevActiveIndex).removeClass("e-responsiveheight e-rbnmobheader");
+                this.element.find(".e-content.e-content-item").eq(args.activeIndex).addClass("e-responsiveheight e-rbnmobheader");
                 this.element.find(".e-responsivecontent").is(":visible") && this.element.find(".e-responsivecontent").hasClass("e-resshow") && this.element.find(".e-responsivecontent").removeClass("e-resshow");
                 if (!ej.isNullOrUndefined(this._responsiveContent))
                     this._responsiveTarget.append(this._responsiveContent).css(this._responsiveContentStyle);
                 if (tab != -1) {
                     if (this._mobileContents[tab].mobileContent.length > 0 && !ribActiveContent.find(".e-respmobcontent").length > 0) {
-                        ribActiveContent.prepend(ej.buildTag("div#" + this._id + "_mobcontent").addClass("e-respmobcontent e-groupmobdiv").append(ej.buildTag("div#" + this._id + "_mobribgroup").addClass("e-mobribgroup").append(ej.buildTag("div.e-ribupdivarrow").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribdownarrow")))));
+                        ribActiveContent.prepend(ej.buildTag("div#" + this._id + "_mobcontent").addClass("e-respmobcontent e-groupmobdiv").append(ej.buildTag("div#" + this._id + "_mobribgroup").addClass("e-mobribgroup e-mobribgroupactive").append(ej.buildTag("div.e-ribupdivarrow").addClass("e-toolbaralign").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribdownarrow"))))).click($.proxy(this._onGroupClick, this)).click($.proxy(this._onMobContentClick, this));
+                        ribActiveContent.find(".e-resgroupheader").removeClass("e-resgroupheader");
                         for (var i = 0; i < this._mobileToolbar[tab].Content.length; i++)
                             ribActiveContent.find(".e-mobribgroup").append(this._mobileToolbar[tab].Content[i]);
+                        ribActiveContent.find(".e-mobribgroup").append(ribActiveContent.find(".e-mobribgroup .e-ribupdivarrow"))
                     }
                 }
+                if (tab != -1 && this._mobileContents[tab].mobileContent.length > 0 && !ribActiveContent.find(".e-mobribgroup").hasClass("e-mobribgroupactive"))
+                    ribActiveContent.find(".e-mobribgroup").addClass("e-mobribgroupactive");
             }
             if (active.length > 0) {
                 active.removeClass("e-active");
@@ -838,8 +1043,11 @@
             if (!this._initialRender)
                 this._trigger("tabClick", args);
             this._clickValue = "click";
+          
         },
         _onTabSelect: function (args) {
+            if (this.model.enableOnDemand)
+                this._setTabContentHeight();
             var active = this.element.find('li.e-active'), aTag, href, disable, expCollapse = this.element.find('.e-expandcollapse');
             this.model.selectedItemIndex = args.activeIndex;
             if (!active.hasClass("e-disable")) {
@@ -850,7 +1058,7 @@
                     this.element.find("#" + this._id + "_disabled").hide();
             }
             if (expCollapse.length > 0)
-                expCollapse.appendTo(this.element.find('.e-active-content'));
+                expCollapse.appendTo(this.element.find('.e-active-content').eq(0));
             if (!this._phoneMode)
                 this._ribbonResize();
             if (!this._initialRender) {
@@ -875,6 +1083,7 @@
             this._initialRender = false;
         },
         _create: function (args) {
+            if(this.model.enableOnDemand) this.element.find(".e-content.e-content-item").addClass("e-rbn-ondemand");
             this._trigger("tabCreate", args);
         },
         _onGalMoveUpClick: function (args) {
@@ -930,8 +1139,10 @@
         },
         _onQatExpandBtnClick: function (args) {
             var pLeft = 0, expandBtn = this.element.find('.e-splitbtnqat'), qaResizeDiv = this.element.find('.e-qaresizediv'), qaMenu = this.element.find('.e-rbnqatmenu'), target = $(args.e.currentTarget), qaWidth;
-            if (expandBtn.hasClass('e-active'))
+            if (expandBtn.hasClass('e-active')) {
                 expandBtn.removeClass('e-tbtn e-active');
+                qaMenu.hide(); return;
+            }
             else
                 expandBtn.addClass('e-tbtn e-active');
             if (qaResizeDiv.length > 0 && qaResizeDiv.is(':visible')) {
@@ -949,10 +1160,15 @@
                 if (this.model.enableRTL)
                     qaMenu.show().css({ right: this.element.width() - target.offset().left + this.element.offset().left - target.outerWidth() - (pLeft) });
                 qaMenu.show().css({ left: target.position().left - (pLeft) });
-               
+                if (this.element.hasClass("e-grpdivhide")) {
+                    this.element.removeClass("e-grpdivhide");
+                    this.element.find('.e-active-content').eq(0).addClass("e-resdivshow");
+                }
             }
         },
         _onQatClick: function (args) {
+            if (!this._QATclick)
+                this._QATclick = true;
             if (this.model.showQAT) {
                 if ($(args.target).hasClass('e-togglebutton e-btn') || $(args.target).parents('.e-togglebutton.e-btn').length > 0) {
                     var tBtnId, target = $(args.target);
@@ -962,6 +1178,7 @@
                     this._rbnToggleBtnCustomization(args, tBtnId);
                 }
             }
+            this._QATclick = false;
         },
         _onMobContentClick: function (args) {
             if ($(args.target).hasClass('e-togglebutton e-btn') || $(args.target).parents('.e-togglebutton.e-btn').length > 0) {
@@ -1125,9 +1342,12 @@
             this._trigger("expand", args);
         },
         collapse: function () {
-            var activeContent = this.element.find('.e-active-content'), togglecontent = this.element.find("#" + this._id + "_togglebutton");
-            activeContent.slideUp("fast", "swing", $.proxy(this._ribCollapse, this));
-            this.element.find('li.e-active').removeClass("e-active").addClass("e-collapseactive e-select");
+            var activeContent = this.element.find('.e-active-content').eq(0), togglecontent = this.element.find("#" + this._id + "_togglebutton");
+            if (this._initialRender && this.model.collapsible)
+                activeContent.hide();
+            else
+                activeContent.slideUp("fast", "swing", $.proxy(this._ribCollapse, this));
+            this.element.find('li.e-active').eq(0).removeClass("e-active").addClass("e-collapseactive e-select");
             activeContent.addClass("e-collapse-content");
             this._selectedItemIndex = this._tabObj.model.selectedItemIndex;
             this._tabObj.option({ selectedItemIndex: 0 });
@@ -1138,7 +1358,10 @@
         },
 
         expand: function () {
-            var activeContent = this.element.find('.e-active-content'), togglecontent = this.element.find("#" + this._id + "_togglebutton");
+            var activeContent = this.element.find('.e-active-content').eq(0);
+            if (activeContent.hasClass("e-rbn-ondemand"))
+                this._groupContent({activeIndex:this.model.selectedItemIndex+1});
+            var togglecontent = this.element.find("#" + this._id + "_togglebutton");
             activeContent.slideDown("fast", "swing", $.proxy(this._ribExpand, this));
             this.element.find('.e-collapseactive').addClass("e-active").removeClass("e-collapseactive");
             activeContent.removeClass("e-collapse-content");
@@ -1146,8 +1369,10 @@
             this.model.selectedItemIndex = this._selectedItemIndex
             togglecontent.removeClass("e-collapsed").addClass("e-expanded");
             togglecontent.find("span").addClass("e-rarrowup-2x");
-            this._ribbonResize();
-            this._addRibbonPin();
+            if (!this._phoneMode) {
+                this._ribbonResize();
+                this._addRibbonPin();
+            }
         },
         _addRibbonPin: function () {
             if (this.element.find('.e-ribbonpinicon').length <= 0) {
@@ -1157,6 +1382,10 @@
                 this._isCollapsed = false;
             }
             this._tabContents.css({ 'position': 'absolute' }).width(this.element.width());
+            if (this.element.hasClass("e-grpdivhide"))
+                this._tabContents.css({ 'position': '' }).width(this.element.width());
+            if (this.element.hasClass("e-grpdivhide") && this.element.find('.e-ribbonpin').length > 0 && this.model.showQAT && this._qAccessBar.hasClass('e-rbnbelow'))
+                this.element.find('.e-rbnquickaccessbar').css({ 'position': 'absolute' });
         },
         _removeRibbonPin: function () {
             var togglecontent = this.element.find("#" + this._id + "_togglebutton");
@@ -1172,13 +1401,27 @@
         },
         _onBackStageItemClick: function (args) {
             if (this._phoneMode)
-                this.element.find(".e-responsivebackstagecontent .e-backstageTitle").text(args.currentTarget.innerText);
+                this.element.find(".e-responsivebackstagecontent .e-backstageTitle").text($(args.currentTarget).text());
             var iconHeight, backStageId, backStageText, argsBackStage, backStageHeight;
+            var contentId = this.element.find(args.data.contentDivId);
             args.preventDefault();
-            if ($(args.target).hasClass("e-backstagebutton"))
+            if ($(args.target).hasClass("e-backstagebutton")) {
                 this.element.find(".e-ribbonbackstagepage").hide();
+                if (this._phoneMode)
+                    if (this.element.find(".e-responsivebackstage").is(":visible"))
+                        this.element.find(".e-responsivebackstage").removeClass("e-backstageshowanimate");
+            }
             this.element.find('.e-backstageactive-content').removeClass("e-backstageactive-content").hide();
             this.element.find(".e-backstageactive").removeClass("e-backstageactive");
+            if (this.model.enableOnDemand && contentId.children().length==0)
+            {
+                var backstageSet = this.model.applicationTab.backstageSettings;
+                var backstagePageLen = backstageSet.pages.length;
+                if (this.model.enableOnDemand && backstagePageLen > 0) {
+                    var activeIndex = $(args.currentTarget).index() - $(args.currentTarget).prevAll(".e-backstageseparator").length;
+                    contentId.append($('#' + backstageSet.pages[activeIndex].contentID).addClass('e-backstagetabarea').show());
+                }
+            }
             this.element.find(args.data.contentDivId).addClass("e-backstageactive-content").show();
             if ($(args.target).hasClass("e-backstageli"))
                 $(args.target).addClass("e-backstageactive");
@@ -1186,7 +1429,7 @@
                 $(args.target).parents(".e-backstageli").addClass("e-backstageactive");
             iconHeight = this.element.find('.e-ribbonbackstagetop').height();
             this.element.find(".e-backstagescrollcontent").ejScroller({ height: 0 });
-            backStageHeight = args.data.height;
+            backStageHeight = this.model.applicationTab.backstageSettings.height;
             this._backStageHeightCalculate(backStageHeight, iconHeight);
             if (!ej.isNullOrUndefined($(args.target).text()))
                 backStageText = $(args.target).text();
@@ -1198,6 +1441,10 @@
                 backStageId = $(args.target).parent().attr('id');
             argsBackStage = { id: backStageId, text: backStageText, target: args.target, type: "backstageItemClick", cancel: false };
             this.element.find(".e-backstagetitlecontent").text('').append(backStageText);
+            if ($(args.target).parents(".e-backstageheader").length > 0 && ($(args.target).find("a").length > 0 || args.target.localName == "a") && this._phoneMode) {
+                this.element.find(".e-responsivebackstagecontent").show();
+                this.element.find(".e-responsivebackstage").removeClass("e-backstageshowanimate");
+            }
             this._trigger("backstageItemClick", argsBackStage);
         },
         _onBackStageTopIcon: function (args) {
@@ -1211,7 +1458,10 @@
                     backStageHeight = parseInt(backStageHeight, 10);
                 if (this.model.applicationTab.backstageSettings.height != '100%') {
                     if (this.element.find(".e-backstageactive-content").height() > backStageHeight - iconHeight)
+					{
+					    this.element.find(".e-ribbonbackstagepage").height(backStageHeight).width(this.model.applicationTab.backstageSettings.width);
                         this.element.find(".e-backstagescrollcontent").ejScroller({ height: backStageHeight - iconHeight });
+					}
                     else {
                         if (ej.isNullOrUndefined(backStageHeight))
                             if (this.element.find(".e-backstageactive-content").height() > this.element.height() - iconHeight)
@@ -1222,11 +1472,18 @@
         },
         _onApplicationTabClick: function (args) {
             args.preventDefault();
-            this.showBackstage();
+            var backStageContent = this.element.find(".e-backstagecontent");
+            if (this.model.enableOnDemand && backStageContent.length == 0)
+                this._createApplicationTab();
+            backStageContent = this.element.find(".e-backstagecontent");
+               this.showBackstage();
         },
 
         showBackstage: function () {
             var headerWidth, argsBackStage, iconHeight, backStageHeight, target, backStageText, backStageLi, bodyCon, headerCon;
+            var backStageContent = this.element.find(".e-backstagecontent");
+            if (this.model.enableOnDemand && backStageContent.length == 0)
+                this._createApplicationTab();
             bodyCon = this.element.find(".e-ribbonbackstagebody");
             headerCon = this.element.find(".e-backstageheader");
             backStageHeight = this.model.applicationTab.backstageSettings.height;
@@ -1252,13 +1509,43 @@
                 this.element.find(".e-backstageactive").removeClass("e-backstageactive");
                 backStageLi.first().addClass("e-backstageactive");
                 this.element.find('.e-backstagecontent').first().addClass("e-backstageactive-content").show();
+                this.element.find(".e-backstagecontent").css({ "width": "100%" });
                 this.element.find(".e-backstagescrollcontent").ejScroller({ height: 0 });
-                this._backStageHeightCalculate(backStageHeight, iconHeight);
                 target = this.element.find('.e-backstageli').first();
                 if (!ej.isNullOrUndefined($(target).text()))
                     backStageText = $(target).text();
                 else
                     backStageText = $(target).children('a').text();
+                var backstageSet = this.model.applicationTab.backstageSettings;
+                var backstagePageLen = backstageSet.pages.length;
+                var backStageContent = this.element.find(".e-backstagecontent");
+                if (!this._phoneMode) {
+                    if (this.model.enableOnDemand && backstagePageLen > 0 && !ej.isNullOrUndefined(backstageSet.pages[0].text)) {
+                        var activeIndex = $(".e-backstageactive-content").index() - 1;
+                        if (activeIndex != -1)
+                            $(backStageContent).filter(".e-backstageactive-content").append($('#' + backstageSet.pages[activeIndex].contentID).addClass('e-backstagetabarea').show());
+                    }
+                }
+                this._backStageHeightCalculate(backStageHeight, iconHeight);
+                backStageContent = this.element.find(".e-backstagecontent");
+                var responsebackstage = this.element.find(".e-responsivebackstage").removeClass("e-reshide");
+                var resbackstageHeader = responsebackstage.find(".e-backstageheader");
+                if(this._phoneMode)
+                    {
+                    if (this.element.find(".e-responsivetabheader").is(":visible"))
+                        this.element.find(".e-responsivetabheader").removeClass("e-resshow");
+                    if (responsebackstage.children().length > 0) {
+                        var top = parseInt(resbackstageHeader.css("top"))
+                        if (this.element.parent(".e-js").length > 0 && ((document.documentElement.clientHeight - (responsebackstage.find(".e-backstageheader").offset().top)) > this.element.parent(".e-js").height()))
+                            resbackstageHeader.css({ "width": this.element.find(".e-header").outerWidth() / 2, "height": this.element.parent().height() });
+                        else
+                            resbackstageHeader.css({ "width": this.element.find(".e-header").outerWidth() / 2, "height": document.documentElement.clientHeight - (responsebackstage.find(".e-backstageheader").offset().top) });
+                        if (resbackstageHeader.offset().top != top)
+                            resbackstageHeader.height(resbackstageHeader.height() - top);
+                    }
+                    responsebackstage.addClass("e-backstageshowanimate");
+                    this.element.find(".e-backstageactive").removeClass("e-backstageactive");
+                }
                 argsBackStage = { id: $(target).attr('id'), text: backStageText, target: $(target).children(), type: "backstageItemClick", cancel: false };
                 this.element.find(".e-backstagetitlecontent").text('').append(backStageText);
                 this._trigger("backstageItemClick", argsBackStage);
@@ -1266,6 +1553,8 @@
         },
         hideBackstage: function () {
             this.element.find(".e-ribbonbackstagepage").hide();
+            if (this._phoneMode)
+                this.goToMainContent();
         },
         _initPrivateProperties: function () {
             this._initialRender = false;
@@ -1285,30 +1574,57 @@
             this._qAccessBar = this.element.find('.e-rbnquickaccessbar');
             this._rbnToggleBtnAction = true;
             this.localizedLabels = this._getLocalizedLabels();
-            this._phoneMode =false;
+            this._phoneMode = (this.model.allowResizing || this.model.isResponsive) && document.documentElement.clientWidth < 420 ? true : false;
             this._responsiveTarget = null;
             this._responsiveContent = null;
             this._responsiveContentStyle = null;
             this._responsiveGallery = null;
             this._mobileToolbar = [];
             this._mobileContents = [];
+            this._responsiveTabText = null;
+            this._responsiveHeight = document.documentElement.clientHeight * (parseInt("40%") / 100);
+            this._QATclick = false;
         },
         _getLocalizedLabels: function () {
             return ej.getLocalizedConstants(this.sfType, this.model.locale);
         },
         _customization: function () {
             var toggleelm, model = {}, expColObj = {}, li;
-            var backStagePage, backStageContent, backStageUl, backStageLi, aTag, backStageScrollContent, backStageTop, backStageBody, backStageTopContent, backStageTitleContent, backStageTopIcon, bottomSeparator;
             if (this._initial) {
-                this._contextualTabs();
+                if (this.model.contextualTabs.length > 0 && this.model.contextualTabs[0].tabs.length > 0)
+                  this._contextualTabs();
                 toggleelm = '<div id=' + this._id + '_togglebutton class="e-expanded"><span class="e-icon e-rarrowup-2x"></span></div>';
                 li = ej.buildTag("li#" + this._id + "_" + "expandCollapse.e-expandcollapse", toggleelm);
-                this.element.find('.e-active-content').append(li);
+                this.element.find('.e-active-content').eq(0).append(li);
                 expColObj.expandObj = this.model.expandPinSettings;
                 expColObj.collapseObj = this.model.collapsePinSettings;
                 li.mouseover({ value: expColObj, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
             }
+            this.model.enableOnDemand?this._createAppTabOnDemand(): this._createApplicationTab();      
+
+        },
+        _createAppTabOnDemand: function () {
             if (this.model.applicationTab.type === ej.Ribbon.ApplicationTabType.Menu) {
+                this._applicationTab.find('.e-link').hide();
+                if (this.model.applicationTab.menuSettings)
+                    model = this.model.applicationTab.menuSettings;
+                if (this.model.applicationTab.menuItemID) {
+                    $("#" + this.model.applicationTab.menuItemID).appendTo(this._applicationTab);
+                    model.enableRTL = this.model.enableRTL;
+                    $("#" + this.model.applicationTab.menuItemID).addClass("e-rbncustomelement").ejMenu(model);
+                }
+                $("#" + this._id + "_" + this.model.applicationTab.type.replace(/\s/g, '')).hide();
+            }
+            else {
+                this._applicationTab.find('.e-link').text(this.model.applicationTab.backstageSettings.text);
+            }
+            this._applicationTab.click($.proxy(this._onApplicationTabClick, this));
+            if (this.model.applicationTab.type === ej.Ribbon.ApplicationTabType.Backstage) 
+             this._applicationTab.find('a').addClass('e-apptabanchor');
+        },
+		_createApplicationTab: function() {
+		 var backStagePage=this.element.find(".e-ribbonbackstagepage"), backStageContent, backStageUl=this.element.find(".e-backstageheader"), backStageLi, aTag, backStageScrollContent, backStageTop, backStageBody=this.element.find(".e-ribbonbackstagebody"), backStageTopContent=this.element.find(".e-backstagetopcontent"), backStageTitleContent, backStageTopIcon, bottomSeparator;
+		 if (this.model.applicationTab.type === ej.Ribbon.ApplicationTabType.Menu && !this.model.enableOnDemand) {
                 this._applicationTab.find('.e-link').hide();
                 if (this.model.applicationTab.menuSettings)
                     model = this.model.applicationTab.menuSettings;
@@ -1330,35 +1646,78 @@
                     backStageHeight = $(document).height() * (parseInt(backStageHeight.slice(0, -1), 10) / 100);
                 else if (backStageHeight.toString().endsWith('px'))
                     backStageHeight = parseInt(backStageHeight, 10);
-                backStagePage = ej.buildTag("div#" + this._id + "_BackStage").addClass('e-ribbonbackstagepage').height(backStageHeight).width(this.model.applicationTab.backstageSettings.width).hide();
-                backStageBody = ej.buildTag("div#" + this._id + "_BackStageBody").addClass('e-ribbonbackstagebody').height(backStageHeight - 50);
-                backStageUl = ej.buildTag("ul#" + this._id + "_BackStageHeader").addClass('e-backstageheader').height(backStageHeight - 50);
-                for (var i = 0; i < this.model.applicationTab.backstageSettings.pages.length; i++) {
-                    backStageLi = ej.buildTag("li").addClass('e-backstageli').click({ contentDivId: "#" + this._id + "_BackStage_" + this.model.applicationTab.backstageSettings.pages[i].id.replace(/\s/g, ''), height: this.model.applicationTab.backstageSettings.height }, $.proxy(this._onBackStageItemClick, this));
-                    if (ej.isNullOrUndefined(this.model.applicationTab.backstageSettings.pages[i].itemType))
-                        this.model.applicationTab.backstageSettings.pages[i].itemType = ej.Ribbon.ItemType.Tab;
-                    if (this.model.applicationTab.backstageSettings.pages[i].itemType == ej.Ribbon.ItemType.Tab) {
-                        aTag = ej.buildTag("a", this.model.applicationTab.backstageSettings.pages[i].text, {}, { href: "#" + this._id + "_BackStage_" + this.model.applicationTab.backstageSettings.pages[i].id.replace(/\s/g, '') });
-                        backStageLi.append(aTag).attr('id', this.model.applicationTab.backstageSettings.pages[i].id + "_backStageTab");
-                    }
+	            if(backStagePage.length==0){
+                 backStagePage = ej.buildTag("div#" + this._id + "_BackStage").addClass('e-ribbonbackstagepage');
+                 backStageBody = ej.buildTag("div#" + this._id + "_BackStageBody").addClass('e-ribbonbackstagebody');
+                 backStageUl = ej.buildTag("ul#" + this._id + "_BackStageHeader").addClass('e-backstageheader');
+				}
+				backStagePage.height(backStageHeight).width(this.model.applicationTab.backstageSettings.width).hide();
+                backStageBody.height(backStageHeight - 50);
+                backStageUl.height(backStageHeight - 50);
+                var backstageSet = this.model.applicationTab.backstageSettings;
+                var backstagePageLen = backstageSet.pages.length;
+                for (var i = 0; i < backstagePageLen; i++) {
+				  var bsItem=this.element.find("#"+backstageSet.pages[i].id + "_backStageTab"),prevItem=this.element.find("#"+backstageSet.pages[i].id + "_backStageBtn");
+                  if(ej.isNullOrUndefined(backstageSet.pages[i].itemType))
+                     backstageSet.pages[i].itemType = ej.Ribbon.ItemType.Tab;
+				  if(backstageSet.pages[i].itemType == ej.Ribbon.ItemType.Button){
+				   bsItem =this.element.find("#"+backstageSet.pages[i].id + "_backStageBtn");
+				   prevItem=this.element.find("#"+backstageSet.pages[i].id + "_backStageTab");
+				  }
+				if(this.element.find(".e-ribbonbackstagepage").length==0 || (bsItem.length==0 && prevItem.length==0)){
+                    backStageLi = ej.buildTag("li").addClass('e-backstageli').click({ contentDivId: "#" + this._id + "_BackStage_" + backstageSet.pages[i].id.replace(/\s/g, ''), height: backstageSet.height }, $.proxy(this._onBackStageItemClick, this));
+                    if (backstageSet.pages[i].itemType == ej.Ribbon.ItemType.Tab) {
+                        aTag = ej.buildTag("a", backstageSet.pages[i].text, {}, { href: "#" + this._id + "_BackStage_" + backstageSet.pages[i].id.replace(/\s/g, '') });
+                        backStageLi.append(aTag).attr('id', backstageSet.pages[i].id + "_backStageTab");
+						}
                     else
-                        backStageLi.append(this.model.applicationTab.backstageSettings.pages[i].text).addClass('e-backstagebutton').attr('id', this.model.applicationTab.backstageSettings.pages[i].id + "_backStageBtn");
+                        backStageLi.append(backstageSet.pages[i].text).addClass('e-backstagebutton').attr('id', backstageSet.pages[i].id + "_backStageBtn");
                     backStageUl.append(backStageLi);
-                    if (this.model.applicationTab.backstageSettings.pages[i].enableSeparator) {
+                    if (backstageSet.pages[i].enableSeparator) {
                         bottomSeparator = ej.buildTag("li").addClass('e-backstageseparator');
                         backStageUl.append(bottomSeparator);
                     }
-                    if (this.model.applicationTab.backstageSettings.pages[i].itemType == ej.Ribbon.ItemType.Tab) {
-                        backStageContent = ej.buildTag("div#" + this._id + "_BackStage_" + this.model.applicationTab.backstageSettings.pages[i].id.replace(/\s/g, '')).addClass('e-backstagecontent').css({ "width": "auto" });
-                        if (i > 0)
-                            backStageContent.hide();
-                        if (this.model.applicationTab.backstageSettings.pages[i].contentID) {
-                            $('#' + this.model.applicationTab.backstageSettings.pages[i].contentID).find('*').addClass('e-backstagechild');
-                            $(backStageContent).append($('#' + this.model.applicationTab.backstageSettings.pages[i].contentID).addClass('e-backstagetabarea'));
-                        }
-                        backStageBody.append(backStageContent);
+                    if (backstageSet.pages[i].itemType == ej.Ribbon.ItemType.Tab) 
+                        this._addBackStageTabCont(backstageSet,backStageBody,i);
+					}
+					else{
+					 var bItem=prevItem;
+					 if(bsItem.length>0)
+					  bItem=bsItem;
+					 if(backstageSet.pages[i].itemType == ej.Ribbon.ItemType.Button){
+					     if(bItem.find('a').length>0){
+						  this._removeBackStageTabCont(this.element.find(bItem.find('a').attr('href')));
+						  bItem.attr('id', backstageSet.pages[i].id + "_backStageBtn").addClass('e-backstagebutton');
+						  bItem.find('a').remove();
+						  }
+						  bItem.text(backstageSet.pages[i].text);
+					 }
+					 else{
+					   if(bItem.hasClass('e-backstagebutton')){
+						 aTag = ej.buildTag("a", backstageSet.pages[i].text, {}, { href: "#" + this._id + "_BackStage_" + backstageSet.pages[i].id.replace(/\s/g, '') });
+                         bItem.append(aTag).attr('id', backstageSet.pages[i].id + "_backStageTab").removeClass('e-backstagebutton');
+                         this._addBackStageTabCont(backstageSet,backStageBody,i);
+						}
+						bItem.find('a').text(backstageSet.pages[i].text);
+						var tabCon=this.element.find(bItem.find('a').attr('href'));
+						if(backstageSet.pages[i].contentID!=tabCon.find(".e-backstagetabarea").attr('id')){
+				          tabCon.find('.e-backstagetabarea').removeClass('e-backstagetabarea').appendTo('body');
+                          tabCon.append($('#' + backstageSet.pages[i].contentID).addClass('e-backstagetabarea'));
+						}
+					 }
+					if (backstageSet.pages[i].enableSeparator) {
+					    if(bItem.next().length>0 && !bItem.next().hasClass('e-backstageseparator')){
+                        bottomSeparator = ej.buildTag("li").addClass('e-backstageseparator');
+                        bItem.after(bottomSeparator);
+						}
                     }
+					else{
+					 if(bItem.next().length>0 && bItem.next().hasClass('e-backstageseparator'))
+					  bItem.next().remove();
+					}
+					}
                 }
+				if(this.element.find(".e-ribbonbackstagepage").length==0){
                 backStageBody.prepend(backStageUl);
                 backStageTop = ej.buildTag("div#" + this._id + "_BackStageTop").addClass('e-ribbonbackstagetop').height(100);
                 backStageTopContent = ej.buildTag("div#" + this._id + "_BackStageTopContent").addClass('e-backstagetopcontent').appendTo(backStageTop);
@@ -1370,16 +1729,61 @@
                 backStagePage.append(backStageScrollContent);
                 this._applicationTab.addClass('e-backstagetab');
                 this._applicationTab.find('a').addClass('e-apptabanchor');
-                if (!ej.isNullOrUndefined(this.model.applicationTab.backstageSettings.headerWidth)) {
-                    backStageTopContent.width(this.model.applicationTab.backstageSettings.headerWidth);
-                    backStageUl.width(this.model.applicationTab.backstageSettings.headerWidth);
-                }
-                this.element.append(backStagePage);
+				if(this.element.find('.e-ribbonbackstagepage').length > 0)
+				   this.element.find('.e-ribbonbackstagepage').remove();
+				this.element.append(backStagePage);
+				var responsiveBackStage = this.element.find(".e-responsivebackstagecontent .e-resbackstagecontent");
+				if (backStagePage.find(".e-ribbonbackstagebody .e-backstagecontent").length > 0 && this._phoneMode) {
+				    responsiveBackStage.children().remove();
+				    responsiveBackStage.append(backStagePage.find(".e-ribbonbackstagebody .e-backstagecontent"));
+				}
             }
-        },
+			else{
+			  var tabs=[];
+			  for(var i=0;i<this.model.applicationTab.backstageSettings.pages.length;i++)
+			   tabs.push(this.model.applicationTab.backstageSettings.pages[i].id);
+			  for(var i=0;i<this.element.find('.e-backstageli').length;i++){
+			    var ele=this.element.find('.e-backstageli').eq(i),id=ele.attr('id').split('_')[0];
+				if($.inArray(id,tabs)<0){
+				  if(ele.find('a').length>0)
+				   this._removeBackStageTabCont(this.element.find(ele.find('a').attr('href')));
+				  if(ele.next().length>0 && ele.next().hasClass('e-backstageseparator'))
+				    ele.next().remove();
+				  ele.remove();
+				  --i;
+				}
+			   }
+			}
+            if (!ej.isNullOrUndefined(backstageSet.headerWidth)) {
+               backStageTopContent.css("width",backstageSet.headerWidth);
+               backStageUl.css("width",backstageSet.headerWidth);
+             }
+		   }
+		   if (this.model.enableOnDemand && this._phoneMode) {
+                backstage = this.element.find(".e-responsivebackstage");
+                backstagePage = this.element.find(".e-ribbonbackstagepage");
+                if (this._tabUl.find(".e-backstagetab").length > 0 && backstage.length == 1) {
+                    var backstagecontent = backstagePage.find(".e-ribbonbackstagebody .e-backstageheader");
+                    backstage.append(backstagecontent).addClass("e-reshide");
+                }
+           }
+		},
+	    _addBackStageTabCont: function (backstageSet,backStageBody,i) {
+		  var content = ej.buildTag("div#" + this._id + "_BackStage_" + backstageSet.pages[i].id.replace(/\s/g, '')).addClass('e-backstagecontent').css({ "width": "auto" });
+          if (i > 0)
+            content.hide();
+          if (backstageSet.pages[i].contentID && !this.model.enableOnDemand)  
+            $(content).append($('#' + backstageSet.pages[i].contentID).addClass('e-backstagetabarea').show());
+          backStageBody.append(content);
+		},
+		_removeBackStageTabCont: function (tab) {
+		   tab.find('.e-backstagetabarea').removeClass('e-backstagetabarea').appendTo('body');
+		   tab.remove();
+		 },
         _conTabsRemove: function () {
             var cntxTabs = this.element.find(".e-contextli,.e-contextliset"), $cntxTab;
-            for (var i = 0; i < cntxTabs.length; i++) {
+            var cntxTabLen = cntxTabs.length;
+            for (var i = 0; i < cntxTabLen; i++) {
                 $cntxTab = $(cntxTabs[i]);
                 $cntxTab.is(":visible") ? $cntxTab.find("li").insertAfter($cntxTab.eq(0)) : $cntxTab.find("li").hide().insertAfter($cntxTab.eq(0));
                 $cntxTab.remove();
@@ -1388,7 +1792,8 @@
         _contextualTabs: function () {
             var curcontextualTabSet, li, ul;
             if (this.model.contextualTabs) {
-                for (var i = 0; i < this.model.contextualTabs.length; i++) {
+                var contextTabLen = this.model.contextualTabs.length;
+                for (var i = 0; i < contextTabLen; i++) {
                     curcontextualTabSet = this.model.contextualTabs[i];
                     if (curcontextualTabSet.tabs.length > 0) {
                         li = ej.buildTag("li.e-contextliset");
@@ -1399,7 +1804,8 @@
                             'background': curcontextualTabSet.backgroundColor,
                             'border-top-color': curcontextualTabSet.borderColor
                         });
-                        for (var j = 0; j < curcontextualTabSet.tabs.length; j++) {
+                        var contexttualTabLen = curcontextualTabSet.tabs.length;
+                        for (var j = 0; j < contexttualTabLen; j++) {
                             ul.append(this._tabUl.children('.e-contextualtabset').filter(function (index) {
                                 return $(this).text() ===
                                 curcontextualTabSet.tabs[j].text;
@@ -1417,7 +1823,6 @@
             this.model.applicationTab.backstageSettings.pages.splice(pageIndex, 0, pageitem);
             this._initial = false;
             this._customization();
-            this.element.find('.e-ribbonbackstagepage:eq(0)').remove();
         },
         removeBackStageItem: function (index) {
             var id, pageId;
@@ -1433,7 +1838,6 @@
             $.extend(this.model.applicationTab.backstageSettings.pages[index], pageitem)
             this._initial = false;
             this._customization();
-            this.element.find('.e-ribbonbackstagepage:eq(0)').remove();
         },
         showContextualTab: function (text) {
             this.element.find(".e-contexttitle").filter(function (index) { return $(this).text() === text; }).parent().parent().show();
@@ -1441,6 +1845,201 @@
         hideContextualTab: function (text) {
             this.element.find(".e-contexttitle").filter(function (index) { return $(this).text() === text; }).parent().parent().hide();
             this._tabObj.option({ selectedItemIndex: this._tabObj.model.selectedItemIndex + 1 });
+        },
+        _createQAT: function () {
+            if (this.model.showQAT && this.element.find(".e-rbnquickaccessbar").children().length == 0) {
+                if (!ej.isNullOrUndefined(this.model.tabs))
+                    this._createCollapseQuickaccess(this.model.tabs);
+                if (!ej.isNullOrUndefined(this.model.contextualTabs))
+                    for (var i = 0; i < this.model.contextualTabs.length; i++)
+                        this._createCollapseQuickaccess(this.model.contextualTabs[i].tabs);
+            }
+            this._createQuickAccessBar();
+        },
+        _createCollapseQuickaccess: function (tabs) {
+            if (!ej.isNullOrUndefined(tabs) && this.element.find(".e-rbnquickaccessbar").children().length == 0) {
+                for (var i = 0; i < tabs.length; i++) {
+                    if (!ej.isNullOrUndefined(tabs[i].groups))
+                        for (var j = 0; j < tabs[i].groups.length; j++) {
+                            if (!ej.isNullOrUndefined(tabs[i].groups[j].content))
+                                for (var k = 0; k < tabs[i].groups[j].content.length; k++) {
+                                    var subGroup = tabs[i].groups[j].content[k].groups;
+                                    var defaults = tabs[i].groups[j].content[k].defaults;
+                                    subGrpLen = subGroup.length;
+                                    for (var m = 0; m < subGrpLen; m++) {
+                                        if (!ej.isNullOrUndefined(subGroup[m])) {
+                                            if (!ej.isNullOrUndefined(defaults)) {
+                                                if (!ej.isNullOrUndefined(defaults.type))
+                                                    subGroup[m].type = defaults.type;
+                                            }
+                                            if (ej.isNullOrUndefined(subGroup[m].type))
+                                                subGroup[m].type = ej.Ribbon.Type.Button;
+                                            if (ej.isNullOrUndefined(subGroup[m].isBig) && !ej.isNullOrUndefined(defaults))
+                                                subGroup[m].isBig = defaults.isBig;
+                                            var buttonDef = this.model.buttonDefaults;
+                                            if (ej.isNullOrUndefined(subGroup[m].height)) {
+                                                var btnHeight;
+                                                if (!ej.isNullOrUndefined(subGroup[m].buttonSettings) && !ej.isNullOrUndefined(subGroup[m].buttonSettings.height))
+                                                    btnHeight = subGroup[m].buttonSettings.height;
+                                                else if (!ej.isNullOrUndefined(defaults) && !ej.isNullOrUndefined(defaults.height))
+                                                    btnHeight = defaults.height;
+                                                else if (!ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.height))
+                                                    btnHeight = buttonDef.height;
+                                                subGroup[m].height = btnHeight;
+                                                btnHeight = null;
+                                            }
+                                            if (ej.isNullOrUndefined(subGroup[m].width)) {
+                                                var btnWidth;
+                                                if (!ej.isNullOrUndefined(subGroup[m].buttonSettings) && !ej.isNullOrUndefined(subGroup[m].buttonSettings.width))
+                                                    btnWidth = subGroup[m].buttonSettings.width;
+                                                else if (!ej.isNullOrUndefined(defaults) && !ej.isNullOrUndefined(defaults.width))
+                                                    btnWidth = defaults.width;
+                                                else if (!ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.width))
+                                                    btnWidth = buttonDef.width;
+                                                subGroup[m].width = btnWidth;
+                                                btnWidth = null;
+                                            }
+                                            if (!ej.isNullOrUndefined(subGroup[m].buttonSettings)) {
+                                                var buttonSet = subGroup[m].buttonSettings;
+                                                if (ej.isNullOrUndefined(buttonSet.enabled) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enabled))
+                                                    buttonSet.enabled = buttonDef.enabled;
+                                                if (ej.isNullOrUndefined(buttonSet.enableRTL) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enableRTL))
+                                                    buttonSet.enableRTL = buttonDef.enableRTL;
+                                                if (ej.isNullOrUndefined(buttonSet.cssClass) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.cssClass))
+                                                    buttonSet.cssClass = buttonDef.cssClass;
+                                                if (ej.isNullOrUndefined(buttonSet.showRoundedCorner) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.showRoundedCorner))
+                                                    buttonSet.showRoundedCorner = buttonDef.showRoundedCorner;
+                                            }
+                                            if (!ej.isNullOrUndefined(subGroup[m].splitButtonSettings)) {
+                                                var splitButtonSet = subGroup[m].splitButtonSettings;
+                                                if (ej.isNullOrUndefined(splitButtonSet.enabled) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enabled))
+                                                    splitButtonSet.enabled = buttonDef.enabled;
+                                                if (ej.isNullOrUndefined(splitButtonSet.enableRTL) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enableRTL))
+                                                    splitButtonSet.enableRTL = buttonDef.enableRTL;
+                                                if (ej.isNullOrUndefined(splitButtonSet.cssClass) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.cssClass))
+                                                    splitButtonSet.cssClass = buttonDef.cssClass;
+                                                if (ej.isNullOrUndefined(splitButtonSet.showRoundedCorner) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.showRoundedCorner))
+                                                    splitButtonSet.showRoundedCorner = buttonDef.showRoundedCorner;
+                                            }
+                                            if (!ej.isNullOrUndefined(subGroup[m].toggleButtonSettings)) {
+                                                if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.enabled) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enabled))
+                                                    subGroup[m].toggleButtonSettings.enabled = buttonDef.enabled;
+                                                if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.enableRTL) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enableRTL))
+                                                    subGroup[m].toggleButtonSettings.enableRTL = buttonDef.enableRTL;
+                                                if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.cssClass) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.cssClass))
+                                                    subGroup[m].toggleButtonSettings.cssClass = buttonDef.cssClass;
+                                                if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.showRoundedCorner) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.showRoundedCorner))
+                                                    subGroup[m].toggleButtonSettings.showRoundedCorner = buttonDef.showRoundedCorner;
+                                            }
+                                            if (ej.isNullOrUndefined(subGroup[m].quickAccessMode))
+                                                subGroup[m].quickAccessMode = "none";
+                                            switch (subGroup[m].type) {
+                                                case ej.Ribbon.Type.SplitButton:
+                                                    split = subGroup[m];
+                                                    model = {}
+                                                    if (split.splitButtonSettings)
+                                                        model = JSON.parse(JSON.stringify(split.splitButtonSettings));
+                                                    model.height = ej.isNullOrUndefined(model.height) ? subGroup[m].height : model.height;
+                                                    model.width = ej.isNullOrUndefined(model.width) ? subGroup[m].width : model.width;
+                                                    if (model.cssClass)
+                                                        model.cssClass = model.cssClass.concat(" e-rbn-splitbtn");
+                                                    else
+                                                        model.cssClass = "e-rbn-splitbtn";
+                                                    model.enableRTL = this.model.enableRTL;
+                                                    if (split.quickAccessMode != "none" && this.model.showQAT) {
+                                                        this._splitButtonQAT = ej.buildTag("button#" + this._id + "_" + split.id + "_qatEle", split.text, {}, { type: "button" }).addClass(split.cssClass);
+                                                        var qatMainDiv = ej.buildTag("div#" + this._id + "_" + split.id + "_qatDiv", this._splitButtonQAT).addClass('e-qatooldiv');
+                                                        model.height = 30;
+                                                        model.arrowPosition = ej.ArrowPosition.Right;
+                                                        model.contentType = ej.ContentType.ImageOnly;
+                                                        if (!$.isEmptyObject(split.customToolTip))
+                                                            qatMainDiv.mouseover({ value: split, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                        else if (!ej.isNullOrUndefined(split.toolTip))
+                                                            qatMainDiv.attr("title", split.toolTip);
+                                                        this._splitButtonQAT.ejSplitButton(model);
+										                qatMainDiv.find('button').addClass('e-rbn-button');
+                                                        qatMainDiv.appendTo(this._qAccessBar);
+                                                        if (split.quickAccessMode == "menu")
+                                                            qatMainDiv.hide();
+                                                        var btnText;
+                                                        if (!ej.isNullOrUndefined(split.text))
+                                                            btnText = split.text;
+                                                        else if (!ej.isNullOrUndefined(split.splitButtonSettings.text))
+                                                            btnText = split.splitButtonSettings.text;
+                                                        this._qatControlsName.push({ id: split.id, text: btnText, qAccess: split.quickAccessMode });
+                                                    }
+                                                    break;
+                                                case ej.Ribbon.Type.ToggleButton:
+                                                    toggle = subGroup[m];
+                                                    model = {}
+                                                    if (toggle.toggleButtonSettings)
+                                                        model = JSON.parse(JSON.stringify(toggle.toggleButtonSettings));
+                                                    model.height = ej.isNullOrUndefined(model.height) ? subGroup[m].height : model.height;
+                                                    model.width = ej.isNullOrUndefined(model.width) ? subGroup[m].width : model.width;
+                                                    if (toggle.quickAccessMode != "none" && this.model.showQAT) {
+                                                        this._toggleButtonQAT = ej.buildTag("input#" + this._id + "_" + toggle.id + "_qatEle", "", "", { type: "checkbox" }).addClass(toggle.cssClass);
+                                                        var qatMainDiv = ej.buildTag("div#" + this._id + "_" + toggle.id + "_qatDiv", this._toggleButtonQAT).addClass('e-qatooldiv');
+                                                        model.height = 30;
+                                                        model.contentType = ej.ContentType.ImageOnly;
+                                                        if (!$.isEmptyObject(toggle.customToolTip))
+                                                            qatMainDiv.mouseover({ value: toggle, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                        else if (!ej.isNullOrUndefined(toggle.toolTip))
+                                                            qatMainDiv.attr("title", toggle.toolTip);
+                                                        this._toggleButtonQAT.ejToggleButton(model).addClass('e-ribbonbtn');
+												        qatMainDiv.find('button').addClass('e-rbn-button');
+                                                        qatMainDiv.appendTo(this._qAccessBar);
+                                                        if (toggle.quickAccessMode == "menu")
+                                                            qatMainDiv.hide();
+                                                        var btnText;
+                                                        if (!ej.isNullOrUndefined(toggle.text))
+                                                            btnText = toggle.text;
+                                                        else if (!ej.isNullOrUndefined(toggle.toggleButtonSettings.defaultText))
+                                                            btnText = toggle.toggleButtonSettings.defaultText;
+                                                        this._qatControlsName.push({ id: toggle.id, text: btnText, qAccess: toggle.quickAccessMode });
+                                                    }
+                                                    break;
+                                                case ej.Ribbon.Type.Button:
+                                                    button = subGroup[m];
+                                                    model = {}
+                                                    if (button.buttonSettings)
+                                                        model = JSON.parse(JSON.stringify(button.buttonSettings));
+                                                    model.height = ej.isNullOrUndefined(model.height) ? subGroup[m].height : model.height;
+                                                    model.width = ej.isNullOrUndefined(model.width) ? subGroup[m].width : model.width;
+                                                    if (button.quickAccessMode != "none" && this.model.showQAT) {
+                                                        if (button.buttonSettings) {
+                                                            if (button.buttonSettings.type)
+                                                                this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text, {}, { type: button.buttonSettings.type }).addClass(button.cssClass);
+                                                            else
+                                                                this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text).addClass(button.cssClass);
+                                                        }
+                                                        else
+                                                            this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text).addClass(button.cssClass);
+                                                        var qatMainDiv = ej.buildTag("div#" + this._id + "_" + button.id + "_qatDiv", this._buttonQAT).addClass('e-qatooldiv');
+                                                        model.height = 30;
+                                                        model.contentType = ej.ContentType.ImageOnly;
+                                                        if (!$.isEmptyObject(button.customToolTip))
+                                                            qatMainDiv.mouseover({ value: button, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                        else if (!ej.isNullOrUndefined(button.toolTip))
+                                                            qatMainDiv.attr("title", button.toolTip);
+                                                        this._buttonQAT.ejButton(model).addClass('e-ribbonbtn  e-rbn-button');
+                                                        qatMainDiv.appendTo(this._qAccessBar);
+                                                        if (button.quickAccessMode == "menu")
+                                                            qatMainDiv.hide();
+                                                        var btnText;
+                                                        if (!ej.isNullOrUndefined(button.text))
+                                                            btnText = button.text;
+                                                        else if (!ej.isNullOrUndefined(button.buttonSettings.text))
+                                                            btnText = button.buttonSettings.text;
+                                                        this._qatControlsName.push({ id: button.id, text: btnText, qAccess: button.quickAccessMode });
+                                                    }
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                }
+                        }
+                }
+            }
         },
         _resizeTabName: function (text) {
             if (!ej.isNullOrUndefined(this.model.tabs)) {
@@ -1467,6 +2066,10 @@
             this._width = this.element.width();
             if (ej.isNullOrUndefined(index)) {
                 var tabElement = this._resizeTabName(text)
+                if (this._phoneMode) {
+                    tabElement = this._responsiveTabText.filter(function (index) { return $(this).text() === text; });
+                    this.element.find(".e-responsivetabheader").addClass("e-resshow");
+                }
                 if (!ej.isNullOrUndefined(tabElement))
                     tabElement.hide();
             }
@@ -1477,17 +2080,26 @@
                     hide = false;
             }
             if (hide) {
-                if (conTab.length > 0)
+                if (conTab.length > 0) {
                     conTab.hide();
-                else
+                    this._responsiveTabText.eq(!ej.isNullOrUndefined(this.model.applicationTab) ? index - 1 : index).hide();
+                }
+                else {
                     this._tabText.filter(function (index) { return $(this).text() === text; }).parent().hide();
+                    this._responsiveTabText.eq(!ej.isNullOrUndefined(this.model.applicationTab) ? index - 1 : index).hide();
+                }
                 if ($(hiddenTabId).hasClass('e-active-content')) {
                     $(hiddenTabId).hide();
                     $(hiddenTabId).removeClass('e-active-content');
                 }
             }
             if (this._tabUl.find('.e-active').is(':hidden')) {
-                updatedindex = this._getVisibleItemIndex(this._tabText);
+                if (this._phoneMode) {
+                    this.element.find(".e-responsivetabheader").addClass("e-resshow");
+                    updatedindex = this._getVisibleItemIndex(this._responsiveTabText);
+                }
+                else
+                    updatedindex = this._getVisibleItemIndex(this._tabText);
                 if (updatedindex) {
                     var currentTab = this.element.find('.e-link').eq(updatedindex).attr('href');
                     if ($(this._tabText[updatedindex]).parent().hasClass('e-disable')) {
@@ -1505,23 +2117,72 @@
                     this.model.selectedItemIndex = updatedindex;
                 }
             }
+            if (this.element.hasClass("e-responsive"))
+                this.element.find(".e-responsivetabheader").removeClass("e-resshow");
         },
 
         showTab: function (text) {
             var index = this._tabText.map(function (index) { if ($(this).text() === text) return index; })[0], conTab;
             if (ej.isNullOrUndefined(index)) {
                 var tabElement = this._resizeTabName(text)
+                if (this._phoneMode) {
+                    tabElement = this._responsiveTabText.filter(function (index) { return $(this).text() === text; });
+                    this.element.find(".e-responsivetabheader").addClass("e-resshow");
+                }
                 if (!ej.isNullOrUndefined(tabElement))
                     tabElement.show();
             }
             var Tab = this._tabText.filter(function (index) { return $(this).text() === text; }).parent();
             conTab = this._tabText.filter(function (index) { return $(this).text() === text; }).parents(".e-contextualtabset");
-            if (conTab.length > 0)
+            if (conTab.length > 0) {
                 conTab.show();
-            else
+                this._responsiveTabText.eq(!ej.isNullOrUndefined(this.model.applicationTab) ? index - 1 : index).show();
+            }
+            else {
                 this._tabText.filter(function (index) { return $(this).text() === text; }).parent().show();
+                this._responsiveTabText.eq(!ej.isNullOrUndefined(this.model.applicationTab) ? index - 1 : index).show();
+            }
             if (!Tab.hasClass('e-active'))
                 Tab.addClass('e-select');
+            if (this.element.hasClass("e-responsive"))
+                this.element.find(".e-responsivetabheader").removeClass("e-resshow");
+        },
+        hideGroups: function (tabId, groupText) {
+            if (typeof groupText == "string")
+                $("#" + this._id + "_" + tabId + "_" + groupText).hide();
+            else {
+                for (var i = 0; i < groupText.length; i++) {
+                    $("#" + this._id + "_" + tabId + "_" + groupText[i]).hide();
+                }
+            }
+        },
+        showGroups: function (tabId, groupText) {
+            if (typeof groupText == "string")
+                $("#" + this._id + "_" + tabId + "_" + groupText).show();
+            else {
+                for (var i = 0; i < groupText.length; i++) {
+                    $("#" + this._id + "_" + tabId + "_" + groupText[i]).show();
+                }
+            }
+        },
+        hideGroupItems: function (tabId, groupText, subGroupId) {
+            if (typeof subGroupId == "string")
+                $("#" + this._id + "_" + tabId + "_" + groupText + "_" + subGroupId).hide();
+            else {
+                for (var i = 0; i < subGroupId.length; i++) {
+                    $("#" + this._id + "_" + tabId + "_" + groupText + "_" + subGroupId[i]).hide();
+                }
+            }
+
+        },
+        showGroupItems: function (tabId, groupText, subGroupId) {
+            if (typeof subGroupId == "string")
+                $("#" + this._id + "_" + tabId + "_" + groupText + "_" + subGroupId).show();
+            else {
+                for (var i = 0; i < subGroupId.length; i++) {
+                    $("#" + this._id + "_" + tabId + "_" + groupText + "_" + subGroupId[i]).show();
+                }
+            }
         },
         _getVisibleItemIndex: function (items) {
             var i = 1;
@@ -1531,9 +2192,30 @@
                 i++;
             }
         },
-
+        removeApplicationTab:function(){
+		 this._ribbonTabs = this._tabUl.find(".e-link").parent();
+                    href = this._ribbonTabs.eq(0).children().attr("href");
+                    curTab = this._ribbonTabs.eq(0);
+					if(curTab.hasClass("e-apptab"))
+					{
+				     this._tabObj.contentPanels.splice(0,1);
+				     this._tabObj.items.splice(0,1);
+					 this._tabObj.selectedItemIndex(this._tabObj.model.selectedItemIndex-1);
+					 curTab.remove();
+					 $(href).remove();
+					 $(this._tabUl.find(".e-link").parent('.e-active')).find('a').addClass("e-removeapptab");
+					 var tabLi=this._tabUl.find('li').eq(0);
+					 if(!tabLi.hasClass('e-disable') && !tabLi.hasClass('e-apptab'))
+					  {
+					   this._tabObj.option({ enabledItemIndex: [0] });
+					   this.model.disabledItemIndex.splice(0);
+					  }
+					  this.element.addClass('e-ribwithout-apptab');
+					  this._ribbonWindowResize();
+					}
+		},
         removeTab: function (tabIndex) {
-            var curTab, href, args;
+            var curTab, href, args,expandCollapse;
             if (this._tabObj.model) {
                 if (tabIndex > 0) {
                     args = { index: tabIndex };
@@ -1551,14 +2233,18 @@
                     }
                     else
                         curTab.remove();
+                    expandCollapse = this.element.find(".e-expandcollapse");
                     $(href).remove();
+                    this._ribbonTabs = this._tabUl.find(".e-link").parent();
                     if (this._tabObj.model.selectedItemIndex === tabIndex) {
-                        this._ribbonTabs = this._tabUl.find(".e-link").parent();
                         curTab = this._ribbonTabs.eq(tabIndex);
                         curTab.addClass("e-active");
                         href = curTab.children().attr("href");
+                        $(href).append(expandCollapse.click($.proxy(this._tabExpandCollapse, this)));
                         $(href).addClass("e-active-content e-activetop").show();
                     }
+                    if (this._isCollapsed)
+                        this.element.find(this._ribbonTabs.eq(tabIndex).children().attr("href")).append(expandCollapse.click($.proxy(this._tabExpandCollapse, this)));
                     args = { removedIndex: tabIndex };
                     this._trigger("tabRemove", args);
                 }
@@ -1581,12 +2267,15 @@
             }
             else {
                 conTabIndex = this.model.tabs.length;
+                var contextTabsLen = this.model.contextualTabs.length;
                 for (var i = 0; i < this.model.contextualTabs.length; i++) {
-                    for (var j = 0; j < this.model.contextualTabs[i].tabs.length; j++) {
+                    var contextualTabsLen = this.model.contextualTabs[i].tabs.length;
+                    for (var j = 0; j < contextualTabsLen; j++) {
                         ++conTabIndex;
                         if (conTabIndex === tabIndex) {
                             conTabGrp = this.model.contextualTabs[i].tabs[j].groups;
-                            for (var k = 0; k < conTabGrp.length; k++) {
+                            var contTabGrpLen=conTabGrp.length;
+                            for (var k = 0; k < contTabGrpLen; k++) {
                                 if (conTabGrp[k].text == groupText) {
                                     conTabGrp.splice(k, 1);
                                     $(tabGroup[k]).remove();
@@ -1599,140 +2288,273 @@
                 }
             }
         },
+        _addTabGrpIntoCollec: function (ribTabs,tabGroup,grpIndex) {
+           var grpCheck=tabGroup.length,gIndex=grpIndex;
+           if($.isPlainObject(tabGroup))
+             grpCheck=1;
+           for(var v=0;v<grpCheck;v++){
+		     var grp=tabGroup;
+             if(!$.isPlainObject(tabGroup)){
+              grp= tabGroup[v];
+			  if(v>0)
+			   ++gIndex;
+			   }
+              ribTabs.groups.splice(gIndex, 0, grp);
+            }
+           return ribTabs;
+        },
         addTabGroup: function (tabIndex, tabGroup, grpIndex) {
             var tabContent, conTabIndex = 0, grpLen = 0, tabs, curTab, tabGroupText, contDiv, groupDiv;
             curTab = this._tabUl.find('.e-select,.e-active').eq(tabIndex);
             tabContent = curTab.children('a').attr('href');
             if ($(curTab).hasClass('e-tab')) {
-                for (var i = 0; i < this.model.tabs.length; i++) {
+                var tabsLen = this.model.tabs.length;
+                for (var i = 0; i < tabsLen; i++) {
                     if (i === tabIndex - 1) {
                         grpLen = this.model.tabs[i].groups.length;
                         if (ej.isNullOrUndefined(grpIndex))
                             grpIndex = grpLen;
-                        this.model.tabs[i].groups.splice(grpIndex, 0, tabGroup);
-                        tabs = this.model.tabs[i];
+                        tabs = this._addTabGrpIntoCollec(this.model.tabs[i],tabGroup,grpIndex);
                     }
                 }
             }
             else {
                 conTabIndex = this.model.tabs.length;
-                for (var i = 0; i < this.model.contextualTabs.length; i++) {
-                    for (var j = 0; j < this.model.contextualTabs[i].tabs.length; j++) {
+                var contextTabsLen = this.model.contextualTabs.length;
+                for (var i = 0; i < contextTabsLen; i++) {
+                    var contextualTabsLen = this.model.contextualTabs[i].tabs.length;
+                    for (var j = 0; j < contextualTabsLen; j++) {
                         ++conTabIndex;
                         if (conTabIndex === tabIndex) {
                             grpLen = this.model.contextualTabs[i].tabs[j].groups.length;
                             if (ej.isNullOrUndefined(grpIndex))
                                 grpIndex = grpLen;
-                            this.model.contextualTabs[i].tabs[j].groups.splice(grpIndex, 0, tabGroup);
-                            tabs = this.model.contextualTabs[i].tabs[j];
+                            tabs = this._addTabGrpIntoCollec( this.model.contextualTabs[i].tabs[j],tabGroup,grpIndex);
                         }
                     }
                 }
             }
-            if (!ej.isNullOrUndefined(tabs.groups[grpIndex])) {
-                tabGroupText = ej.isNullOrUndefined(tabs.groups[grpIndex].text) ? tabs.groups[grpIndex].text : tabs.groups[grpIndex].text.replace(/\s/g, '');
-                contDiv = this._createControls(grpIndex, tabs, tabGroupText);
-                groupDiv = this._addControlsToGroup(grpIndex, tabs, tabGroupText, contDiv);
-                if ($(tabContent).children().eq(grpIndex).length > 0)
-                    $(tabContent).children().eq(grpIndex).before(groupDiv);
-                else
-                    $(tabContent).append(groupDiv);
+            if (!ej.isNullOrUndefined(tabs.groups[grpIndex]) && (!this.element.find(".e-content.e-content-item").eq(tabIndex).hasClass("e-rbn-ondemand"))) {
+             var grpCheck=tabGroup.length,gIndex=grpIndex;
+             if($.isPlainObject(tabGroup))
+              grpCheck=1;
+             for(var v=0;v<grpCheck;v++){
+              if(!$.isPlainObject(tabGroup) && v>0)
+               ++gIndex;
+              tabGroupText = ej.isNullOrUndefined(tabs.groups[gIndex].text) ? tabs.groups[gIndex].text : tabs.groups[gIndex].text.replace(/\s/g, '');
+              contDiv = this._createControls(gIndex, tabs, tabGroupText, tabIndex);
+              groupDiv = this._addControlsToGroup(gIndex, tabs, tabGroupText, contDiv);
+              if ($(tabContent).children().eq(gIndex).length > 0)
+               $(tabContent).children().eq(gIndex).before(groupDiv);
+              else
+               $(tabContent).append(groupDiv);
+             }
+			 if($(tabContent).hasClass('e-empty-content'))
+              $(tabContent).removeClass('e-empty-content');
             }
+            if(!$(tabContent).hasClass('e-parentdiv'))
+             $(tabContent).addClass('e-parentdiv');
+           this._setTabContentHeight();
         },
-
-        addTabGroupContent: function (tabIndex, grpIndex, subGrpIndex, content, contentIndex) {
-            var tabContent, conTabIndex = 0, tabs, curTab, tabGroupText, contDiv, grpContent, subGroup, separator, grpContentDiv, grpHeight;
+ 	addTabGroupContent: function (tabIndex, grpIndex, content, contentIndex, subGrpIndex) {
+ 	    var tabContent, conTabIndex = 0, tabs, curTab, tabGroupText, contDiv, grpContent, subGroup, separator, grpContentDiv, grpHeight, alignType, isNewGroup = false, contInnerDiv;
             curTab = this._tabUl.find('.e-select,.e-active').eq(tabIndex);
             tabContent = curTab.children('a').attr('href');
-            if (curTab.hasClass('e-tab'))
-                for (var i = 0; i < this.model.tabs.length; i++)
+            if (ej.isNullOrUndefined(contentIndex))
+                contentIndex = 0;
+            if (ej.isNullOrUndefined(subGrpIndex)) subGrpIndex = 0;
+            if (curTab.hasClass('e-tab')) {
+                var tabsLen = this.model.tabs.length;
+                for (var i = 0; i < tabsLen; i++)
                     if (i === tabIndex - 1)
                         if (!ej.isNullOrUndefined(this.model.tabs[i].groups[grpIndex].content)) {
-                            if (ej.isNullOrUndefined(contentIndex))
-                                contentIndex = this.model.tabs[i].groups[grpIndex].content[subGrpIndex].groups.length;
-                            this.model.tabs[i].groups[grpIndex].content[subGrpIndex].groups.splice(contentIndex, 0, content);
-                            tabs = this.model.tabs[i];
-                        }
-                        else {
-                            conTabIndex = this.model.tabs.length;
-                            for (var i = 0; i < this.model.contextualTabs.length; i++)
-                                for (var j = 0; j < this.model.contextualTabs[i].tabs.length; j++) {
-                                    ++conTabIndex;
-                                    if (conTabIndex === tabIndex)
-                                        if (!ej.isNullOrUndefined(this.model.contextualTabs[i].tabs[j].groups[grpIndex].content)) {
-                                            if (ej.isNullOrUndefined(contentIndex))
-                                                contentIndex = this.model.contextualTabs[i].tabs[j].groups[grpIndex].content[subGrpIndex].groups.length;
-                                            this.model.contextualTabs[i].tabs[j].groups[grpIndex].content[subGrpIndex].groups.splice(contentIndex, 0, content);
-                                            tabs = this.model.contextualTabs[i].tabs[j];
-                                        }
+                            alignType = this.model.tabs[i].groups[grpIndex].alignType;
+                            if (contentIndex == 0 || !ej.isNullOrUndefined(this.model.tabs[i].groups[grpIndex].content[contentIndex - 1])) {
+                                if (ej.isNullOrUndefined(this.model.tabs[i].groups[grpIndex].content[contentIndex])) {
+                                    this.model.tabs[i].groups[grpIndex].content[contentIndex] = content;
+                                    isNewGroup = true;
                                 }
+                                else
+                                    this.model.tabs[i].groups[grpIndex].content[contentIndex].groups.splice(subGrpIndex, 0, content);
+                                tabs = this.model.tabs[i];
+                            }
                         }
-            if (!ej.isNullOrUndefined(tabs.groups[grpIndex])) {
+            }
+            else {
+                conTabIndex = this.model.tabs.length;
+                var contextTabsLen = this.model.contextualTabs.length;
+                for (var i = 0; i < contextTabsLen; i++) {
+                    var contextualTabsLen = this.model.contextualTabs[i].tabs.length;
+                    for (var j = 0; j < contextualTabsLen; j++) {
+                        ++conTabIndex;
+                        if (conTabIndex === tabIndex)
+                            if (!ej.isNullOrUndefined(this.model.contextualTabs[i].tabs[j].groups[grpIndex].content)) {
+                                alignType = this.model.contextualTabs[i].tabs[j].groups[grpIndex].alignType
+                                if (ej.isNullOrUndefined(contentIndex))
+                                    contentIndex = this.model.contextualTabs[i].tabs[j].groups[grpIndex].content[0].groups.length;
+                                if (contentIndex == 0 || !ej.isNullOrUndefined(this.model.contextualTabs[i].tabs[j].groups[grpIndex].content[contentIndex - 1])) {
+                                    if (ej.isNullOrUndefined(this.model.contextualTabs[i].tabs[j].groups[grpIndex].content[contentIndex])) {
+                                        this.model.contextualTabs[i].tabs[j].groups[grpIndex].content[contentIndex] = content;
+                                        isNewGroup = true;
+                                    }
+                                    else
+                                        this.model.contextualTabs[i].tabs[j].groups[grpIndex].content[contentIndex].groups.splice(subGrpIndex, 0, content);
+                                    tabs = this.model.contextualTabs[i].tabs[j];
+                                }
+                            }
+                    }
+                }
+            }
+            if (!ej.isNullOrUndefined(tabs) && !ej.isNullOrUndefined(tabs.groups[grpIndex]) && (!this.element.find(".e-content.e-content-item").eq(tabIndex).hasClass("e-rbn-ondemand"))) {
                 tabGroupText = ej.isNullOrUndefined(tabs.groups[grpIndex].text) ? tabs.groups[grpIndex].text : tabs.groups[grpIndex].text.replace(/\s/g, '');
-                contDiv = this._createControls(grpIndex, tabs, tabGroupText);
+                contDiv = this._createControls(grpIndex, tabs, tabGroupText, tabIndex);
                 grpContentDiv = ej.buildTag("div");
-                grpContent = contDiv.find(".e-innerdiv,.e-innerdivrow").eq(subGrpIndex).find(".e-controlpadding").eq(contentIndex);
+                contInnerDiv = contDiv.find(".e-innerdiv,.e-innerdivrow").eq(contentIndex).find(".e-controlpadding");
+                grpContent = isNewGroup ? contInnerDiv : contInnerDiv.eq(subGrpIndex);
                 separator = contDiv.find("#" + grpContent.attr("id")).next();
                 if (separator.hasClass("e-separatordivrow"))
                     grpContentDiv.append(separator);
                 grpContentDiv.prepend(grpContent);
-                subGroup = $(tabContent).children().eq(grpIndex).find(".e-innerdiv,.e-innerdivrow").eq(subGrpIndex);
+                subGroup = $(tabContent).children().eq(grpIndex).find(".e-innerdiv,.e-innerdivrow").eq(contentIndex);
+                if (!subGroup.length > 0) {
+                    var div;
+                    if (alignType == ej.Ribbon.alignType.columns)
+                        div = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + (contentIndex + 1)).addClass("e-innerdiv");
+                    else
+                        div = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + (contentIndex + 1)).addClass("e-innerdivrow");
+                    $(tabContent).children().eq(grpIndex).find(".e-ribGroupContent").append(div);
+                    subGroup = $(tabContent).children().eq(grpIndex).find(".e-innerdiv,.e-innerdivrow").eq(contentIndex);
+                }
                 grpHeight = $(subGroup).parent().height();
-                if (subGroup.find(".e-controlpadding").eq(contentIndex).length > 0)
-                    subGroup.find(".e-controlpadding").eq(contentIndex).before(grpContentDiv.children());
+                if (subGroup.find(".e-controlpadding").eq(subGrpIndex).length > 0)
+                    subGroup.find(".e-controlpadding").eq(subGrpIndex).before(grpContentDiv.children());
                 else
                     subGroup.append(grpContentDiv.children());
                 if ($(subGroup).parent().height() > grpHeight)
                     this.element.find(".e-content").height(this.element.find(".e-content").height() + ($(subGroup).parent().height() - grpHeight));
                 contDiv.children().remove();
+			    if($(tabContent).hasClass('e-empty-content'))
+                 $(tabContent).removeClass('e-empty-content');
+                this._setTabContentHeight();
             }
         },
-        removeTabGroupContent: function (tabIndex, groupText, subGrpIndex) {
-            var tabGroup, curTab, curGrp, conTabIndex, conTabGrp, conLegth, tabContent, conDiv;
+        removeTabGroupContent: function (tabIndex, groupText, contentIndex, subGrpIndex) {
+            var tabGroup, curTab, curGrp, conTabIndex, conTabGrp, conLegth, tabContent, conDiv, innerDiv;
             tabGroup = $($('.e-ribbon .e-content')[tabIndex]).find('.e-groupdiv');
             curTab = this._tabUl.find('.e-select,.e-active').eq(tabIndex);
             tabContent = curTab.children('a').attr('href');
             if ($(curTab).hasClass('e-tab')) {
                 curGrp = this.model.tabs[tabIndex - 1].groups;
-                for (i = 0; i < curGrp.length; i++) {
-                    if (curGrp[i].text == groupText && !ej.isNullOrUndefined(curGrp[i].content)) {
-                        if (!ej.isNullOrUndefined(subGrpIndex) && !ej.isNullOrUndefined(curGrp[i].content[subGrpIndex].groups)) {
-                            conTabGrp = curGrp[i].content[subGrpIndex].groups;
-                            conDiv = $(tabContent).children().eq(i).find(".e-innerdiv,.e-innerdivrow").eq(subGrpIndex);
-                            for (j = 0; j < conDiv.children().length; j++) {
-                                conTabGrp.splice(j, 1);
+                var curGrpLen = curGrp.length;
+                for (i = 0; i < curGrpLen; i++) {
+                    if (curGrp[i].text == groupText) {
+                        if (!ej.isNullOrUndefined(contentIndex)) {
+                            if (!ej.isNullOrUndefined(subGrpIndex) && !ej.isNullOrUndefined(curGrp[i].content[contentIndex].groups)) {
+                                conTabGrp = curGrp[i].content[contentIndex].groups;
+                                innerDiv = $(tabContent).children(".e-groupdiv").eq(i).find(".e-innerdiv,.e-innerdivrow");
+                                if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                    innerDiv = this.element.find(".e-responsivecontent").find(".e-innerdiv,.e-innerdivrow");
+                                }
+                                conDiv = innerDiv.eq(contentIndex);
+                                for (j = 0; j < conDiv.children().length; j++) {
+                                    conTabGrp.splice(j, 1);
+                                }
+                                conDiv.children().eq(subGrpIndex).remove();
+                                if (innerDiv.children().length == 0) {
+                                    innerDiv.remove();
+                                }
                             }
-                            conDiv.remove();
+                            else {
+                                conTabGrp = curGrp[i].content[contentIndex];
+                                innerDiv = $(tabContent).children(".e-groupdiv").eq(i).find('.e-innerdiv,.e-innerdivrow');
+                                if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                    innerDiv = this.element.find(".e-responsivecontent").find(".e-innerdiv,.e-innerdivrow");
+                                }
+                                innerDiv.eq(contentIndex).children().remove();
+                                conTabGrp.groups.splice(0, conTabGrp.groups.length);
+                            }
                         }
-                        else {
+                        else if (curGrp[i].type === ej.Ribbon.type.custom && curGrp[i].text == groupText && ej.isNullOrUndefined(curGrp[i].content)) {
+                            innerDiv = $(tabContent).find(".e-groupdiv").eq(i).find(".e-ribGroupContent");
+                            if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                innerDiv = this.element.find(".e-responsivecontent").find(".e-ribGroupContent");
+                            }
+                            innerDiv.children().remove();
+                            curGrp[i].contentID = null;
+                        }
+                        else if (curGrp[i].text == groupText && ej.isNullOrUndefined(contentIndex)) {
                             conTabGrp = curGrp[i].content;
-                            $(tabContent).children().eq(i).find('.e-ribGroupContent').remove();
-                            conTabGrp.splice(i, 1);
+                            if (!ej.isNullOrUndefined(conTabGrp)) {
+                                conlen = curGrp[i].content.length;
+                                for (var l = 0; l < conlen; l++)
+                                    conTabGrp[l].groups.splice(0, conTabGrp[l].groups.length);
+                            }
+                            innerDiv = $(tabContent).find(".e-groupdiv").eq(i).find(".e-ribGroupContent");
+                            if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                innerDiv = this.element.find(".e-responsivecontent").find(".e-ribGroupContent");
+                            }
+                            innerDiv.children().remove();
                         }
                     }
                 }
             }
             else {
                 conTabIndex = this.model.tabs.length;
-                for (var i = 0; i < this.model.contextualTabs.length; i++) {
-                    for (var j = 0; j < this.model.contextualTabs[i].tabs.length; j++) {
+                var contextTabsLen = this.model.contextualTabs.length
+                for (var i = 0; i < contextTabsLen; i++) {
+                    var contextualTabsLen = this.model.contextualTabs[i].tabs.length
+                    for (var j = 0; j < contextualTabsLen; j++) {
                         ++conTabIndex;
                         if (conTabIndex === tabIndex) {
                             conTabGrp = this.model.contextualTabs[i].tabs[j].groups;
-                            for (var k = 0; k < conTabGrp.length; k++) {
-                                if (conTabGrp[k].text == groupText && !ej.isNullOrUndefined(conTabGrp[k].content)) {
-                                    if (!ej.isNullOrUndefined(subGrpIndex) && !ej.isNullOrUndefined(conTabGrp[k].content[subGrpIndex].groups)) {
-                                        contTabGrp = conTabGrp[k].content[subGrpIndex].groups;
-                                        conDiv = $(tabContent).children().eq(k).find(".e-innerdiv,.e-innerdivrow").eq(subGrpIndex);
-                                        for (m = 0; m < conDiv.children().length; m++) {
-                                            contTabGrp.splice(m, 1);
+                            var conTabGrpLen = conTabGrp.length;
+                            for (var k = 0; k < conTabGrpLen; k++) {
+                                if (conTabGrp[k].text == groupText) {
+                                    if (!ej.isNullOrUndefined(contentIndex)) {
+                                        if (!ej.isNullOrUndefined(subGrpIndex) && !ej.isNullOrUndefined(conTabGrp[k].content[contentIndex].groups)) {
+                                            contTabGrp = conTabGrp[k].content[contentIndex].groups;
+                                            innerDiv = $(tabContent).children(".e-groupdiv").eq(k).find(".e-innerdiv,.e-innerdivrow");
+                                            if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                                innerDiv = this.element.find(".e-responsivecontent").find(".e-innerdiv,.e-innerdivrow");
+                                            }
+                                            conDiv = innerDiv.eq(contentIndex);
+                                            for (m = 0; m < conDiv.children().length; m++) {
+                                                contTabGrp.splice(m, 1);
+                                            }
+                                            conDiv.children().eq(subGrpIndex).remove();
+                                            if (innerDiv.children().length == 0)
+                                                innerDiv.remove();
                                         }
-                                        conDiv.remove();
+                                        else {
+                                            contTabGrp = conTabGrp[k].content[contentIndex];
+                                            innerDiv = $(tabContent).children(".e-groupdiv").eq(k).find('.e-innerdiv,.e-innerdivrow');
+                                            if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                                innerDiv = this.element.find(".e-responsivecontent").find(".e-innerdiv,.e-innerdivrow");
+                                            }
+                                            innerDiv.eq(contentIndex).children().remove();
+                                            contTabGrp.groups.splice(0, contTabGrp.groups.length);
+                                        }
                                     }
-                                    else {
+                                    else if (conTabGrp[k].type === ej.Ribbon.type.custom && conTabGrp[k].text == groupText && ej.isNullOrUndefined(conTabGrp[k].content)) {
+                                        innerDiv = $(tabContent).find(".e-groupdiv").eq(k).find(".e-ribGroupContent");
+                                        if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                            innerDiv = this.element.find(".e-responsivecontent").find(".e-ribGroupContent");
+                                        }
+                                        innerDiv.children().remove();
+                                        conTabGrp[k].contentID = null;
+                                    }
+                                    else if (ej.isNullOrUndefined(contentIndex)) {
                                         contTabGrp = conTabGrp[k].content;
-                                        conTabGrp.splice(k, 1);
-                                        $(tabContent).children().eq(k).find('.e-ribGroupContent').remove();
+                                        if (!ej.isNullOrUndefined(contTabGrp)) {
+                                            conlen = conTabGrp[k].content.length;
+                                            for (var l = 0; l < conlen; l++)
+                                                contTabGrp[l].groups.splice(0, contTabGrp[l].groups.length);
+                                        }
+                                        innerDiv = $(tabContent).find(".e-groupdiv").eq(k).find(".e-ribGroupContent");
+                                        if (this._phoneMode && this.element.find(".e-responsivecontent").is(":visible") && innerDiv.length == 0) {
+                                            innerDiv = this.element.find(".e-responsivecontent").find(".e-ribGroupContent");
+                                        }
+                                        innerDiv.children().remove();
                                     }
                                 }
                             }
@@ -1755,13 +2577,21 @@
                 this._contextualTabs();
                 this._tabUl.find(".e-select,.e-active").eq(index).addClass("e-tab");
                 this._tabUl.find(".e-select > a,.e-active > a ").eq(index).addClass("e-link");
-                this.model.tabs.splice(index - 1, 0, rTab);
+                if(ej.isNullOrUndefined(this.model.tabs[0].id)){
+				 this.model.tabs[0]=rTab;
+                 this._tabObj.showItem(1);
+                }
+				else
+				 this.model.tabs.splice(index - 1, 0, rTab);
                 for (i = 0; i < 1; i++) {
                     tabs = this.model.tabs[index - 1];
-                    for (j = 0; j < tabs.groups.length; j++) {
+                    var tabsGrpLen = tabs.groups.length;
+					if(tabsGrpLen==0)
+                     this.element.find("#" + this._id + "_" + tabs.id).addClass('e-empty-content');
+                    for (j = 0; j < tabsGrpLen; j++) {
                         if (!ej.isNullOrUndefined(tabs.groups[j])) {
                             var tabGroupText = ej.isNullOrUndefined(tabs.groups[j].text) ? tabs.groups[j].text : tabs.groups[j].text.replace(/\s/g, '');
-                            var contDiv = this._createControls(j, tabs, tabGroupText);
+                            var contDiv = this._createControls(j, tabs, tabGroupText, index);
                             var groupDiv = this._addControlsToGroup(j, tabs, tabGroupText, contDiv);
                             tabcont = this.element.find("#" + this._id + "_" + tabs.id);
                             tabcont.append(groupDiv).addClass("e-parentdiv");
@@ -1770,20 +2600,32 @@
                 }
                 this._setTabContentHeight();
                 this.element.find('.e-content.e-content-item').css("box-sizing", "content-box");
+				this._ribbonTabs = this._tabUl.find(".e-link").parent();
+				this._tabContents = this.element.children().attr('role', 'tabpanel').not('.e-header,.e-disable,.e-resizediv,.e-tooltipdiv,.e-ribbonbackstagepage');
                 this._applicationTab.click($.proxy(this._onApplicationTabClick, this));
                 newTab = this._tabUl.find(".e-select,.e-active").eq(index);
                 args = { tabHeader: newTab, tabContent: tabcont };
                 this._trigger("tabAdd", args);
             }
+            if (this._applicationTab.hasClass('e-active'))
+             this._applicationTab.removeClass("e-active");
+		    var appTabCont=$(this._applicationTab.find('a').attr('href'));
+            if(appTabCont.length>0){
+		     appTabCont.find('.e-expandcollapse').appendTo(this.element.find('.e-active-content'))
+             appTabCont.remove();
+			}
+            if(!$(tabcont).hasClass('e-parentdiv'))
+             $(tabcont).addClass('e-parentdiv');
         },
 
         addContextualTabs: function (contextualTabSet, index) {
-            var tabSetLen = this.model.contextualTabs.length, ribbonModel;
+            var tabSetLen = this.model.contextualTabs.length, ribbonModel,contextTabSetLen;
             if (ej.isNullOrUndefined(index))
                 index = this._tabUl.find(".e-select,.e-active").length;
             if (index > 0) {
                 this._conTabsRemove();
-                for (var i = 0; i < contextualTabSet.tabs.length; i++) {
+                contextTabSetLen = contextualTabSet.tabs.length;
+                for (var i = 0; i < contextTabSetLen; i++) {
                     this._tabObj.addItem("#" + this._id + "_" + contextualTabSet.tabs[i].id, contextualTabSet.tabs[i].text, index);
                     if (this._tabUl.find('.e-ribresmenu').nextAll('li.e-select').length > 0) {
                         var liTag = this._tabUl.find(".e-select,.e-active").not('.e-apptab,.e-tab');
@@ -1798,9 +2640,11 @@
                 else
                     this.model.contextualTabs[0] = contextualTabSet;
                 this._contextualTabs();
-                for (i = 0; i < contextualTabSet.tabs.length; i++) {
+                contextTabSetLen = contextualTabSet.tabs.length;
+                for (i = 0; i < contextTabSetLen; i++) {
                     tabs = contextualTabSet.tabs[i];
-                    for (j = 0; j < tabs.groups.length; j++) {
+                    var tabGrbLen = tabs.groups.length;
+                    for (j = 0; j < tabGrbLen; j++) {
                         if (!ej.isNullOrUndefined(tabs.groups[j])) {
                             var tabGroupText = ej.isNullOrUndefined(tabs.groups[j].text) ? tabs.groups[j].text : tabs.groups[j].text.replace(/\s/g, '');
                             var contDiv = this._createControls(j, tabs, tabGroupText);
@@ -1812,12 +2656,18 @@
                 }
                 this._setTabContentHeight();
                 this.element.find('.e-content.e-content-item').css("box-sizing", "content-box");
+				this._ribbonTabs = this._tabUl.find(".e-link").parent();
+				this._tabContents = this.element.children().attr('role', 'tabpanel').not('.e-header,.e-disable,.e-resizediv,.e-tooltipdiv,.e-ribbonbackstagepage');
                 this._applicationTab.click($.proxy(this._onApplicationTabClick, this));
             }
         },
 
         setTabText: function (oldText, newText) {
             this._tabText.filter(function (index) { return $(this).text() === oldText; }).text(newText);
+            if (this._phoneMode) {
+                this._responsiveTabText.filter(function (index) { return $(this).text() === oldText; }).text(newText);
+                this.element.find(".e-ribresmenu .e-reslink").text(this._responsiveTabText.filter(".e-resactive").text());
+            }
         },
 
         getTabText: function (index) {
@@ -1826,14 +2676,17 @@
         },
 
         updateGroup: function (tabIndex, groupId, contentGroup) {
-            var curTab, grp, curGroup, contDiv, tabs, tabGroupText, cntGroupId, conTabIndex;
+            var curTab, grp, curGroup, contDiv, tabs, tabGroupText, cntGroupId, conTabIndex,grpLen,grpConLen,conGrpLen;
             curTab = this._tabUl.find('.e-select,.e-active').eq(tabIndex);
             if ($(curTab).hasClass('e-tab')) {
                 grp = this.model.tabs[tabIndex - 1].groups;
-                for (var i = 0; i < grp.length; i++) {
+                grpLen = grp.length;
+                for (var i = 0; i < grpLen; i++) {
                     if (!ej.isNullOrUndefined(grp[i].content)) {
-                        for (var j = 0; j < grp[i].content.length; j++) {
-                            for (var k = 0; k < grp[i].content[j].groups.length; k++) {
+                        grpConLen = grp[i].content.length;
+                        for (var j = 0; j < grpConLen; j++) {
+                            conGrpLen = grp[i].content[j].groups.length;
+                            for (var k = 0; k < conGrpLen; k++) {
                                 if (grp[i].content[j].groups[k].id == groupId) {
                                     var grpContent = grp[i].content[j].groups[k];
                                     if (!ej.isNullOrUndefined(contentGroup.buttonSettings)) {
@@ -1859,7 +2712,7 @@
                                     $.extend(grpContent, contentGroup);
                                     tabGroupText = ej.isNullOrUndefined(grp[i].text) ? grp[i].text : grp[i].text.replace(/\s/g, '');
                                     tabs = this.model.tabs[tabIndex - 1];
-                                    contDiv = this._createControls(i, tabs, tabGroupText);
+                                    contDiv = this._createControls(i, tabs, tabGroupText,tabIndex);
                                     cntGroupId = "#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + groupId;
                                     curGroup = this.element.find(cntGroupId);
                                     groupDiv = contDiv.find(cntGroupId);
@@ -1877,10 +2730,13 @@
                         ++conTabIndex;
                         if (conTabIndex === tabIndex) {
                             grp = this.model.contextualTabs[m].tabs[n].groups;
-                            for (var i = 0; i < grp.length; i++) {
+                            grpLen = grp.length;
+                            for (var i = 0; i < grpLen; i++) {
                                 if (!ej.isNullOrUndefined(grp[i].content)) {
-                                    for (var j = 0; j < grp[i].content.length; j++) {
-                                        for (var k = 0; k < grp[i].content[j].groups.length; k++) {
+                                    grpConLen = grp[i].content.length;
+                                    for (var j = 0; j < grpConLen; j++) {
+                                        conGrpLen = grp[i].content[j].groups.length;
+                                        for (var k = 0; k < conGrpLen; k++) {
                                             if (grp[i].content[j].groups[k].id == groupId) {
                                                 var grpContent = grp[i].content[j].groups[k];
                                                 if (!ej.isNullOrUndefined(contentGroup.buttonSettings)) {
@@ -1906,7 +2762,7 @@
                                                 $.extend(grpContent, contentGroup);
                                                 tabGroupText = ej.isNullOrUndefined(grp[i].text) ? grp[i].text : grp[i].text.replace(/\s/g, '');
                                                 tabs = this.model.contextualTabs[0].tabs[0];
-                                                contDiv = this._createControls(i, tabs, tabGroupText);
+                                                contDiv = this._createControls(i, tabs, tabGroupText, tabIndex);
                                                 cntGroupId = "#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + groupId;
                                                 curGroup = this.element.find(cntGroupId);
                                                 groupDiv = contDiv.find(cntGroupId);
@@ -1920,7 +2776,6 @@
                     }
                 }
             }
-
         },
         isVisible: function (text) {
             var tab = this._tabText.filter(function (index) { return $(this).text() === text; }).parent();
@@ -1929,30 +2784,33 @@
 
         isEnable: function (text) {
             var isEnable = true, tabIndex = this._tabText.filter(function (index) { return $(this).text() === text; }).parent().index();
-            for (var i = 0; i < this.model.disabledItemIndex.length; i++) {
+            var disabeldItemLen = this.model.disabledItemIndex.length;
+            for (var i = 0; i < disabeldItemLen; i++) {
                 if (this.model.disabledItemIndex[i] == tabIndex)
                     isEnable = false;
             }
             return isEnable;
         },
         _renderTab: function () {
-            var ul = ej.buildTag("ul"), li, aTag, appTab = this.model.applicationTab.type, tabs, contextualTabs, contextualTabSet, i, j;
+            var ul = ej.buildTag("ul"), li, aTag, appTab = this.model.applicationTab.type, tabs, contextualTabs, contextualTabSet, i, j, tab = this.model.tabs, tabLen = tab.length;
             if (appTab != null)
                 aTag = ej.buildTag("a", "", {}, { href: "#" + this._id + "_" + appTab.replace(/\s/g, '') });
             li = ej.buildTag("li.e-apptab", aTag);
             ul.append(li);
-            if (this.model.tabs.length >= 1 && !ej.isNullOrUndefined(this.model.tabs[0].id) && !ej.isNullOrUndefined(this.model.tabs[0].text)) {
-                for (i = 0; i < this.model.tabs.length; i++) {
-                    tabs = this.model.tabs[i];
+            if (tabLen >= 1 && !ej.isNullOrUndefined(tab[0].id) && !ej.isNullOrUndefined(tab[0].text)) {
+                for (i = 0; i < tabLen; i++) {
+                    tabs = tab[i];
                     aTag = ej.buildTag("a", tabs.text, {}, { href: "#" + this._id + "_" + tabs.id });
                     li = ej.buildTag("li", aTag).addClass("e-tab");
                     ul.append(li);
                 }
             }
             if (this.model.contextualTabs) {
-                for (i = 0; i < this.model.contextualTabs.length; i++) {
+                var contextTabLen = this.model.contextualTabs.length;
+                for (i = 0; i < contextTabLen; i++) {
                     if (this.model.contextualTabs[i].tabs) {
-                        for (j = 0; j < this.model.contextualTabs[i].tabs.length; j++) {
+                        var contextualTabLen = this.model.contextualTabs[i].tabs.length;
+                        for (j = 0; j < contextualTabLen; j++) {
                             contextualTabSet = this.model.contextualTabs[i].tabs[j];
                             aTag = ej.buildTag("a", contextualTabSet.text, {}, { href: "#" + this._id + "_" + contextualTabSet.id });
                             li = ej.buildTag("li", aTag).addClass("e-contextualtabset");
@@ -1961,14 +2819,14 @@
                     }
                 }
             }
-            ul.append(ej.buildTag("li.e-ribresmenu").append(ej.buildTag("span.e-icon").addClass("e-ribdownarrow")).prepend(ej.buildTag("a#" + this._id + "_responsivelink").addClass("e-reslink")));
+            ul.append(ej.buildTag("li.e-ribresmenu").append(ej.buildTag("span.e-icon").addClass("e-ribdownarrow")).prepend(ej.buildTag("a#" + this._id + "_responsivelink").addClass("e-reslink")).click($.proxy(this._onResponsiveHeaderClick, this)));
             this.model.showQAT && ul.append(ej.buildTag("li#" + this._id + "_responsiveqat").addClass("e-responsiveqat").click($.proxy(this._onQatClick, this)))
-            this.element.append(ul);           
+            this.element.append(ul);
             this.element.ejTab({ width: this.model.width, allowKeyboardNavigation: false, disabledItemIndex: this.model.disabledItemIndex, enabledItemIndex: this.model.enabledItemIndex, enableTabScroll: false, itemActive: $.proxy(this._onTabSelect, this), beforeActive: $.proxy(this._onTabClick, this), create: $.proxy(this._create, this), selectedItemIndex: this.model.selectedItemIndex, enableRTL: this.model.enableRTL });
         },
         _createControls: function (j, tabs, tabGroupText, tabIndex) {
             var innerDiv, innerDivCustom, innerDivChild, contDiv, model = {};
-            var split, button, dropdown, custom, toggle, separatorDiv;
+            var split, button, dropdown, custom, toggle, separatorDiv,tabsConLen,subGrpLen;
             tabGroupText = !ej.isNullOrUndefined(tabGroupText) ? tabGroupText.replace(/\&/g, '') : tabGroupText;
             contDiv = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_content").addClass('e-ribGroupContent');
             if (tabs.groups[j].type === "custom") {
@@ -1976,15 +2834,18 @@
                     innerDivCustom = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + tabs.groups[j].type, tabs.groups[j].customContent).addClass("e-innerdiv");
                 else {
                     innerDivCustom = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + tabs.groups[j].type).addClass("e-innerdiv");
-                    $("#" + tabs.groups[j].contentID).addClass('e-rbncustomelement').appendTo(innerDivCustom);
+                    $("#" + tabs.groups[j].contentID).addClass('e-rbncustomelement').appendTo(innerDivCustom).show();
                 }
+                if (j === 0)
+                    contDiv.append(ej.buildTag("div.e-ribupdivarrow").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribdownarrow"))).addClass("e-resgroupheader");
                 contDiv.append(innerDivCustom);
             }
             else {
                 if (tabs.groups[j].content) {
                     if (j === 0)
                         contDiv.append(ej.buildTag("div.e-ribupdivarrow").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribdownarrow"))).addClass("e-resgroupheader");
-                    for (var l = 0; l < tabs.groups[j].content.length; l++) {
+                    tabsConLen = tabs.groups[j].content.length;
+                    for (var l = 0; l < tabsConLen; l++) {
                         if (tabs.groups[j].content[l] != undefined) {
                             var subGroup = tabs.groups[j].content[l].groups;
                             var defaults = tabs.groups[j].content[l].defaults;
@@ -1998,7 +2859,8 @@
                                 innerDiv = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + (l + 1)).addClass("e-innerdivrow");
                                 ++m;
                             }
-                            for (var m = 0; m < subGroup.length; m++) {
+                            subGrpLen = subGroup.length;
+                            for (var m = 0; m < subGrpLen; m++) {
                                 if (!ej.isNullOrUndefined(subGroup[m])) {
                                     if (!ej.isNullOrUndefined(defaults)) {
                                         if (!ej.isNullOrUndefined(defaults.type))
@@ -2008,14 +2870,15 @@
                                         subGroup[m].type = ej.Ribbon.Type.Button;
                                     if (ej.isNullOrUndefined(subGroup[m].isBig) && !ej.isNullOrUndefined(defaults))
                                         subGroup[m].isBig = defaults.isBig;
+                                    var buttonDef = this.model.buttonDefaults;
                                     if (ej.isNullOrUndefined(subGroup[m].height)) {
                                         var btnHeight;
                                         if (!ej.isNullOrUndefined(subGroup[m].buttonSettings) && !ej.isNullOrUndefined(subGroup[m].buttonSettings.height))
                                             btnHeight = subGroup[m].buttonSettings.height;
                                         else if (!ej.isNullOrUndefined(defaults) && !ej.isNullOrUndefined(defaults.height))
                                             btnHeight = defaults.height;
-                                        else if (!ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.height))
-                                            btnHeight = this.model.buttonDefaults.height;
+                                        else if (!ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.height))
+                                            btnHeight = buttonDef.height;
                                         subGroup[m].height = btnHeight;
                                         btnHeight = null;
                                     }
@@ -2025,107 +2888,110 @@
                                             btnWidth = subGroup[m].buttonSettings.width;
                                         else if (!ej.isNullOrUndefined(defaults) && !ej.isNullOrUndefined(defaults.width))
                                             btnWidth = defaults.width;
-                                        else if (!ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.width))
-                                            btnWidth = this.model.buttonDefaults.width;
+                                        else if (!ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.width))
+                                            btnWidth = buttonDef.width;
                                         subGroup[m].width = btnWidth;
                                         btnWidth = null;
                                     }
                                     if (!ej.isNullOrUndefined(subGroup[m].buttonSettings)) {
-                                        if (ej.isNullOrUndefined(subGroup[m].buttonSettings.enabled) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enabled))
-                                            subGroup[m].buttonSettings.enabled = this.model.buttonDefaults.enabled;
-                                        if (ej.isNullOrUndefined(subGroup[m].buttonSettings.enableRTL) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enableRTL))
-                                            subGroup[m].buttonSettings.enableRTL = this.model.buttonDefaults.enableRTL;
-                                        if (ej.isNullOrUndefined(subGroup[m].buttonSettings.cssClass) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.cssClass))
-                                            subGroup[m].buttonSettings.cssClass = this.model.buttonDefaults.cssClass;
-                                        if (ej.isNullOrUndefined(subGroup[m].buttonSettings.showRoundedCorner) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.showRoundedCorner))
-                                            subGroup[m].buttonSettings.showRoundedCorner = this.model.buttonDefaults.showRoundedCorner;
+                                        var buttonSet = subGroup[m].buttonSettings;
+                                        if (ej.isNullOrUndefined(buttonSet.enabled) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enabled))
+                                            buttonSet.enabled = buttonDef.enabled;
+                                        if (ej.isNullOrUndefined(buttonSet.enableRTL) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enableRTL))
+                                            buttonSet.enableRTL = buttonDef.enableRTL;
+                                        if (ej.isNullOrUndefined(buttonSet.cssClass) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.cssClass))
+                                            buttonSet.cssClass = buttonDef.cssClass;
+                                        if (ej.isNullOrUndefined(buttonSet.showRoundedCorner) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.showRoundedCorner))
+                                            buttonSet.showRoundedCorner = buttonDef.showRoundedCorner;
                                     }
                                     if (!ej.isNullOrUndefined(subGroup[m].splitButtonSettings)) {
-                                        if (ej.isNullOrUndefined(subGroup[m].splitButtonSettings.enabled) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enabled))
-                                            subGroup[m].splitButtonSettings.enabled = this.model.buttonDefaults.enabled;
-                                        if (ej.isNullOrUndefined(subGroup[m].splitButtonSettings.enableRTL) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enableRTL))
-                                            subGroup[m].splitButtonSettings.enableRTL = this.model.buttonDefaults.enableRTL;
-                                        if (ej.isNullOrUndefined(subGroup[m].splitButtonSettings.cssClass) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.cssClass))
-                                            subGroup[m].splitButtonSettings.cssClass = this.model.buttonDefaults.cssClass;
-                                        if (ej.isNullOrUndefined(subGroup[m].splitButtonSettings.showRoundedCorner) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.showRoundedCorner))
-                                            subGroup[m].splitButtonSettings.showRoundedCorner = this.model.buttonDefaults.showRoundedCorner;
+                                        var splitButtonSet = subGroup[m].splitButtonSettings;
+                                        if (ej.isNullOrUndefined(splitButtonSet.enabled) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enabled))
+                                            splitButtonSet.enabled = buttonDef.enabled;
+                                        if (ej.isNullOrUndefined(splitButtonSet.enableRTL) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enableRTL))
+                                            splitButtonSet.enableRTL = buttonDef.enableRTL;
+                                        if (ej.isNullOrUndefined(splitButtonSet.cssClass) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.cssClass))
+                                            splitButtonSet.cssClass = buttonDef.cssClass;
+                                        if (ej.isNullOrUndefined(splitButtonSet.showRoundedCorner) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.showRoundedCorner))
+                                            splitButtonSet.showRoundedCorner = buttonDef.showRoundedCorner;
                                     }
 
                                     if (!ej.isNullOrUndefined(subGroup[m].dropdownSettings)) {
-                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.enabled) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enabled))
-                                            subGroup[m].dropdownSettings.enabled = this.model.buttonDefaults.enabled;
-                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.enableRTL) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enableRTL))
-                                            subGroup[m].dropdownSettings.enableRTL = this.model.buttonDefaults.enableRTL;
-                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.cssClass) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.cssClass))
-                                            subGroup[m].dropdownSettings.cssClass = this.model.buttonDefaults.cssClass;
-                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.showRoundedCorner) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.showRoundedCorner))
-                                            subGroup[m].dropdownSettings.showRoundedCorner = this.model.buttonDefaults.showRoundedCorner;
+                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.enabled) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enabled))
+                                            subGroup[m].dropdownSettings.enabled = buttonDef.enabled;
+                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.enableRTL) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enableRTL))
+                                            subGroup[m].dropdownSettings.enableRTL = buttonDef.enableRTL;
+                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.cssClass) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.cssClass))
+                                            subGroup[m].dropdownSettings.cssClass = buttonDef.cssClass;
+                                        if (ej.isNullOrUndefined(subGroup[m].dropdownSettings.showRoundedCorner) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.showRoundedCorner))
+                                            subGroup[m].dropdownSettings.showRoundedCorner = buttonDef.showRoundedCorner;
                                     }
 
                                     if (!ej.isNullOrUndefined(subGroup[m].toggleButtonSettings)) {
-                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.enabled) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enabled))
-                                            subGroup[m].toggleButtonSettings.enabled = this.model.buttonDefaults.enabled;
-                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.enableRTL) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.enableRTL))
-                                            subGroup[m].toggleButtonSettings.enableRTL = this.model.buttonDefaults.enableRTL;
-                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.cssClass) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.cssClass))
-                                            subGroup[m].toggleButtonSettings.cssClass = this.model.buttonDefaults.cssClass;
-                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.showRoundedCorner) && !ej.isNullOrUndefined(this.model.buttonDefaults) && !ej.isNullOrUndefined(this.model.buttonDefaults.showRoundedCorner))
-                                            subGroup[m].toggleButtonSettings.showRoundedCorner = this.model.buttonDefaults.showRoundedCorner;
+                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.enabled) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enabled))
+                                            subGroup[m].toggleButtonSettings.enabled = buttonDef.enabled;
+                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.enableRTL) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.enableRTL))
+                                            subGroup[m].toggleButtonSettings.enableRTL = buttonDef.enableRTL;
+                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.cssClass) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.cssClass))
+                                            subGroup[m].toggleButtonSettings.cssClass = buttonDef.cssClass;
+                                        if (ej.isNullOrUndefined(subGroup[m].toggleButtonSettings.showRoundedCorner) && !ej.isNullOrUndefined(buttonDef) && !ej.isNullOrUndefined(buttonDef.showRoundedCorner))
+                                            subGroup[m].toggleButtonSettings.showRoundedCorner = buttonDef.showRoundedCorner;
                                     }
                                     if (ej.isNullOrUndefined(subGroup[m].quickAccessMode))
                                         subGroup[m].quickAccessMode = "none";
-                                    if (subGroup[m].type === ej.Ribbon.Type.Custom) {
-                                        custom = subGroup[m];
-                                        if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + custom.contentID).addClass("e-controlpadding");
-                                        }
-                                        else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + custom.contentID).addClass("e-innerdivchild e-controlpadding");
-                                        }
-                                        if (!$.isEmptyObject(custom.customToolTip))
-                                            innerDivChild.mouseover({ value: custom, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                        else if (!ej.isNullOrUndefined(custom.toolTip))
-                                            innerDivChild.attr("title", custom.toolTip);
-                                        $("#" + custom.contentID).addClass('e-rbncustomelement').appendTo(innerDivChild);
-                                        if (!ej.isNullOrUndefined(subGroup[m])) {
-                                            if (!ej.isNullOrUndefined(subGroup[m].height))
-                                                innerDivChild.children().height(subGroup[m].height);
-                                            if (!ej.isNullOrUndefined(subGroup[m].width))
-                                                innerDivChild.children().width(subGroup[m].width);
-                                        }
-                                        if (!ej.isNullOrUndefined(custom.isBig)) {
-                                            (custom.isBig) ? innerDivChild.children().addClass("e-big") : innerDivChild.children().addClass("e-small");
-                                        }
-                                        innerDiv.append(innerDivChild);
-                                        if (subGroup[m].enableSeparator) {
-                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                                separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + custom.toolTip).addClass("e-separatordivrow");
-                                                innerDiv.append(separatorDiv);
+                                    switch (subGroup[m].type) {
+                                        case ej.Ribbon.Type.Custom:
+                                            custom = subGroup[m];
+                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + custom.contentID).addClass("e-controlpadding");
                                             }
-                                        }
-                                    }
-                                    else if (subGroup[m].type === ej.Ribbon.Type.SplitButton) {
-                                        split = subGroup[m];
-                                        this._splitButtonControl = ej.buildTag("button#" + this._id + "_" + split.id, split.text, {}, { type: "button" }).addClass(split.cssClass);
-                                        if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + split.id, this._splitButtonControl).addClass("e-controlpadding");
-                                        }
-                                        else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + split.id, this._splitButtonControl).addClass("e-innerdivchild e-controlpadding");
-                                        }
-                                        if (!$.isEmptyObject(split.customToolTip))
-                                            innerDivChild.mouseover({ value: split, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                        else if (!ej.isNullOrUndefined(split.toolTip))
-                                            innerDivChild.attr("title", split.toolTip);
-                                        model = {}
-                                        if (split.splitButtonSettings)
-                                            model = split.splitButtonSettings;
+                                            else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + custom.contentID).addClass("e-innerdivchild e-controlpadding");
+                                            }
+                                            if (!$.isEmptyObject(custom.customToolTip))
+                                                innerDivChild.mouseover({ value: custom, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                            else if (!ej.isNullOrUndefined(custom.toolTip))
+                                                innerDivChild.attr("title", custom.toolTip);
+                                            $("#" + custom.contentID).addClass('e-rbncustomelement').appendTo(innerDivChild);
+                                            if (!ej.isNullOrUndefined(subGroup[m])) {
+                                                if (!ej.isNullOrUndefined(subGroup[m].height))
+                                                    innerDivChild.children().height(subGroup[m].height);
+                                                if (!ej.isNullOrUndefined(subGroup[m].width))
+                                                    innerDivChild.children().width(subGroup[m].width);
+                                            }
+                                            if (!ej.isNullOrUndefined(custom.isBig)) {
+                                                (custom.isBig) ? innerDivChild.children().addClass("e-big") : innerDivChild.children().addClass("e-small");
+                                            }
+                                            innerDiv.append(innerDivChild);
+                                            if (subGroup[m].enableSeparator) {
+                                                if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                    separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + custom.toolTip).addClass("e-separatordivrow");
+                                                    innerDiv.append(separatorDiv);
+                                                }
+                                            }
+                                            break;
+                                        case ej.Ribbon.Type.SplitButton:
+                                            split = subGroup[m];
+                                            this._splitButtonControl = ej.buildTag("button#" + this._id + "_" + split.id, split.text, {}, { type: "button" }).addClass(split.cssClass);
+                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + split.id, this._splitButtonControl).addClass("e-controlpadding");
+                                            }
+                                            else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + split.id, this._splitButtonControl).addClass("e-innerdivchild e-controlpadding");
+                                            }
+                                            if (!$.isEmptyObject(split.customToolTip))
+                                                innerDivChild.mouseover({ value: split, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                            else if (!ej.isNullOrUndefined(split.toolTip))
+                                                innerDivChild.attr("title", split.toolTip);
+                                            model = {}
+                                            if (split.splitButtonSettings)
+                                                model = split.splitButtonSettings;
                                         model.height = ej.isNullOrUndefined(model.height) ? subGroup[m].height : model.height;
                                         model.width = ej.isNullOrUndefined(model.width) ? subGroup[m].width : model.width;
                                         if (model.cssClass)
-                                            model.cssClass = model.cssClass.concat(" e-rbn-splitbtn");
+                                            model.cssClass = model.cssClass.concat(" e-rbn-splitbtn e-rbn-button");
                                         else
-                                            model.cssClass = "e-rbn-splitbtn";
+                                            model.cssClass = "e-rbn-splitbtn e-rbn-button";
                                         model.enableRTL = this.model.enableRTL;
                                         this._splitButtonControl.ejSplitButton(model);
                                         if (split.isMobileOnly) {
@@ -2135,30 +3001,32 @@
                                             model.width = split.splitButtonSettings.width;
                                             model.arrowPosition = ej.ArrowPosition.Right;
                                             model.imagePosition = split.splitButtonSettings.imagePosition;
-                                            model.contentType = split.splitButtonSettings.contentType
-                                            this._mobileSplitButton.ejSplitButton(model);
-                                            this._mobileToolbar[tabIndex].Content.push(mobileContentDiv);
-                                            var btnText;
-                                            if (!ej.isNullOrUndefined(split.text))
-                                                btnText = split.text;
-                                            else if (!ej.isNullOrUndefined(split.splitButtonSettings.text))
-                                                btnText = split.splitButtonSettings.text;
-                                            this._mobileContents[tabIndex].mobileContent.push({ id: split.id, text: btnText, isMobileOnly: split.isMobileOnly });
-                                        }
-                                        if (split.quickAccessMode != "none" && this.model.showQAT) {
-                                            this._splitButtonQAT = ej.buildTag("button#" + this._id + "_" + split.id + "_qatEle", split.text, {}, { type: "button" }).addClass(split.cssClass);
-                                            var qatMainDiv = ej.buildTag("div#" + this._id + "_" + split.id + "_qatDiv", this._splitButtonQAT).addClass('e-qatooldiv');
-                                            model.height = 30;
-                                            model.arrowPosition = ej.ArrowPosition.Right;
-                                            model.contentType = ej.ContentType.ImageOnly;
-                                            if (!$.isEmptyObject(split.customToolTip))
-                                                qatMainDiv.mouseover({ value: split, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                            else if (!ej.isNullOrUndefined(split.toolTip))
-                                                qatMainDiv.attr("title", split.toolTip);
-                                            this._splitButtonQAT.ejSplitButton(model);
-                                            qatMainDiv.appendTo(this._qAccessBar);
-                                            if (split.quickAccessMode == "menu")
-                                                qatMainDiv.hide();
+                                                model.contentType = split.splitButtonSettings.contentType
+                                                this._mobileSplitButton.ejSplitButton(model);
+										        mobileContentDiv.find('button').addClass('e-rbn-button');
+                                                this._mobileToolbar[tabIndex].Content.push(mobileContentDiv);
+                                                var btnText;
+                                                if (!ej.isNullOrUndefined(split.text))
+                                                    btnText = split.text;
+                                                else if (!ej.isNullOrUndefined(split.splitButtonSettings.text))
+                                                    btnText = split.splitButtonSettings.text;
+                                                this._mobileContents[tabIndex].mobileContent.push({ id: split.id, text: btnText, isMobileOnly: split.isMobileOnly });
+                                            }
+                                        if (split.quickAccessMode != "none" && this.model.showQAT && (!this.model.enableOnDemand)) {
+                                                this._splitButtonQAT = ej.buildTag("button#" + this._id + "_" + split.id + "_qatEle", split.text, {}, { type: "button" }).addClass(split.cssClass);
+                                                var qatMainDiv = ej.buildTag("div#" + this._id + "_" + split.id + "_qatDiv", this._splitButtonQAT).addClass('e-qatooldiv');
+                                                model.height = 30;
+                                                model.arrowPosition = ej.ArrowPosition.Right;
+                                                model.contentType = ej.ContentType.ImageOnly;
+                                                if (!$.isEmptyObject(split.customToolTip))
+                                                    qatMainDiv.mouseover({ value: split, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                else if (!ej.isNullOrUndefined(split.toolTip))
+                                                    qatMainDiv.attr("title", split.toolTip);
+                                                this._splitButtonQAT.ejSplitButton(model);
+												qatMainDiv.find('button').addClass('e-rbn-button');
+                                                qatMainDiv.appendTo(this._qAccessBar);
+                                                if (split.quickAccessMode == "menu")
+                                                    qatMainDiv.hide();
                                             var btnText;
                                             if (!ej.isNullOrUndefined(split.text))
                                                 btnText = split.text;
@@ -2167,27 +3035,27 @@
                                             this._qatControlsName.push({ id: split.id, text: btnText, qAccess: split.quickAccessMode });
                                         }
                                         if (!ej.isNullOrUndefined(split.isBig)) {
-                                            (split.isBig) ? innerDivChild.children().removeAttr("style").addClass("e-big") : innerDivChild.children().removeAttr("style").addClass("e-small");
+                                            (split.isBig) ? innerDivChild.children().prop("style",false).addClass("e-big") : innerDivChild.children().prop("style",false).addClass("e-small");
                                         }
                                         innerDiv.append(innerDivChild);
                                         if (subGroup[m].enableSeparator) {
                                             if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                                separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + split.id).addClass("e-separatordivrow");
-                                                innerDiv.append(separatorDiv);
+                                                    separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + split.id).addClass("e-separatordivrow");
+                                                    innerDiv.append(separatorDiv);
+                                                }
                                             }
-                                        }
-                                    }
-                                    else if (subGroup[m].type === ej.Ribbon.Type.ToggleButton) {
-                                        toggle = subGroup[m];
-                                        this._toggleButtonControl = ej.buildTag("input#" + this._id + "_" + toggle.id, "", "", { type: "checkbox" }).addClass(toggle.cssClass);
-                                        if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + toggle.id, this._toggleButtonControl).addClass("e-controlpadding");
-                                        }
-                                        else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + toggle.id, this._toggleButtonControl).addClass("e-innerdivchild e-controlpadding");
-                                        }
-                                        if (!$.isEmptyObject(toggle.customToolTip))
-                                            innerDivChild.mouseover({ value: toggle, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                            break;
+                                        case ej.Ribbon.Type.ToggleButton:
+                                            toggle = subGroup[m];
+                                            this._toggleButtonControl = ej.buildTag("input#" + this._id + "_" + toggle.id, "", "", { type: "checkbox" }).addClass(toggle.cssClass);
+                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + toggle.id, this._toggleButtonControl).addClass("e-controlpadding");
+                                            }
+                                            else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + toggle.id, this._toggleButtonControl).addClass("e-innerdivchild e-controlpadding");
+                                            }
+                                            if (!$.isEmptyObject(toggle.customToolTip))
+                                                innerDivChild.mouseover({ value: toggle, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
                                         else if (!ej.isNullOrUndefined(toggle.toolTip))
                                             innerDivChild.attr("title", toggle.toolTip);
                                         model = {}
@@ -2195,7 +3063,12 @@
                                             model = toggle.toggleButtonSettings;
                                         model.height = ej.isNullOrUndefined(model.height) ? subGroup[m].height : model.height;
                                         model.width = ej.isNullOrUndefined(model.width) ? subGroup[m].width : model.width;
-                                        this._toggleButtonControl.ejToggleButton(model).addClass('e-ribbonbtn');
+                                        var qatToggle = $(("#" + this._toggleButtonControl.attr("id") + "_qatDiv button.e-togglebutton"));
+                                        if (this.model.enableOnDemand && this.model.showQAT && qatToggle.is(":visible") && qatToggle.hasClass("e-active")) {
+                                            model.toggleState = true;
+                                        }
+                                        this._toggleButtonControl.ejToggleButton(model).addClass('e-ribbonbtn e-rbn-button');
+										innerDivChild.find('button').addClass('e-rbn-button');
                                         if (toggle.isMobileOnly) {
                                             this._mobileToggleButton = ej.buildTag("button#" + this._id + "_" + toggle.id + "_mobEle", "", "", { type: "checkbox" }).addClass(toggle.cssClass);
                                             var mobileContentDiv = ej.buildTag("div#" + this._id + "_" + toggle.id + "_mobDiv", this._mobileToggleButton).addClass('e-mobdiv');
@@ -2204,71 +3077,73 @@
                                             model.contentType = toggle.toggleButtonSettings.contentType;
                                             model.imagePosition = toggle.toggleButtonSettings.imagePosition;
                                             this._mobileToggleButton.ejToggleButton(model).addClass('e-ribbonbtn');
-                                            this._mobileToolbar[tabIndex].Content.push(mobileContentDiv);
-                                            var btnText;
-                                            if (!ej.isNullOrUndefined(toggle.text))
-                                                btnText = toggle.text;
-                                            else if (!ej.isNullOrUndefined(toggle.toggleButtonSettings.defaultText))
-                                                btnText = toggle.toggleButtonSettings.defaultText;
-                                            this._mobileContents[tabIndex].mobileContent.push({ id: toggle.id, text: btnText, isMobileOnly: toggle.isMobileOnly });
-                                        }
-                                        if (toggle.quickAccessMode != "none" && this.model.showQAT) {
-                                            this._toggleButtonQAT = ej.buildTag("input#" + this._id + "_" + toggle.id + "_qatEle", "", "", { type: "checkbox" }).addClass(toggle.cssClass);
-                                            var qatMainDiv = ej.buildTag("div#" + this._id + "_" + toggle.id + "_qatDiv", this._toggleButtonQAT).addClass('e-qatooldiv');
-                                            model.height = 30;
-                                            model.contentType = ej.ContentType.ImageOnly;
-                                            if (!$.isEmptyObject(toggle.customToolTip))
-                                                qatMainDiv.mouseover({ value: toggle, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                            else if (!ej.isNullOrUndefined(toggle.toolTip))
-                                                qatMainDiv.attr("title", toggle.toolTip);
-                                            this._toggleButtonQAT.ejToggleButton(model).addClass('e-ribbonbtn');
-                                            qatMainDiv.appendTo(this._qAccessBar);
-                                            if (toggle.quickAccessMode == "menu")
-                                                qatMainDiv.hide();
-                                            var btnText;
-                                            if (!ej.isNullOrUndefined(toggle.text))
-                                                btnText = toggle.text;
-                                            else if (!ej.isNullOrUndefined(toggle.toggleButtonSettings.defaultText))
-                                                btnText = toggle.toggleButtonSettings.defaultText;
-                                            this._qatControlsName.push({ id: toggle.id, text: btnText, qAccess: toggle.quickAccessMode });
-                                        }
-                                        if (!ej.isNullOrUndefined(toggle.isBig)) {
-                                            (toggle.isBig) ? innerDivChild.find('.e-togglebutton.e-tbtn.e-btn').addClass("e-big") : innerDivChild.find('.e-togglebutton.e-tbtn.e-btn').addClass("e-small");
-                                        }
-                                        innerDiv.append(innerDivChild);
-                                        if (subGroup[m].enableSeparator) {
-                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                                separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + toggle.id).addClass("e-separatordivrow");
-                                                innerDiv.append(separatorDiv);
+										    mobileContentDiv.find('button').addClass('e-rbn-button');
+                                                this._mobileToolbar[tabIndex].Content.push(mobileContentDiv);
+                                                var btnText;
+                                                if (!ej.isNullOrUndefined(toggle.text))
+                                                    btnText = toggle.text;
+                                                else if (!ej.isNullOrUndefined(toggle.toggleButtonSettings.defaultText))
+                                                    btnText = toggle.toggleButtonSettings.defaultText;
+                                                this._mobileContents[tabIndex].mobileContent.push({ id: toggle.id, text: btnText, isMobileOnly: toggle.isMobileOnly });
                                             }
-                                        }
-                                    }
-                                    else if (subGroup[m].type === ej.Ribbon.Type.Button) {
-                                        button = subGroup[m];
-                                        if (button.buttonSettings) {
-                                            if (button.buttonSettings.type)
-                                                this._buttonControl = ej.buildTag("button#" + this._id + "_" + button.id, button.text, {}, { type: button.buttonSettings.type }).addClass(button.cssClass);
+                                        if (toggle.quickAccessMode != "none" && this.model.showQAT && (!this.model.enableOnDemand)) {
+                                                this._toggleButtonQAT = ej.buildTag("input#" + this._id + "_" + toggle.id + "_qatEle", "", "", { type: "checkbox" }).addClass(toggle.cssClass);
+                                                var qatMainDiv = ej.buildTag("div#" + this._id + "_" + toggle.id + "_qatDiv", this._toggleButtonQAT).addClass('e-qatooldiv');
+                                                model.height = 30;
+                                                model.contentType = ej.ContentType.ImageOnly;
+                                                if (!$.isEmptyObject(toggle.customToolTip))
+                                                    qatMainDiv.mouseover({ value: toggle, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                else if (!ej.isNullOrUndefined(toggle.toolTip))
+                                                    qatMainDiv.attr("title", toggle.toolTip);
+                                                this._toggleButtonQAT.ejToggleButton(model).addClass('e-ribbonbtn');
+												qatMainDiv.find('button').addClass('e-rbn-button');
+                                                qatMainDiv.appendTo(this._qAccessBar);
+                                                if (toggle.quickAccessMode == "menu")
+                                                    qatMainDiv.hide();
+                                                var btnText;
+                                                if (!ej.isNullOrUndefined(toggle.text))
+                                                    btnText = toggle.text;
+                                                else if (!ej.isNullOrUndefined(toggle.toggleButtonSettings.defaultText))
+                                                    btnText = toggle.toggleButtonSettings.defaultText;
+                                                this._qatControlsName.push({ id: toggle.id, text: btnText, qAccess: toggle.quickAccessMode });
+                                            }
+                                            if (!ej.isNullOrUndefined(toggle.isBig)) {
+                                                (toggle.isBig) ? innerDivChild.find('.e-togglebutton.e-tbtn.e-btn').addClass("e-big") : innerDivChild.find('.e-togglebutton.e-tbtn.e-btn').addClass("e-small");
+                                            }
+                                            innerDiv.append(innerDivChild);
+                                            if (subGroup[m].enableSeparator) {
+                                                if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                    separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + toggle.id).addClass("e-separatordivrow");
+                                                    innerDiv.append(separatorDiv);
+                                                }
+                                            }
+                                            break;
+                                        case ej.Ribbon.Type.Button:
+                                            button = subGroup[m];
+                                            if (button.buttonSettings) {
+                                                if (button.buttonSettings.type)
+                                                    this._buttonControl = ej.buildTag("button#" + this._id + "_" + button.id, button.text, {}, { type: button.buttonSettings.type }).addClass(button.cssClass);
+                                                else
+                                                    this._buttonControl = ej.buildTag("button#" + this._id + "_" + button.id, button.text).addClass(button.cssClass);
+                                            }
                                             else
                                                 this._buttonControl = ej.buildTag("button#" + this._id + "_" + button.id, button.text).addClass(button.cssClass);
-                                        }
-                                        else
-                                            this._buttonControl = ej.buildTag("button#" + this._id + "_" + button.id, button.text).addClass(button.cssClass);
-                                        if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + button.id, this._buttonControl).addClass("e-controlpadding");
-                                        }
-                                        else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + button.id, this._buttonControl).addClass("e-innerdivchild e-controlpadding");
-                                        }
-                                        if (!$.isEmptyObject(button.customToolTip))
-                                            innerDivChild.mouseover({ value: button, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                        else if (!ej.isNullOrUndefined(button.toolTip))
+                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + button.id, this._buttonControl).addClass("e-controlpadding");
+                                            }
+                                            else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + button.id, this._buttonControl).addClass("e-innerdivchild e-controlpadding");
+                                            }
+                                            if (!$.isEmptyObject(button.customToolTip))
+                                                innerDivChild.mouseover({ value: button, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                            else if (!ej.isNullOrUndefined(button.toolTip))
                                             innerDivChild.attr("title", button.toolTip);
                                         model = {}
                                         if (button.buttonSettings)
                                             model = button.buttonSettings;
                                         model.height = ej.isNullOrUndefined(model.height) ? subGroup[m].height : model.height;
                                         model.width = ej.isNullOrUndefined(model.width) ? subGroup[m].width : model.width;
-                                        this._buttonControl.ejButton(model).addClass('e-ribbonbtn');
+                                        this._buttonControl.ejButton(model).addClass('e-ribbonbtn  e-rbn-button');
                                         if (button.isMobileOnly) {
                                             if (button.buttonSettings) {
                                                 if (button.buttonSettings.type)
@@ -2276,75 +3151,71 @@
                                                 else
                                                     this._mobileButton = ej.buildTag("button#" + this._id + "_" + button.id + "_mobEle", button.text).addClass(button.cssClass);
                                             }
-                                            else
-                                                this._mobileButton = ej.buildTag("button#" + this._id + "_" + button.id + "_mobEle", button.text).addClass(button.cssClass);
-                                            var mobileContentDiv = ej.buildTag("div#" + this._id + "_" + button.id + "_mobDiv", this._mobileButton).addClass('e-mobdiv');
-                                            model.height = button.buttonSettings.height;
-                                            model.width = button.buttonSettings.width;
-                                            model.imagePosition = button.buttonSettings.imagePosition;
-                                            model.contentType = button.buttonSettings.contentType;
-                                            this._mobileButton.ejButton(model).addClass('e-ribbonbtn');
-                                            this._mobileToolbar[tabIndex].Content.push(mobileContentDiv);
-                                            var btnText;
-                                            if (!ej.isNullOrUndefined(button.text))
-                                                btnText = button.text;
-                                            else if (!ej.isNullOrUndefined(button.buttonSettings.text))
-                                                btnText = button.buttonSettings.text;
-                                            this._mobileContents[tabIndex].mobileContent.push({ id: button.id, text: btnText, isMobileOnly: button.isMobileOnly });
-                                        }
-                                        if (button.quickAccessMode != "none" && this.model.showQAT) {
-                                            if (button.buttonSettings) {
-                                                if (button.buttonSettings.type)
-                                                    this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text, {}, { type: button.buttonSettings.type }).addClass(button.cssClass);
+                                                else
+                                                    this._mobileButton = ej.buildTag("button#" + this._id + "_" + button.id + "_mobEle", button.text).addClass(button.cssClass);
+                                                var mobileContentDiv = ej.buildTag("div#" + this._id + "_" + button.id + "_mobDiv", this._mobileButton).addClass('e-mobdiv');
+                                                this._mobileButton.ejButton(model).addClass('e-ribbon-resbtn  e-rbn-button');
+                                                this._mobileToolbar[tabIndex].Content.push(mobileContentDiv);
+                                                var btnText;
+                                                if (!ej.isNullOrUndefined(button.text))
+                                                    btnText = button.text;
+                                                else if (!ej.isNullOrUndefined(button.buttonSettings.text))
+                                                    btnText = button.buttonSettings.text;
+                                                this._mobileContents[tabIndex].mobileContent.push({ id: button.id, text: btnText, isMobileOnly: button.isMobileOnly });
+                                            }
+                                        if (button.quickAccessMode != "none" && this.model.showQAT && (!this.model.enableOnDemand)) {
+                                                if (button.buttonSettings) {
+                                                    if (button.buttonSettings.type)
+                                                        this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text, {}, { type: button.buttonSettings.type }).addClass(button.cssClass);
+                                                    else
+                                                        this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text).addClass(button.cssClass);
+                                                }
                                                 else
                                                     this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text).addClass(button.cssClass);
+                                                var qatMainDiv = ej.buildTag("div#" + this._id + "_" + button.id + "_qatDiv", this._buttonQAT).addClass('e-qatooldiv');
+                                                model.height = 30;
+                                                model.contentType = ej.ContentType.ImageOnly;
+                                                if (!$.isEmptyObject(button.customToolTip))
+                                                    qatMainDiv.mouseover({ value: button, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                else if (!ej.isNullOrUndefined(button.toolTip))
+                                                    qatMainDiv.attr("title", button.toolTip);
+                                                this._buttonQAT.ejButton(model).addClass('e-ribbonbtn e-rbn-button');
+                                                qatMainDiv.appendTo(this._qAccessBar);
+                                                if (button.quickAccessMode == "menu")
+                                                    qatMainDiv.hide();
+                                                var btnText;
+                                                if (!ej.isNullOrUndefined(button.text))
+                                                    btnText = button.text;
+                                                else if (!ej.isNullOrUndefined(button.buttonSettings.text))
+                                                    btnText = button.buttonSettings.text;
+                                                this._qatControlsName.push({ id: button.id, text: btnText, qAccess: button.quickAccessMode });
                                             }
-                                            else
-                                                this._buttonQAT = ej.buildTag("button#" + this._id + "_" + button.id + "_qatEle", button.text).addClass(button.cssClass);
-                                            var qatMainDiv = ej.buildTag("div#" + this._id + "_" + button.id + "_qatDiv", this._buttonQAT).addClass('e-qatooldiv');
-                                            model.height = 30;
-                                            model.contentType = ej.ContentType.ImageOnly;
-                                            if (!$.isEmptyObject(button.customToolTip))
-                                                qatMainDiv.mouseover({ value: button, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                            else if (!ej.isNullOrUndefined(button.toolTip))
-                                                qatMainDiv.attr("title", button.toolTip);
-                                            this._buttonQAT.ejButton(model).addClass('e-ribbonbtn');
-                                            qatMainDiv.appendTo(this._qAccessBar);
-                                            if (button.quickAccessMode == "menu")
-                                                qatMainDiv.hide();
-                                            var btnText;
-                                            if (!ej.isNullOrUndefined(button.text))
-                                                btnText = button.text;
-                                            else if (!ej.isNullOrUndefined(button.buttonSettings.text))
-                                                btnText = button.buttonSettings.text;
-                                            this._qatControlsName.push({ id: button.id, text: btnText, qAccess: button.quickAccessMode });
-                                        }
-                                        if (!ej.isNullOrUndefined(button.isBig)) {
-                                            (button.isBig) ? innerDivChild.children().addClass("e-big") : innerDivChild.children().addClass("e-small");
-                                        }
-                                        innerDiv.append(innerDivChild);
-                                        if (subGroup[m].enableSeparator) {
-                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                                separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + button.id).addClass("e-separatordivrow");
-                                                innerDiv.append(separatorDiv);
+                                            if (!ej.isNullOrUndefined(button.isBig)) {
+                                                (button.isBig) ? innerDivChild.children().addClass("e-big") : innerDivChild.children().addClass("e-small");
                                             }
-                                        }
-                                    }
-                                    else if (subGroup[m].type === ej.Ribbon.Type.DropDownList) {
-                                        dropdown = subGroup[m];
-                                        this._dropdownControl = ej.buildTag("input#" + this._id + "_" + dropdown.id, { type: "text" }).addClass(dropdown.cssClass);
-                                        if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns && dropdown.dropdownSettings) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + dropdown.id, this._dropdownControl).append($("#" + dropdown.dropdownSettings.targetID)).addClass("e-controlpadding");
-                                        }
-                                        else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows && dropdown.dropdownSettings) {
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + dropdown.id, this._dropdownControl).append($("#" + dropdown.dropdownSettings.targetID)).addClass("e-innerdivchild e-controlpadding");
-                                        }
-                                        if (!$.isEmptyObject(dropdown.customToolTip))
-                                            innerDivChild.mouseover({ value: dropdown, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                        else if (!ej.isNullOrUndefined(dropdown.toolTip))
-                                            innerDivChild.attr("title", dropdown.toolTip);
-                                        model = {};
-                                        if (dropdown.dropdownSettings)
+                                            innerDiv.append(innerDivChild);
+                                            if (subGroup[m].enableSeparator) {
+                                                if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                    separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + button.id).addClass("e-separatordivrow");
+                                                    innerDiv.append(separatorDiv);
+                                                }
+                                            }
+                                            break;
+                                        case ej.Ribbon.Type.DropDownList:
+                                            dropdown = subGroup[m];
+                                            this._dropdownControl = ej.buildTag("input#" + this._id + "_" + dropdown.id, { type: "text" }).addClass(dropdown.cssClass);
+                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns && dropdown.dropdownSettings) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + dropdown.id, this._dropdownControl).append($("#" + dropdown.dropdownSettings.targetID)).addClass("e-controlpadding");
+                                            }
+                                            else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows && dropdown.dropdownSettings) {
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + dropdown.id, this._dropdownControl).append($("#" + dropdown.dropdownSettings.targetID)).addClass("e-innerdivchild e-controlpadding");
+                                            }
+                                            if (!$.isEmptyObject(dropdown.customToolTip))
+                                                innerDivChild.mouseover({ value: dropdown, ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                            else if (!ej.isNullOrUndefined(dropdown.toolTip))
+                                                innerDivChild.attr("title", dropdown.toolTip);
+                                            model = {};
+                                            if (dropdown.dropdownSettings)
                                             model = dropdown.dropdownSettings;
                                         model.height = ej.isNullOrUndefined(model.height) ? subGroup[m].height : model.height;
                                         model.width = ej.isNullOrUndefined(model.width) ? subGroup[m].width : model.width;
@@ -2352,122 +3223,136 @@
                                             model.cssClass = model.cssClass.concat(" e-rbn-ddl");
                                         else
                                             model.cssClass = "e-rbn-ddl";
+                                        if (dropdown.isMobileOnly) {
+                                            this._mobileDropdown = ej.buildTag("input#" + this._id + "_" + dropdown.id + "_mobEle", "", "", { type: "text" }).addClass(dropdown.cssClass);
+                                            var mobileContentDiv = ej.buildTag("div#" + this._id + "_" + dropdown.id + "_mobDiv", this._mobileDropdown).addClass('e-mobdiv');
+                                            this._mobileDropdown.ejDropDownList(model).addClass('e-ribbonbtn');
+                                            this._mobileToolbar[tabIndex].Content.push(mobileContentDiv);
+                                            var btnText;
+                                            if (!ej.isNullOrUndefined(dropdown.text))
+                                                btnText = dropdown.text;
+                                            else if (!ej.isNullOrUndefined(dropdown.dropdownSettings.defaultText))
+                                                btnText = dropdown.dropdownSettings.defaultText;
+                                            this._mobileContents[tabIndex].mobileContent.push({ id: dropdown.id, text: btnText, isMobileOnly: dropdown.isMobileOnly });
+                                        }
                                         model.enableRTL = this.model.enableRTL;
                                         this._dropdownControl.ejDropDownList(model);
                                         innerDiv.append(innerDivChild);
-                                        if (subGroup[m].enableSeparator) {
-                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
-                                                separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + dropdown.id).addClass("e-separatordivrow");
-                                                innerDiv.append(separatorDiv);
-                                            }
-                                        }
-                                    }
-                                    else if (subGroup[m].type === ej.Ribbon.Type.Gallery) {
-                                        var galleryContentDiv, galleryPagesDiv, prevPage, nextPage, expandGallery, visibleRowCnt, galleryRows;
-                                        gallery = subGroup[m];
-                                        this._galleryControl = ej.buildTag("div#" + this._id + "_" + gallery.id + "_gallerycontrol").addClass("e-ribbongallerycontrol");
-                                        this._gallery = ej.buildTag("div#" + this._id + "_" + gallery.id).addClass("e-ribbongallery");
-                                        var galleryContentDiv = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ContentDiv").addClass("e-gallerycontent").height(65).width(gallery.columns * gallery.itemWidth).click({ galleryId: this._gallery.attr("id") }, $.proxy(this._onGalContentClick, this));
-
-                                        galleryRows = Math.floor(gallery.galleryItems.length / gallery.columns);
-
-                                        if ((gallery.galleryItems.length % gallery.columns) > 0)
-                                            ++galleryRows;
-
-                                        for (var m = 1; m <= galleryRows; m++) {
-                                            var galleryRow = ej.buildTag("div#" + this._id + "_" + gallery.id + "_galleryrow_" + m).addClass('e-galleryrow').click({ model: gallery }, $.proxy(this._onGalleryItemClick, this));
-                                            if (m === 1)
-                                                galleryRow.addClass('e-gryfirstrow');
-                                            else if (m === galleryRows)
-                                                galleryRow.addClass('e-grylastrow');
-
-                                            for (var n = 1; n <= gallery.columns; n++) {
-                                                var contentLen = galleryContentDiv.find('.e-galleryrow').children().length + galleryRow.children().length, btnCtrl;
-                                                if (!ej.isNullOrUndefined(gallery.galleryItems[contentLen])) {
-                                                    btnCtrl = ej.buildTag("button#" + gallery.id + "_galleryItem_" + (contentLen + 1), gallery.galleryItems[contentLen].text, {}, { type: "button" }).addClass('e-gallerybtn');
-                                                    if (!$.isEmptyObject(gallery.galleryItems[contentLen].customToolTip))
-                                                        btnCtrl.mouseover({ value: gallery.galleryItems[contentLen], ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                                    else if (!ej.isNullOrUndefined(gallery.galleryItems[contentLen].toolTip))
-                                                        btnCtrl.attr("title", gallery.galleryItems[contentLen].toolTip);
-
-                                                    model = {}
-                                                    if (gallery.galleryItems[contentLen].buttonSettings)
-                                                        model = gallery.galleryItems[contentLen].buttonSettings;
-                                                    if (gallery.itemHeight <= 65)
-                                                        model.height = gallery.itemHeight;
-                                                    else
-                                                        model.height = 65;
-                                                    model.width = gallery.itemWidth;
-                                                    btnCtrl.ejButton(model);
-                                                    btnCtrl.appendTo(galleryRow);
+                                            if (subGroup[m].enableSeparator) {
+                                                if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows) {
+                                                    separatorDiv = ej.buildTag("div#" + this._id + "_" + "separator" + "_" + dropdown.id).addClass("e-separatordivrow");
+                                                    innerDiv.append(separatorDiv);
                                                 }
                                             }
-                                            if (gallery.itemHeight > 65)
-                                                visibleRowCnt = 1;
-                                            else
-                                                visibleRowCnt = (galleryContentDiv.height() / gallery.itemHeight);
-                                            if (m > visibleRowCnt)
-                                                galleryRow.hide();
-                                            galleryRow.appendTo(galleryContentDiv);
-                                        }
-                                        this._gallery.append(galleryContentDiv);
+                                            break;
+                                        case ej.Ribbon.Type.Gallery:
+                                            var galleryContentDiv, galleryPagesDiv, prevPage, nextPage, expandGallery, visibleRowCnt, galleryRows;
+                                            gallery = subGroup[m];
+                                            this._galleryControl = ej.buildTag("div#" + this._id + "_" + gallery.id + "_gallerycontrol").addClass("e-ribbongallerycontrol");
+                                            this._gallery = ej.buildTag("div#" + this._id + "_" + gallery.id).addClass("e-ribbongallery");
+                                            var galleryContentDiv = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ContentDiv").addClass("e-gallerycontent").height(65).width(gallery.columns * gallery.itemWidth).click({ galleryId: this._gallery.attr("id") }, $.proxy(this._onGalContentClick, this));
 
-                                        var galleryPagesDiv = ej.buildTag("div#" + this._id + "_" + gallery.id + "_PagesDiv").addClass("e-gallerymovediv");
-                                        var prevPage = ej.buildTag("div#" + this._id + "_" + gallery.id + "_prevPage", "<span class='e-icon e-galleryup e-gallerymoveicon'></span>").click({ galleryId: this._gallery.attr("id"), rowCnt: visibleRowCnt }, $.proxy(this._onGalMoveUpClick, this)).addClass('e-moveupdiv e-disablegrymovebtn');
-                                        var nextPage = ej.buildTag("div#" + this._id + "_" + gallery.id + "_nextPage", "<span class='e-icon e-gallerydown e-gallerymoveicon'></span>").click({ galleryId: this._gallery.attr("id") }, $.proxy(this._onGalMoveDownClick, this)).addClass('e-movedowndiv');
-                                        var expandGallery = ej.buildTag("div#" + this._id + "_" + gallery.id + "_expandGallery", "<span class='e-icon e-galleryexpand e-gallerymoveicon'></span>").click({ galleryId: this._gallery.attr("id"), columns: gallery.columns, expandedColumns: gallery.expandedColumns, itemWidth: gallery.itemWidth }, $.proxy(this._onExpandGalleryClick, this)).addClass('e-expgallerydiv');
-                                        this._responsiveGallery = gallery.expandedColumns;
+                                            galleryRows = Math.floor(gallery.galleryItems.length / gallery.columns);
 
-                                        galleryPagesDiv.append(prevPage);
-                                        galleryPagesDiv.append(nextPage);
-                                        galleryPagesDiv.append(expandGallery);
-                                        this._gallery.append(galleryPagesDiv);
-                                        var galleryExpandContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ExpandContent").addClass("e-gallexpandcontent").hide();
-                                        var scrollContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_scrollContent", "<div></div>").addClass("e-gallscrollcontent");
-                                        var expanderContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ExpanderContent").addClass("e-expandercontent").click({ galleryId: this._gallery.attr("id") }, $.proxy(this._onExpandContentClick, this));
-                                        scrollContent.children().append(expanderContent);
-                                        galleryExpandContent.append(scrollContent);
-                                        if (!ej.isNullOrUndefined(gallery.customGalleryItems)) {
-                                            var expanderExtraContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ExtraContent").addClass("e-extracontent").click({ model: gallery }, $.proxy(this._onGalleryItemClick, this));
-                                            for (var l = 0; l < gallery.customGalleryItems.length; l++) {
-                                                var btnCtrlExtra;
-                                                if (ej.isNullOrUndefined(gallery.customGalleryItems[l].customItemType))
-                                                    gallery.customGalleryItems[l].customItemType = ej.Ribbon.CustomItemType.Button;
-                                                if (gallery.customGalleryItems[l].customItemType === ej.Ribbon.CustomItemType.Button) {
-                                                    btnCtrlExtra = ej.buildTag("button#" + gallery.id + "_" + "_extraItem_" + l, gallery.customGalleryItems[l].text, {}, { type: "button" }).addClass('e-galleryextrabtn');
-                                                    if (!$.isEmptyObject(gallery.customGalleryItems[l].customToolTip))
-                                                        btnCtrlExtra.mouseover({ value: gallery.customGalleryItems[l], ribbonId: this._id }, $.proxy(this._tooltip, this))
-                                                        .mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
-                                                    else if (!ej.isNullOrUndefined(gallery.customGalleryItems[l].toolTip))
-                                                        btnCtrlExtra.attr("title", gallery.customGalleryItems[l].toolTip);
-                                                    model = {}
-                                                    if (gallery.customGalleryItems[l]) {
-                                                        if (gallery.customGalleryItems[l].buttonSettings)
-                                                            model = gallery.customGalleryItems[l].buttonSettings;
-                                                        btnCtrlExtra.ejButton(model);
+                                            if ((gallery.galleryItems.length % gallery.columns) > 0)
+                                                ++galleryRows;
+
+                                            for (var m = 1; m <= galleryRows; m++) {
+                                                var galleryRow = ej.buildTag("div#" + this._id + "_" + gallery.id + "_galleryrow_" + m).addClass('e-galleryrow').click({ model: gallery }, $.proxy(this._onGalleryItemClick, this));
+                                                if (m === 1)
+                                                    galleryRow.addClass('e-gryfirstrow');
+                                                else if (m === galleryRows)
+                                                    galleryRow.addClass('e-grylastrow');
+
+                                                for (var n = 1; n <= gallery.columns; n++) {
+                                                    var contentLen = galleryContentDiv.find('.e-galleryrow').children().length + galleryRow.children().length, btnCtrl;
+                                                    if (!ej.isNullOrUndefined(gallery.galleryItems[contentLen])) {
+                                                        btnCtrl = ej.buildTag("button#" + gallery.id + "_galleryItem_" + (contentLen + 1), gallery.galleryItems[contentLen].text, {}, { type: "button" }).addClass('e-gallerybtn  e-rbn-button');
+                                                        if (!$.isEmptyObject(gallery.galleryItems[contentLen].customToolTip))
+                                                            btnCtrl.mouseover({ value: gallery.galleryItems[contentLen], ribbonId: this._id }, $.proxy(this._tooltip, this)).mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                        else if (!ej.isNullOrUndefined(gallery.galleryItems[contentLen].toolTip))
+                                                            btnCtrl.attr("title", gallery.galleryItems[contentLen].toolTip);
+
+                                                        model = {}
+                                                        if (gallery.galleryItems[contentLen].buttonSettings)
+                                                            model = gallery.galleryItems[contentLen].buttonSettings;
+                                                        if (gallery.itemHeight <= 65)
+                                                            model.height = gallery.itemHeight;
+                                                        else
+                                                            model.height = 65;
+                                                        model.width = gallery.itemWidth;
+                                                        btnCtrl.ejButton(model);
+                                                        btnCtrl.appendTo(galleryRow);
                                                     }
-                                                    btnCtrlExtra.appendTo(expanderExtraContent);
                                                 }
-                                                else {
-                                                    model = {}
-                                                    if (gallery.customGalleryItems[l].menuSettings)
-                                                        model = gallery.customGalleryItems[l].menuSettings;
-                                                    model.menuType = ej.MenuType.NormalMenu;
-                                                    model.orientation = ej.Orientation.Vertical;
-                                                    model.enableRTL = this.model.enableRTL;
-                                                    $("#" + gallery.customGalleryItems[l].menuId).ejMenu(model).addClass('e-gallerymenu');
-                                                    $("#" + gallery.customGalleryItems[l].menuId).appendTo(expanderExtraContent).css("width", "100%");
-                                                }
+                                                if (gallery.itemHeight > 65)
+                                                    visibleRowCnt = 1;
+                                                else
+                                                    visibleRowCnt = (galleryContentDiv.height() / gallery.itemHeight);
+                                                if (m > visibleRowCnt)
+                                                    galleryRow.hide();
+                                                galleryRow.appendTo(galleryContentDiv);
                                             }
-                                            galleryExpandContent.append(expanderExtraContent);
-                                        }
-                                        this._galleryControl.append(this._gallery);
-                                        this._galleryControl.append(galleryExpandContent);
-                                        if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns)
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + gallery.id, this._galleryControl).addClass("e-controlpadding");
-                                        else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows)
-                                            innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + gallery.id, this._galleryControl).addClass("e-innerdivchild e-controlpadding");
-                                        innerDiv.append(innerDivChild);
+                                            this._gallery.append(galleryContentDiv);
+
+                                            var galleryPagesDiv = ej.buildTag("div#" + this._id + "_" + gallery.id + "_PagesDiv").addClass("e-gallerymovediv");
+                                            var prevPage = ej.buildTag("div#" + this._id + "_" + gallery.id + "_prevPage", "<span class='e-icon e-galleryup e-gallerymoveicon'></span>").click({ galleryId: this._gallery.attr("id"), rowCnt: visibleRowCnt }, $.proxy(this._onGalMoveUpClick, this)).addClass('e-moveupdiv e-disablegrymovebtn');
+                                            var nextPage = ej.buildTag("div#" + this._id + "_" + gallery.id + "_nextPage", "<span class='e-icon e-gallerydown e-gallerymoveicon'></span>").click({ galleryId: this._gallery.attr("id") }, $.proxy(this._onGalMoveDownClick, this)).addClass('e-movedowndiv');
+                                            var expandGallery = ej.buildTag("div#" + this._id + "_" + gallery.id + "_expandGallery", "<span class='e-icon e-galleryexpand e-gallerymoveicon'></span>").click({ galleryId: this._gallery.attr("id"), columns: gallery.columns, expandedColumns: gallery.expandedColumns, itemWidth: gallery.itemWidth }, $.proxy(this._onExpandGalleryClick, this)).addClass('e-expgallerydiv');
+                                            this._responsiveGallery = gallery.expandedColumns;
+
+                                            galleryPagesDiv.append(prevPage);
+                                            galleryPagesDiv.append(nextPage);
+                                            galleryPagesDiv.append(expandGallery);
+                                            this._gallery.append(galleryPagesDiv);
+                                            var galleryExpandContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ExpandContent").addClass("e-gallexpandcontent").hide();
+                                            var scrollContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_scrollContent", "<div></div>").addClass("e-gallscrollcontent");
+                                            var expanderContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ExpanderContent").addClass("e-expandercontent").click({ galleryId: this._gallery.attr("id") }, $.proxy(this._onExpandContentClick, this));
+                                            scrollContent.children().append(expanderContent);
+                                            galleryExpandContent.append(scrollContent);
+                                            if (!ej.isNullOrUndefined(gallery.customGalleryItems)) {
+                                                var expanderExtraContent = ej.buildTag("div#" + this._id + "_" + gallery.id + "_ExtraContent").addClass("e-extracontent").click({ model: gallery }, $.proxy(this._onGalleryItemClick, this));
+                                                var customGalItemsLen = gallery.customGalleryItems.length;
+                                                for (var l = 0; l < customGalItemsLen; l++) {
+                                                    var btnCtrlExtra;
+                                                    if (ej.isNullOrUndefined(gallery.customGalleryItems[l].customItemType))
+                                                        gallery.customGalleryItems[l].customItemType = ej.Ribbon.CustomItemType.Button;
+                                                    if (gallery.customGalleryItems[l].customItemType === ej.Ribbon.CustomItemType.Button) {
+                                                        btnCtrlExtra = ej.buildTag("button#" + gallery.id + "_" + "_extraItem_" + l, gallery.customGalleryItems[l].text, {}, { type: "button" }).addClass('e-galleryextrabtn e-rbn-button');
+                                                        if (!$.isEmptyObject(gallery.customGalleryItems[l].customToolTip))
+                                                            btnCtrlExtra.mouseover({ value: gallery.customGalleryItems[l], ribbonId: this._id }, $.proxy(this._tooltip, this))
+                                                            .mouseout({ ribbonId: this._id }, $.proxy(this._toolTipOut, this));
+                                                        else if (!ej.isNullOrUndefined(gallery.customGalleryItems[l].toolTip))
+                                                            btnCtrlExtra.attr("title", gallery.customGalleryItems[l].toolTip);
+                                                        model = {}
+                                                        if (gallery.customGalleryItems[l]) {
+                                                            if (gallery.customGalleryItems[l].buttonSettings)
+                                                                model = gallery.customGalleryItems[l].buttonSettings;
+                                                            btnCtrlExtra.ejButton(model);
+                                                        }
+                                                        btnCtrlExtra.appendTo(expanderExtraContent);
+                                                    }
+                                                    else {
+                                                        model = {}
+                                                        if (gallery.customGalleryItems[l].menuSettings)
+                                                            model = gallery.customGalleryItems[l].menuSettings;
+                                                        model.menuType = ej.MenuType.NormalMenu;
+                                                        model.orientation = ej.Orientation.Vertical;
+                                                        model.enableRTL = this.model.enableRTL;
+                                                        $("#" + gallery.customGalleryItems[l].menuId).ejMenu(model).addClass('e-gallerymenu');
+                                                        $("#" + gallery.customGalleryItems[l].menuId).appendTo(expanderExtraContent).css("width", "100%");
+                                                    }
+                                                }
+                                                galleryExpandContent.append(expanderExtraContent);
+                                            }
+                                            this._galleryControl.append(this._gallery);
+                                            this._galleryControl.append(galleryExpandContent);
+                                            if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Columns)
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + gallery.id, this._galleryControl).addClass("e-controlpadding");
+                                            else if (tabs.groups[j].alignType === ej.Ribbon.AlignType.Rows)
+                                                innerDivChild = ej.buildTag("div#" + this._id + "_" + tabs.id + "_" + tabGroupText + "_" + gallery.id, this._galleryControl).addClass("e-innerdivchild e-controlpadding");
+                                            innerDiv.append(innerDivChild);
+                                            break;
                                     }
                                     contDiv.append(innerDiv);
                                 }
@@ -2478,14 +3363,59 @@
             }
             return contDiv;
         },
+
+        _groupContent: function (e) {
+            ej.isNullOrUndefined(e) ? index = this._tabUl.find(".e-active").index() - 1 : index = e.activeIndex - 1;
+            var rbnOnDemand = this.element.find(".e-content-item").eq(index + 1);
+            if (!rbnOnDemand.hasClass("e-rbn-ondemand") || index<0)
+                return;
+            var tabLen = this.model.tabs.length;
+            !ej.isNullOrUndefined(e) ? contextIndex = $(e.activeHeader).hasClass("e-contextualtabset") ? tabLen - $(e.activeHeader).index() : -1 : contextIndex =- 1;
+            if (this.model.contextualTabs && contextIndex!=-1) {
+                var contextTablen = this.model.contextualTabs.length;
+                contextIndex = contextTablen - (e.activeIndex - tabLen);
+                contextualTab = this.model.contextualTabs[contextIndex];
+                    if (contextualTab.tabs) {
+                        var contexttualTablen = contextualTab.tabs.length;
+                        for (var l = 0; l < contexttualTablen; l++) {
+                            if (!ej.isNullOrUndefined(contextualTab.tabs[l].groups) && contextualTab.tabs[l].groups.length > 0) {
+                                this.model.tabs[tabLen] = contextualTab.tabs[l];
+                                index = e.activeIndex-1;
+                            }
+                        }
+                    }
+            }
+            tabs = this.model.tabs[index];
+            this._mobileContents[index] = { "tab": tabs.text, "mobileContent": [] };
+            this._mobileToolbar[index] = { "tab": tabs.text, "Content": [] };
+            if (!ej.isNullOrUndefined(tabs.groups)) {
+                var tabsGrouplen = tabs.groups.length;
+                for (j = 0; j < tabsGrouplen; j++) {
+                    if (!ej.isNullOrUndefined(tabs.groups[j])) {
+                        tabGroupText = ej.isNullOrUndefined(tabs.groups[j].text) ? tabs.groups[j].text : tabs.groups[j].text.replace(/\s/g, '');
+                        contDiv = this._createControls(j, tabs, tabGroupText, index);
+                        groupDiv = this._addControlsToGroup(j, tabs, tabGroupText, contDiv);
+                        tabcont = this.element.find("#" + this._id + "_" + tabs.id);
+                        tabcont.append(groupDiv).addClass("e-parentdiv");
+                    }
+                }
+            }
+            else 
+                this.element.find('.e-content.e-content-item').eq(index + 1).addClass('e-empty-content');
+            rbnOnDemand.removeClass("e-rbn-ondemand")
+        },
         _groupingControls: function () {
             var tabLen = this.model.tabs.length, contextualTab, tabs, groupDiv, contDiv, tabcont;
             var i, j, tabGroupText, ribbonModel = $.extend(true, {}, this.model);
             if (this.model.contextualTabs) {
-                for (var k = 0; k < this.model.contextualTabs.length; k++) {
+                var contextTablen = this.model.contextualTabs.length;
+                for (var k = 0; k < contextTablen; k++) {
                     contextualTab = this.model.contextualTabs[k];
                     if (contextualTab.tabs) {
-                        for (var l = 0; l < contextualTab.tabs.length; l++) {
+                        var contexttualTablen = contextualTab.tabs.length;
+					    if(contexttualTablen==0)
+                         this.element.find('.e-content.e-content-item').eq(i + 1).addClass('e-empty-content');
+                        for (var l = 0; l < contexttualTablen; l++) {
                             if (!ej.isNullOrUndefined(contextualTab.tabs[l].groups) && contextualTab.tabs[l].groups.length > 0) {
                                 this.model.tabs[tabLen] = contextualTab.tabs[l];
                                 ++tabLen;
@@ -2494,12 +3424,15 @@
                     }
                 }
             }
-            for (i = 0; i < this.model.tabs.length; i++) {
+            for (i = 0; i < tabLen; i++) {
                 tabs = this.model.tabs[i];
                 this._mobileContents[i] = { "tab": tabs.text, "mobileContent": [] };
                 this._mobileToolbar[i] = { "tab": tabs.text, "Content": [] };
                 if (!ej.isNullOrUndefined(tabs.groups)) {
-                    for (j = 0; j < tabs.groups.length; j++) {
+                    var tabsGrouplen = tabs.groups.length;
+					if(tabsGrouplen==0)
+                     this.element.find('.e-content.e-content-item').eq(i + 1).addClass('e-empty-content');
+                    for (j = 0; j < tabsGrouplen; j++) {
                         if (!ej.isNullOrUndefined(tabs.groups[j])) {
                             tabGroupText = ej.isNullOrUndefined(tabs.groups[j].text) ? tabs.groups[j].text : tabs.groups[j].text.replace(/\s/g, '');
                             contDiv = this._createControls(j, tabs, tabGroupText, i);
@@ -2544,6 +3477,8 @@
         },
         _tabExpandCollapse: function (e) {
             var target, args, action;
+			if(e.type=="touchend")
+			   e.preventDefault();
             target = e.target.tagName == "div" ? e.target : e.target.parentNode;
             action = target.className == "e-expanded" ? "collapse" : "expand";
             args = { target: $(target), type: e.type, action: action, cancel: false };
@@ -2561,7 +3496,7 @@
             this._clickValue = "click";
         },
         _responsiveback: function () {
-            this.element.find(".e-resizebtn.e-active").removeClass("e-active");
+            this.element.find(".e-resizebtnselect").removeClass("e-active e-resizebtnselect");
             this.element.find(".e-responsivebackstagecontent").is(":visible") && this.element.find(".e-responsivebackstagecontent").hide();
             this.element.find(".e-responsivecontent").hasClass("e-resshow") && !(this.element.find(".e-responsivecontent").find(".e-split.e-active").length > 0) && this._responsiveContentBack();
             if (this.element.find(".e-respcontent").is(":visible")) {
@@ -2572,134 +3507,201 @@
         },
         _ribbonResponsive: function () {
             var ul = ej.buildTag("ul#" + this._id + "_responsivetabContent").addClass("e-rescontent");
-            for (var i = 0; i < this.model.tabs.length ; i++) {
+            var count = this.model.tabs.length, tabcount = true;
+            for (var i = 0; i < count ; i++)
                 ul.append(ej.buildTag("li", this.model.tabs[i].text).addClass("e-responsivetabli"));
-            }
-            var div = ej.buildTag("div#" + this._id + "_responsivetabHeader").addClass("e-responsivetabheader");
+            count = this.model.contextualTabs.length;
+            if (count == 1)
+                tabcount = this.model.contextualTabs[0].tabs.length > 0 ? true : false;
+            if (count != 0 && tabcount)
+                for (var i = 0; i < count ; i++)
+                    ul.append(ej.buildTag("li", this.model.contextualTabs[i].tabs[0].text).addClass("e-responsivetabli").addClass("e-resContextual"));
+            var div = ej.buildTag("div#" + this._id + "_responsivetabHeader").addClass("e-responsivetabheader").click($.proxy(this._onResponsiveHeaderClick, this));
             div.append(ul);
             this.element.append(div);
             if (this._initialRender) {
                 this._tabUl.find("li.e-ribresmenu a").not(".e-backstagetab").text(this._tabUl.find("li.e-active a").text());
             }
-            if (this.element.find(".e-ribbonbackstagepage").length > 0) {
+            if (this.model.applicationTab.type === ej.Ribbon.ApplicationTabType.Backstage) {
                 this.element.prepend(ej.buildTag("div#" + this._id + "_responsivebackstage").addClass("e-responsivebackstage"));
                 var resbackstage = ej.buildTag("div#" + this._id + "_resbackstagecontent").addClass("e-responsivebackstagecontent").append(ej.buildTag("div.e-resbackstagecontent"));
                 resbackstage.prepend(ej.buildTag("div#" + this._id + "backstagetop").addClass("e-backstagerestop").append(ej.buildTag("div.e-backstagerestopcontent").append(ej.buildTag("span.e-icon").addClass("e-ribleftarrow")).append(ej.buildTag("div#" + this._id + "resbacstageTitle").addClass("e-backstageTitle"))));
                 this.element.prepend(resbackstage.hide());
             }
         },
+        _onResponsiveHeaderClick: function (args) {
+            if ($(args.target).hasClass("e-responsivetabli")) {
+                var index = $(args.target).parent("ul").children().index(args.target);
+                this.element.find(".e-responsivetabheader").removeClass("e-resshow");
+                this.element.find(".e-ribresmenu a").text(args.target.textContent);
+                $(this._tabUl.find(".e-tab,.e-contextliset").find("a")[index]).trigger("click");
+                $(args.target).parent("ul").children(".e-resactive").removeClass("e-resactive");
+                $(args.target).addClass("e-resactive");
+                return;
+            }
+            if ($(args.target).parent(".e-ribresmenu").length > 0) {
+                this.element.find(".e-responsivetabheader").addClass("e-resshow"); return;
+            }
+        },
         _ribbonResGroup: function () {
-            var tab = this._tabUl.children(".e-tab").index(this._tabUl.find("li.e-active"));
+            var tab = this._tabUl.find(".e-tab,.e-contextualtabset").index(this._tabUl.find("li.e-active"));
+			if(tab<0)
+			 tab=this._tabUl.find(".e-tab,.e-contextualtabset").index(this._tabUl.find("li.e-collapseactive"));
             if (!ej.isNullOrUndefined(this.model.applicationTab))
-                tabIndex = tab + 1;;
+                tabIndex = tab + 1;
             var ribTabContents = this.element.find('.e-content.e-content-item');
             var ribActiveContent = this.element.find(".e-active-content");
             var tabContent = ribTabContents.eq(tabIndex).attr('id');
             var grpLen = ribTabContents.eq(tabIndex).children('.e-groupdiv').length;
             var resize = ribTabContents.eq(tabIndex).children('.e-groupdiv')[grpLen - 1];
             var curGroup = ribTabContents.eq(tabIndex).children('.e-groupdiv').eq(grpLen - 1).find('.e-resizebtn');
-            if (tab != -1) {
+            if (tab != -1 && this.element.find(".e-content-item").eq(tabIndex).children().not(".e-expandcollapse").length > 0) {
                 if (this._mobileContents[tab].mobileContent.length > 0 && !ribActiveContent.find(".e-respmobcontent").length > 0) {
-                    ribActiveContent.prepend(ej.buildTag("div#" + this._id + "_mobcontent").addClass("e-respmobcontent e-groupmobdiv").append(ej.buildTag("div#" + this._id + "_mobribgroup").addClass("e-mobribgroup").append(ej.buildTag("div.e-ribupdivarrow").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribdownarrow"))))).click($.proxy(this._onGroupClick, this)).click($.proxy(this._onMobContentClick, this));
-                    for (var i = 0; i < this._mobileToolbar[tab].Content.length; i++)
+                    ribActiveContent.prepend(ej.buildTag("div#" + this._id + "_mobcontent").addClass("e-respmobcontent e-groupmobdiv").append(ej.buildTag("div#" + this._id + "_mobribgroup").addClass("e-mobribgroup e-mobribgroupactive").append(ej.buildTag("div.e-ribupdivarrow").addClass("e-toolbaralign").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribdownarrow"))))).click($.proxy(this._onGroupClick, this)).click($.proxy(this._onMobContentClick, this));
+                    ribActiveContent.find(".e-resgroupheader").removeClass("e-resgroupheader");
+                    var mobToolbarlen = this._mobileToolbar[tab].Content.length;
+                    for (var i = 0; i < mobToolbarlen; i++)
                         ribActiveContent.find(".e-mobribgroup").append(this._mobileToolbar[tab].Content[i]);
+                    ribActiveContent.find(".e-mobribgroup").append(ribActiveContent.find(".e-mobribgroup .e-ribupdivarrow"))
                 }
             }
             for (var j = grpLen - 1; j >= 0; j--) {
                 curGroup = ribTabContents.eq(tabIndex).children('.e-groupdiv').eq(j).find('.e-resizebtn');
                 if ((curGroup.length == 0) && (j != 0 || this._mobileContents[tab].mobileContent.length > 0))
                     this._createResizeBtn(tabIndex, j);
+                else if (j == 0 && curGroup.length > 0 && !this._mobileContents[tab].mobileContent.length > 0) {
+                    var group = curGroup.parent().siblings();
+                    curGroup.parent().remove();
+                    group.show();
+                    group.not('.e-contentbottom').css("width", "");
+                }
             }
 
         },
         _ribbonWindowResize: function () {
-            this._phoneMode = false;
+            this._phoneMode = (this.model.allowResizing || this.model.isResponsive) && document.documentElement.clientWidth < 420 ? true : false;
+            var tab = this._tabUl.find(".e-tab,.e-contextualtabset").index(this._tabUl.find("li.e-active"));
+            var ribbonPin = this.element.find(".e-ribbonpin");
+            var ribTabContents = this.element.find('.e-active-content').eq(0);
+            var responsiveTab = this.element.find(".e-ribresmenu"), backstage, backstagePage, mobiletoolgroup;
+            var responsiveContent = this.element.find(".e-respcontent");
+            if (!ej.isNullOrUndefined(this.model.applicationTab))
+                tabIndex = tab + 1;
+            this.element.find(".e-ribGroupContent.e-resshow").addClass("e-reshide");
             if (this._phoneMode) {
-                if (this._phoneMode) {
-                    if (this.element.find(".e-respcontent").is(":hidden") && this.element.find(".e-responsivecontent").is(":hidden"))
-                        this.element.find(".e-respcontent").removeClass("e-reshide")
-                    if (this._isCollapsed) {
-                        if (this._tabUl.find(".e-active").length > 0)
-                            this.element.find(".e-ribresmenu a").text(this._tabUl.find(".e-active a").text());
-                        else {
-                            $(this._tabUl.find(".e-tab a")[0]).trigger("click");
-                        }
+                this._responsiveScrollRemove();
+                if (responsiveContent.is(":hidden") && this.element.find(".e-responsivecontent").is(":hidden"))
+                    responsiveContent.removeClass("e-reshide")
+                if (this._isCollapsed) {
+                    if (this._tabUl.find(".e-active").length > 0)
+                        responsiveTab.find("a").text(this._tabUl.find(".e-active a").text());
+                    else {
+                        this._responsiveTabText.eq(0).addClass("e-resactive");
+                        responsiveTab.find("a").text(this._responsiveTabText.filter(".e-resactive").text());
                     }
-                    if (this.element.find(".e-ribbonpin").length > 0)
-                        this.element.find(".e-ribbonpin").trigger("click");
-                    var ribTabContents = this.element.find('.e-active-content');
-                    ribTabContents.addClass("e-responsiveheight e-rbnmobheader").addClass("e-tab_" + this._tabUl.find(".e-active a").text());
-                    if (!ribTabContents.hasClass("e-respcontent"))
-                        ribTabContents.addClass("e-respcontent")
-                    var responsivenestedmenu = ribTabContents.find(".e-groupresponsive");
-                    if ($(responsivenestedmenu).eq(0).hasClass("e-ribdownarrow") || responsivenestedmenu.hasClass("e-ribuparrow"))
-                        responsivenestedmenu.hasClass("e-ribuparrow") && responsivenestedmenu.eq(0).removeClass("e-ribuparrow").addClass("e-ribdownarrow");
-                    if (!ej.isNullOrUndefined(this.model.applicationTab))
-                        this.element.find(".e-ribresmenu").css("padding-left", "12px");
-                    this._ribbonResGroup();
-                    this.element.addClass("e-responsive");
-                    if (this.model.showQAT)
-                        this._tabUl.find("li.e-responsiveqat").append(this.element.find(".e-rbnquickaccessbar.e-rbnabove").children());
-                    if (this.element.find(".e-ribbonbackstagepage").length > 0 && this.element.find(".e-backstagetab .e-resbackstage").length == 0) {
-                        this.element.find(".e-backstagetab").append(ej.buildTag("span.e-icon").addClass("e-ribbon e-resbackstage"));
-                    }
-                    if (ribTabContents.find(".e-groupdiv .e-resizebtn").length > 0 && !ribTabContents.find(".e-groupdiv .e-groupresponsive").not(".e-ribdownarrow").length > 0)
-                        ribTabContents.find(".e-groupdiv").find(".e-resizebtn").parent("div").prepend(ej.buildTag("div.e-ribrightdivarrow").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribrightarrow")));
-                    if (this._tabUl.find(".e-backstagetab").length > 0 && this.element.find(".e-responsivebackstage").length == 1) {
-                        var backstagecontent = this.element.find(".e-ribbonbackstagepage .e-ribbonbackstagebody .e-backstageheader");
-                        this.element.find(".e-responsivebackstage").append(backstagecontent).hide();
-                    }
-                    if (!this.element.find(".e-responsivecontent").length > 0) {
-                        var div = ej.buildTag("div#" + this._id + "_responsive").addClass("e-content e-responsivecontent").click($.proxy(this._onResizeDivClick, this));
-                        div.append(ej.buildTag("div#" + this._id + "_resback").addClass("e-responsiveback").append(ej.buildTag("span").addClass("e-groupresponsive e-icon e-ribleftarrow")).append(ej.buildTag("div#" + this._id + "+rescontentback").addClass("e-restopbackcontent")));
-                        this.element.append(div.hide());
-                    }
-                    if (this.element.find(".e-ribbonbackstagepage .e-ribbonbackstagebody .e-backstagecontent").length > 0)
-                        this.element.find(".e-responsivebackstagecontent .e-resbackstagecontent").append(this.element.find(".e-ribbonbackstagepage .e-ribbonbackstagebody .e-backstagecontent"));
-                    var header = this.element.find(".e-header");
-                    var screenHeight = document.documentElement.clientHeight;
-                    if (this.element.find(".e-header").outerWidth() > document.documentElement.clientWidth)
-                        this.element.find(".e-header").css("width", document.documentElement.clientWidth - (this.element.find(".e-header").outerWidth() - document.documentElement.clientWidth));
-                    if (this.element.find(".e-active-content").outerWidth() > document.documentElement.clientWidth)
-                        this.element.find(".e-active-content").css("width", document.documentElement.clientWidth - (this.element.find(".e-active-content").outerWidth() - document.documentElement.clientWidth));
-                    this.element.find(".e-responsivecontent").css({ "height": (screenHeight - +this.element.find(".e-header").outerHeight()), width: document.documentElement.clientWidth });
-                    this.element.find(".e-responsivebackstagecontent .e-resbackstagecontent").css({ "height": screenHeight, "width": document.documentElement.clientWidth });
-                    return;
                 }
                 else {
-                    if (this.element.find(".e-responsiveqat").length > 0 && this.model.showQAT) {
-                        this.element.find(".e-rbnquickaccessbar.e-rbnabove").append(this._tabUl.find("li.e-responsiveqat").children());
+                    this._responsiveTabText.filter(".e-resactive").removeClass("e-resactive");
+                    this._responsiveTabText.eq($(this._ribbonTabs.filter(".e-tab ,.e-contextualtabset")).index(this._ribbonTabs.filter(".e-active"))).addClass("e-resactive")
+                    responsiveTab.find("a").text(this._responsiveTabText.filter(".e-resactive").text());
+                }
+                if (ribbonPin.length > 0)
+                    ribbonPin.trigger("click");
+                ribTabContents.addClass("e-responsiveheight e-rbnmobheader").addClass("e-tab_" + this._tabUl.find(".e-active a").text());
+                if (!ribTabContents.hasClass("e-respcontent"))
+                    ribTabContents.addClass("e-respcontent");
+                var responsivenestedmenu = ribTabContents.find(".e-groupresponsive");
+                if ($(responsivenestedmenu).eq(0).hasClass("e-ribdownarrow") || responsivenestedmenu.hasClass("e-ribuparrow"))
+                    responsivenestedmenu.hasClass("e-ribuparrow") && responsivenestedmenu.eq(0).removeClass("e-ribuparrow").addClass("e-ribdownarrow");
+                if (!ej.isNullOrUndefined(this.model.applicationTab))
+                    this.element.find(".e-ribresmenu").css("padding-left", "12px");
+                this._ribbonResGroup();
+                this.element.addClass("e-responsive");
+                this.element.find(".e-rbn-ddl.e-ddl").addClass("e-rbn-resize");
+                backstagePage = this.element.find(".e-ribbonbackstagepage");
+                backstage = this.element.find(".e-responsivebackstage");
+                var headerWidth = this.element.find(".e-header").width();
+                if (this.model.enableOnDemand && this.element.find(".e-backstagetab .e-resbackstage").length == 0) {
+                    if (this.model.applicationTab.type === ej.Ribbon.ApplicationTabType.Backstage)
+                        this._applicationTab.addClass('e-backstagetab');
+                    this.element.find(".e-backstagetab").append(ej.buildTag("span.e-icon").addClass("e-ribbon e-resbackstage").click($.proxy(this._onResponsiveHeaderClick, this)));
+                    this.element.find(".e-header").addClass("e-resheader");
+                }
+                else if (this.model.applicationTab.type == ej.Ribbon.ApplicationTabType.Backstage && this.element.find(".e-backstagetab .e-resbackstage").length == 0) {
+                    this.element.find(".e-backstagetab").append(ej.buildTag("span.e-icon").addClass("e-ribbon e-resbackstage").click($.proxy(this._onResponsiveHeaderClick, this)));
+                    this.element.find(".e-header").addClass("e-resheader");
+                }
+                
+                if (this.model.showQAT) {
+                    this._tabUl.find("li.e-responsiveqat").append(this.element.find(".e-rbnquickaccessbar.e-rbnabove").children());
+                    var headerContent = this.element.find(".e-ribdownarrow").not(".e-groupresponsive");
+                    if (this.element.find(".e-resqatScroll").length > 0) {
+                        var mobQATScroll = this.element.find(".e-resqatScroll")
+                        mobQATScroll.data("ejScroller")._destroy();
+                        mobQATScroll.parent().append(mobQATScroll.find("div:first").children());
+                        mobQATScroll.remove();
                     }
-                    $(".e-respmobcontent.e-groupmobdiv").remove();
-                    if (this.element.find(".e-ribbonbackstagepage").length > 0)
-                        this.element.find(".e-backstageheader").width(this.element.find(".e-backstagetopcontent").width())
-                    if (this.element.find(".e-responsivebackstage").children().length > 0)
-                        this.element.find(".e-ribbonbackstagepage .e-ribbonbackstagebody").prepend(this.element.find(".e-responsivebackstage").children());
-                    if (this.element.find(".e-resbackstagecontent").children().length > 0)
-                        this.element.find(".e-ribbonbackstagepage .e-ribbonbackstagebody").append(this.element.find(".e-resbackstagecontent").children());
-                    if (this.element.hasClass("e-responsive")) {
-                        this.element.removeClass("e-responsive");
-                        this.element.find(".e-responsiveheight").removeClass("e-responsiveheight e-rbnmobheader");
-                        this.element.find(".e-content").css({ "width": "", height: "" });
-                        this.element.find(".e-content .e-groupdiv .e-resizebtn div").css("height", "");
-                        this.element.find(".e-content .e-groupdiv ").css("height", "");
-                        this.element.find(".e-backstageheader .e-backstageli").css("width", "");
-                        if (this.element.find(".e-responsivebackstagecontent").is(":visible"))
-                            this.element.find(".e-responsivebackstagecontent").hide();
-                        this.element.find(".e-groupdiv").css("height", this._responsiveContentStyle.height);
-                        if (!ej.isNullOrUndefined(this._responsiveTarget)) {
-                            this._responsiveTarget.append(this._responsiveContent).find(".e-ribGroupContent").css("height", "").hide();
-                            this._responsiveTarget.append(this._responsiveContent).css(this._responsiveContentStyle);
-                        }
-                        this._responsiveContent = null;
-                        this.element.find(".e-content").removeClass("e-respcontent");
-                        this.element.find(".e-ribGroupContent").removeClass("e-reshide e-resshow");
+                    var qatOffset = ((headerWidth - (headerContent.offset().left + headerContent.outerWidth())) < (headerWidth - this.element.find("li.e-responsiveqat").offset().left));
+                    if (qatOffset && !this.element.find(".e-resqatScroll").length > 0) {
+                        var diff = (headerWidth - this.element.find("li.e-responsiveqat").offset().left) - (headerWidth - (headerContent.offset().left + headerContent.outerWidth()));
+                        var div = ej.buildTag("div#" + this._id + "_responsiveqat").addClass("e-resqatScroll").append(ej.buildTag("div"));
+                        div.find("div").append(this._tabUl.find("li.e-responsiveqat").children());
+                        this._tabUl.find("li.e-responsiveqat").append(div);
+                        var qatScroll = this.element.find(".e-resqatScroll");
+                        qatScroll.ejScroller({ width: (headerWidth - this.element.find("li.e-responsiveqat").offset().left) - diff, height: "", scrollerSize: 3, buttonSize: 0 })
                     }
+                }
+                if (ribTabContents.find(".e-groupdiv .e-resizebtn").length > 0 && !ribTabContents.find(".e-groupdiv .e-groupresponsive").not(".e-ribdownarrow").length > 0)
+                    ribTabContents.find(".e-groupdiv").find(".e-resizebtn").parent("div").prepend(ej.buildTag("div.e-ribrightdivarrow").append(ej.buildTag("span.e-icon").addClass("e-groupresponsive e-ribrightarrow")));
+                if (this._tabUl.find(".e-backstagetab").length > 0 && backstage.length == 1) {
+                    var backstagecontent = backstagePage.find(".e-ribbonbackstagebody .e-backstageheader");
+                    backstage.append(backstagecontent).addClass("e-reshide");
+                }
+                if (!this.element.find(".e-responsivecontent").length > 0) {
+                    var div = ej.buildTag("div#" + this._id + "_responsive").addClass("e-content e-responsivecontent").click($.proxy(this._onResizeDivClick, this));
+                    div.append(ej.buildTag("div#" + this._id + "_resback").addClass("e-responsiveback").append(ej.buildTag("span").addClass("e-groupresponsive e-icon e-ribleftarrow")).append(ej.buildTag("div#" + this._id + "+rescontentback").addClass("e-restopbackcontent")));
+                    this.element.append(div.hide());
+                }
+                if (backstagePage.find(".e-ribbonbackstagebody .e-backstagecontent").length > 0)
+                    this.element.find(".e-responsivebackstagecontent .e-resbackstagecontent").append(backstagePage.find(".e-ribbonbackstagebody .e-backstagecontent"));
+                var header = this.element.find(".e-header");
+                var screenHeight = document.documentElement.clientHeight;
+                mobiletoolgroup = this.element.find(".e-mobribgroup.e-mobribgroupactive");
+                this.element.find(".e-responsivebackstagecontent .e-resbackstagecontent").css({ "height": screenHeight - this.element.find(".e-backstagerestop").outerHeight() });
+                mobiletoolgroup.find(".e-ribupdivarrow").removeClass("e-toolbaralign");
+                var mobToolbarScroll = mobiletoolgroup.find(".e-resptoolbarScroll");
+                if (mobToolbarScroll.length > 0) {
+                    mobToolbarScroll.data("ejScroller")._destroy();
+                    mobToolbarScroll.parent().append(mobToolbarScroll.find("div:first").children());
+                    mobToolbarScroll.parents(".e-active-content").removeClass("e-responsiveToolbarScroll");
+                    mobToolbarScroll.remove();
+                }
+                if (this._phoneMode && mobiletoolgroup.outerWidth() > this.element.find(".e-header").outerWidth()) {
+                var div = ej.buildTag("div#" + this._id + "_responsivetoolbar").addClass("e-resptoolbarScroll").append(ej.buildTag("div"));
+                div.find("div").append(mobiletoolgroup.children());
+                mobiletoolgroup.append(div);
+                var toolbarScroll = this.element.find(".e-respmobcontent .e-resptoolbarScroll");
+                toolbarScroll.find(".e-toolbaralign").removeClass("e-toolbaralign");
+                toolbarScroll.ejScroller({ width: this.element.find(".e-header").width(), height: "", scrollerSize: 4, buttonSize: 0 })
+                toolbarScroll.parents(".e-active-content").addClass("e-responsiveToolbarScroll");
+            }
+            else if (mobiletoolgroup.find(".e-resptoolbarScroll").length > 0 && !mobiletoolgroup.find("e-responsiveToolbarScroll").length > 0)
+                mobiletoolgroup.parents(".e-active-content").addClass("e-responsiveToolbarScroll");
+            else mobiletoolgroup.find(".e-ribupdivarrow").addClass("e-toolbaralign"); {
+                this.goToMainContent();
+                return;
+            }
+            }
+            else {
+                if (this.element.hasClass("e-responsive")) {
+                    this.element.removeClass("e-responsive");
+                    this._ribbonRerender();
+                   
                 }
             }
 
             if (this.model.allowResizing || this.model.isResponsive) {
-                if (this.element.find('.e-ribbonpin').length > 0 && this.element.find('.e-active-content').is(':visible')) {
+                if (this.element.find('.e-ribbonpin').length > 0 && this.element.find('.e-active-content').eq(0).is(':visible')) {
                     this.collapse();
                 }
                 else
@@ -2710,7 +3712,7 @@
         },
         _ribbonResize: function () {
             var tabContent, resize, tabIndex, tabLeft, tabWidth, tabHeadLen, curHead, curTextLen, grpLen, contentWidth, grpsWidth, resizeBtnLen = 0, resizeBtn, m = 0, tabArray = [], resizeHead, toolTip, tabUl, curGroup;
-            var ribTabContents, ribActiveCon = this.element.find('.e-active-content'), ribTabs, ribTabsVisible, ribResizeDiv, resizeTab, ribbonPin = this.element.find('.e-ribbonpin');
+            var ribTabContents, ribActiveCon = this.element.find('.e-active-content').eq(0), ribTabs, ribTabsVisible, ribResizeDiv, resizeTab, ribbonPin = this.element.find('.e-ribbonpin');
             ribTabsVisible = this._tabUl.find('li.e-select:visible,li.e-active:visible'), ribResizeDiv = this.element.find('.e-resizediv'), expandDiv = this.element.find('.e-expandcollapse');
             tabUl = this.element.find('.e-header');
             if (ribbonPin.length > 0) {
@@ -2757,10 +3759,6 @@
                         tabWidth = ribTabsVisible.last().width();
                         if (((this.element.width() + this.element.offset().left) - 30) - (tabLeft + tabWidth) <= 0) {
                             this._resizeWidth = this.element.width() + this.element.offset().left;
-                            tabUl.hide();
-                            this._qAccessBar.hide();
-                            ribActiveCon.hide();
-                            expandDiv.children().addClass('e-collapsed').removeClass('e-expanded');
                         }
                     }
                 }
@@ -2782,11 +3780,13 @@
                 if ((this.element.width() + this.element.offset().left - 25) - (resize.offsetWidth + $(resize).offset().left) <= 0 || (this.model.enableRTL && ($(window).width() - this.element.offset().left + 25) - ($(window).width() - $(resize).offset().left + resize.offsetWidth) <= 0)) {
                     if (grpLen === ribTabContents.eq(tabIndex).find('.e-resizebtn').length) {
                         this._resizeWidth = this.element.width() + this.element.offset().left;
-                        tabUl.hide();
-                        this._qAccessBar.hide();
-                        ribActiveCon.hide();
-                        expandDiv.children().addClass('e-collapsed').removeClass('e-expanded');
+                        this.element.addClass("e-grpdivhide")
+                        this.element.find('.e-expandcollapse').css("display", "none");
                     }
+                }
+                else {
+                    this.element.removeClass("e-grpdivhide");
+                    this.element.find('.e-expandcollapse').css("display", "block");
                 }
             }
             this._qatResize();
@@ -2796,15 +3796,18 @@
                 ribResizeDiv.children().hide().appendTo(resizeCon);
                 ribResizeDiv.hide();
             }
-            for (var l = 0; l < this.model.tabs.length; l++) {
+            var tabLen = this.model.tabs.length
+            for (var l = 0; l < tabLen; l++) {
                 var tabText = this.model.tabs[l].text;
                 tabArray.push(tabText);
             }
 
             if (this.model.contextualTabs) {
-                for (var i = 0; i < this.model.contextualTabs.length; i++) {
+                var contextTabLen = this.model.contextualTabs.length;
+                for (var i = 0; i < contextTabLen; i++) {
                     if (this.model.contextualTabs[i].tabs) {
-                        for (var j = 0; j < this.model.contextualTabs[i].tabs.length; j++) {
+                        var contexttualTabLen = this.model.contextualTabs[i].tabs.length;
+                        for (var j = 0; j < contexttualTabLen; j++) {
                             tabText = this.model.contextualTabs[i].tabs[j].text;
                             tabArray.push(tabText);
                         }
@@ -2819,7 +3822,8 @@
                     if (curHead.hasClass("e-resizeHead")) {
                         var aTagLen = ribTabs.find(".e-link").not('.e-resizeHead').length - 1;
                         var textLen = curHead.text().length;
-                        for (var s = textLen; s <= tabArray[aTagLen].length; s++) {
+                        var tabLength = tabArray[aTagLen].length;
+                        for (var s = textLen; s <= tabLength; s++) {
                             if (ribTabsVisible.length > 0) {
                                 tabLeft = ribTabsVisible.last().offset().left;
                                 tabWidth = ribTabsVisible.last().width() + 15;
@@ -2842,8 +3846,9 @@
                     contentWidth = resizeBtn.offset().left + resizeBtn.parent().siblings().not('.e-contentbottom').width();
                     if (this.model.enableRTL)
                         contentWidth = (this.element.width() + this.element.offset().left - resizeBtn.offset().left) + resizeBtn.parent().siblings().not('.e-contentbottom').width();
-                    if (resizeBtnLen > 1) {
-                        for (var k = 1; k < resizeBtnLen; k++)
+                    var resizeBtnLength = ribTabContents.eq(tabIndex).find('.e-resizebtn').length;
+                    if (resizeBtnLength > 1) {
+                        for (var k = 0; k < resizeBtnLength; k++)
                             contentWidth = contentWidth + ribTabContents.eq(tabIndex).find('.e-resizebtn').eq(k).parents('.e-groupdiv').width() + 7;
                     }
                     if (grpsWidth > contentWidth) {
@@ -2859,7 +3864,7 @@
             toolTip.hide();
             toolTip.find('.e-tooltiptitle').children().remove();
             toolTip.find('.e-tooltipdesc').children().remove();
-            if (this.element.find('.e-ribbonpin').length > 0 && this.element.find('.e-active-content').is(':visible')) {
+            if (this.element.find('.e-ribbonpin').length > 0 && this.element.find('.e-active-content').eq(0).is(':visible')) {
                 this._addRibbonPin();
                 this._tabContents.width(this.element.width());
             }
@@ -2874,7 +3879,8 @@
         _qatResize: function () {
             if (this.model.showQAT && this._qAccessBar.is(':visible')) {
                 var qaLastEle, qaResizeDiv;
-                for (var i = 0; i < this._qAccessBar.children(':visible').length; i++) {
+                var qatToolbarlen = this._qAccessBar.children(':visible').length;
+                for (var i = 0; i < qatToolbarlen; i++) {
                     qaLastEle = this._qAccessBar.children(':visible').last();
                     if (this.element.width() - (qaLastEle.width() + $(qaLastEle).position().left + 6) <= 0) {
                         if (qaLastEle.hasClass('e-splitbtnqatdiv')) {
@@ -2888,7 +3894,7 @@
                                 contentType: "imageonly",
                                 height: 30,
                                 width: 14,
-                                prefixIcon: "e-ribbon e-qaresizebtnicon",
+                                prefixIcon: "e-icon e-ribbon e-qaresizebtnicon",
                                 click: $.proxy(this._onQatResizeBtnClick, this)
                             }));
                             qaResizeDiv.append(qaLastEle);
@@ -2910,9 +3916,11 @@
             if (qaResizeDiv.length > 0 && this._qAccessBar.is(':visible') && this.model.showQAT) {
                 qaResizeDiv.show();
                 qaResizebBtnDiv = this.element.find('.e-qaresizebtndiv');
-                for (var i = 0; i < this._qAccessBar.children(':visible').length; i++)
+                var qatToolbarlen = this._qAccessBar.children(':visible').length;
+                var qaResizelen = qaResizeDiv.children().length;
+                for (var i = 0; i < qatToolbarlen; i++)
                     qAccessBarWidth = qAccessBarWidth + this._qAccessBar.children(':visible').eq(i).width() + 6;
-                for (var i = 0; i <= qaResizeDiv.children().length; i++) {
+                for (var i = 0; i <= qaResizelen; i++) {
                     if (qaResizeDiv.children().length > 2)
                         qAccessBarWidth = qAccessBarWidth + qaResizeDiv.children().eq(0).width();
                     else
@@ -2942,13 +3950,13 @@
             curGroup.children().hide();
             grpContents.css("width", grpWidth);
             var rBtnDiv = ej.buildTag("div.e-resizegroupdiv#" + this._id + "_" + "resizeDiv" + "_" + groupText);
-            var rBtn = ej.buildTag("button#" + this._id + "_" + "resizebtn" + "_" + groupText, groupText, {}, { type: "button" }).addClass("e-resizebtn")
+            var rBtn = ej.buildTag("button#" + this._id + "_" + "resizebtn" + "_" + groupText, groupText, {}, { type: "button" }).addClass("e-resizebtn e-rbn-button")
             var data = { target: ribTabContents.eq(i).children('.e-groupdiv').eq(j).children() };
             rBtn.ejButton({
                 click: $.proxy(this._resizeBtnClick, data),
                 contentType: ej.ContentType.TextAndImage,
                 imagePosition: ej.ImagePosition.ImageBottom,
-                prefixIcon: "e-ribbonresize"
+                prefixIcon: "e-icon e-ribbonresize"
             });
             curGroup.height(grpHeight);
             rBtn.find('div').prepend("<span class='e-icon e-" + groupText + "'></span>").height(grpHeight - 5);
@@ -2958,17 +3966,28 @@
         _resizeBtnClick: function (args) {
 
         },
+        _responsiveCustomize: function (responsivecontent) {
+            responsivecontent.find(".e-rbn-resize").parents(".e-controlpadding").addClass("e-rbn-resize").addClass("e-rbn-dll-cus");
+            responsivecontent.find(".e-rbn-resize").parents(".e-innerdivrow").addClass("e-rbn-resize").next().css("display", "inline-block");
+        },
         _responsiveContentShow: function (responsivecontent) {
             var content = this.element.find(".e-active-content");
+            this._responsiveCustomize(responsivecontent);
             content.addClass("e-reshide");
             responsivecontent.addClass("e-resshow");
             this.element.find(".e-responsivecontent .e-ribGroupContent").addClass("e-resshow");
-            content.find(".e-resizebtnselect").removeClass("e-resizebtnselect");
+            if (responsivecontent.find(".e-ribGroupContent").height() > this._responsiveHeight) {
+                var div = ej.buildTag("div#" + this._id + "_responsivecontentScroll").addClass("e-rescontentScroll").append(ej.buildTag("div"));
+                div.find("div").append(responsivecontent.children(".e-ribGroupContent"));
+                responsivecontent.append(div);
+                responsivecontent.find(".e-rescontentScroll").ejScroller({ height: this._responsiveHeight, scrollerSize: 8, buttonSize: 0 });
+            }
+           content.find(".e-resizebtnselect").removeClass("e-resizebtnselect");
         },
         _responsiveContentBack: function () {
             this._responsiveTarget.append(this._responsiveContent).find(".e-ribGroupContent").addClass("e-reshide").css(this._responsiveContentStyle);
             this._responsiveContent = null;
-            this.element.find(".e-resizebtn.e-active").removeClass("e-active");
+            this.element.find(".e-resizebtn.e-active").removeClass("e-active e-resizebtnselect");
             if (this.element.find(".e-galleryexpand.e-gallerymoveicon").length > 0)
                 this.element.find(".e-galleryexpand.e-gallerymoveicon").trigger("click")
             this.element.find(".e-content.e-responsivecontent").children().not(".e-responsiveback").remove();
@@ -2977,113 +3996,41 @@
         },
         _ribbonDocClick: function (e) {
             if (this.element.hasClass("e-responsive")) {
+                var target = e.target, args = {};
+                var responsiveBackstage = this.element.find(".e-responsivebackstage"), respTabHeader = this.element.find(".e-responsivetabheader");
                 var content = this.element.find(".e-active-content");
                 var responsebackstage = this.element.find(".e-responsivebackstage");
-                if ($(e.target).hasClass("e-resbackstage")) {
-                    if (responsebackstage.children().length > 0)
-                        responsebackstage.find(".e-backstageheader").css({ "width": document.documentElement.clientWidth / 2, "height": document.documentElement.clientHeight - (responsebackstage.find(".e-backstageheader").offset().top) });
-                    if (this.element.find(".e-responsivetabheader").is(":visible"))
-                        this.element.find(".e-responsivetabheader").removeClass("e-resshow");
-                    $(".e-ribbon.e-responsive .e-responsivebackstage").show();
-                    this.element.find(".e-backstageactive").removeClass("e-backstageactive");
-                    return;
-                }
-                else
-                    this.element.find(".e-responsivebackstage").is(":visible") && this.element.find(".e-responsivebackstage").hide();
-                this.element.find(".e-responsivetabheader").hasClass("e-resshow") && this.element.find(".e-responsivetabheader").removeClass("e-resshow")
-                if ($(e.target).hasClass("e-ribdownarrow") && $(e.target).parent(".e-ribresmenu").length > 0) {
-                    this.element.find(".e-responsivetabheader").addClass("e-resshow"); return;
-                }
-                if ($(e.target).parent().hasClass("e-backstagerestopcontent")) {
-                    $(e.target).parents(".e-responsivebackstagecontent").hide();
-                    return;
-                }
-                if ($(e.target).parents(".e-backstageheader").length > 0 && ($(e.target).find("a").length > 0 || e.target.localName == "a")) {
-                    this.element.find(".e-responsivebackstagecontent").show();
-                    $(".e-ribbon.e-responsive .e-responsivebackstage").hide();
-                    return;
-                }
-                if ($(e.target).hasClass("e-responsivetabli")) {
-                    var index = $(e.target).parent("ul").children().index(e.target);
-                    this.element.find(".e-responsivetabheader").removeClass("e-resshow");
-                    this.element.find(".e-ribresmenu a").text(e.target.textContent);
-                    $(this._tabUl.find(".e-tab a")[index]).trigger("click");
-                }
-                if ($(e.target).hasClass("e-groupresponsive e-ribdownarrow") || ($(e.target).parents(".e-rbn-splitbtn").length > 0 && $(e.target).parents(".e-groupdiv").length > 0)) {
-                    this.element.find(".e-active-content").removeClass("e-responsiveheight e-rbnmobheader");
-                    $(e.target).hasClass("e-ribdownarrow") && $(e.target).removeClass("e-ribdownarrow").addClass("e-ribuparrow");
-                    $(e.target).parents(".e-groupdiv").find(".e-groupresponsive.e-ribdownarrow").removeClass("e-ribdownarrow").addClass("e-ribuparrow");
-                    return;
-                }
-                else if ($(e.target).hasClass("e-groupresponsive e-ribuparrow")) {
-                    this.element.find(".e-active-content").addClass("e-responsiveheight e-rbnmobheader");
-                    $(e.target).removeClass("e-ribuparrow").addClass("e-ribdownarrow");
-                    return;
-                }
-                else if ($(e.target).hasClass("e-resizebtn")) {
-                    this._responsiveTarget = $(e.target).parents(".e-groupdiv");
-                    this._responsiveContent = $(e.target).parent().siblings();
-                    var resizeContent = this._responsiveContent.eq(0).removeClass("e-reshide");
-                    var responsivecontent = this.element.find(".e-content.e-responsivecontent");
-                    responsivecontent.children().not(".e-responsiveback").remove();
-                    responsivecontent.append(resizeContent);
-                    this.element.find(".e-restopbackcontent").text(this._responsiveTarget.find(".e-resizebtn .e-btntxt").text());
-                    this._responsiveContentShow(responsivecontent);
-                    return;
-                }
-                else if ($(e.target).parents(".e-resizebtn").length > 0) {
-                    this._responsiveTarget = $(e.target).parents(".e-resizebtn").parents(".e-groupdiv");
-                    this._responsiveContent = $(e.target).parents(".e-resizebtn").parent().siblings();
-                    var resizeContent = this._responsiveContent.eq(0).removeClass("e-reshide");
-                    var responsivecontent = this.element.find(".e-content.e-responsivecontent");
-                    responsivecontent.children().not(".e-responsiveback").remove();
-                    responsivecontent.append(resizeContent);
-                    this.element.find(".e-restopbackcontent").text(this._responsiveTarget.find(".e-resizebtn .e-btntxt").text());
-                    this._responsiveContentShow(responsivecontent);
-                    return;
-                }
-                else if ($(e.target).hasClass("e-groupresponsive e-ribrightarrow") || $(e.target).hasClass("e-ribrightdivarrow")) {
-                    var resParent = $(e.target).parents(".e-resizegroupdiv").find(".e-resizebtn")
-                    if (resParent.length > 0) {
-                        this._responsiveTarget = resParent.parents(".e-groupdiv");
-                        this._responsiveContent = resParent.parent().siblings();
-                        var resizeContent = this._responsiveContent.eq(0).removeClass("e-reshide");
-                        var responsivecontent = this.element.find(".e-content.e-responsivecontent");
-                        responsivecontent.children().not(".e-responsiveback").remove();
-                        responsivecontent.append(resizeContent);
-                        this.element.find(".e-restopbackcontent").text(this._responsiveTarget.find(".e-resizebtn .e-btntxt").text());
-
-                        var gallery = responsivecontent.find(".e-ribbongallery");
-                        var expcolumns = this._responsiveGallery;
-                        var rowLen = Math.floor(gallery.find('.e-galleryrow').children().length / expcolumns);
-                        if (gallery.find('.e-galleryrow').children().length % expcolumns > 0)
-                            ++rowLen;
-                        for (var m = 1; m <= rowLen; m++) {
-                            var galleryExpanderRow = ej.buildTag("div#" + gallery.attr("id") + "_galleryExpanderRow_" + m).addClass('e-galleryexpanderrow').click({ model: gallery }, $.proxy(this._onGalleryItemClick, this));
-                            for (var n = 0; n < expcolumns; n++)
-                                gallery.find('.e-galleryrow').children().eq(0).appendTo(galleryExpanderRow);
-                            galleryExpanderRow.appendTo(responsivecontent.parent().find('.e-expandercontent'));
-                        }
-                        gallery.hide();
-                        responsivecontent.parent().find(".e-gallexpandcontent").show();
-                        this._responsiveContentShow(responsivecontent);
-                        return;
+                if (((!$(e.target).parents(".e-ribbon").length > 0 && !(e.target == document.documentElement) && !$(e.target).parents(".e-rbn-ddl").length > 0) && !$(e.target).parents(".e-popup").length > 0) && !this.element.find(".e-responsivecontent").is(":visible")) {
+                    respTabHeader.removeClass("e-resshow");
+                    if (responsiveBackstage.is(":visible"))
+                        responsiveBackstage.removeClass("e-backstageshowanimate");
+                    if (this.element.find(".e-responsivecontent").is(":visible"))
+                        this._responsiveContentBack();
+                    this.element.find(".e-responsivebackstagecontent").hide();
+                    if (!content.hasClass("e-responsiveheight")) {
+                        content.addClass("e-responsiveheight e-rbnmobheader");
+                        this._responsiveScrollRemove();
+                        content.find(".e-groupresponsive.e-ribuparrow").removeClass("e-ribuparrow").addClass("e-ribdownarrow")
+                        args.isMobile = this.element.hasClass("e-responsive");
+                        args.target = target;
+                        args.currentTarget = e.currentTarget
+                        args.eventType = e.type
+                        this._trigger("collapse", args);
                     }
-                  }
-                  else if ($(e.target).hasClass("e-ribleftarrow")) {
-                      this._responsiveContentBack();
-                      return;
-                  }
-                  else if ($(e.target).parents(".e-resizebtn").length > 0)
-                      return;
-                  else if (this.element.find(".e-responsivetabheader").hasClass("e-resshow"))
-                      this.element.find(".e-responsivetabheader").removeClass("e-resshow");
-                  else if (this.element.find(".e-responsivebackstage").is(":visible"))
-                      this.element.find(".e-responsivebackstage").hide();
-                  else if ((!$(e.target).parents(".e-responsivecontent").length > 0 || $(e.target).hasClass("e-ribGroupContent")) && !$(e.target).parents(".e-resbackstagecontent").length > 0)
-                      this._responsiveback();
+                    return;
+                }
+                if ($(target).hasClass("e-header") || $(target).hasClass("e-ribGroupContent") || $(target).hasClass("e-groupresponsive") || $(target).hasClass("e-respmobcontent")) {
+                    if (respTabHeader.hasClass("e-resshow"))
+                        respTabHeader.removeClass("e-resshow");
+                    if (responsiveBackstage.is(":visible"))
+                        responsiveBackstage.removeClass("e-backstageshowanimate");
+                }
+                if ($(target).parent().hasClass("e-backstagerestopcontent") && !$(".e-ddl-popup").is(":visible")) {
+                    $(target).parents(".e-responsivebackstagecontent").hide();
+                    return;
+                }
+                else return;
             }
-
             var resizeDiv, resizeContent, expClick, gallery, gryColumns, contentHeight, toolTip, control, modelDivCon, activeContent;
             var popup, galExpandCont = this.element.find(".e-gallexpandcontent");
             modelDivCon = this.element.find("#" + this._id + "_modelDiv");
@@ -3108,46 +4055,6 @@
                 galExpandCont.addClass("e-gallerypopupshow");
                 activeContent.append(modelDivCon.show().height("100%"));
             }
-            resizeDiv = $(e.target).parents('.e-resizediv');
-            if (resizeDiv.length <= 0) {
-                if ($(e.target).hasClass('e-resizebtn'))
-                    resizeDiv = $(e.target);
-                else if (!ej.isNullOrUndefined($(e.target).parents('.e-resizebtn')))
-                    resizeDiv = $(e.target).parents('.e-resizebtn');
-            }
-            if (this.element.find('.e-resizediv').is(':visible') && this.element.find('.e-resizediv .e-gallexpandcontent').is(':visible')) {
-                if ($(e.target).hasClass('e-gallerymoveicon') || $(e.target).hasClass('e-gallerymovediv') || $(e.target).hasClass('e-expgallerydiv') || $(e.target).hasClass('e-scrollbar') || $(e.target).parents().hasClass('e-scrollbar'))
-                    expClick = e.target;
-                else if ($(e.target).parents().hasClass('e-gallerymenu')) {
-                    if ($(e.target).hasClass('e-haschild') || $(e.target).hasClass('aschild') || $(e.target).hasClass('e-arrows'))
-                        expClick = e.target;
-                }
-                if (ej.isNullOrUndefined(expClick)) {
-                    this._ribbonGalleryShow();
-                    this.element.find('.e-resizediv').show().css('visibility', '');
-                    this.element.find('.e-resizediv .e-gallexpandcontent').hide().css('visibility', '');
-                }
-            }
-            else if (resizeDiv.length <= 0) {
-                if ((!$(e.target).parents(".e-content").length > 0 && $(e.target).parents(".e-rbn-ddl").length > 0) || $(e.target).parents(".e-rbn-splitbtn").length > 0 || $(e.target).parents(".e-presetWrapper").length > 0 || $(e.target).parents(".e-ribbonpopup").length > 0 || $(e.target).parents('.e-colorpicker.e-ribbon:visible').length > 0)
-                    return false;
-                else
-                    this._resizeDivHide();
-            }
-            else {
-                if ($(resizeDiv).hasClass('e-resizebtn')) {
-                    if (this.element.find('.e-resizediv').is(":visible")) {
-                        if (resizeDiv.parent().siblings('.e-contentbottom').length <= 0)
-                            this._resizeDivHide();
-                        else {
-                            this._resizeDivHide();
-                            this._resizeDivShow(resizeDiv);
-                        }
-                    }
-                    else
-                        this._resizeDivShow(resizeDiv);
-                }
-            }
             if ($(e.target).hasClass('e-gallerymoveicon') || $(e.target).hasClass('e-gallerymovediv') || $(e.target).hasClass('e-expgallerydiv') || $(e.target).hasClass('e-scrollbar') || $(e.target).parents().hasClass('e-scrollbar'))
                 expClick = e.target;
             else if ($(e.target).parents().hasClass('e-gallerymenu')) {
@@ -3160,8 +4067,10 @@
             disabled = $(e.target).find('.e-disable');
             if (toolTip.is(':visible') && $(disabled).length <= 0 && (!$(e.target).hasClass('e-disable')))
                 toolTip.hide();
-            if ($(e.target).hasClass('e-backstagechild') || $(e.target).hasClass('e-ribbonbackstagepage') || $(e.target).hasClass('e-apptab') || $(e.target).parents('.e-ribbonbackstagepage').length > 0 || $(e.target).parents('.e-apptab').length > 0)
+            if ($(e.target).hasClass('e-backstagechild') || $(e.target).parents('.e-backstagechild').length > 0 || $(e.target).hasClass('e-ribbonbackstagepage') || $(e.target).hasClass('e-apptab') || $(e.target).parents('.e-ribbonbackstagepage').length > 0 || $(e.target).parents('.e-apptab').length > 0)
                 expClick = e.target;
+			if(ej.isNullOrUndefined(expClick) && $(document).find($(e.target)).length==0)
+			 expClick=$(e.currentTarget.activeElement);
             if (ej.isNullOrUndefined(expClick))
                 this.element.find(".e-ribbonbackstagepage").hide();
             if (!$(e.target).hasClass('e-disable-item') && $(e.target).parents('.e-disable-item').length <= 0)
@@ -3192,7 +4101,8 @@
             if (this.element.find('.e-gallexpandcontent:visible').length > 0) {
                 var visibleRows = 0, n = 0;
                 gallery = this.element.find('.e-gallexpandcontent:visible').parent().find('.e-ribbongallery');
-                for (var i = 1; i <= gallery.find('.e-galleryrow').length; i++) {
+                var galleryRowlen = gallery.find('.e-galleryrow').length;
+                for (var i = 1; i <= galleryRowlen; i++) {
                     if (gallery.find('.e-galleryrow').eq(i - 1).css('display') === "block") {
                         if (visibleRows === 0)
                             startIndex = i - 1;
@@ -3204,7 +4114,8 @@
                 gallery.show();
                 gryColumns = gallery.find('.e-galleryrow').eq(0).children().length;
                 gallery.find('.e-galleryrow').eq(0).children().remove();
-                for (var k = 0; k < gallery.find('.e-galleryrow').length; k++) {
+                var galleryRowlen = gallery.find('.e-galleryrow').length;
+                for (var k = 0; k < galleryRowlen; k++) {
                     for (var l = 0; l < gryColumns; l++) {
                         var activeBtn = gallery.parent().find('.e-galleryexpanderrow').children().eq(0);
                         if ($(activeBtn).hasClass("e-galleryselect")) {
@@ -3279,9 +4190,13 @@
                 else
                     $(resizeArea).offset({ left: curGroup.parent().position().left });
             if (this.element.find('.e-ribbonpin').length > 0)
-                $(resizeArea).offset({ top: this.element.height() + this.element.find('.e-active-content').height() });
+                $(resizeArea).offset({ top: this.element.height() + this.element.find('.e-active-content').eq(0).height() });
             $(resizeArea).width(curGroup.not('.e-contentbottom').css("width"));
             $(resizeArea).append(curGroup.show()).show();
+            if (this.element.hasClass("e-grpdivhide")) {
+                this.element.removeClass("e-grpdivhide");
+				this.element.find('.e-active-content').eq(0).addClass("e-resdivshow");
+            }
             this._on($(document), "mousedown", this._rbndocumentClick);
         },
         _rbndocumentClick: function (e) {

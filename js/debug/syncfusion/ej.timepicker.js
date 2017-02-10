@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.timepicker.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","jquery-easing","./../common/ej.core","./../common/ej.scroller"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.scroller"], fn) : fn();
 })
 (function () {
 	
@@ -58,8 +58,6 @@
             showPopupButton: true,
 
             enableStrictMode: false,
-			
-			enablePersistence: false,
 
             interval: 30,
 
@@ -90,6 +88,10 @@
             enablePersistence: false,
 
             disableTimeRanges: null,
+
+            validationRules: null,
+
+            validationMessages: null,
 
             focusIn: null,
 
@@ -129,7 +131,9 @@
             enableAnimation: "boolean",
             enableStrictMode: "boolean",
             disableTimeRanges: "data",
-            htmlAttributes: "data"
+            htmlAttributes: "data",
+            validationRules: "data",
+            validationMessages: "data",
         },
 
         observables: ["value"],
@@ -137,7 +141,7 @@
         enable: function () {
             if (!this.model.enabled) {
                 this.element[0].disabled = false;
-				this.element.removeAttr("disabled");
+                this.element.prop("disabled", false);
                 this.model.enabled = true;
                 this.element.removeClass("e-disable").attr("aria-disabled", false);
                 if (this.model.showPopupButton) {
@@ -153,7 +157,7 @@
             if (this.model.enabled) {
                 this.element[0].disabled = true;
                 this.model.enabled = false;
-				this.element.attr("disabled","disabled");
+                this.element.attr("disabled", "disabled");
                 this.element.addClass("e-disable").attr("aria-disabled", true);
                 if (this.model.showPopupButton) {
                     this.timeIcon.addClass("e-disable").attr("aria-disabled", true);
@@ -174,11 +178,11 @@
             if (!this.model.readOnly) this._setMask();
         },
 
-        show: function() {
+        show: function () {
             (!this.showDropdown && !this._getInternalEvents) && this._showResult();
         },
 
-        hide: function() {
+        hide: function () {
             (this.showDropdown) && this._hideResult();
         },
 
@@ -227,6 +231,8 @@
         },
 
         _timeFormat: function (format) {
+            if (!format)
+                format = ej.preferredCulture(this.model.locale).calendars.standard.patterns.t;
             var validatedformat = this._validateTimeFormat(format);
             if (validatedformat) {
                 this.model.timeFormat = validatedformat;
@@ -262,7 +268,7 @@
         },
 
         _localize: function (culture) {
-            var currentTime = this._createObject(this.model.value,true);           
+            var currentTime = this._createObject(this.model.value, true);
             this.model.locale = culture;
             this._getTimeFormat();
 
@@ -280,25 +286,25 @@
                     this.element.val(currentTime);
                 }
             }
-            this._getAmPm();  
+            this._getAmPm();
         },
         _setLocalize: function (culture) {
             var culture = ej.preferredCulture(culture);
             if (culture) {
                 this.model.locale = culture.name == "en" ? "en-US" : culture.name;
-                if (!ej.isNullOrUndefined(this._options) && ej.isNullOrUndefined(this._options.timeFormat))
+                if (!ej.isNullOrUndefined(this._options) && (ej.isNullOrUndefined(this._options.timeFormat) || (!this._options.timeFormat)))
                     this.model.timeFormat = ej.preferredCulture(this.model.locale).calendars.standard.patterns.t;
             }
         },
         _updateInput: function () {
-		    if(ej.isNullOrUndefined(this._options)) return;
-		    var value = this._localizeTime(this._options.value);
+            if (ej.isNullOrUndefined(this._options)) return;
+            var value = this._localizeTime(this._options.value);
             if (!ej.isNullOrUndefined(value))
-            if (typeof value === "string" && this.model.enableStrictMode && !this.model.value) {
-                this.element.val(this._options.value);
-                this.isValidState = (this.element.val() == "") ? true : false;
-                this._checkErrorClass();
-            }
+                if (typeof value === "string" && this.model.enableStrictMode && !this.model.value) {
+                    this.element.val(this._options.value);
+                    this.isValidState = (this.element.val() == "") ? true : false;
+                    this._checkErrorClass();
+                }
         },
         _createMinMaxObj: function () {
             // create minTime object
@@ -333,62 +339,59 @@
             }
             this._updateInput();
             this._updateTextbox();
+            if (this.model.validationRules != null) {
+                this._initTimeValidator();
+                this._setTimeValidation();
+            }
+
         },
         _updateTextbox: function () {
-            if (this._options === undefined || this._options.value === undefined)
+            if (this._options === undefined || (this._options.value === undefined && !this.model.value))
                 this._setTime(this._localizeTime(this.model.minTime));
+        },
+
+        _setMinMaxTime: function (prev, options) {
+            if (!ej.isNullOrUndefined(options["minTime"]) && $.trim(options["minTime"]) && this._isValid(options["minTime"])) {
+                this.model.minTime = options["minTime"];
+                this._minTimeObj = this._createObject(this.model.minTime);
+                this._validateTimes();
+            }
+            if (!ej.isNullOrUndefined(options["maxTime"]) && $.trim(options["maxTime"]) && this._isValid(options["maxTime"])) {
+                this.model.maxTime = options["maxTime"];
+                this._maxTimeObj = this._createObject(this.model.maxTime);
+                this._validateTimes();
+            }
+
+            this._validateMinMax();
+            this._createMinMaxObj();
+            if (!ej.isNullOrUndefined(options["minTime"])) options["minTime"] = this.model.minTime;
+            if (!ej.isNullOrUndefined(options["maxTime"])) options["maxTime"] = this.model.maxTime;
+            if (!this._checkMinMax(this.model.value)) {
+                if (!this.model.enableStrictMode) {
+                    if (this.model.minTime && !this._compareTime(this.model.value, this.model.minTime, true))
+                        this.model.value = this.model.minTime;
+                    if (this.model.maxTime && !this._compareTime(this.model.maxTime, this.model.value, true))
+                        this.model.value = this.model.maxTime;
+                }
+                else {
+                    this.isValidState = false;
+                    this.model.value = null;
+                }
+            }
+            if (prev !== this.model.value && this._isValid(this.model.value, true))
+                this.element.val(this.model.value);
         },
         _setModel: function (options) {
             var change = false, prev = this.model.value;
-            if (!ej.isNullOrUndefined(options["minTime"]) || !ej.isNullOrUndefined(options["maxTime"])) {
-                if (!ej.isNullOrUndefined(options["minTime"]) && $.trim(options["minTime"]) && this._isValid(options["minTime"])) {
-                    this.model.minTime = options["minTime"];
-                    this._minTimeObj = this._createObject(this.model.minTime);
-                    this._validateTimes();
-                }
-                if (!ej.isNullOrUndefined(options["maxTime"]) && $.trim(options["maxTime"]) && this._isValid(options["maxTime"])) {
-                    this.model.maxTime = options["maxTime"];
-                    this._maxTimeObj = this._createObject(this.model.maxTime);
-                    this._validateTimes();
-                }
-
-                this._validateMinMax();
-                this._createMinMaxObj();
-                if (!ej.isNullOrUndefined(options["minTime"])) options["minTime"] = this.model.minTime;
-                if (!ej.isNullOrUndefined(options["maxTime"])) options["maxTime"] = this.model.maxTime;
-
-                if (this.model.showPopupButton)
-                    this._reRenderDropdown();
-                if (!this._checkMinMax(this.model.value)) {
-                    if (!this.model.enableStrictMode) {
-                        if (this.model.minTime && !this._compareTime(this.model.value, this.model.minTime, true))
-                            this.model.value = this.model.minTime;
-                        if (this.model.maxTime && !this._compareTime(this.model.maxTime, this.model.value, true))
-                            this.model.value = this.model.maxTime;
-                    }
-                    else {
-                        this.isValidState = false;
-                        this.model.value = null;
-                    }
-                }
-                if (prev !== this.model.value && this._isValid(this.model.value,true))
-                    this.element.val(this.model.value);
-                change = true;
-            }
-
-            var option;
-            for (option in options) {
+            for (var option in options) {
                 switch (option) {
                     case "timeFormat":
                         var prevTime = this._createObject(this.model.value);
-                        this._preTimeformat = this.model.timeFormat;                        
-                        var newFormat = this._timeFormat(options[option]);                                                                    
-                        options[option] = this.model.timeFormat;                     
-                        if (newFormat) {
+                        this._preTimeformat = this.model.timeFormat;
+                        var newFormat = this._timeFormat(options[option]);
+                        options[option] = this.model.timeFormat;
+                        if (newFormat)
                             this.seperator = this._getSeperator();
-                            if (this.model.showPopupButton)
-                                this._reRenderDropdown();
-                        }                        
                         var currentTime = this._createObject(this.model.value);
                         change = (+prevTime === +currentTime) ? false : true;
                         break;
@@ -397,17 +400,12 @@
                         this._localize(options[option]);
                         this.model.minTime = ej.format(this._createObject(this._minTimeObj), this.model.timeFormat, this.model.locale);
                         this.model.maxTime = ej.format(this._createObject(this._maxTimeObj), this.model.timeFormat, this.model.locale);
-                        if (this.model.showPopupButton)
-                            this._reRenderDropdown();
                         var currentTime = this._createObject(this.model.value);
                         change = (+prevTime === +currentTime) ? false : true;
                         break;
                     case "interval":
                         this.model.interval = options[option];
-                        if (this.model.showPopupButton)
-                            this._reRenderDropdown();
                         break;
-                    case "showPopupButton": this._showButton(options[option]); break;
                     case "cssClass": this._changeSkin(options[option]); break;
                     case "showRoundedCorner": this._setRoundedCorner(options[option]); break;
                     case "enableRTL": this._setRtl(options[option]); break;
@@ -417,8 +415,9 @@
                         this.wrapper.width(options[option]);
                         this._setListWidth();
                         break;
-                    case "value":                                          
-                        this.model.value = ej.format(this._createObject(options[option],true), this.model.timeFormat, this.model.locale);
+                    case "value":
+                        if (ej.isPlainObject(options[option])) options[option] = null;
+                        this.model.value = ej.format(this._createObject(options[option], true), this.model.timeFormat, this.model.locale);
                         this._ensureValue();
                         this._enableMask();
                         if (this.model.enableStrictMode && !this._isValid(options[option], true)) {
@@ -431,6 +430,24 @@
                     case "enableStrictMode":
                         this.model.enableStrictMode = options[option];
                         break;
+                    case "validationRules":
+                        if (this.model.validationRules != null) {
+                            this.element.rules('remove');
+                            this.model.validationMessages = null;
+                        }
+                        this.model.validationRules = jsondata[key];
+                        if (this.model.validationRules != null) {
+                            this._initTimeValidator();
+                            this._setTimeValidation();
+                        }
+                        break;
+                    case "validationMessages":
+                        this.model.validationMessages = jsondata[key];
+                        if (this.model.validationRules != null && this.model.validationMessages != null) {
+                            this._initValidator();
+                            this._setValidation();
+                        }
+                        break;
                     case "popupHeight": this.model.popupHeight = options[option]; this._setListHeight(); break;
                     case "popupWidth": this.model.popupWidth = options[option]; this._setListWidth(); break;
                     case "enabled": if (options[option]) this.enable(); else this.disable(); break;
@@ -438,20 +455,28 @@
                     case "disableTimeRanges":
                         this.model.disableTimeRanges = options[option];
                         this._initStartEnd();
-                        if (this.model.showPopupButton) this._reRenderDropdown();
                         this.model.value = ej.format(this._createObject(this.element.val(), true), this.model.timeFormat, this.model.locale);
                         this._ensureValue();
                         this._enableMask();
-                        if (this.model.enableStrictMode && !this._isValid(this.element.val(), true)) 
-                            this.element.val(this.element.val());                                                   
+                        if (this.model.enableStrictMode && !this._isValid(this.element.val(), true))
+                            this.element.val(this.element.val());
                         change = true;
-
                 }
+            }
+            if (!ej.isNullOrUndefined(options["minTime"]) || !ej.isNullOrUndefined(options["maxTime"])) {
+                this._setMinMaxTime(prev, options);
+                change = true;
+            }
+            if (!ej.isNullOrUndefined(options["showPopupButton"]))
+                this._showButton(options[option]);
+            else if (this.model.showPopupButton && (newFormat || !ej.isNullOrUndefined(options["minTime"]) || !ej.isNullOrUndefined(options["maxTime"]) ||
+                   !ej.isNullOrUndefined(options["locale"]) || !ej.isNullOrUndefined(options["interval"]) || !ej.isNullOrUndefined(options["disableTimeRanges"]))) {
+                this._reRenderDropdown();
             }
             if (change) {
                 this._raiseChangeEvent(prev, true);
                 options["value"] = this.model.value;
-            }            
+            }
             this._checkErrorClass();
         },
 
@@ -460,14 +485,14 @@
             this.element.insertAfter(this.wrapper);
             this.wrapper.remove();
             this.element.removeClass("e-input").removeAttr("ondragstart draggable aria-atomic aria-live aria-readonly").val(this.element.attr("value"));
-            if(!this._cloneElement.attr('name')) this.element.removeAttr('name');
+            if (!this._cloneElement.attr('name')) this.element.removeAttr('name');
             if (this.popupList) this.popupList.remove();
         },
 
         _initialize: function () {
             this.target = this.element[0];
             this.timeIcon = null;
-            this._disabledItems = [];           
+            this._disabledItems = [];
             this.popupList = null;
             this.focused = false;
             this.start = 0;
@@ -482,7 +507,7 @@
             this.showDropdown = false;
             this._activeItem = 0;
             this.isValidState = true;
-            this._manualFocus = false;            
+            this._manualFocus = false;
             this._isIE7 = this._checkIE7();
             this._initStartEnd();
             if (ej.isNullOrUndefined(this.model.value) && this.element[0].value != "")
@@ -514,20 +539,45 @@
         _renderWrapper: function () {
             this.element.addClass("e-input").attr("tabindex", "0");
             this.wrapper = ej.buildTag("span.e-timewidget e-widget " + this.model.cssClass + "#" + this.target.id + "_timewidget").insertAfter(this.element);
+            if (!ej.isTouchDevice()) this.wrapper.addClass('e-ntouch');
             this.container = ej.buildTag("span.e-in-wrap e-box").append(this.element);
             this.wrapper.append(this.container);
         },
         _addAttr: function (htmlAttr) {
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
-                if (key == "class") proxy.wrapper.addClass(value);
-                else if (key == "name") proxy.element.attr(key, value);
-                else if (key == "required") proxy.element.attr(key, value);
-                else if (key == "disabled" && value == "disabled") proxy.disable();
-                else if (key == "readOnly" && value == "readOnly") proxy.model.readOnly = true;
-                else if(key=="tabindex") proxy.element.attr(key,value);
-				 else proxy.wrapper.attr(key, value);
+                var keyName = key.toLowerCase();
+                if (keyName == "class") proxy.wrapper.addClass(value);
+                else if (keyName == "disabled" && value == "disabled") proxy.disable();
+                else if (keyName == "readOnly" && value == "readOnly") proxy.model.readOnly = true;
+                else if (keyName == "style" || keyName == "id") proxy.wrapper.attr(key, value);
+                else if (ej.isValidAttr(proxy.element[0], key)) proxy.element.attr(key, value);
+                else proxy.wrapper.attr(key, value);
+
             });
+        },
+        _initTimeValidator: function () {
+            (!this.element.closest("form").data("validator")) && this.element.closest("form").validate();
+        },
+        _setTimeValidation: function () {
+            this.element.rules("add", this.model.validationRules);
+            var validator = this.element.closest("form").data("validator");
+            validator = validator ? validator : this.element.closest("form").validate();
+            name = this.element.attr("name");
+            validator.settings.messages[name] = {};
+            for (var ruleName in this.model.validationRules) {
+                var message = null;
+                if (!ej.isNullOrUndefined(this.model.validationRules[ruleName])) {
+                    if (!ej.isNullOrUndefined(this.model.validationRules["messages"] && this.model.validationRules["messages"][ruleName]))
+                        message = this.model.validationRules["messages"][ruleName];
+                    else {
+                        validator.settings.messages[name][ruleName] = $.validator.messages[ruleName];
+                        for (var msgName in this.model.validationMessages)
+                            ruleName == msgName ? (message = this.model.validationMessages[ruleName]) : "";
+                    }
+                    validator.settings.messages[name][ruleName] = message != null ? message : $.validator.messages[ruleName];
+                }
+            }
         },
         _renderTimeIcon: function () {
             if (this.model.showPopupButton) {
@@ -541,17 +591,18 @@
                 this.container.append(this.timeIcon).addClass("e-padding");
                 this._on(this.timeIcon, "mousedown", this._timeIconClick);
             }
-            
+
         },
         _elementClick: function (e) {
             if (!this.showDropdown) this._showResult();
         },
         _renderDropdown: function () {
-            var oldWrapper = $("#" + this.element.context.id + "_popup").get(0);
+            var oldWrapper = $("#" + this.element[0].id + "_popup").get(0);
             if (oldWrapper)
                 $(oldWrapper).remove();
             if (!this.model.showPopupButton || this.popupList) return false;
             this.popupList = ej.buildTag("div.e-time-popup e-popup e-widget e-box " + this.model.cssClass + "#" + this.target.id + "_popup", "", {}, { 'tabindex': 0, 'aria-activedescendant': '' });
+            if (!ej.isTouchDevice()) this.popupList.addClass('e-ntouch');
             this.popup = this.popupList;
             this.ul = ej.buildTag("ul.e-ul");
             if (this._isIE8)
@@ -564,47 +615,49 @@
             this.popupList.ejScroller({ height: this.popupList.height(), width: 0, scrollerSize: 20 });
             this.scrollerObj = this.popupList.ejScroller("instance");
             this.popupList.css("display", "none");
-            this._listSize = this.ul.find("li").size();
+            this._listSize = this.ul.find("li").length;
         },
         _renderLiTags: function () {
             this._disabledItems = [];
-            if (this.model.interval < 1) return false;
             var start, end, timeVal, interval = this.model.interval * 60000;
             // Maintain the min and max time as object;
+            var disableTime = (!ej.isNullOrUndefined(this.model.disableTimeRanges) && this.model.disableTimeRanges.length > 0) ? true : false;
             start = this._minTimeObj;
             end = this._maxTimeObj;
             var i = 0;
             while (this._compareTime(end, start, true)) {
                 timeVal = this._localizeTime(start);
-                var litag = ej.buildTag("li", timeVal);
-                if (this._isIE8)
-                    litag.attr("unselectable", "on");
-                if (this._ensureTimeRange(timeVal)) {
-                    litag.addClass('e-disable');
-                    this._disabledItems.push(i);
+                var litag = $(document.createElement('li'));
+                litag[0].appendChild(document.createTextNode(timeVal));
+                if (this._isIE8) litag.attr("unselectable", "on");
+                if (disableTime) {
+                    if (this._ensureTimeRange(timeVal)) {
+                        litag.addClass('e-disable');
+                        this._disabledItems.push(i);
+                    }
+                    else {
+                        litag.removeClass('e-disable');
+                    }
                 }
-                else {
-                    litag.removeClass('e-disable');
-                }
-                this.ul.append(litag);
-                start = this._createObject(start).getTime() + interval;
+                this.ul[0].appendChild(litag[0]);
+                start = new Date(start).getTime() + interval;
                 i++;
             }
 
             var liTags = this.ul.find("li");
-            if(!ej.isTouchDevice()) {
+            if (!ej.isTouchDevice()) {
                 this._on(liTags, "mouseenter", $.proxy(this._OnMouseEnter, this));
                 this._on(liTags, "mouseleave", $.proxy(this._OnMouseLeave, this));
             }
             this._on(liTags, "click", $.proxy(this._OnMouseClick, this));
         },
-        _ensureTimeRange: function (value) {            
+        _ensureTimeRange: function (value) {
             if (!ej.isNullOrUndefined(this.model.disableTimeRanges)) {
                 var timeVal = this._makeDateTimeObj(value);
                 for (i = 0; i < this.model.disableTimeRanges.length; i++) {
                     if (+timeVal >= +this._makeDateTimeObj(this.model.disableTimeRanges[i].startTime) && +timeVal <= +this._makeDateTimeObj(this.model.disableTimeRanges[i].endTime))
                         return true;
-                }                
+                }
             }
             return false;
         },
@@ -616,22 +669,22 @@
                     this._startTime[i] = this._makeDateTimeObj(this.model.disableTimeRanges[i].startTime);
                     this._endTime[i] = this._makeDateTimeObj(this.model.disableTimeRanges[i].endTime);
                 }
-            }            
+            }
         },
-        _makeDateTimeObj: function (value) {            
+        _makeDateTimeObj: function (value) {
             if (typeof value === "string") {
                 var dateFormat = ej.preferredCulture(this.model.locale).calendar.patterns.d;
                 var dateValue = ej.format(new Date("1/1/2000"), dateFormat, this.model.locale);
-                var obj = ej.parseDate(dateValue + " " + value, dateFormat + " " + this.model.timeFormat);               
+                var obj = ej.parseDate(dateValue + " " + value, dateFormat + " " + this.model.timeFormat);
                 if (!obj) {
                     var isJSONString = new Date(value);
                     if (!isNaN(Date.parse(isJSONString)) && !ej.isNullOrUndefined(value))
                         return this._setEmptyDate(value);
                     else
                         obj = new Date("1/1/2000 " + value);
-                }               
+                }
                 return obj;
-            }            
+            }
             else if (value instanceof Date)
                 return this._setEmptyDate(value);
             else return null;
@@ -782,7 +835,7 @@
             else this.model.timeFormat = "h:mm tt";
             if (!this._isValid(this.model.minTime)) this.model.minTime = "12:00 AM";
             if (!this._isValid(this.model.maxTime)) this.model.maxTime = "11:59 PM";
-            if (!this._isValid(this.model.value,true)) this.model.value = null;
+            if (!this._isValid(this.model.value, true)) this.model.value = null;
             if (!this._checkMinMax(this.model.value) && !this.model.enableStrictMode) {
                 if (this.model.minTime && !this._compareTime(this.model.value, this.model.minTime, true))
                     this.model.value = this.model.minTime;
@@ -792,7 +845,7 @@
             this._validateMinMax();
         },
         _ensureValue: function () {
-            if (!this._checkMinMax(this.model.value) && this._isValid(this.model.value,true)) {
+            if (!this._checkMinMax(this.model.value) && this._isValid(this.model.value, true)) {
                 if (!this.model.enableStrictMode) {
                     if (this.model.minTime && !this._compareTime(this.model.value, this.model.minTime, true))
                         this.model.value = this.model.minTime;
@@ -857,6 +910,7 @@
                 this.timeIcon.remove();
                 this.popupList.remove();
                 this.timeIcon = this.popupList = null;
+                $(document).off("mousedown", $.proxy(this._OnDocumentClick, this));
             }
         },
         _checkAttributes: function () {
@@ -947,7 +1001,7 @@
             this._raiseChangeEvent(preVal);
         },
 
-        _setSelection: function (start, end) {                     
+        _setSelection: function (start, end) {
             var element = this.element[0];
 
             if (element.setSelectionRange)
@@ -984,10 +1038,10 @@
             this.element.focus();
         },
         _targetFocus: function (e) {
-		    this._clearRange();
+            this._clearRange();
             e.preventDefault();
             this.focused = true;
-            this.element.bind('mousewheel DOMMouseScroll', $.proxy(this._mouseWheel, this));
+            this.element.on('mousewheel DOMMouseScroll', $.proxy(this._mouseWheel, this));
             this.wrapper.addClass("e-focus").removeClass("e-error").attr('aria-invalid', "false");
             if (!this._manualFocus) {
                 this._findCategoryPosition(this._getLeast(false));
@@ -995,24 +1049,24 @@
             }
             this._manualFocus = false;
             this._prevTimeVal = this.element.val();
-            this._raiseEvent("focusIn");                  
+            this._raiseEvent("focusIn");
         },
         _targetBlur: function () {
             this.focused = false;
-            this.element.unbind('mousewheel DOMMouseScroll', $.proxy(this._mouseWheel, this));
+            this.element.off('mousewheel DOMMouseScroll', $.proxy(this._mouseWheel, this));
             this.wrapper.removeClass("e-focus");
             if (!this.model.enableStrictMode) {
                 // To remove the min value mask while focusout the timepicker.
                 if (this.target.value.indexOf('_') > -1) this.element.val('');
             }
-            if (!this._checkMinMax(this.target.value) && this._isValid(this.target.value,true)) {
+            if (!this._checkMinMax(this.target.value) && this._isValid(this.target.value, true)) {
                 if (!this.model.enableStrictMode) {
-                    if (this.model.minTime && !this._compareTime(this._createObject(this.target.value), this.model.minTime, true))                        
+                    if (this.model.minTime && !this._compareTime(this._createObject(this.target.value), this.model.minTime, true))
                         this.element.val(this.model.minTime);
-                    if (this.model.maxTime && !this._compareTime(this.model.maxTime, this._createObject(this.target.value), true))                        
+                    if (this.model.maxTime && !this._compareTime(this.model.maxTime, this._createObject(this.target.value), true))
                         this.element.val(this.model.maxTime);
                     if (!this._isValid(this.model.value, true))
-                        this.element.val(null);                       
+                        this.element.val(null);
                     this.isValidState = true;
                 }
                 else
@@ -1023,7 +1077,7 @@
             this._raiseChangeEvent();
             this._checkErrorClass();
             this._raiseEvent("focusOut");
-            if (!this.model.enableStrictMode) this._checkInComplete();           
+            if (!this.model.enableStrictMode) this._checkInComplete();
         },
         _clearRange: function () {
             var input = this.element[0];
@@ -1041,7 +1095,7 @@
             var input = this.element[0], start = 0, end = 0;
             if (!isNaN(input.selectionStart)) {
                 start = input.selectionStart;
-                end = input.selectionEnd;               
+                end = input.selectionEnd;
                 return { start: Math.abs(start), end: Math.abs(end) };
             }
             // For lower version browsers (IE8, IE7 ...)
@@ -1057,25 +1111,25 @@
         },
 
         _mouseDownOnInput: function (e) {
-            if (!this.focused) this._focusElement();          
-            this.downPosition = this._getCaretSelection();           
-            $(document).bind("mouseup", $.proxy(this._mouseUpOnInput, this));
+            if (!this.focused && (!ej.isTouchDevice())) this._focusElement();
+            this.downPosition = this._getCaretSelection();
+            $(document).on("mouseup", $.proxy(this._mouseUpOnInput, this));
         },
 
         _mouseUpOnInput: function (e) {
-            e.preventDefault();            
-            $(document).unbind("mouseup", $.proxy(this._mouseUpOnInput, this));
+            e.preventDefault();
+            $(document).off("mouseup", $.proxy(this._mouseUpOnInput, this));
             var pos = this._getCaretSelection();
 
             if (this.incomplete) {
                 this.incomplete = false;
                 pos = this.downPosition;
-            }            
+            }
             // Select the Complete Time value using mouse.            
             if (this.target.value != this._getSelectedText()) {
                 pos = this._getStartEnd(pos);
                 this._setSelection(pos.start, pos.end);
-            }         
+            }
         },
 
         _getCategoryPosition: function (category) {
@@ -1235,14 +1289,14 @@
             }
             pos = this._getCaretSelection();
             cursor = this._getStartEnd(pos);
-            category = this._getCategory(cursor);            
-            switch (e.keyCode) {                
-                case 38:                   
+            category = this._getCategory(cursor);
+            switch (e.keyCode) {
+                case 38:
                     e.preventDefault();
                     if (!this.showDropdown) {
                         if (this._isValid(this.target.value)) this._modifyValue(true);
                     }
-                    else if (this.showDropdown) {                        
+                    else if (this.showDropdown) {
                         e.preventDefault();
                         this._findActiveIndex();
                         prevActiveItem = this._activeItem;
@@ -1253,7 +1307,7 @@
                         if (activeItem.length) this._selectTimeItem(activeItem);
                     }
                     break;
-                case 40:                          
+                case 40:
                     e.preventDefault();
                     if (e.altKey && this.model.showPopupButton)
                         this._showhidePopup();
@@ -1267,17 +1321,17 @@
                         this._activeItem = this._disableItemSelectDown(this._activeItem);
                         if (this._activeItem < this._listSize) this._activeItem += 1;
                         else
-                            this._activeItem = prevActiveItem;                        
+                            this._activeItem = prevActiveItem;
                         this._addListHover();
                         this._selectTimeItem(this._getActiveItem());
                     }
                     break;
-                case 37:                                      
+                case 37:
                     e.preventDefault();
                     if (pos.start == pos.end) this._setSelection(pos.start - 1, pos.start - 1);
                     else this._movePosition(pos, true);
                     break;
-                case 39:                    
+                case 39:
                     e.preventDefault();
                     if (pos.start == pos.end) this._setSelection(pos.start + 1, pos.start + 1);
                     else this._movePosition(pos, false);
@@ -1311,7 +1365,7 @@
                         if (ePos.isValid) this._setSelection(ePos.start, ePos.end);
                     }
                     else {
-                        this._activeItem = this._listSize+1;
+                        this._activeItem = this._listSize + 1;
                         prevActiveItem = this._activeItem;
                         this._activeItem = this._disableItemSelectUp(this._activeItem - 1);
                         if (this._activeItem == 0) this._activeItem = prevActiveItem;
@@ -1321,15 +1375,15 @@
                     break;
                 case 9:
                     if (this._getInternalEvents) break;
-                    this._hideResult();                  
-                        var flag = null;
-                        if (e.shiftKey && pos.start > 0) flag = true;
-                        else if (!e.shiftKey && pos.end < this.element.val().length) flag = false;
-                        if (flag != null) {
-                            e.preventDefault();
-                            this._checkInComplete();
-                            this._movePosition(pos, flag);
-                        }                   
+                    this._hideResult();
+                    var flag = null;
+                    if (e.shiftKey && pos.start > 0) flag = true;
+                    else if (!e.shiftKey && pos.end < this.element.val().length) flag = false;
+                    if (flag != null) {
+                        e.preventDefault();
+                        this._checkInComplete();
+                        this._movePosition(pos, flag);
+                    }
                     break;
                 case 13:
                     if (!this.showDropdown) {
@@ -1369,67 +1423,71 @@
                         }
 
                     }
-                        break;
-                    
-            }
-          
-                var currSelection = this._getSelectedValue(cursor);
-                var unicode = e.keyCode ? e.keyCode : e.charCode, actualkey;
+                    break;
 
-                if (e.keyCode > 47 && e.keyCode < 58)
-                    actualkey = String.fromCharCode(unicode);
-                else if (e.keyCode > 95 && e.keyCode < 106)
-                    actualkey = String.fromCharCode(unicode - 48);
-                if (category == "tt" && ((!e.shiftKey && !e.ctrlKey && !e.altKey) && (e.keyCode > 64 && e.keyCode < 91) || (e.keyCode > 47 && e.keyCode < 58) || (e.keyCode > 95 && e.keyCode < 106))) {
-                    e.preventDefault();
-                    var ttPos = this._getCategoryPosition(category);
-                    this.start = ttPos.start;
-                    this.end = ttPos.end;
-                    this._changeAmPm(currSelection);
-                    this._raiseChangeEvent();
-                }
+            }
+
+            var currSelection = this._getSelectedValue(cursor);
+            var unicode = e.keyCode ? e.keyCode : e.charCode, actualkey;
+
+            if (e.keyCode > 47 && e.keyCode < 58)
+                actualkey = String.fromCharCode(unicode);
+            else if (e.keyCode > 95 && e.keyCode < 106)
+                actualkey = String.fromCharCode(unicode - 48);
+            if (category == "tt" && ((!e.shiftKey && !e.ctrlKey && !e.altKey) && (e.keyCode > 64 && e.keyCode < 91) || (e.keyCode > 47 && e.keyCode < 58) || (e.keyCode > 95 && e.keyCode < 106))) {
+                e.preventDefault();
+                var ttPos = this._getCategoryPosition(category);
+                this.start = ttPos.start;
+                this.end = ttPos.end;
+                this._changeAmPm(currSelection);
+                this._raiseChangeEvent();
+            }
 
             // Select complete text and then press time value in the textbox               
-                if (this.target.value == this._getSelectedText() && (!e.shiftKey && !e.ctrlKey && !e.altKey)) {
-                    if (e.keyCode > 64 && e.keyCode < 91 && !this.model.enableStrictMode) e.preventDefault();
-                    if ((e.keyCode > 47 && e.keyCode < 58) || (e.keyCode > 95 && e.keyCode < 106)) {
-                        var cursor = this._getStartEnd(pos);
-                        this._setSelection(cursor.start, cursor.end);
-                    }
+            if (this.target.value == this._getSelectedText() && (!e.shiftKey && !e.ctrlKey && !e.altKey)) {
+                if (e.keyCode > 64 && e.keyCode < 91 && !this.model.enableStrictMode) e.preventDefault();
+                if ((e.keyCode > 47 && e.keyCode < 58) || (e.keyCode > 95 && e.keyCode < 106)) {
+                    var cursor = this._getStartEnd(pos);
+                    this._setSelection(cursor.start, cursor.end);
                 }
+            }
 
-                if ((!e.shiftKey && !e.ctrlKey && !e.altKey) && (e.keyCode > 47 && e.keyCode < 58) || (e.keyCode > 95 && e.keyCode < 106)) {
-                    if (category != "tt") {
-                        this._getMinMax(category, true);
-                        if (pos.start == pos.end) {                            
-                            this._findCategoryPosition(category);
-                            var newVal;
-                            if (pos.start == this.start) {
-                                newVal = actualkey + currSelection;
-                                    this.element.val(this.model.minTime);
-                                    var cursor = this._getStartEnd(pos);
-                                    this._setSelection(cursor.start, cursor.end);
-                            }
-                            else {
-                                newVal = currSelection + actualkey;                                
-                            }                           
-                            if (newVal.length > 2 || !(Number(newVal) >= this.min && this.max >= Number(newVal))) {
-                                !this.model.enableStrictMode && e.preventDefault();
-                            }
+            if ((!e.shiftKey && !e.ctrlKey && !e.altKey) && (e.keyCode > 47 && e.keyCode < 58) || (e.keyCode > 95 && e.keyCode < 106)) {
+                if (category != "tt") {
+                    this._getMinMax(category, true);
+                    if (pos.start == pos.end) {
+                        this._findCategoryPosition(category);
+                        var newVal;
+                        if (pos.start == this.start) {
+                            newVal = actualkey + currSelection;
+                            this.element.val(this.model.minTime);
+                            var cursor = this._getStartEnd(pos);
+                            this._setSelection(cursor.start, cursor.end);
                         }
-                        else if (!(Number(actualkey) >= this.min && this.max >= Number(actualkey))) {
+                        else {
+                            newVal = currSelection + actualkey;
+                        }
+                        if (newVal.length > 2 || !(Number(newVal) >= this.min && this.max >= Number(newVal))) {
                             !this.model.enableStrictMode && e.preventDefault();
                         }
                     }
+                    else if (!(Number(actualkey) >= this.min && this.max >= Number(actualkey))) {
+                        !this.model.enableStrictMode && e.preventDefault();
+                    }
                 }
-                else if (!this._allowKeyCodes(e)) {
-                    !this.model.enableStrictMode ? (e.keyCode == 8 || e.keyCode == 46) ? e.stopPropagation() : e.preventDefault() : e.stopPropagation();
-                }           
+            }
+            else if (!this._allowKeyCodes(e)) {
+                !this.model.enableStrictMode ? (e.keyCode == 8 || e.keyCode == 46) ? e.stopPropagation() : e.preventDefault() : e.stopPropagation();
+            }
         },
 
         _getSelectedText: function (e) {
-                        if (window.getSelection) return window.getSelection().toString();
-                        else return document.selection.createRange().text;
+            if (window.getSelection) {
+                var element = $('#' + this.element[0].id).get(0);
+                return element.value.substring(element.selectionStart, element.selectionEnd);
+            }
+                // For IE
+            else return document.selection.createRange().text;
         },
         _allowKeyCodes: function (e) {
             if ((e.ctrlKey && (e.keyCode == 65 || e.keyCode == 67 || e.keyCode == 90 || e.keyCode == 89))
@@ -1526,7 +1584,7 @@
             if (!this.model.enabled || this.model.readOnly || this.ul.find("li").length < 1) return false;
             this._showhidePopup();
             var len = this.element.val().length;
-            this._setSelection(len, len);
+            if (!ej.isTouchDevice()) this._setSelection(len, len);
         },
         _showhidePopup: function () {
             if (this._getInternalEvents) return false;
@@ -1537,30 +1595,30 @@
         },
         _showResult: function () {
             this._raiseEvent("beforeOpen");
-            this._refreshPopup();            
-            if (!this.focused) this._focusElement();            
+            this._refreshPopup();
+            if (!this.focused && (!ej.isTouchDevice())) this._focusElement();
             if (this.model.value) this._changeActiveEle();
-            else 
-                this.ul.find("li").removeClass("e-active");               
+            else
+                this.ul.find("li").removeClass("e-active");
 
             var proxy = this, sTop = this._vissibleAndCalculateTop();
-            this.popupList.slideDown(this.model.enableAnimation ? 200 : 0, "easeOutQuad", function () {
-                $(document).bind("mousedown", $.proxy(proxy._OnDocumentClick, proxy));
+            this.popupList.slideDown(this.model.enableAnimation ? 200 : 0, function () {
+                $(document).on("mousedown", $.proxy(proxy._OnDocumentClick, proxy));
             });
             this.scrollerObj.setModel({ "scrollTop": sTop });
             this.showDropdown = true;
-            this._listSize = this.ul.find("li").size();
-            $(window).bind("resize", $.proxy(this._OnWindowResize, this));
-            this._on(ej.getScrollableParents(this.wrapper), "scroll", this._hideResult);            
+            this._listSize = this.ul.find("li").length;
+            $(window).on("resize", $.proxy(this._OnWindowResize, this));
+            this._on(ej.getScrollableParents(this.wrapper), "scroll", this._hideResult);
             this._raiseEvent("open");
             this.wrapper.addClass("e-active");
         },
         _hideResult: function () {
             if (this.showDropdown && !this._getInternalEvents) {
                 this.showDropdown = false;
-                this.popupList.slideUp(this.model.enableAnimation ? 100 : 0, "easeOutQuad");
-                $(document).unbind("mousedown", $.proxy(this._OnDocumentClick, this));
-                $(window).unbind("resize", $.proxy(this._OnWindowResize, this));
+                this.popupList.slideUp(this.model.enableAnimation ? 100 : 0);
+                $(document).off("mousedown", $.proxy(this._OnDocumentClick, this));
+                $(window).off("resize", $.proxy(this._OnWindowResize, this));
                 this._off(ej.getScrollableParents(this.wrapper), "scroll", this._hideResult);
                 this._raiseEvent("close");
                 this.wrapper.removeClass("e-active");
@@ -1605,7 +1663,7 @@
         _OnMouseEnter: function (e) {
             var targetEle = e.target;
             this.ul.find("li").removeClass("e-hover");
-            if(!$(targetEle).hasClass('e-disable'))
+            if (!$(targetEle).hasClass('e-disable'))
                 $(targetEle).addClass("e-hover");
         },
         _OnMouseLeave: function (e) {
@@ -1651,7 +1709,7 @@
         },
 
         _changeValue: function (cursor, isIncrement) {
-            var preVal = this.target.value, currValue, category = this._getCategory(cursor);           
+            var preVal = this.target.value, currValue, category = this._getCategory(cursor);
             if (!category) return false;
             this._setSelection(this.start, this.end);
             currValue = this.target.value.substring(this.start, this.end);
@@ -1659,7 +1717,7 @@
                 if (currValue != this.ttAM && currValue != this.ttPM) {
                     currValue = this._changeCurrentValue(currValue, category, isIncrement);
                     if (category.length != 1) currValue = this._changeWhole(currValue);
-                    this._findCategoryPosition(category);                    
+                    this._findCategoryPosition(category);
                     this.element.val(this._replaceAt(this.target.value, this.start, this.end, currValue));
                     this.end = this.start + currValue.toString().length;
                     this._setSelection(this.start, this.end);
@@ -1676,7 +1734,7 @@
                                     this._changeValue(cursor, isIncrement);
                                 }
                             }
-                        }                     
+                        }
                     }
                 }
                 else this._changeAmPm(currValue);
@@ -1686,8 +1744,8 @@
                 this._setTime(this.model[timeValue]);
                 this._findCategoryPosition(category);
                 this._setSelection(this.start, this.end);
-            }           
-            if (!this._checkMinMax(this.target.value)) {                
+            }
+            if (!this._checkMinMax(this.target.value)) {
                 this.element.val(this.model.value);
                 this._findCategoryPosition(category);
                 this._setSelection(this.start, this.end);
@@ -1726,14 +1784,14 @@
                 if (isIncrement) {
                     if (minute == this.max) {
                         minute = this.min;
-                        this._changeHour();
+                        this._changeHour(isIncrement);
                     }
                     else minute += 1;
                 }
                 else {
                     if (minute == this.min) {
                         minute = this.max;
-                        this._changeHour();
+                        this._changeHour(isIncrement);
                     }
                     else minute -= 1;
                 }
@@ -1850,22 +1908,22 @@
         },
 
         _raiseChangeEvent: function (prev, isCode) {
-            prev = (prev === undefined) ? this.model.value : prev;            
-            this._previousValue = prev;          
+            prev = (prev === undefined) ? this.model.value : prev;
+            this._previousValue = prev;
             current = !this.target.value ? null : this.target.value;
             if (prev == current) return false;
-            if (this._checkMinMax(this.target.value) && this._isValid(this.target.value,this.model.enableStrictMode)||!this.target.value) this.isValidState = true;
+            if (this._checkMinMax(this.target.value) && this._isValid(this.target.value, this.model.enableStrictMode) || !this.target.value) this.isValidState = true;
             else this.isValidState = false;
-            this.model.value = this._isValid(this.target.value,true) && this._checkMinMax(this.target.value) ? this.target.value : null;            
+            this.model.value = this._isValid(this.target.value, true) && this._checkMinMax(this.target.value) ? this.target.value : null;
             if (!this.model.value && !this.model.enableStrictMode) this._setTime(this.model.value);
-            if (this.model.value == this._previousValue) return false;         
+            if (this.model.value == this._previousValue) return false;
             this._raiseEvent("change", isCode);
-            this._raiseEvent("_change", isCode);            
+            this._raiseEvent("_change", isCode);
             return true;
         },
         _raiseEvent: function (name, isCode) {
             var data = { value: this.model.value, prevTime: this._previousValue };
-            if (name == "change") data.isInteraction = !isCode ;
+            if (name == "change") data.isInteraction = !isCode;
             return (this._trigger(name, data));
         },
         _checkIE7: function () {
@@ -1881,7 +1939,7 @@
             return mainString.substring(0, from) + replace + mainString.substring(to);
         },
         _localizeTime: function (value) {
-            if(value)
+            if (value)
                 return $.trim(ej.format(this._createObject(value), this.model.timeFormat, this.model.locale));
             return null;
         },
@@ -1893,7 +1951,7 @@
             if (orEqual) return this._parse(time1) >= this._parse(time2);
             else return this._parse(time1) > this._parse(time2);
         },
-        _isValid: function (time,validate) {
+        _isValid: function (time, validate) {
             time = this._createObject(time, validate);
             return time && typeof time.getTime === "function" && isFinite(time.getTime());
         },
@@ -1913,7 +1971,7 @@
                 var format = this._setModelOption ? this._preTimeformat : this.model.timeFormat;
                 var dateFormat = ej.preferredCulture(this.model.locale).calendar.patterns.d;
                 var dateValue = ej.format(new Date("1/1/2000"), dateFormat, this.model.locale);
-                obj = ej.parseDate(dateValue + " " + value, dateFormat + " " + format);
+                obj = ej.parseDate(dateValue + " " + value, dateFormat + " " + format, this.model.locale);
                 if (this._extISORegex.exec(value) || this._basicISORegex.exec(value)) this.model.value = obj = this._timeFromISO(value);
                 this._setModelOption = false;
                 if (!obj) {

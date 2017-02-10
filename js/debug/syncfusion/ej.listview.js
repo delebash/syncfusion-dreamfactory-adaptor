@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.listview.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -41,6 +41,8 @@
             enableCache: false,
             
             enablePersistence: false,
+			
+			ready: null,
             
             load: null,
             
@@ -90,7 +92,9 @@
 
             enableCheckMark: false,
 
-            checkedIndices :[]
+            checkedIndices :[],
+			
+			locale:"en-US"
 
         },
 
@@ -174,13 +178,9 @@
             if (this.model.fieldSettings && this.model.query != null) {
                 this._dataUrl = this.model.dataSource;
                 var proxy = this;
-                if (proxy._prefixClass == "e-m-")
-                    App.waitingPopUp.show();
                 this.dataSource().executeQuery(eval(this.model.query)).done(function (e) {
                     proxy.model.dataSource = e.result;
                     proxy._renderControl();
-                    if (proxy._prefixClass == "e-m-")
-                        App.waitingPopUp.hide();
                 });
             }
             else
@@ -192,31 +192,15 @@
             this.element.addClass(this._prefixClass + "parentlv " + this.model.cssClass);
             this._lbEle = ej.buildTag("div." + this._rootCSS);
             this._lbEle.addClass("subpage");
-            if (this._prefixClass == "e-m-") {
-                this._lbEle.addClass("e-m-" + this.model.renderMode + " e-m-" + this.model.theme);
-                if (this.model.ios7.inline)
-                    this._lbEle.addClass("e-m-inline")
-            }
-            this._lContainer = ej.buildTag("div." + this._prefixClass + "list-container#" + this.model.id + "_container");
-            if (this._prefixClass == "e-m-" && this.model.enablePullToRefresh) {
-                this._refreshContainer = ej.buildTag("div." + this._prefixClass + "ptr-container");
-                this._ptrImgContainer = ej.buildTag("span." + this._prefixClass + "image-container " + this._prefixClass + "pull");
-                this._textContainer = ej.buildTag("span." + this._prefixClass + "text-container");
-                this._refreshContainer.append(this._ptrImgContainer).append(this._textContainer);
-                this._lContainer.find("div:first").append(this._refreshContainer);
-                this._textContainer.html(this.model.pullToRefreshSettings.pullText)
-            }
+            this._lContainer = ej.buildTag("div." + this._prefixClass + "list-container#" + this.model.id + "_container");           
             if (this._hasDataSource()) 
                 var ul = this.element.find(">ul");
             else
                 var ul = this.element.find("ul:first");
             if (this.model.showHeader) {
-                var hdr = this._renderHeader(this.model.id, this.model.showHeaderBackButton, this.model.headerTitle, this.model.headerBackButtonText);
+                var hdr = this._renderHeader(this.model.id, false , this.model.headerTitle, this.model.headerBackButtonText);
                 this._lbEle.prepend(hdr);
             }
-            if (this._prefixClass == "e-m-")
-                if (this.model.allowScrolling)
-                    this._renderScrollPanel(this._lbEle, this.model.id + "_scroll", this.model.id + "_container");
             if (this._hasDataSource() && !this.model.renderTemplate)
                 this.element.empty();
             if (this.model.renderTemplate) {
@@ -274,7 +258,7 @@
                         ej.destroyWidgets(this._template);
                         innerDiv[0].innerHTML = this._template;
                     }
-                    this._prefixClass == "e-m-" ? this._lContainer.find("div:first").append(innerDiv) : this._lContainer.append(innerDiv);
+					this._lContainer.append(innerDiv);
                     if (ej.widget.init)
                         ej.widget.init(innerDiv);
                 }
@@ -291,7 +275,7 @@
                     }
                     if (ul.length) {
                         ej.destroyWidgets(ul);
-                        this._prefixClass == "e-m-" ? this._lContainer.find("div:first").append(this._renderListItems(ul)) : this._lContainer.append(this._renderListItems(ul));
+						this._lContainer.append(this._renderListItems(ul));
                     }
                     else if (this._template) {
                         ej.destroyWidgets(this._template);
@@ -311,8 +295,6 @@
                 this._lbEle.append(this._lContainer);
                 if (ej.widget.init)
                     ej.widget.init(this._lContainer);
-                if (this._prefixClass == "e-m-" && (App.angularAppName || ej.angular.defaultAppName))
-                    ej.angular.compile(this._lContainer)
                 var eLi = this.element.find('li.' + this._prefixClass + 'list');
                 eLi.removeEleEmptyAttrs();
                 eLi.find('.' + this._prefixClass + 'chevron-right_01').removeEleEmptyAttrs();
@@ -335,8 +317,6 @@
                 $(this.element.find('.' + this._prefixClass + 'lv-input').closest('.' + this._prefixClass + 'lv-filter')).addClass(this._prefixClass + 'lv-inputdiv');
                 this._wireEvents();
             }
-            if (this._prefixClass == "e-m-" && (App.angularAppName || ej.angular.defaultAppName))
-                ej.angular.compile(this._lbEle);
             this._setHeightWidth();
 			if (this.model.height !== null) 
 				if (this._lContainer.height() > this.model.height)
@@ -345,8 +325,6 @@
 				this.scrollerObj.refresh();
 				$(this.scrollerObj.element).find(".e-vhandlespace").css("height",($(this.scrollerObj.element).find(".e-vhandlespace").height() -1));
 			}
-            if (this._prefixClass == "e-m-")
-                this.element.find("li[data-href]").addClass("e-m-arrow").find("a.e-m-list-anchor").addClass("e-m-fontimage");
             if (this.model.loadComplete)
                 this._trigger("loadComplete");
         },
@@ -446,17 +424,12 @@
             list.addClass(this._prefixClass + "childli");
             ul[0].innerHTML = "{{for items}}" + list[0].outerHTML + "{{/for}}";
             var div = ej.buildTag("div." + this._rootCSS + " subpage " + this._prefixClass + "childitem", "", {}, { "id": "{{if key}}child{{>key}}{{else " + this.model.fieldSettings['childId'] + "}}{{>" + this.model.fieldSettings['childId'] + "}}{{else}}{{/if}}", "style": "display:none" });
-            if (this._prefixClass == "e-m-")
-                div.addClass("e-m-" + this.model.renderMode + " e-m-" + this.model.theme);
             var innerdiv = ej.buildTag("div." + this._prefixClass + "list-container", "", {}, { "id": "{{if key}}child{{>key}}{{else " + this.model.fieldSettings['childId'] + "}}{{>" + this.model.fieldSettings['childId'] + "}}{{else}}{{/if}}_container" });
             if (this.model.showHeader)
                 div.append(this._renderHeader("{{if key}}child{{>key}}{{else " + this.model.fieldSettings['childId'] + "}}{{>" + this.model.fieldSettings['childId'] + "}}{{else}}{{/if}}", true, "Title"));
             if (this.model.enableFiltering)
                 this._createFilterWrapper(div);
             div.append(innerdiv.append(ul));
-            if (this._prefixClass == "e-m-")
-                if (this.model.allowScrolling)
-                    this._renderScrollPanel(div, "{{if key}}child{{>key}}{{else " + this.model.fieldSettings['childId'] + "}}{{>" + this.model.fieldSettings['childId'] + "}}{{else}}{{/if}}_scroll", "{{if key}}child{{>key}}{{else " + this.model.fieldSettings['childId'] + "}}{{>" + this.model.fieldSettings['childId'] + "}}{{else}}{{/if}}_container");
             if (ej.browserInfo().name == "msie" && ej.browserInfo().version < 10)
                 this.jsChildRender[0].text = div[0].outerHTML.replace(/&gt;/g, '>');
             else
@@ -472,8 +445,6 @@
             this._div.hide();
             this._container = ej.buildTag("div." + this._prefixClass + "list-container#" + childId + "_container");
             this.element.append(this._div);
-            if (this.model.allowScrolling)
-                this._renderScrollPanel(this._div, childId + "_scroll", childId + "_container", true);
         },
 
         _getText: function (element) {
@@ -527,6 +498,7 @@
         },
 
         _onTouchStartHandler: function (evt) {
+             this._mouseDown = { x: (!ej.isNullOrUndefined(evt.clientX)) ? evt.clientX : evt.touches[0].clientX, y: (!ej.isNullOrUndefined(evt.clientY)) ? evt.clientY : evt.touches[0].clientY };
 			if(($(evt.target.parentElement).hasClass(this._prefixClass + 'disable')) || ($(evt.currentTarget).hasClass(this._prefixClass + 'disable'))) 
 				return false;
             if (!ej.isDevice() && !ej._preventDefaultException(evt.target, this._preventDefaultException))
@@ -537,47 +509,33 @@
             this._scroll = false;
             if (!ej.getBooleanVal(this._currentItem, 'data-preventSelection', this.model.preventSelection))
                 this._addSelection();
-            if (this.model.renderMode == "windows" && !this.model.windows.preventSkew)
-                this._currentItem.addClass(ej.isMobile() ? ej._getSkewClass($(this._currentItem), evt.pageX, evt.pageY) : this._prefixClass + "m-skew-center");
+			 if (this.model.renderMode == "windows" &&!this.model.windows.preventSkew)
+                 this._currentItem.addClass(this._prefixClass + "m-skew-center");
             this._triggerStartEvent(this._returnData());
-            ej.listenEvents([this._liEl, (this._prefixClass == "e-m-" && this.model.enablePullToRefresh) ? this.element : this._liEl, this._liEl],
+			ej.listenEvents([this._liEl, this._liEl],
                            [ej.endEvent(), ej.moveEvent(), ej.cancelEvent()],
                            [this._touchEndDelegate, this._touchMoveDelegate, this._touchMoveDelegate], false, this);
-            $(window).bind(ej.endEvent() + " MSPointerUp pointerup", this._docClickDelegate);
+            $(window).on(ej.endEvent() + " MSPointerUp pointerup", this._docClickDelegate);
         },
         
         
         _onTouchMoveHandler: function (evt) {
+		if ((ej.browserInfo().name == "msie" && ej.browserInfo().version > 8)|| ej.browserInfo().name != "msie"){
+           if (((!ej.isNullOrUndefined(evt.clientX)) ? evt.clientX : evt.changedTouches[0].clientX !== this._mouseDown.x) || ((!ej.isNullOrUndefined(evt.clientY)) ? evt.clientY : evt.changedTouches[0].clientY !== this._mouseDown.y)) {
             this._isMoved = true;
-            if (this._prefixClass == "e-m-" && this.model.enablePullToRefresh && !this._isRefreshing) {
-                this._listScroll = this.element.find(".e-m-scroll");
-                var scrollPos = this._listScroll.ejmScrollPanel("getScrollPosition").y;
-                var moved = evt.changedTouches ? evt.changedTouches[0].pageY : evt.pageY;
-                if (scrollPos > 0) {
-                    if (this.model.refreshThreshold < moved) {
-                        this._textContainer.empty().html(this.model.pullToRefreshSettings.releaseText);
-                        this._ptrImgContainer.removeClass("rotatereverse").addClass("rotateimage");
-                        this._isCrossed = true;
-                    }
-                    else {
-                        if (this._ptrImgContainer.hasClass("rotateimage"))
-                            this._ptrImgContainer.removeClass("rotateimage").addClass("rotatereverse");
-                        this._textContainer.html(this.model.pullToRefreshSettings.pullText);
-                        this._isCrossed = false;
-                    }
-                }
-            }
-            else if (!ej.isWindows || (ej.isWindows && !ej.isWindows()) || (ej.isWindows && ej.isWindows() && ej._isTouchMoved(evt, this))) {
+             if (ej.isMobile() && (!ej.isWindows || (ej.isWindows && !ej.isWindows()) || (ej.isWindows && ej.isWindows() && ej._isTouchMoved(evt, this)))) {
                 this._scroll = true;
                 if (!ej.getBooleanVal(this._currentItem, 'data-persistSelection', this.model.persistSelection))
                     this._removeSelection();
                 else if (this._prevItem && this._prevItem[0] != this._currentItem[0])
                     this._removeSelection();
-                if (this.model.renderMode == "windows" && !this.model.windows.preventSkew)
-                    ej._removeSkewClass(this._currentItem);
-                else if (this.model.renderMode != "windows" && !ej.getBooleanVal(this._currentItem, 'data-preventselection', this.model.preventSelection) && this._prevItem && ej.getBooleanVal(this._currentItem, 'data-persistSelection', this.model.persistSelection))
+                 if (this.model.renderMode == "windows" && !this.model.windows.preventSkew)					
+                     ej._removeSkewClass(this._currentItem);
+                else if (!ej.getBooleanVal(this._currentItem, 'data-preventselection', this.model.preventSelection) && this._prevItem && ej.getBooleanVal(this._currentItem, 'data-persistSelection', this.model.persistSelection))
                     this._prevItem.removeClass(this._prefixClass + "state-default").addClass(this._prefixClass + "state-active");
             }
+        }
+			  }
         },
         
         
@@ -586,7 +544,7 @@
             this._isFromAjax = false;
             if (!ej.getBooleanVal(this._currentItem, 'data-persistSelection', this.model.persistSelection))
                 this._removeSelection();
-            if (this.model.renderMode == "windows" && !this.model.windows.preventSkew)
+            if (this.model.renderMode == "windows" && !this.model.windows.preventSkew)			
                 ej._removeSkewClass(this._currentItem);
             if (this._scroll) {
                 this._setCurrent();
@@ -596,21 +554,18 @@
             else if (!this._scroll) {
                 if (this._currentItem.find('.' + this._prefixClass + 'lv-check').length) {
                     var lbCheck = this._currentItem.find('.' + this._prefixClass + 'lv-check');
-                    if (this._prefixClass == "e-m-" || (this._prefixClass == "e-" && !ej.isNullOrUndefined(evt) && !$(evt.target).closest('.e-lv-checkdiv').length))
+					  if ((this._prefixClass == "e-" && !ej.isNullOrUndefined(evt) && !$(evt.target).closest('.e-lv-checkdiv').length))
                         this._toggleCheckboxValue(lbCheck);
                 }
-                if (this._prefixClass == "e-m-")
-                    var backButton = this._currentItem.attr('data-childheaderbackbuttontext') == undefined ? this._currentItem.closest('.' + this._rootCSS + '').find('.' + this._prefixClass + 'header').length ? this._currentItem.closest('.' + this._rootCSS + '').find('.' + this._prefixClass + 'header').ejmHeader('getTitle') : "Back" : ej.getAttrVal(this._currentItem, 'data-childheaderbackbuttontext');
-                else
-                    var backButton = this._currentItem.attr('data-childheaderbackbuttontext') == undefined ? this._currentItem.closest('.' + this._rootCSS + '').find('.' + this._prefixClass + 'header').length ? this._currentItem.closest('.' + this._rootCSS + '').find('.' + this._prefixClass + 'header .' + this._prefixClass + 'htitle').text() : "Back" : ej.getAttrVal(this._currentItem, 'data-childheaderbackbuttontext');
+                var backButton = this._currentItem.attr('data-childheaderbackbuttontext') == undefined ? this._currentItem.closest('.' + this._rootCSS + '').find('.' + this._prefixClass + 'header').length && ! this.model.showHeaderBackButton ? this._currentItem.closest('.' + this._rootCSS + '').find('.' + this._prefixClass + 'header .' + this._prefixClass + 'htitle').text() : "Back" : ej.getAttrVal(this._currentItem, 'data-childheaderbackbuttontext');
                 var urlVal = this._currentItem.attr('data-href');
                 if (!this._currentItem.attr('data-navigateUrl')) {
                     var page = this._isInsideNavigation ? this._tempContent.find("[data-ajaxurl='" + this._convertToRelativeUrl(urlVal) + "']") : this.element.find("[data-ajaxurl='" + this._convertToRelativeUrl(urlVal) + "']");
                     if (ej.getBooleanVal(this._currentItem, 'data-loadajax', (this.model.enableAjax && typeof (urlVal) != "undefined" || !typeof (urlVal))) && (!this.model.enableCache || page.length == 0)) {
                         if (page.length)
                             page.remove();
-                        if ((this._prefixClass == "e-m-" && this._currentItem.hasClass("e-m-arrow"))|| this._prefixClass != "e-m-")
-                                this.loadAjaxContent(urlVal, backButton);
+                        if ((this._prefixClass == "e-" && this._currentItem.hasClass("e-arrow")) || this._prefixClass != "e-")
+                            this.loadAjaxContent(urlVal, backButton);
                         this._unbindEvents(evt);
                         if (this._isInsideNavigation && this._nearestND.model.contentId)
                             this._closeNavigation();
@@ -626,6 +581,7 @@
                         }
                     }
                     this._updateContent(this._currentItem, backButton);
+					if (this.model.ready) this._trigger("ready");
                     if (this._isInsideNavigation)
                         var close = this._nearestND.model.contentId ? (!this._currentItem.attr("data-childid") || this._currentItem.attr("data-href")) : !(this._currentItem.attr("data-childid") || this._currentItem.attr("data-href"));
                     if (this._isInsideNavigation && close)
@@ -636,8 +592,6 @@
                     this._touchEndEventHandler();
                 this._prevItem = this._currentItem;
             }
-            else if (this.model.renderMode == "windows" && !ej.isMobile())
-                this._touchEndEventHandler(evt);
             this._unbindEvents(evt);
         },
 
@@ -655,9 +609,6 @@
 
         
         _closeNavigation: function () {
-            if (this._prefixClass == "e-m-")
-                this.element.closest('.' + this._prefixClass + 'nb').ejmNavigationDrawer('close');
-            else
                 this.element.closest('.' + this._prefixClass + 'nb').ejNavigationDrawer('close');
         },
 
@@ -713,24 +664,13 @@
         },
                 
         _docClick: function (evt) {
-            if (this._isMoved && this._prefixClass == "e-m-" && this.model.enablePullToRefresh && this._isCrossed && !this._isRefreshing) {
-                ej.listenEvents([this.element],
-                         [ej.moveEvent()],
-                         [this._touchMoveDelegate], true, this);
-                this._refreshContainer.addClass("refreshing");
-                this._ptrImgContainer.removeClass(this._prefixClass + "pull").addClass(this._prefixClass + "loading");
-                this._textContainer.html(this.model.pullToRefreshSettings.refreshText);
-                this._updateDataSource();
-                this._ptrImgContainer.removeClass("rotateimage");
-                this._isCrossed = false;
-            }
             if (this._scroll) {
                 this._setCurrent();
-                $(document).unbind(ej.endEvent() + " MSPointerUp pointerup", this._docClickDelegate);
+                $(document).off(ej.endEvent() + " MSPointerUp pointerup", this._docClickDelegate);
                 ej.listenEvents([this._liEl, this._liEl],
                                [ej.endEvent(), ej.moveEvent()],
                                [this._touchEndDelegate, this._touchMoveDelegate], true, this);
-                $(window).unbind(ej.endEvent() + " MSPointerUp pointerup", this._docClickDelegate);
+                $(window).off(ej.endEvent() + " MSPointerUp pointerup", this._docClickDelegate);
             }
         },
         
@@ -795,11 +735,10 @@
             this._searchItems = $(element).find("." + this._prefixClass + "list");
             this._emptyFilterTextValue(element);
             element.find('.' + this._prefixClass + 'list[style*="display: none"]').show();
-            var selector = "a";
             this._elementText = [];
             for (var i = 0; i < this._searchItems.length; i++) {
-                if ($(this._searchItems[i]).find(selector))
-                    this._elementText.push($.trim($(this._searchItems[i]).find(selector).html().replace(new RegExp('<[^<]+\>', 'g'), "").toLowerCase()));
+                if ($(this._searchItems[i]))
+                    this._elementText.push($.trim($(this._searchItems[i]).html().replace(new RegExp('<[^<]+\>', 'g'), "").toLowerCase()));
                 else
                     this._elementText.push("");
             }
@@ -820,8 +759,19 @@
             var refresh = false;
             for (var prop in options) {
                 var setModel = "_set" + prop.charAt(0).toUpperCase() + prop.slice(1);
-                if (this[setModel])
-                    this[setModel](options[prop]);
+				 if (this[setModel] || prop == "locale") {
+                    switch (prop) {                       
+						case "locale":
+							if (ej.ListView.Locale[options[prop]]) {
+								this.model.locale = options[prop];
+								this._setCulture();	
+                                this._setHeaderVal(this.model.id,this.model.headerTitle, this.model.headerBackButtonText);						
+							}
+                            break;
+                        default:
+                            this[setModel](options[prop]);
+                    }
+                }               
                 else
                     refresh = true;
             }
@@ -880,13 +830,13 @@
         },
         //To clear the element
         _clearElement: function () {
-            this.element.removeAttr("class").removeAttr("style");
+            this.element.removeAttr("class style");
             this.element.empty().html(this._orgEle.html());
         },
         // all events bound using this._on will be unbind automatically
         _destroy: function () {
-            if (this._prefixClass == "e-")
-                $(window).unbind("resize");
+			if (this._prefixClass == "e-")
+			   ej.listenEvents([window], ["resize"], [this._resizeDelegate], true, this);
             this._wireEvents(true);
             this._clearElement();
         },
@@ -896,8 +846,6 @@
             this._isFromAjax = true;
             this._renderChild(ej.getAttrVal(this._currentItem, 'data-childid', "page_" + parseInt(Math.random().toFixed(3) * 1000)));
             if (!$.support.pushstate || ej.isWindowsWebView())
-                if (proxy._prefixClass == "e-m-")
-                    urlVal = App.route.makeUrlAbsolute(urlVal);
             var loadData = { content: proxy._div, item: proxy._currentItem, index: $(proxy._currentItem).index(), text: $(proxy._currentItem).text(), url: proxy.model.ajaxSettings.url ? proxy.model.ajaxSettings.url : urlVal };
             if (this.model.ajaxBeforeLoad)
                 this._trigger("ajaxBeforeLoad", loadData);
@@ -912,10 +860,8 @@
                 "successHandler": function (data) { //Ajax post success event handler
                     var content = ej.buildTag("div." + this._prefixClass + "content", (/<\/?body[^>]*>/gmi).test(data) ? data.split(/<\/?body[^>]*>/gmi)[1] : data || "");
                     proxy._div.append(proxy._container.append(content));
-                    if (proxy._prefixClass == "e-m-")
-                        proxy._div.attr("data-ajaxurl", App.route.convertToRelativeUrl(urlVal));
-                    proxy._updateContent(proxy._currentItem, backButton);
-                    if (proxy._prefixClass == "e-m-" && (App.angularAppName || ej.angular.defaultAppName))
+                    proxy._updateContent(proxy._currentItem, backButton);                    
+					if ((App.angularAppName || ej.angular.defaultAppName))
                         ej.angular.compile(content);
                     var successData = { content: proxy._div, item: proxy._currentItem, index: $(proxy._currentItem).index(), text: $(proxy._currentItem).text(), url: proxy.model.ajaxSettings.url ? proxy.model.ajaxSettings.url : urlVal };
                     if (proxy.model.ajaxSuccess)
@@ -1057,7 +1003,7 @@
             this._getElement(childId).css('visibility', 'hidden');
         },
 
-		objectSplice:function(list,index){
+		_objectSplice:function(list,index){
 		    for (var i = 0; i < list.length; i++) {
 		        this.model.items.splice(index, 0, list[i]);
 		    }
@@ -1072,7 +1018,7 @@
                     $('.e-list-container > div > ul').append(li);
                 }
                     if (typeof (list) == 'object')
-                        this.objectSplice(list, index);
+                        this._objectSplice(list, index);
                     else
                         this.model.items.splice(index, 0, this._getLiAttributes(list, null, null, groupid));
                     var items = this.model.items;
@@ -1102,6 +1048,7 @@
                 else 
                       ele = $($(this.jsRender).render(items[index])).insertBefore($ul.children()[index]);    
                 ej.widget.init && ej.widget.init(ele);
+				if($(list).attrNotStartsWith(/^data-ej-/).length>0) $(ele).addEleAttrs($($(list).attrNotStartsWith(/^data-ej-/)));
             }
             else {
                 this._renderControl();
@@ -1148,34 +1095,7 @@
         getItemsCount: function (childId) {
             return this._getElement(childId).find('li.' + this._prefixClass + 'list').length;
         },
-
-        append: function (dynamicdatasource) {
-            var $ul, newListItems;
-            if (dynamicdatasource.length) {
-                this.model.dataSource = this.model.dataSource.concat(dynamicdatasource);
-                if (!this.model.enableGroupList) {
-                    $ul = $(this.element.find("ul:visible"));
-                    newListItems = this._rendering(dynamicdatasource, $ul);
-                    this._processing($ul);
-                }
-                else {
-                    var group = ej.DataManager(dynamicdatasource).executeLocal(ej.Query().from(dynamicdatasource).group('groupID'));
-                    for (var i in group) {
-                        $ul = this.element.find('ul[data-ej-grouplisttitle= ' + group[i].key + ']');
-                        newListItems = this._rendering(group[i].items, $ul);
-                        this._processing($ul);
-                    }
-                }
-                this._liEl = this.element.find('li.' + this._prefixClass + 'list');
-                this._wireEvents(false, newListItems);
-                if (this._prefixClass == "e-m-" && this.element.find(".e-m-scroll").length) {
-                    var scroll = this.element.find(".e-m-scroll");
-                    this._scrollInst = scroll.ejmScrollPanel("instance");
-                    this._scrollInst.refresh();
-                }
-            }
-            this._setHeightWidth();
-        },
+		
         getActiveItemData: function () {
             if (this.getActiveItem().attr("data-id"))
                 return (this._generateData(this.dataSource().length ? typeof this.dataSource() == "string" ? eval(this.dataSource()) : this.dataSource() : this.model.items, this.getActiveItem().attr("data-id")));
@@ -1196,7 +1116,7 @@
 
     ej.widget("ejListView", "ej.ListView", {
         _rootCSS: "e-lv",
-
+        validTags:['div'],
         _prefixClass: "e-",
         defaults: {
 
@@ -1276,7 +1196,8 @@
         ],
 
 
-        _init: function () {
+        _init: function (options) {
+            this._options = options;
             this._preventDefaultException = { tagName: /^(INPUT|TEXTAREA|BUTTON|SELECT)$/ };
             this._storedContent = [];
             this._storedTemplate = [];
@@ -1287,6 +1208,7 @@
             if (this._oldEle.find("ul").length)
                 this.model.items = [];
             this._indexVal = 0;
+			this._setCulture();
             this._updateModelItems();
             this._load();
             var navObj = this.element.closest(".e-nb.e-js");
@@ -1297,11 +1219,14 @@
         },
 
         _responsive: function () {
-			$(window).bind("resize", $.proxy(this._resizeHandler, this));
+			$(window).on("resize", $.proxy(this._resizeHandler, this));
         },
 
         _resizeHandler: function () {
-			if($(this.element).parent().width()<=this.model.width) {
+			if ($(this.element).parent().width() == null && this.model == null) {
+				$(this.element).width(this.width);
+			}
+			else if($(this.element).parent().width()<=this.model.width) {
 				this.width = $(this.element).parent().width();
 				$(this.element).width(this.width);
 			}
@@ -1347,7 +1272,7 @@
             item.childHeaderBackButtonText = ej.getAttrVal(element, "data-ej-childheaderbackbuttontext");
             item.mouseUp = ej.getAttrVal(element, "data-ej-mouseUp");
             item.mouseDown = ej.getAttrVal(element, "data-ej-mouseDown");
-            if (this.element.find('li').length < 0) item.attributes = element.attrNotStartsWith(/^data-ej-/);
+            if (this.element.find('li').length > 0) item.attributes = (typeof(element)=="object")? element.attrNotStartsWith(/^data-ej-/):$(element).attrNotStartsWith(/^data-ej-/);
             item.renderTemplate = ej.getAttrVal(element, "data-ej-rendertemplate");
             item.templateId = this._storedTemplate[this._indexVal - 1],
             item.enableAjax = ej.getAttrVal(element, "data-ej-enableajax");
@@ -1499,13 +1424,17 @@
             ul.find('.e-lv-check').parent().addClass("e-lv-checkdiv")
         },
         _triggerStartEvent: function (data) {
-            this.model.mouseDown = ej.getAttrVal(this._currentItem, 'data-mousedown', this._touchStart);
+			if (ej.browserInfo().name == "msie" && ej.browserInfo().version == 8)
+				this.model.mouseDown = this._touchStart;
+            else this.model.mouseDown = ej.getAttrVal(this._currentItem, 'data-mousedown', this._touchStart);
             if (this.model.mouseDown)
                 this._trigger("mouseDown", data);
         },
 
         _triggerEndEvent: function (data, evt) {
-            this.model.mouseUp = ej.getAttrVal(this._currentItem, 'data-mouseup', this._touchEnd);
+			if (ej.browserInfo().name == "msie" && ej.browserInfo().version == 8)
+				this.model.mouseUp = this._touchEnd;
+            else this.model.mouseUp = ej.getAttrVal(this._currentItem, 'data-mouseup', this._touchEnd);
             this.selectedItemIndex(this._currentItem.index());
             if (this.model.enablePersistence && this.model.enableCheckMark) {
                 var state = this._currentItem.find('.e-chkbox-wrap'), index = this._currentItem.index();
@@ -1542,8 +1471,23 @@
         },
         _convertToRelativeUrl: function (url) {
             return url;
-        }
+        },
+		_setCulture: function () {
+            this._localizedLabels = this._getLocalizedLabels();
+            if (!ej.isNullOrUndefined(this._options)) {
+                if (!ej.isNullOrUndefined(this._options.headerTitle)) this._localizedLabels.headerTitle = this._options.headerTitle;
+            }
+            this.model.headerTitle = this._localizedLabels.headerTitle;            
+        },
+        _getLocalizedLabels: function () {
+            return ej.getLocalizedConstants(this.sfType, this.model.locale);
+        },
+		
     });
+	 ej.ListView.Locale = ej.ListView.Locale || {};
+        ej.ListView.Locale["default"] = ej.ListView.Locale["en-US"] = {
+        headerTitle: "Title"       
+        };
     $.extend(true, ej.ListView.prototype, ej.ListViewBase.prototype);
 })(jQuery, Syncfusion);;
 

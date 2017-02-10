@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.draggable.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -44,6 +44,8 @@
             clone: false,
             
             distance: 1, 
+			
+			dragOnTaphold: false,
             
             cursorAt: { top: -1, left: -2 }, 
             
@@ -81,6 +83,9 @@
                     case "dragArea":
                         this.model.dragArea = options[key];
                         break;
+						case "dragOnTaphold":
+                        this.model.dragOnTaphold = options[key];
+                        break; 
                 }
             }
         },
@@ -88,12 +93,12 @@
         
         _destroy: function () {
             $(document)
-                .unbind(ej.eventType.mouseUp, this._destroyHandler)
-                .unbind(ej.eventType.mouseUp, this._dragStopHandler)
-                .unbind(ej.eventType.mouseMove, this._dragStartHandler)
-                .unbind(ej.eventType.mouseMove, this._dragHandler)
-                .unbind("mouseleave", this._dragMouseOutHandler)
-                .unbind('selectstart', false);
+                .off(ej.eventType.mouseUp, this._destroyHandler)
+                .off(ej.eventType.mouseUp, this._dragStopHandler)
+                .off(ej.eventType.mouseMove, this._dragStartHandler)
+                .off(ej.eventType.mouseMove, this._dragHandler)
+                .off("mouseleave", this._dragMouseOutHandler)
+                .off('selectstart', false);
 
             
 
@@ -103,12 +108,12 @@
 
         _initialize: function (e) {
             var ori = e;
-            e.preventDefault();
+			e.preventDefault();
             e = this._getCoordinate(e);
             this.target = $(ori.currentTarget);
             this._initPosition = { x: e.pageX, y: e.pageY };
             
-            $(document).bind(ej.eventType.mouseMove, this._dragStartHandler).bind(ej.eventType.mouseUp, this._destroyHandler);
+            $(document).on(ej.eventType.mouseMove, this._dragStartHandler).on(ej.eventType.mouseUp, this._destroyHandler);
             if (!this.model.clone) {
                 var _offset = this.element.offset();
                 this._relXposition = e.pageX - _offset.left;
@@ -146,7 +151,6 @@
         _dragStart: function (e) {
             var ori = e;
             e = this._getCoordinate(e);
-            
             this.margins = {
                 left: (parseInt(this.element.css("marginLeft"), 10) || 0),
                 top: (parseInt(this.element.css("marginTop"), 10) || 0),
@@ -185,8 +189,8 @@
                 }
                 
                 var pos= dragTargetElmnt.offsetParent().offset();
-                $(document).unbind(ej.eventType.mouseMove, this._dragStartHandler).unbind(ej.eventType.mouseUp, this._destroyHandler)
-                    .bind(ej.eventType.mouseMove, this._dragHandler).bind(ej.eventType.mouseUp, this._dragStopHandler).bind("mouseleave", this._dragMouseOutHandler).bind("selectstart", false);
+                $(document).off(ej.eventType.mouseMove, this._dragStartHandler).off(ej.eventType.mouseUp, this._destroyHandler)
+                    .on(ej.eventType.mouseMove, this._dragHandler).on(ej.eventType.mouseUp, this._dragStopHandler).on("mouseleave", this._dragMouseOutHandler).on("selectstart", false);
                 ej.widgetBase.droppables[this.model.scope] = {
                     draggable: this.element,
                     helper: dragTargetElmnt.css({ position: 'absolute',  left: (this.position.left-pos.left), top: (this.position.top-pos.top) }),
@@ -197,6 +201,7 @@
 
         _drag: function (e) {
             var left, top, pageX, pageY;
+			e.preventDefault();
             this.position = this._getMousePosition(e);
             if (this.position.top < 0)
                 this.position.top = 0;
@@ -277,7 +282,7 @@
         },
 
         _dragMouseEnter: function (e) {
-            $(document).unbind("mouseenter", this._dragMouseEnterHandler);
+            $(document).off("mouseenter", this._dragMouseEnterHandler);
             if (this._isIE9)
                 this._dragManualStop(e);
             else if (this._isIE8) {
@@ -295,7 +300,7 @@
         },
 
         _dragMouseOut: function (e) {
-            $(document).bind("mouseenter", this._dragMouseEnterHandler);
+            $(document).on("mouseenter", this._dragMouseEnterHandler);
         },
 
         _checkTargetElement:function(e)
@@ -327,7 +332,7 @@
             }
         },
         _elementUnderCursor:function(e){
-            if(e.type == "touchmove" || e.type == "touchstart" || e.type == "touchend")
+            if(e.type == "touchmove" || e.type == "touchstart" || e.type == "touchend" || e.type=="taphold")
                 return document.elementFromPoint(e.originalEvent.changedTouches[0].clientX, e.originalEvent.changedTouches[0].clientY);
             else return document.elementFromPoint(e.clientX, e.clientY);
         },
@@ -339,6 +344,9 @@
                 }
         },
         _wireEvents: function () {
+			if(ej.isDevice()==true && this.model.dragOnTaphold==true)
+            this._on(this.element, "taphold", this._initialize);
+		else
             this._on(this.element, ej.eventType.mouseDown, this._initialize);
             this._dragStartHandler = $.proxy(this._dragStart, this);
             this._destroyHandler = $.proxy(this._destroy, this);
@@ -355,7 +363,7 @@
         },
         _getCoordinate: function (evt) {
             var coor = evt;
-            if (evt.type == "touchmove" || evt.type == "touchstart" || evt.type == "touchend")
+            if (evt.type == "touchmove" || evt.type == "touchstart" || evt.type == "touchend" || evt.type== "taphold" && ej.browserInfo().name !="msie")
                 coor = evt.originalEvent.changedTouches[0];
             return coor;
         }
@@ -401,7 +409,7 @@
         
         _init: function () {
             if (this.model.accept) $(this.element).delegate(this.accept, 'mouseup', $.proxy(this._drop, this));
-            else $(this.element).bind('mouseup', $.proxy(this._drop, this));
+            else $(this.element).on('mouseup', $.proxy(this._drop, this));
             this._on($(document), 'touchend', this._drop);
             this._mouseOver = false;
         },
@@ -412,7 +420,7 @@
         
         
         _destroy: function () {
-
+			 $(this.element).off('mouseup', $.proxy(this._drop, this));
         },
 
         _over: function (e) {
@@ -522,7 +530,7 @@
                 .delegate(this.handle, 'resizestart', this._blockDefaultActions);
             }
             else {
-                $(this.target).bind("mousedown", $.proxy(this._mousedown, this));                                
+                $(this.target).on("mousedown", $.proxy(this._mousedown, this));                                
             }
             this._resizeStartHandler = $.proxy(this._resizeStart, this);
             this._destroyHandler = $.proxy(this._destroy, this);
@@ -533,10 +541,10 @@
         _mouseover: function (e) {
             if ($(e.target).hasClass("e-resizable")) {
                 $(e.target).css({ cursor: "se-resize" });
-                $(this.target).bind(ej.eventType.mouseDown, $.proxy(this._mousedown, this));
+                $(this.target).on(ej.eventType.mouseDown, $.proxy(this._mousedown, this));
             }
             else {
-                $(this.target).unbind(ej.eventType.mouseDown);
+                $(this.target).off(ej.eventType.mouseDown);
                 $(this.target).css({ cursor: "" });
             }
         },
@@ -557,7 +565,7 @@
             this._pageX = e.pageX;
             this._pageY = e.pageY;
 
-            $(document).bind(ej.eventType.mouseMove, this._resizeStartHandler).bind(ej.eventType.mouseUp, this._destroyHandler);
+            $(document).on(ej.eventType.mouseMove, this._resizeStartHandler).on(ej.eventType.mouseUp, this._destroyHandler);
 
             $(document.documentElement).trigger(ej.eventType.mouseDown, ori); // The next statement will prevent 'mousedown', so manually trigger it.
             return false;
@@ -578,8 +586,8 @@
                     this._pageX = e.pageX;
                     this._pageY = e.pageY;
                     var pos = this.getElementPosition(resizeTargetElmnt);
-                    $(document).unbind(ej.eventType.mouseMove, this._resizeStartHandler).unbind(ej.eventType.mouseUp, this._destroyHandler)
-                        .bind(ej.eventType.mouseMove, this._resizeHandler).bind(ej.eventType.mouseUp, this._resizeStopHandler).bind("mouseenter", this._resizeMouseEnterHandler).bind("selectstart", false);
+                    $(document).off(ej.eventType.mouseMove, this._resizeStartHandler).off(ej.eventType.mouseUp, this._destroyHandler)
+                        .on(ej.eventType.mouseMove, this._resizeHandler).on(ej.eventType.mouseUp, this._resizeStopHandler).on("mouseenter", this._resizeMouseEnterHandler).on("selectstart", false);
                     ej.widgetBase.resizables[this.scope] = {
                         resizable: this.target,
                         helper: resizeTargetElmnt.css({ width: _width, height: _height }),
@@ -649,12 +657,12 @@
         
         _destroy: function (e) {
             $(document)
-                .unbind(ej.eventType.mouseUp, this._destroyHandler)
-                .unbind(ej.eventType.mouseUp, this._resizeStopHandler)
-                .unbind(ej.eventType.mouseMove, this._resizeStartHandler)
-                .unbind(ej.eventType.mouseMove, this._resizeHandler)
-                .unbind("mouseenter", this._resizeMouseEnterHandler)
-                .unbind('selectstart', false);            
+                .off(ej.eventType.mouseUp, this._destroyHandler)
+                .off(ej.eventType.mouseUp, this._resizeStopHandler)
+                .off(ej.eventType.mouseMove, this._resizeStartHandler)
+                .off(ej.eventType.mouseMove, this._resizeHandler)
+                .off("mouseenter", this._resizeMouseEnterHandler)
+                .off('selectstart', false);            
             ej.widgetBase.resizables[this.scope] = null;
             
         },

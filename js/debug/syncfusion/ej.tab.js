@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.tab.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core"], fn) : fn();
 })
 (function () {
 	
@@ -524,7 +524,7 @@
 
 
         _addDeleteIcon: function () {
-            if (this.element.find("div.e-close e-tabdelete").length <= 0 && this.items.length > 0) {
+            if (this.element.find("div.e-close.e-tabdelete").length <= 0 && this.items.length > 0) {
                 var deleteIcon = ej.buildTag('div.e-icon e-close e-tabdelete', "", {}, { role: "presentation" }).css("visibility", "hidden");
                 if (this.model.headerPosition == "left" || this.model.headerPosition == "right") {
                     var delIconPosition = this.items.find("a");
@@ -762,8 +762,8 @@
                 var widthValue = parseInt(this.itemsContainer.css("width"));
                 if (this.model.headerPosition == "top") {
                     var item = $(this.contentPanels);
-                    item.css("margin-top", this.itemsContainer.outerHeight() + (item.hasClass("e-activetop") ? 0 : (this.model.enableRTL ? 4 : 3)) + "px");
-                    $(this.contentPanels).css({ "position": "absolute", "border-top": "none", "width": ej.getDimension(this.element, "width") - 1 + "px" });
+                    item.css("padding-top", this.itemsContainer.outerHeight() + (item.hasClass("e-activetop") ? 0 : (this.model.enableRTL ? 4 : 3)) + "px");
+                    $(this.contentPanels).css({"border-top": "none", "width": ej.getDimension(this.element, "width") - 1 + "px" });
                     this.itemsContainer.css("border-bottom", "1px solid #bbbcbb");
                 }
                 if (this.model.headerPosition == "bottom") {
@@ -1010,7 +1010,7 @@
         },
         _getDimension: function (element, method) {
             var value;
-            var $hidden = $(element).parents().andSelf().filter(':hidden');
+            var $hidden = $(element).parents().addBack().filter(':hidden');
             var prop = { visibility: 'hidden', display: 'block' };
             var hiddenCollection = [];
             $hidden.each(function () {
@@ -1049,7 +1049,7 @@
                 if (this.selectedItemIndex() != null && this.selectedItemIndex() < this.contentPanels.length) {
                     this._ajaxLoad();
                     this.hideItem(this._preTabIndex);
-                    $(this.contentPanels[this.selectedItemIndex()]).fadeIn(this.model.enableAnimation ? 200 : 0, "easeOutQuad", function () {
+                    $(this.contentPanels[this.selectedItemIndex()]).fadeIn(this.model.enableAnimation ? 20 : 0, function () {
                         if (!proxy.initialRender && proxy._onActive())
                             return true;
                         proxy.initialRender = false;
@@ -1150,8 +1150,8 @@
         _disableTabs: function () {
             for (var i = 0, li; (li = this.items[i]) ; i++) {
                 if ($.inArray(i, this.model.disabledItemIndex) > -1) {
-                    $(li).find("a").unbind(this.model.events);
-                    $(li).find("div.e-close").unbind("click");
+                    $(li).find("a").off(this.model.events);
+                    $(li).find("div.e-close").off("click");
                 }
                 $(li)[$.inArray(i, this.model.disabledItemIndex) != -1 &&
                     !$(li).hasClass("e-tab-selected") ? "addClass" : "removeClass"]("e-disable");
@@ -1378,10 +1378,12 @@
                 var index = $(this.items).index($(args.target).parent());
                 if (index == -1)
                     index = $(this.items).index($(args.target));
+				if(!$(this.items[index]).hasClass("e-disable")){
                 args.type === "mouseout" ? $(this.element.find("div.e-tabdelete")[index]).css("visibility", "hidden") : $(this.element.find("div.e-tabdelete")[index]).css("visibility", "visible");
+				args.type === "mouseout" ? $(this.element.find("div.e-reload")[index]).css("visibility", "hidden") : $(this.element.find("div.e-reload")[index]).css("visibility", "visible");
+				}
                 args.type === "mouseout" ? $(this.element.find("div.e-chevron-circle-right")).css("visibility", "hidden") : $(this.element.find("div.e-chevron-circle-right")).css("visibility", "visible");
                 args.type === "mouseout" ? $(this.element.find("div.e-chevron-circle-left")).css("visibility", "hidden") : $(this.element.find("div.e-chevron-circle-left")).css("visibility", "visible");
-                args.type === "mouseout" ? $(this.element.find("div.e-reload")[index]).css("visibility", "hidden") : $(this.element.find("div.e-reload")[index]).css("visibility", "visible");
             }
         },
 
@@ -1394,7 +1396,7 @@
             this._on(this.element.find("div.e-chevron-circle-left"), "click", this._tabScrollBackClick);
             this._on(this.itemsContainer, "focusin", this._focusIn);
             this._on(this.itemsContainer, "focusout", this._focusOut);
-            $(window).bind('resize', $.proxy(this._resize, this));
+            $(window).on('resize', $.proxy(this._resize, this));
             this._on(this.element.find("div.e-reload"), "click", this._tabReloadClick);
         },
         _resize: function () {
@@ -1418,8 +1420,8 @@
             this._resizeEvents();
         },
         _resizeEvents: function (value) {
-            if (value === "fill") $(window).bind('resize', $.proxy(this._windowResized, this));
-            else $(window).unbind('resize', $.proxy(this._windowResized, this));
+            if (value === "fill") $(window).on('resize', $.proxy(this._windowResized, this));
+            else $(window).off('resize', $.proxy(this._windowResized, this));
         },
 
 
@@ -1705,11 +1707,11 @@
 
         _focusIn: function () {
             if (!this.model.readOnly && this.model.allowKeyboardNavigation)
-                $(this.element).bind("keydown", $.proxy(this._keyPress, this));
+                $(this.element).on("keydown", $.proxy(this._keyPress, this));
         },
 
         _focusOut: function (e) {
-            $(this.element).unbind("keydown", $.proxy(this._keyPress, this));
+            $(this.element).off("keydown", $.proxy(this._keyPress, this));
         },
 
         _onLoad: function (link) {

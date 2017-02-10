@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.menu.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core","./ej.checkbox"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./ej.checkbox"], fn) : fn();
 })
 (function () {
 	
@@ -194,10 +194,8 @@
                         break;
                     case "enableAnimation": this.model.enableAnimation = jsondata[key]; break;
                     case "openOnClick":
-                        if (jsondata[key] == true) {
-                            this._hoverOpen = false;
-                            this._hoverClose = false;
-                        }
+                            this._hoverOpen = !jsondata[key];
+                            this._hoverClose = !jsondata[key]; 
                         break;
                     case "subMenuDirection": this._setSubMenuDirection(this.model.subMenuDirection); break;
                     case "titleText":
@@ -254,6 +252,7 @@
         _renderMenu: function () {
             this._renderControl();
             this._addArrow(this.model.showRootLevelArrows, this.model.showSubLevelArrows);
+			this._renderArrow();
             this._intializeMenu();
         },
 
@@ -282,23 +281,7 @@
             }
             //For ContextMenu Mode
             else this._contextMenu_Template();
-            //Adding arrows to items with sub items
-            this.element.find('li:has("> ul")').find('> a,> span').addClass('aschild');
-            this.element.find('>li').addClass('e-list').attr({ "role": "menuitem" });
-            list = this.element.find('.e-list a.aschild');
-            spanlist = this.element.find('.e-list span.aschild');
-            for (i = 0; i < list.length; i++) {
-                $(list[i]).siblings().attr({ "aria-hidden": true });
-                $(list[i]).parent().attr({ "aria-haspopup": true, "role": "menu" });
-                $(list[i]).parent().addClass("e-haschild");
-                $(list[i]).siblings('ul').children('li').addClass('e-list').attr("role", "menuitem");
-            }
-            for (i = 0; i < spanlist.length; i++) {
-                $(spanlist[i]).siblings().attr({ "aria-hidden": true });
-                $(spanlist[i]).parent().attr({ "aria-haspopup": true, "role": "menu" });
-                $(spanlist[i]).parent().addClass("e-haschild");
-                $(spanlist[i]).siblings('ul').children('li').addClass('e-list').attr("role", "menuitem");
-            }
+            this._addClass();
             if (this.model.enableCenterAlign) this._centerAlign(this.model.enableCenterAlign);
             if (this.model.enableSeparator) this._setSeparator(true);
             (!this.model.enabled) && this.disable();
@@ -331,7 +314,36 @@
             var obj = this.element.parents('.e-menu-wrap').children('.e-menu');
             e.isChecked ? obj.removeClass('e-res-hide').addClass('e-res-show') : obj.removeClass('e-res-show').addClass('e-res-hide');
         },
-
+        _addClass : function (){
+            //Adding arrows to items with sub items
+            this.element.find('li:has("> ul")').find('> a,> span').addClass('aschild');
+            this.element.find('>li').addClass('e-list').attr({ "role": "menuitem" });
+			this.element.find('li').find(">a, >span").addClass('e-menulink');
+            var list = this.element.find('.e-list a.aschild');
+            var spanlist = this.element.find('.e-list span.aschild');
+            var listElement, spanElement;
+            for (i = 0; i < list.length; i++) {
+                listElement = $(list[i]);
+                listElement.siblings().attr({ "aria-hidden": true });
+                listElement.parent().attr({ "aria-haspopup": true, "role": "menu" }).addClass("e-haschild");
+                listElement.siblings('ul').children('li').addClass('e-list').attr("role", "menuitem");
+            }
+            for (i = 0; i < spanlist.length; i++) {
+                spanElement = $(spanlist[i]);
+                spanElement.siblings().attr({ "aria-hidden": true });
+                spanElement.parent().attr({ "aria-haspopup": true, "role": "menu" }).addClass("e-haschild");
+                spanElement.siblings('ul').children('li').addClass('e-list').attr("role", "menuitem");
+            }
+        },
+		_renderArrow : function(){
+			 if ((this.model.menuType != ej.MenuType.ContextMenu) && (this.model.orientation != "vertical")) {
+				if( $($(this.element).find("span.e-menu-arrow")).length == 0){
+					var arrow = ej.buildTag("span.e-menu-arrow e-menu-left");
+					$(arrow).append("<span class='e-arrowMenuOuter'></span>").append("<span class='e-arrowMenuInner'></span>");
+					this.element.find('>li.e-list.e-haschild').append(arrow);
+				}
+			 }
+		},
         _generateTemplate: function (data) {
             var proxy = this, queryPromise;
             if (data instanceof ej.DataManager) {
@@ -362,26 +374,24 @@
             liTag = $(document.createElement('li'));
             liTag.attr("class", 'e-list');
             if (item[mapper.htmlAttribute]) this._setAttributes(item[mapper.htmlAttribute], liTag);
-
-            if (item[mapper.id]) {
-                aTag = $(document.createElement('a'));
-                if (item[mapper.imageUrl] && item[mapper.imageUrl] != "") {
-                    imgTag = $(document.createElement('img'));
-                    imgTag.attr('src', item[mapper.imageUrl]);
-                    if (item[mapper.imageAttribute]) this._setAttributes(item[mapper.imageAttribute], imgTag);
-                    aTag.append(imgTag);
-                }
-                else if (item[mapper.spriteCssClass] && item[mapper.spriteCssClass] != "") {
-                    spanTag = $(document.createElement('span'));
-                    spanTag.addClass(item[mapper.spriteCssClass]);
-                    aTag.append(spanTag);
-                }
-                aTag.append(item[mapper.text]);
-                if (item[mapper.linkAttribute]) this._setAttributes(item[mapper.linkAttribute], aTag);
-                if (item[mapper.url])
-                    aTag.attr('href', item[mapper.url]);
-                liTag.append(aTag);
-            }
+			aTag = $(document.createElement('a'));
+			aTag.attr("class", 'e-menulink');
+			if (item[mapper.imageUrl] && item[mapper.imageUrl] != "") {
+				imgTag = $(document.createElement('img'));
+				imgTag.attr('src', item[mapper.imageUrl]);
+				if (item[mapper.imageAttribute]) this._setAttributes(item[mapper.imageAttribute], imgTag);
+				aTag.append(imgTag);
+			}
+			else if (item[mapper.spriteCssClass] && item[mapper.spriteCssClass] != "") {
+				spanTag = $(document.createElement('span'));
+				spanTag.addClass(item[mapper.spriteCssClass]);
+				aTag.append(spanTag);
+			}
+			aTag.append(item[mapper.text]);
+			if (item[mapper.linkAttribute]) this._setAttributes(item[mapper.linkAttribute], aTag);
+			if (item[mapper.url])
+				aTag.attr('href', item[mapper.url]);
+			liTag.append(aTag);
             if (item[mapper.id]) {
                 liTag.prop("id", item[mapper.id]);
             }
@@ -389,6 +399,7 @@
                 this._odataFlag = true;
                 if (mapper["child"]["dataSource"] instanceof ej.DataManager) {
                     var proxy = this, queryManager = ej.Query();
+					$(liTag).attr({ "aria-haspopup": true, "role": "menu" }).addClass("e-haschild");
                     queryManager = this._columnToSelect(mapper["child"]);
                     queryManager.where(mapper["child"]["parentId"], ej.FilterOperators.equal, item[mapper.id]);
                     var queryPromise = mapper["child"]["dataSource"].executeQuery(queryManager);
@@ -408,9 +419,18 @@
                                 $(liTag).children('a.aschild').append($('<span>').addClass("e-icon e-arrowhead-right")).addClass("e-arrow-space");
                         }
                     });
+                    queryPromise.then(function (e) {
+                        proxy._renderArrow();
+                    });
                 }
                 else {
-                    var childItems = ej.DataManager(mapper["child"]["dataSource"]).executeLocal(ej.Query().where(mapper["child"]["parentId"], ej.FilterOperators.equal, item[mapper.id]));
+					var childItems;
+					if(!ej.isNullOrUndefined(item.child)){
+						if(ej.isPlainObject(item.child))
+							childItems = ej.DataManager(mapper["child"]["dataSource"]).executeLocal(ej.Query().where(mapper["child"]["parentId"], ej.FilterOperators.equal, item[mapper.id]));
+						else if(item.child instanceof Array)
+							childItems =  item.child;
+					}	
                     if (childItems && childItems.length > 0) {
                         var ul = $(document.createElement('ul'));
                         for (var i = 0; i < childItems.length; i++) {
@@ -509,6 +529,7 @@
                 this.wrapper.removeClass("e-menu-rtl").addClass("e-menu-rtl");
             else
                 this.wrapper.removeClass("e-menu-rtl");
+			this.model.subMenuDirection = isRTL ? "left" : "right";
         },
 
         _setSubMenuDirection: function (direction) {
@@ -586,7 +607,7 @@
         },
 
         _contextMenu_Template: function () {
-            var oldWrapper = $(".e-menu-wrap #" + this.element.context.id).get(0);
+            var oldWrapper = $(".e-menu-wrap #" + this.element[0].id).get(0);
             if (oldWrapper)
                 $(oldWrapper.parentElement).remove();
             this.model.orientation = "vertical";
@@ -628,6 +649,7 @@
 
         _subMenuPos: function (element, direction) {
             var pos = $(element).offset();
+            var subMenuLeft, subMenuRight ;
             var posLeft = pos.left;
             var subMenu = $('ul:first', element);
             var menuWidth = $(element).outerWidth();
@@ -637,8 +659,17 @@
             var left = document.documentElement.clientWidth + $(document).scrollLeft();
             if (this.model.menuType == "normalmenu") {
                 if ($(element.parentNode).is(this.element)) {
-                    if (this.model.orientation == "horizontal")
+                    if (this.model.orientation == "horizontal"){
                         subMenu.css("top", $(element).outerHeight() + "px");
+                        if (!this.model.enableRTL) {
+                            subMenuLeft = (left < (posLeft + submenuWidth)) ? ((posLeft + submenuWidth) - left) : 1;
+                            subMenu.css("left", (subMenuLeft *(-1)) + "px");
+                        }
+                        else {
+                            subMenuRight = (((posLeft + menuWidth) - submenuWidth) < 0) ? ((posLeft + menuWidth) - submenuWidth) : 1;
+                            subMenu.css({ "left": "auto", "right": subMenuRight + "px" });
+                        }
+                    }
                     else if ((direction == "left" && posLeft > submenuWidth) || (direction == "right" && left <= pos.left + menuWidth + submenuWidth))
                         subMenu.css("left", -(submenuWidth + 4) + "px");
                     else {
@@ -709,6 +740,7 @@
         _show: function (element, showanim, hideanim) {
             var siblingElement;
             var sibling = $('> ul', element);
+			var zIndex = this._max_zindex();
             sibling.attr({ "aria-hidden": false });
             this._hideAnimation($(element).siblings().find(' > ul:visible'), hideanim);
             if (!($.inArray(this._disabledMenuItems, element) > -1)) {
@@ -718,7 +750,8 @@
                 }
                 else $('> ul', element).children().find('> ul').hide();
                 this._subMenuPos(element, this.model.subMenuDirection);
-                sibling.css({ "z-index": this._max_zindex() + 1 });
+                sibling.css({ "z-index": zIndex + 1 });
+				$(element).children('span.e-menu-arrow').css({"z-index": zIndex + 2 });
                 if ($('> ul', element).css('display') != 'block' && !$(element).hasClass("e-disable-item")) {
                     this._showAnimation(sibling, showanim);
                     sibling.closest('li').addClass('e-active e-mfocused');
@@ -736,7 +769,7 @@
         _showAnimation: function (element, anim) {
             switch (anim) {
                 case "slideDown":
-                    element.slideDown(this.model.enableAnimation ? 200 : 0, "easeOutQuad"); break;
+                    element.slideDown(this.model.enableAnimation ? 200 : 0); break;
                 case "none":
                     element.css("display", "block"); break;
             }
@@ -746,7 +779,7 @@
             switch (anim) {
                 case "slideUp":
                     $(element).attr({ "aria-hidden": true });
-                    element.slideUp(this.model.enableAnimation ? 100 : 0, "easeOutQuad"); break;
+                    element.slideUp(this.model.enableAnimation ? 100 : 0); break;
                 case "none":
                     element.css("display", "none"); break;
             }
@@ -795,6 +828,7 @@
             if (item["htmlAttribute"]) this._setAttributes(item["htmlAttribute"], liTag);
             if (item["text"] && item["text"] != "") {
                 aTag = $(document.createElement('a'));
+				aTag.attr({ "class": 'e-menulink'});
                 if (item["imageUrl"] && item["imageUrl"] != "") {
                     imgTag = $(document.createElement('img'));
                     imgTag.attr('src', item["imageUrl"]);

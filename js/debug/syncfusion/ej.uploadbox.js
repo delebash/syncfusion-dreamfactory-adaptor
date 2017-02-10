@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.uploadbox.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./../common/ej.scroller","./ej.tooltip","./../common/ej.draggable","./ej.dialog"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./../common/ej.globalize","./../common/ej.scroller","./ej.tooltip","./../common/ej.draggable","./ej.dialog"], fn) : fn();
 })
 (function () {
 	
@@ -138,6 +138,8 @@
             fileSelect: null,
 
             begin: null,
+			
+			beforeSend:null,
 
             cancel: null,
 
@@ -206,10 +208,12 @@
                     this._uploadFileListDelete();
             }
         },
-
-
+        _updateLocalConstant: function () {
+            this._localizedLabels = ej.getLocalizedConstants("ej.Uploadbox", this.model.locale);
+        },
         _init: function () {
             this.s = ej.browserInfo();
+            this._updateLocalConstant();
             this._initialize();
             this._wireEvents();
             /*Sync Uploads*/
@@ -245,6 +249,7 @@
                         break;
                     case "locale":
                         this.model.locale = options[option];
+                        this._updateLocalConstant();
                         this._setLocale();
                         break;
                     case "height":
@@ -289,6 +294,7 @@
                         break;
                     case "multipleFilesSelection":
                         this.model.multipleFilesSelection = options[option];
+						 if (((navigator.userAgent.indexOf('Safari') != -1 )&& (navigator.userAgent.indexOf('Chrome') == -1 ))==false)
                         if (this.model.multipleFilesSelection)
                             this._currentElement.find(".e-uploadinput").attr('multiple', 'multiple');
                         else
@@ -336,20 +342,26 @@
             if (this.updialog) this.updialog.ejDialog({ enableRTL: val });
         },
         _getLocalizedLabels: function (property) {
-            var textType;
+            var textType,targetText="";
             if (property == "browse" || property == "upload" || property == "cancel" || property == 'close')
                 textType = "buttonText";
             else
                 textType = "dialogText";
-            return (ej.Uploadbox.Locale[this.model.locale] === undefined || ej.Uploadbox.Locale[this.model.locale][property] === undefined) ?
-            ej.Uploadbox.Locale[this.model.locale][textType][property] :
-            ej.Uploadbox.Locale[this.model.locale][property];
+            if(this._localizedLabels[property])
+                targetText =this._localizedLabels[property];
+            else if(this._localizedLabels[textType][property])
+                targetText =this._localizedLabels[textType][property];
+            else if(ej.Uploadbox.Locale["en-US"][property])
+                targetText =ej.Uploadbox.Locale["en-US"][property];
+            else if(ej.Uploadbox.Locale["en-US"][textType][property]) 
+                targetText =ej.Uploadbox.Locale["en-US"][textType][property];
+            return targetText;
         },
 
         _setLocale: function () {
-            this._buttonText(ej.Uploadbox.Locale[this.model.locale].buttonText);
-            this._dialogText(ej.Uploadbox.Locale[this.model.locale].dialogText);
-			this._dropAreaText(ej.Uploadbox.Locale[this.model.locale].dropAreaText);
+            this._buttonText(this._localizedLabels.buttonText);
+            this._dialogText(this._localizedLabels.dialogText);
+            this._dropAreaText(this._localizedLabels.dropAreaText);
         },
 
         _buttonText: function (data) {
@@ -389,6 +401,7 @@
             this._currentElement.addClass(skin);
 			if (this.diaObj)
                 this.diaObj.setModel({ cssClass:this.model.cssClass });
+			if (this.model.allowDragAndDrop) this.dragWrapper.addClass(skin);
         },
 
 
@@ -399,7 +412,8 @@
             this.element.append(this.innerdiv);
             this.buttondiv = ej.buildTag('input.e-inputbtn e-btn#' + this.control.id + '_SelectButton', '', {}, { type: 'button', "data-role": "none", value: this._getLocalizedLabels("browse") });
             this.inputupload = ej.buildTag('input.e-uploadinput', "", {}, { type: 'file', "data-role": "none", name: this.model.uploadName != "" ? this.model.uploadName : this.control.id }).attr("accept",this.model.extensionsAllow);
-            if (this.model.multipleFilesSelection) {
+            if (this.model.multipleFilesSelection) 
+			if (((navigator.userAgent.indexOf('Safari') != -1 )&& (navigator.userAgent.indexOf('Chrome') == -1 ))==false){
                 this.inputupload.attr('multiple', 'multiple');
             }
             this.innerdiv.append(this.buttondiv);
@@ -546,7 +560,7 @@
             this._bindResizeHandler(true);
         },
         _bindResizeHandler: function (responsive) {
-            responsive ? $(window).bind('resize', $.proxy(this._resizeHandler, this)) : $(window).unbind('resize', $.proxy(this._resizeHandler, this));
+            responsive ? $(window).on('resize', $.proxy(this._resizeHandler, this)) : $(window).off('resize', $.proxy(this._resizeHandler, this));
         },
 
         _keydownselect: function (e) {
@@ -746,7 +760,7 @@
             this._on(dialogActions, "click", this._dialogclose);
             this._on(dialogActions, 'keydown', this._keydownDialogClose);            
             var dialogContainer = (this.model.dialogAction.content != null && this.model.dialogAction.content != "") ? this.model.dialogAction.content : DialogContentContainer
-            this.updialog.ejDialog({ showOnInit: false, closeIconTooltip: this._getLocalizedLabels("closeToolTip"), minWidth: 240, width: ($(window).width() < 750) ? 250 : this._getDialogContentWidth(), height: "auto", cssClass: "e-uploadbox " + this.model.cssClass, close: $.proxy(this._uploadFileListDelete, this), enableRTL: this.model.enableRTL, target: dialogContainer, enableResize: false, allowDraggable: this.model.dialogAction.drag, enableModal: this.model.asyncUpload ? this.model.dialogAction.modal : false, showHeader: this.model.customFileDetails.title });
+            this.updialog.ejDialog({ showOnInit: false, closeIconTooltip: this._getLocalizedLabels("closeToolTip"), minWidth: 240, width: ($(window).width() < 750) ? 250 : this._getDialogContentWidth(), height: "auto", cssClass: "e-uploadbox " + this.model.cssClass, close: $.proxy(this._uploadFileListDelete, this), enableRTL: this.model.enableRTL, target: dialogContainer, enableResize: false, allowDraggable: this.model.dialogAction.drag, enableModal: this.model.asyncUpload ? this.model.dialogAction.modal : false, showHeader: this.model.customFileDetails.title , showRoundedCorner : this.model.showRoundedCorner});
             $(window).width() < 750 ? $(this.updialog).closest('.e-dialog.e-uploadbox').addClass("e-mobile-upload") : $(this.updialog).closest('.e-dialog.e-uploadbox').removeClass("e-mobile-upload");
 			this.diaObj = this.updialog.data('ejDialog');
 			if(this.model.cssClass!="")
@@ -815,6 +829,7 @@
             filedialog = this.updialog;
             if (filedialog && filedialog.length != 0) {
                 if (this.model.showFileDetails) {
+				    DialogContentContainer = "#" + this.control.id;
                     if (this.updialog) this.updialog.find(".e-uploadbtn").removeAttr('disabled').removeClass('e-disable');
                     me.diaObj.open();
                 }
@@ -859,7 +874,7 @@
             if (this.model.customFileDetails.action) $(addedfileaction).appendTo(addedlist);
             $(addedlist).appendTo(addedFile);
             var dialogContainer = (this.model.dialogAction.content != null && this.model.dialogAction.content != "") ? this.model.dialogAction.content : DialogContentContainer;
-            this.updialog.ejDialog({ showOnInit: false, closeIconTooltip: this._getLocalizedLabels("closeToolTip"), minWidth: 240, width: ($(window).width() < 750) ? 250 : this._getDialogContentWidth(), height: "auto", cssClass: "e-uploadbox " + this.model.cssClass, close: $.proxy(this._uploadFileListDelete, this), enableRTL: this.model.enableRTL, target: dialogContainer, enableResize: false, allowDraggable: this.model.dialogAction.drag, enableModal: this.model.asyncUpload ? this.model.dialogAction.modal : false, showHeader: this.model.customFileDetails.title })
+            this.updialog.ejDialog({ showOnInit: false, closeIconTooltip: this._getLocalizedLabels("closeToolTip"), minWidth: 240, width: ($(window).width() < 750) ? 250 : this._getDialogContentWidth(), height: "auto", cssClass: "e-uploadbox " + this.model.cssClass, close: $.proxy(this._uploadFileListDelete, this), enableRTL: this.model.enableRTL, target: dialogContainer, enableResize: false, allowDraggable: this.model.dialogAction.drag, enableModal: this.model.asyncUpload ? this.model.dialogAction.modal : false, showHeader: this.model.customFileDetails.title , showRoundedCorner : this.model.showRoundedCorner })
 			$(window).width() < 750 ? $(this.updialog).closest('.e-dialog.e-uploadbox').addClass("e-mobile-upload") : $(this.updialog).closest('.e-dialog.e-uploadbox').removeClass("e-mobile-upload");
 			me.diaObj = this.updialog.data("ejDialog");
 			if (me.model.cssClass!="")
@@ -890,7 +905,7 @@
         _setAction: function (element, action) {
             if (this.model.customFileDetails.action) {
                 var actionlist;
-                element.find(".e-icon").remove().addClass(action.toString());
+                element.find(".e-action-perform .e-icon,.e-file-percentage .e-icon").remove().addClass(action.toString());
                 if (action == "cancel") {
                     actionlist = ej.buildTag('div.e-icon e-file-cancel', '', {}, { "data-content": this._getLocalizedLabels("cancelToolTip") });
                 } else if (action == "remove") {
@@ -930,23 +945,27 @@
         },
         _renderTooltip: function () {
             var proxy = this;
-            this.upTooltip = $(this.updialog).ejTooltip({
-                target: ".e-file-cancel, .e-delete, .e-reload, .e-checkmark, .e-close, .e-file-percentage-failed",
-                content: " ",
-                isBalloon: false,
-                enableRTL: this.model.enableRTL,
-                position: {
-                    target: { horizontal: "center", vertical: "bottom" },
-                    stem: { horizontal: "left", vertical: "top" }
-                }
-            }).data("ejTooltip");
-            $(this.upTooltip.tooltip).css({ "min-width": "auto" });
+            if (!ej.isNullOrUndefined(this.updialog)) {
+                this.upTooltip = $(this.updialog).ejTooltip({
+                    target: ".e-file-cancel, .e-delete, .e-reload, .e-checkmark, .e-close, .e-file-percentage-failed",
+                    content: " ",
+                    isBalloon: false,
+					showRoundedCorner : this.model.showRoundedCorner,
+                    enableRTL: this.model.enableRTL,
+                    position: {
+                        target: { horizontal: "center", vertical: "bottom" },
+                        stem: { horizontal: "left", vertical: "top" }
+                    }
+                }).data("ejTooltip");
+                $(this.upTooltip.tooltip).css({ "min-width": "auto" });
+            }
         },
 
         _createInputandBind: function () {
             var tempInput = ej.buildTag('input', '', {}, { type: 'file', "data-role": "none" });
             tempInput.attr("name", this.model.uploadName != "" ? this.model.uploadName : this.control.id).attr("autocomplete", "off").attr("class", "e-uploadinput").attr("accept",this.model.extensionsAllow);
-            if (this.model.multipleFilesSelection) {
+            if (this.model.multipleFilesSelection) 
+			 if (((navigator.userAgent.indexOf('Safari') != -1 )&& (navigator.userAgent.indexOf('Chrome') == -1 ))==false){
                 tempInput.attr("multiple", "multiple");
             }
             tempInput.appendTo(this.element.find(".e-selectpart"));
@@ -978,16 +997,19 @@
             $element.replaceWith(clone);
         },
 
-        _isAllowed: function (files) {
-            var inputfield, uploadControl, args, allowExtension, allowSize, denyExtension, proxy = this, allowedFiles = [], filteredFiles = [],status=true;
+         _isAllowed: function (files) {
+            var inputfield, uploadControl, args, allowExtension,allowSize,denyExtension, proxy = this, allowedFiles = [], filteredFiles = [],status=true;
             inputfield = this.element.find(".e-uploadinput");
             uploadControl = this;
+			
             if (this.model.extensionsAllow != "") {
                 allowExtension = this.model.extensionsAllow.replace(/\s/g, "").toLowerCase().split(",");
+				
+             
                 $(files).each(function () {
                     if ($.inArray((this.extension).toLowerCase(), allowExtension) == -1) {
 
-                        args = { action: "Files Processing", error:proxy._getLocalizedLabels("allowError").replace("#Extension", allowExtension), files: this };
+                        args = { action: "Files Processing", error:proxy._getLocalizedLabels("allowError").replace("#Extension", allowExtension.join(", ")), files: this };
                         uploadControl._trigger('error', args);
 						proxy._resetFileInput(inputfield);
                         status = false;
@@ -1001,10 +1023,12 @@
 
             else if (this.model.extensionsDeny != "") {
                 denyExtension = this.model.extensionsDeny.replace(/\s/g, "").toLowerCase().split(",");
+				
+				
                 $(files).each(function () {
                     if ($.inArray((this.extension).toLowerCase(), denyExtension) != -1) {
 
-                        args = { action: "Files Processing", error: proxy._getLocalizedLabels("denyError").replace("#Extension", denyExtension), files: this };
+                        args = { action: "Files Processing", error: proxy._getLocalizedLabels("denyError").replace("#Extension", denyExtension.join(", ")), files: this };
                         uploadControl._trigger('error', args);
 						proxy._resetFileInput(inputfield);
                         status = false;
@@ -1025,8 +1049,8 @@
                 allowSize = this.model.fileSize;
                 $(allowedFiles).each(function () {
                     if ((this.size > allowSize)) {
-
-                        args = { action: "Files Processing", error: proxy._getLocalizedLabels("filedetail"), files: this };
+                  
+                        args = { action: "Files Processing", error: proxy._getLocalizedLabels("filedetail").replace("#fileSize", allowSize), files: this };
                         uploadControl._trigger('error', args);
 						proxy._resetFileInput(inputfield);
                         status = false;
@@ -1081,6 +1105,7 @@
 
         _uploadFileListDelete: function () {
             this.updialog.find(".e-ul").empty();
+			this._currentElement.find(".e-uploadinput").val("");
             this._resetFileInput(this._currentElement.find(".e-uploadinput"));
             if (!this.model.asyncUpload)
                 this._formResetSyncUpload();
@@ -1175,6 +1200,7 @@
 
                 }
             });
+			this.upTooltip.hide();
         },
 
         _xhrOnCancel: function (e, fileItem) {
@@ -1215,7 +1241,7 @@
                 xhrUpload._setAction(addedFile, "remove");
                 xhrUpload._setStatus(addedFile, "success");
             } else {
-                addedFile.find(".e-icon").remove();
+                addedFile.find(".e-action-perform .e-icon,.e-file-percentage .e-icon").remove();
                 xhrUpload._setStatus(addedFile, "success");
             }
             if ($(fileEntry).length > 0) {
@@ -1594,7 +1620,7 @@
             status: "Status"
         },
 		dropAreaText: "Drop files or click to upload",
-        filedetail: "The selected file size is too large. Please select a file within the valid size.",
+        filedetail: "The selected file size is too large.  Please select a file within #fileSize",
         denyError: "Files with #Extension extensions are not allowed.",
         allowError: "Only files with #Extension extensions are allowed.",
         cancelToolTip: "Cancel",

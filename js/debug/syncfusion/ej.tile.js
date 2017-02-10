@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.tile.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -83,6 +83,8 @@
 
             allowSelection: false,
 
+           locale: "en-US",
+
             //deprecated
             showText: true,
 
@@ -104,6 +106,7 @@
             },
             alignment: "enum",
             tileSize: "enum",
+            locale: "string"
         },
 
         observables: ["badge.value", "badge.enabled", "badge.text", "badge.position", "text", "caption.text"],
@@ -123,23 +126,23 @@
             this._setDeprecatedProperties();
             this._imagePosition = this.model.imagePosition;
             this._cssClass = this.model.cssClass;
-            this.element.addClass(this.model.cssClass + " " + this._prefix + "tile-image" + this.model.imagePosition + " " + (this._isCustomizeSize() ? this._prefix + "tile-custom-size" : this._prefix + "tile-" + this.model.tileSize));
+            this.element.addClass(this.model.cssClass + " " + this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "tile-" + this.model.tileSize);
             if (this.model.showRoundedCorner)
                 this.element.addClass(this._prefix + "tile-round-corner");
             if (this._isLiveTile())
                 this._liveTile();
             else {
-                this._image = ej.buildTag("div").addClass(this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "image-parent");
+                this._image = ej.buildTag("div").addClass(this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "image-parent");
                 this._innerImage = ej.buildTag("span").addClass(this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition);
                 if (this.model.imageTemplateId) {
                     var imageTemp = this._isMobile() ? ej.getCurrentPage().find('#' + this.model.imageTemplateId) : $('#' + this.model.imageTemplateId);
                     this._innerImage.addClass(this._prefix + "tile-template").append(imageTemp);
                 }
-                else if (this.model.imageClass)
+                else if (this.model.imageClass) 
                     this._innerImage.addClass(this.model.imageClass);
                 else if (this.model.imageUrl) {
                     var url = this._isMobile() && this.model.imagePath ? (this._getAbsolutePath(this.model.imagePath) + "/" + this.model.renderMode.toLowerCase() + "/" + this.model.imageUrl) : this._getAbsolutePath(this.model.imageUrl);
-                    this._innerImage.css({ "background-image": "url('" + url + "')" , "position":"absolute"});
+                    this._innerImage.css({ "background-image": "url('" + url + "')"});
                     if (ej.browserInfo().name == "msie" && ej.browserInfo().version < 9 && this.model.imagePosition == "fill")
                         this._innerImage.css({ "filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='" + url + "',sizingMethod='scale')", "-ms-filter": "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='" + url + "',sizingMethod='scale')" });
                 }
@@ -151,7 +154,7 @@
             }
             if (this._isCaptionEnable()) {
                 if (this.model["liveTile"].text && this._isLiveTile()) {
-                    var liveTileImage = this.element.find("." + this._prefix + "tile-image" + "." + this._prefix + "image-parent");
+                    var liveTileImage = this.element.find("." + this._prefix + "image-parent");
                     for (var i = 0, tileLength = liveTileImage.length; i < tileLength; i++) {
                         this._setCaptionClass($(liveTileImage[i]));
                         $(liveTileImage[i]).addClass(this._prefix + "tile-caption-text ").attr("text", this.model["liveTile"].text[i]);
@@ -173,6 +176,8 @@
                 this._setBadgeEnabled();
             this._selectElement = ej.buildTag("span." + this._prefix + "tile-overlay");
             this.element.append(this._selectElement);
+            if(!this.model.height) this.model.height = this.model["caption"].position == "outer" ? this.element.height() - 50 : this.element.height();
+            if(!this.model.width) this.model.width = this.element.width();
             if (this._isCustomizeSize())
                 this._setCustomizSize();
         },
@@ -181,15 +186,15 @@
             this.element.addClass(this._prefix + "livetile-enable"); var image;
             if (this.model["liveTile"].imageTemplateId) {
                 for (var i = 0; i < this.model["liveTile"].imageTemplateId.length; i++) {
-                    var imageTempEle = ej.buildTag("div").addClass(this._prefix + "tile-template " + this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "tile-" + this.model["liveTile"].type);
+                    var imageTempEle = ej.buildTag("div").addClass(this._prefix + "tile-template " + this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "image-parent " + this._prefix + "tile-" + this.model["liveTile"].type);
                     var template = this._isMobile() ? ej.getCurrentPage().find('#' + this.model["liveTile"].imageTemplateId[i]) : $('#' + this.model["liveTile"].imageTemplateId[i]);
                     this.element.append(imageTempEle.append(template));
                 }
             }
             else if (this.model["liveTile"].imageClass) {
                 for (var i = 0; i < this.model["liveTile"].imageClass.length; i++) {
-                    image = ej.buildTag("span").addClass(this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition);
-                    var imageClassEle = ej.buildTag("div").addClass(this.model["liveTile"].imageClass[i] + " " + this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "tile-" + this.model["liveTile"].type + " " + this._prefix + "image-parent");
+                    image = ej.buildTag("span").addClass(this.model["liveTile"].imageClass[i] + " " + this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition);
+                    var imageClassEle = ej.buildTag("div").addClass( this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "tile-" + this.model["liveTile"].type + " " + this._prefix + "image-parent");
                     image.appendTo(imageClassEle);
                     this.element.append(imageClassEle);
                 }
@@ -197,24 +202,23 @@
             else {
                 for (var i = 0; i < this.model["liveTile"].imageUrl.length; i++) {
                     var url = this._isMobile() && this.model.imagePath ? this._getAbsolutePath(this.model.imagePath) + "/windows/" + this.model["liveTile"].imageUrl[i] : this._getAbsolutePath(this.model["liveTile"].imageUrl[i]);
-                    image = ej.buildTag("span").addClass(this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition).css({ "background-image": "url('" + url + "')", "position":"absolute" });
-                    var imageUrlEle = ej.buildTag("div." + this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "tile-" + this.model["liveTile"].type + " " + this._prefix + "image-parent");
+                    image = ej.buildTag("span").addClass(this._prefix + "tile-image " + this._prefix + "tile-image" + this.model.imagePosition).css({ "background-image": "url('" + url + "')" });
+                    var imageUrlEle = ej.buildTag("div." + this._prefix + "tile-image" + this.model.imagePosition + " " + this._prefix + "tile-" + this.model["liveTile"].type + " " + this._prefix + "image-parent");
                     image.appendTo(imageUrlEle);
                     this.element.append(imageUrlEle);
                 }
             }
-            if(image) image.css({"position":"absolute"});
             this._setBackgroundColor(this.model.backgroundColor);
             $(this.element.children()[0]).addClass(this._prefix + "tile-" + this.model["liveTile"].type + 'back').removeClass(this._prefix + "tile-" + this.model["liveTile"].type);
             if (this.model.imageTemplateId && this._prefix == "e-m-" && (App.angularAppName || ej.angular.defaultAppName))
                 ej.angular.compile(this.element);
         },
         _setCustomizSize: function () {
-            var minWidth = (this._isLiveTileMode() || this.model.renderMode == "flat") && this._isBelowSmallSize() ? "70" :
+            var minWidth = (this._isLiveTileMode() || this.model.renderMode == "flat") && (parseInt(this.model.width) <= 70) ? "70" :
                 (this._isMobile() && this.model.renderMode == "android") && this._isBelowSmallSize() ? "85" :
                 (this._isMobile() && this.model.renderMode == "ios7") && this._isBelowSmallSize() ? "74" :
                  this.model.width;
-            var minHeight = (this._isLiveTileMode() || this.model.renderMode == "flat") && this._isBelowSmallSize() ? "70" :
+            var minHeight = (this._isLiveTileMode() || this.model.renderMode == "flat") && (parseInt(this.model.height) <= 70) ? "70" :
                 (this._isMobile() && (this.model.renderMode == "android" || this.model.renderMode == "ios7")) && this._isBelowSmallSize() ? "70" :
                 (this._isMobile() && this.model.renderMode == "ios7") && this._isBelowSmallSize() ? "70" : this.model.height;
             var extraSpace = (this._isLiveTileMode() || this.model.renderMode == "flat") && !this._isBelowSmallSize() ? 50 :
@@ -222,7 +226,7 @@
                 (this._isMobile() && this.model.renderMode == "android") && this._isBelowSmallSize() ? 30 : 30;
             var newHeight = (this.model["caption"].enabled && this.model["caption"].position == "outer" && this.model.height) ? minHeight ? parseInt(minHeight) + extraSpace : parseInt(minHeight) + extraSpace : this.model.height;
             this.element.css({ "width": this.model.width ? this.model.width : "70", "height": this.model.height ? newHeight : this.element.height() + extraSpace });
-            this.element.find("." + this._prefix + "tile-image" + "." + this._prefix + "image-parent").css({ "height": this.model.height ? minHeight : this.element.height() - extraSpace });
+            this.element.find("." + this._prefix + "image-parent").css({"width": this.element.css("width"), "height": this.model.height ? minHeight : this.element.height() - extraSpace });
             if (!this._isBelowSmallSize() && this.model["caption"].enabled && this.model["caption"].position == "outer") {
                 this.element.find(".e-m-tile-image").css({ "width": this.model.width ? minWidth : "", "height": this.model.height ? minHeight : "" });
                 this._selectElement.css({ "width": this.model.width ? minWidth : "", "height": this.model.height ? minHeight : "" });
@@ -246,7 +250,7 @@
         },
 
         _isCaptionEnable: function () {
-            return (this.model["caption"].enabled && (this.model.tileSize != "small" || (this._isMobile() && (this.model.renderMode == "ios7" || this.model.renderMode == "android") && this.model["caption"].position == "outer") || (this._isCustomizeSize() && !this._isBelowSmallSize()) || this._isMobile() && (this.model.renderMode == "android" || this.model.renderMode == "ios7") && this.model["caption"].position == "outer" && (this._isCustomizeSize() && this._isBelowSmallSize())));
+            return (this.model["caption"].enabled && !(this.model.tileSize == "small" || (this._isBelowSmallSize() && this.model.tileSize == "small")) || ((this._isMobile() && (this.model.renderMode == "ios7" || this.model.renderMode == "android") && this.model["caption"].position == "outer") || this._isMobile() && (this.model.renderMode == "android" || this.model.renderMode == "ios7") && this.model["caption"].position == "outer" && (this._isCustomizeSize() && this._isBelowSmallSize())));
         },
 
         _isBelowSmallSize: function () {
@@ -308,7 +312,7 @@
 
         _animateEffect: function () {
             var type = this.model["liveTile"].type.toLowerCase();
-            var items = this.element.find("." + this._prefix + "tile-image" + "." + this._prefix + "image-parent");
+            var items = this.element.find("." + this._prefix + "image-parent");
             var currentitem = this.element.find("." + this._prefix + "tile-" + type + "back");
             var nextitem = currentitem.next()[0] == null ? items.first() : currentitem.next();
             var previtem = currentitem.prev()[0] == null ? items.last() : currentitem.prev();
@@ -362,11 +366,20 @@
             var refresh = false;
             for (var property in options) {
                 var setModel = "_set" + property.charAt(0).toUpperCase() + property.slice(1);
-                if (this[setModel]) {
+                if (this[setModel] || property == "locale") {
                     switch (property) {
                         case "text":
                             this[setModel](ej.util.getVal(options[property]));
                             options[property] = this.text(ej.util.getVal(options[property]));
+							if (ej.isNullOrUndefined(this._options)) this._options = {};
+							this._options["caption"] = this.model.caption;
+                            break;
+						case "locale":
+							if (ej.Tile.Locale[options[property]]) {
+								this.model.locale = options[property];
+								this._setCulture();
+								this._setCaptionText(this._captionText());
+							}
                             break;
                         default:
                             this[setModel](options[property]);
@@ -401,6 +414,7 @@
         },
 
         _setText: function (value) {
+			this._captionText(value);
             this._setCaptionText(value)
         },
         _setCaptionText: function (value) {
@@ -422,9 +436,6 @@
             if (this._isCaptionEnable())
                 this.element.removeClass(this._prefix + "caption-align-normal " + this._prefix + "caption-align-left " + this._prefix + "caption-align-center " + this._prefix + "caption-align-right").addClass(this._prefix + "caption-align-" + value)
         },
-        _setAllowSelection: function (value) {
-            (value ? this._selectElement.addClass(this._prefix + "tile-selected") : this._selectElement.removeClass(this._prefix + "tile-selected"));
-        },
         _setShowRoundedCorner: function (value) {
             (value ? this.element.addClass(this._prefix + "tile-round-corner") : this.element.removeClass(this._prefix + "tile-round-corner"));
         },
@@ -440,7 +451,11 @@
                 this.element.removeAttr("text");
             else if (this._isCaptionEnable())
                 this.element.attr("text", this._captionText());
+            this.element.css({ "width": "", "height": "" });
+            this.element.find("." + this._prefix + "image-parent").css({ "width": "", "height": "" });
             this.element.removeClass(this._prefix + "tile-small " + this._prefix + "tile-medium " + this._prefix + "tile-wide " + this._prefix + "tile-large").addClass(this._prefix + "tile-" + value);
+            this.model.height = this.element.height();
+            this.model.width = this.element.width();
         },
         _setImagePosition: function (value) {
             this.element.removeClass(this._prefix + "tile-image" + this._imagePosition).addClass(this._prefix + "tile-image" + value);
@@ -490,7 +505,8 @@
                 }
                 this.element.addClass(this._prefix + "tile-badge " + this._prefix + "badge-position-" + this._badgePosition());
                 this.element.addClass(this._prefix + "tile-badge-value").attr("badgeValue", badgeValue);
-            }
+            } else 
+                this.element.removeClass(this._prefix + "tile-badge " + this._prefix + "badge-position-" + this._badgePosition() + " " + this._prefix + "tile-badge-value");
         },
 
         _setBadgePosition: function (value) {
@@ -555,8 +571,12 @@
             mouseUp: null
         },
 
-        _init: function () {
+        _init: function (options) {
+            this._options = options;
+            this._setCulture();
             this._orgEle = this.element.clone();
+            this._liveTileimageTemplateParent = [];
+            this._cloneLiveTileImageTemplateElement = [];
             this._renderEJControl();
         },
 
@@ -570,8 +590,10 @@
                 this._cloneImageTemplateElement = $("#" + this.model.imageTemplateId).clone();
             }
             if (this.model.liveTile.enabled && this.model.liveTile.imageTemplateId) {
-                this._liveTileimageTemplateParent = $("#" + this.model.liveTile.imageTemplateId).parent();
-                this._cloneLiveTileImageTemplateElement = $("#" + this.model.liveTile.imageTemplateId).clone();
+                for (i = 0; i < this.model.liveTile.imageTemplateId.length; i++) {
+                    this._liveTileimageTemplateParent[i] = $("#" + this.model.liveTile.imageTemplateId[i]).parent();
+                    this._cloneLiveTileImageTemplateElement[i] = $("#" + this.model.liveTile.imageTemplateId[i]).clone();
+                }
             }
             this.element.addClass("e-tile-web");
             this._prefix = "e-";
@@ -619,12 +641,24 @@
                 $(this._captionTemplateParent).append(this._cloneCaptionTemplateElement);
             if (this.model.imageTemplateId)
                 $(this._imageTemplateParent).append(this._cloneImageTemplateElement);
-            if (this.model.liveTile.enabled && this.model.liveTile.imageTemplateId)
-                $(this._liveTileimageTemplateParent).append(this._cloneLiveTileImageTemplateElement);
+            if (this.model.liveTile.enabled && this.model.liveTile.imageTemplateId) {
+                for (i = 0; i < this.model.liveTile.imageTemplateId.length; i++)
+                    $(this._liveTileimageTemplateParent[i]).append(this._cloneLiveTileImageTemplateElement[i]);
+            }
             this._renderEJControl();
+        },
+		_setCulture: function () {
+            if (this.model.locale != "en-US" && (ej.isNullOrUndefined(this._options) || ((ej.isNullOrUndefined(this._options["caption"]) || ej.isNullOrUndefined(this._options["caption"].text)) && ej.isNullOrUndefined(this._options["text"]))))
+				this._captionText(this._getLocalizedLabels().captionText)
+        },
+		_getLocalizedLabels: function () {
+            return ej.getLocalizedConstants(this.sfType, this.model.locale);
         }
     });
-
+	ej.Tile.Locale = ej.Tile.Locale || {};
+    ej.Tile.Locale["default"] = ej.Tile.Locale["en-US"] = {
+        captionText: "text"
+    };
     ej.Tile.ImagePosition = {
         Center: "center",
         TopCenter: "topcenter",

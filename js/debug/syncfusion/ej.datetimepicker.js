@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.datetimepicker.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","jquery-easing","./../common/ej.core","./../common/ej.scroller","./ej.datepicker","./ej.timepicker"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.globalize","./../common/ej.core","./../common/ej.scroller","./ej.datepicker","./ej.timepicker"], fn) : fn();
 })
 (function () {
 	
@@ -82,9 +82,9 @@
 
                 timeTitle: "Time"
             },
-			
-			watermarkText: "Select datetime",
-			
+
+            watermarkText: "Select datetime",
+
             enablePersistence: false,
 
             interval: 30,
@@ -92,7 +92,7 @@
             timeDisplayFormat: "",
 
             timePopupWidth: 105,
-			popupPosition:"bottom",
+            popupPosition: "bottom",
 
             dayHeaderFormat: "short",
 
@@ -153,7 +153,7 @@
             dateTimeFormat: "string",
             showPopupButton: "boolean",
             buttonText: "data",
-			 watermarkText: "string",
+            watermarkText: "string",
             enablePersistence: "boolean",
             enableStrictMode: "boolean",
             interval: "number",
@@ -201,6 +201,8 @@
                         break;
                     case "value":
                         options[option] = this._setValue(options[option]);
+                        if (this._specificFormat())
+                            this._stopRefresh = true
                         validate = true; break;
                     case "enableStrictMode":
                         this.model.enableStrictMode = options[option];
@@ -216,7 +218,7 @@
                             this.model.minDateTime = temp;
                         }
                         else options[option] = this.model[option];
-                        validate = true;                        
+                        validate = true;
                         break;
                     case "maxDateTime":
                         var temp = this._stringToObject(options[option]);
@@ -243,10 +245,10 @@
                         this._setWaterMark();
                         break;
                     case "buttonText":
-                        if(!ej.isNullOrUndefined(this._options)) this._options = [];
+                        if (!ej.isNullOrUndefined(this._options)) this._options = [];
                         this._options["buttonText"] = this.model.buttonText = options[option];
                         this._localizedLabels.buttonText = this.model.buttonText;
-					    this._buttonText(options[option]); break;
+                        this._buttonText(options[option]); break;
                     case "interval":
                         this._updateTimeHeight();
                         this.timePicker.option("interval", options[option]); break;
@@ -298,6 +300,7 @@
             }
             if (validate) this._validateMinMax();
             this._valueChange(true);
+            if (option == "value") options[option] = this.model.value;
             this._updateTimeHeight();
             this._checkErrorClass();
         },
@@ -306,11 +309,17 @@
         _destroy: function () {
             if (this.isPopupOpen)
                 this._hideResult();
-            this.element.insertAfter(this.wrapper);
-            this.element.removeClass("e-input").val("");
-			if (!ej.isNullOrUndefined(this.datePicker))
-				this.datePicker.destroy();			
-            this.wrapper.remove();
+            if (this.wrapper) {
+                this.element.insertAfter(this.wrapper);
+                this.wrapper.remove();
+            }
+			this._cloneElement.removeClass("e-js e-input").removeClass(ej.util.getNameSpace(this.sfType));
+            this._cloneElement.insertAfter(this.element);
+            this.element.remove();
+            if (!ej.isNullOrUndefined(this.datePicker))
+                this.datePicker.destroy();
+            if (!ej.isNullOrUndefined(this.timePicker))
+                this.timePicker.destroy();
             this.popup.remove();
         },
 
@@ -318,6 +327,7 @@
         _init: function (options) {
             if (!this.element.is("input") || (this.element.attr('type') && this.element.attr('type') != "text")) return false;
             this._options = options;
+            this._cloneElement = this.element.clone();
             this._ISORegex();
             this._isSupport = document.createElement("input").placeholder == undefined ? false : true;
             this._validateMeridian();
@@ -398,7 +408,7 @@
                 this._buttonContainer.show();
                 this.datePicker.option("showFooter", false);
                 this.timePicker._refreshScroller();
-                this.timePicker._changeActiveEle();                
+                this.timePicker._changeActiveEle();
             }
         },
         _initValidator: function () {
@@ -427,13 +437,13 @@
         _addAttr: function (htmlAttr) {
             var proxy = this;
             $.map(htmlAttr, function (value, key) {
-                if (key == "required") proxy.element.attr(key, value);
-                else if (key == "name") proxy.element.attr(key, value);
-                else if (key == "class") proxy.wrapper.addClass(value);
-                else if (key == "disabled" && value == "disabled") proxy._enabled(false);
-                else if (key == "readOnly" && value == "readOnly") proxy._readOnly(true);
-				else if(key=="tabindex") proxy.element.attr(key,value);
-                else proxy.wrapper.attr(key, value);
+                var keyName = key.toLowerCase();
+                if (keyName == "class") proxy.wrapper.addClass(value);
+                else if (keyName == "disabled" && value == "disabled") proxy._enabled(false);
+                else if (keyName == "readOnly" && value == "readOnly") proxy._readOnly(true);
+                else if (keyName == "style" || keyName == "id") proxy.wrapper.attr(key, value);
+                else if (ej.isValidAttr(proxy.element[0], keyName)) proxy.element.attr(keyName, value);
+                else proxy.wrapper.attr(keyName, value);
             });
         },
         _validateMeridian: function () {
@@ -450,6 +460,7 @@
                 this.model.timeDrillDown.showMeridian = ej.isNullOrUndefined(ej.preferredCulture(this.model.locale).calendars.standard["AM"]) ? false : true;
         },
         _initialize: function () {
+            var val;
             this.popup = null;
             this.isPopupOpen = false;
             this.isValidState = true;
@@ -459,22 +470,35 @@
                 if (!ej.isNullOrUndefined(this._options.buttonText))
                     $.extend(this._localizedLabels.buttonText, this._options.buttonText);
                 if (!ej.isNullOrUndefined(this._options.watermarkText))
-                    $.extend(this._localizedLabels.watermarkText, this._options.watermarkText);
+                    this._localizedLabels.watermarkText = this._options.watermarkText;
             }
             this._localizedLabelToModel();
             this._isIE8 = (ej.browserInfo().name == "msie") && (ej.browserInfo().version == "8.0") ? true : false;
+            this._isIE9 = (ej.browserInfo().name == "msie") && (ej.browserInfo().version == "9.0") ? true : false;
             if (!this.model.dateTimeFormat || !this.model.timeDisplayFormat) this._getDateTimeFormat();
-            if (typeof this.model.value == "string" && typeof this.model.value != "") {
-                if (this._extISORegex.exec(this.model.value) || this._basicISORegex.exec(this.model.value)) var val = this._dateFromISO(this.model.value);
-                else var val = this._stringToObject(this.model.value);
-                if (val) this.model.value = val;
+            if (!this.model.value || (typeof JSON === "object" && JSON.stringify(this.model.value) === "{}"))  val = null;
+            else if (!(this.model.value instanceof Date)) {
+                 var dateTimeObj = ej.parseDate(this.model.value, this.model.dateTimeFormat, this.model.locale);
+                  val = dateTimeObj ? dateTimeObj : (dateTimeObj = this._checkJSONString(this.model.value)) ? dateTimeObj : null;
             }
+            else  val = this.model.value;
+            if (val) this.model.value = val;
             var min = this.model.minDateTime = this._stringToObject(this.model.minDateTime);
             if (!min || !this._isValidDate(min)) this.model.minDateTime = this.defaults.minDateTime;
             var max = this.model.maxDateTime = this._stringToObject(this.model.maxDateTime);
             if (!max || !this._isValidDate(max)) this.model.maxDateTime = this.defaults.maxDateTime;
         },
-
+        _checkJSONString: function (dateTimeString) {
+            // Validate the string value
+            var dateTimeObj = new Date(dateTimeString);
+            if (!isNaN(Date.parse(dateTimeObj))) {
+                if ((dateTimeObj.toJSON() === this.model.value) || (dateTimeObj.toGMTString() === this.model.value) ||
+                    (dateTimeObj.toISOString() === this.model.value) || (dateTimeObj.toLocaleString() === this.model.value) || 
+                    (dateTimeObj.toString() === this.model.value) || (dateTimeObj.toUTCString() === this.model.value))
+                    return dateTimeObj;
+                else if (typeof dateTimeString == "string") return this._dateFromISO(dateTimeString);
+            } else if (this._extISORegex.exec(dateTimeString) || this._basicISORegex.exec(dateTimeString)) return this._dateFromISO(dateTimeString);
+        },
         _render: function () {
             this._renderWrapper();
             this._renderIcon();
@@ -488,7 +512,7 @@
             this.wrapper = ej.buildTag("span.e-datetime-wrap e-widget " + this.model.cssClass + "#" + this.element[0].id + "_wrapper").insertAfter(this.element);
             if (!ej.isTouchDevice()) this.wrapper.addClass('e-ntouch');
             this.container = ej.buildTag("span.e-in-wrap e-box").append(this.element);
-            this.wrapper.append(this.container);			
+            this.wrapper.append(this.container);
             if (!this._isSupport) {
                 this._hiddenInput = ej.buildTag("input.e-input e-placeholder ", "", {}, { type: "text" }).insertAfter(this.element);
                 this._hiddenInput.val(this._localizedLabels.watermarkText);
@@ -498,7 +522,7 @@
                     proxy.element.focus();
                 });
             }
-        },		
+        },
         _removeWatermark: function () {
             if (this.element.val() != "" && !this._isSupport)
                 this._hiddenInput.css("display", "none");
@@ -518,18 +542,18 @@
         },
 
         _renderDropdown: function () {
-            var oldWrapper = $("#" + this.element.context.id + "_popup").get(0);
+            var oldWrapper = $("#" + this.element[0].id + "_popup").get(0);
             if (oldWrapper)
                 $(oldWrapper).remove();
             this.popup = ej.buildTag("div.e-datetime-popup e-popup e-widget e-box " + this.model.cssClass + "#" + this.element[0].id + "_popup").css("visibility", "hidden");
             if (!ej.isTouchDevice()) this.popup.addClass('e-ntouch');
             $('body').append(this.popup);
             this._renderControls();
-            
+
             var _timeTitle, _dateContainer, popupContainer, _today, _now, _done;
 
             _timeTitle = ej.buildTag("div.e-header", this._localizedLabels.buttonText.timeTitle).attr((this._isIE8) ? { 'unselectable': 'on' } : {});
-            this._dateContainer = ej.buildTag("div.e-datecontainer").append(this.datePicker.popup).attr((this._isIE8) ? { 'unselectable': 'on' } : {});            
+            this._dateContainer = ej.buildTag("div.e-datecontainer").append(this.datePicker.popup).attr((this._isIE8) ? { 'unselectable': 'on' } : {});
             this._timeContainer = ej.buildTag("div.e-timecontainer").append(_timeTitle, this.timePicker.popup).attr((this._isIE8) ? { 'unselectable': 'on' } : {});
             this._drillDownContainer = ej.buildTag("div.e-drillDowncontainer").append().attr((this._isIE8) ? { 'unselectable': 'on' } : {});
             popupContainer = ej.buildTag("div.e-popup-container").append(this._dateContainer, this._timeContainer, this._drillDownContainer).attr((this._isIE8) ? { 'unselectable': 'on' } : {});
@@ -728,13 +752,13 @@
 
             $("table", this._sfTimeHour).find("td").removeClass("e-active");
             $(e.target).addClass("e-active");
-           
+
             this._sfTimeHour.hide();
             this._sfTimeMins.show();
             this._addFocus(this._sfTimeMins);
             if (this.model.timeDrillDown.showMeridian) {
                 var txt = $(e.target).hasClass("e-hour-am") ? "AM" : "PM";
-                value =  $(e.target).text() + ":00 " + txt;
+                value = $(e.target).text() + ":00 " + txt;
             }
             else
                 value = $(e.target).text();
@@ -753,7 +777,7 @@
             $("table", this._sfTimeMins).find("td").removeClass("e-active").removeClass("e-state-hover");
             $(e.target).addClass("e-active");
             if (this.model.timeDrillDown.showMeridian) {
-                value = $(e.target).text() + " " + ej.format(this._datetimeValue,"tt","en-US");
+                value = $(e.target).text() + " " + ej.format(this._datetimeValue, "tt", "en-US");
                 value = this.timePicker._localizeTime(value)
             }
             else
@@ -761,7 +785,7 @@
             this.timePicker.option("value", value);
             this.datePicker.option("value", this._datetimeValue);
             this._datetimeValue = new Date(this.model.value.toString());
-            this.model.timeDrillDown.autoClose && this._hideResult();
+            this.model.timeDrillDown.autoClose && this._hideResult(e);
             this._updateInput();
         },
         _generateMins: function (value) {
@@ -788,11 +812,11 @@
                 if (this._isIE8)
                     tdtag.attr("unselectable", "on");
                 tr.append(tdtag);
-                count++;                
+                count++;
                 start = this.timePicker._createObject(start).getTime() + interval;
             }
             minsTable.append(tbody);
-            $(".e-mins-header", this._sfTimeMins).find('.e-minitues-meridiantxt').text(ej.format(this._datetimeValue, "tt",this.model.locale))
+            $(".e-mins-header", this._sfTimeMins).find('.e-minitues-meridiantxt').text(ej.format(this._datetimeValue, "tt", this.model.locale))
             this._disableRange("mins");
             this._on(minsTable.find('.e-mins'), "click", $.proxy(this._minsNavHandler, this));
         },
@@ -810,7 +834,7 @@
             var progress = element.hasClass('e-prev') ? true : false;
             this._processNextPrev(progress, this._sfTimeMins);
         },
-        _processNextPrev: function (progress,wrapper) {
+        _processNextPrev: function (progress, wrapper) {
             if (progress && wrapper.find(".e-arrow-sans-left").hasClass("e-disable")) return false;
             else if (!progress && wrapper.find(".e-arrow-sans-right").hasClass("e-disable")) return false;
             var currentTable = $("table", wrapper), temp;
@@ -821,7 +845,7 @@
                     this._datetimeValue.setDate(this._datetimeValue.getDate() + incVal);
                     this._disableRange("hour");
 
-                    this._hoverHour = this._setFocusByIndex("hour", this._hoverHour, this._sfTimeHour);                   
+                    this._hoverHour = this._setFocusByIndex("hour", this._hoverHour, this._sfTimeHour);
                     $(".e-hours-headertext", this._sfTimeHour).text(ej.format(this._datetimeValue, "dd MMM yyyy"));
                     $(".e-minitues-headertext", this._sfTimeMins).text(ej.format(this._datetimeValue, "dd MMM yyyy"));
                     break;
@@ -846,7 +870,7 @@
                     break;
             }
         },
-        _forwardNavHandler: function (event,table) {
+        _forwardNavHandler: function (event, table) {
             if (this.model.readOnly || !this.model.enabled) return false;
             var hclassName, proxy = this;
             if (event) event.preventDefault();
@@ -854,9 +878,9 @@
                 hclassName = $(event.currentTarget).get(0).className;
             else
                 hclassName = table.find(".e-text>span").get(0).className;
-               
+
             switch (hclassName) {
-                case "e-hours-headertext":                   
+                case "e-hours-headertext":
                     this._sfTimeHour.css("display", "none");
                     this._dateContainer.css("display", "block");
                     this._addFocus(this._dateContainer.find('.e-datepicker'));
@@ -889,7 +913,7 @@
                 showDateIcon: false,
                 showFooter: this.model.timeDrillDown.enabled ? this.model.timeDrillDown.showFooter : false,
                 enableStrictMode: true,
-                buttonText:this._localizedLabels.buttonText.today,
+                buttonText: this._localizedLabels.buttonText.today,
 
                 minDate: this._stringToObject(this.model.minDateTime),
                 maxDate: this._stringToObject(this.model.maxDateTime),
@@ -901,7 +925,6 @@
                 stepMonths: this.model.stepMonths,
                 showOtherMonths: this.model.showOtherMonths,
                 headerFormat: this.model.headerFormat,
-                buttonText: this._localizedLabels.buttonText.today,
 
                 enabled: this.model.enabled,
                 enableRTL: this.model.enableRTL,
@@ -940,10 +963,8 @@
             var min = (this.model.minDateTime) ? this._stringToObject(this.model.minDateTime) : this.defaults.minDateTime;
             var max = (this.model.maxDateTime) ? this._stringToObject(this.model.maxDateTime) : this.defaults.maxDateTime;
             if (this.model.value == "") {
-                if (+this.datePicker.model.value == +this.datePicker._zeroTime(this.model.minDateTime))
-                    this.timePicker.option("minTime", this._getFormat(min, this.timePicker.model.timeFormat));
-                if (+this.datePicker.model.value == +this.datePicker._zeroTime(this.model.maxDateTime))
-                    this.timePicker.option("maxTime", this._getFormat(max, this.timePicker.model.timeFormat));
+                this.timePicker.option("minTime", this._getFormat(min, this.timePicker.model.timeFormat));
+                this.timePicker.option("maxTime", this._getFormat(max, this.timePicker.model.timeFormat));
             }
         },
         _updateTimeHeight: function () {
@@ -960,7 +981,7 @@
             this.datePicker.option("change", function (a) {
                 proxy._refreshTimes(a);
             });
-            this.datePicker.option("select", function (e) {               
+            this.datePicker.option("select", function (e) {
                 proxy._updateInput(e);
             });
             this.datePicker.option("dt_drilldown", function (e) {
@@ -977,7 +998,7 @@
             this._addFocus(this._sfTimeHour);
             var selected = new Date(this.model.value.toString());
             this._datetimeValue = new Date(selected.setHours(this._datetimeValue.getHours(), this._datetimeValue.getMinutes(), this._datetimeValue.getSeconds(), this._datetimeValue.getMilliseconds()));
-           
+
             // To hide the hours that exceeds the min and max.
             this._disableRange("hour");
 
@@ -1104,7 +1125,7 @@
             this._preVal = this._objectToString(this.model.value);
             this._updateDateTime();
             this._raiseChangeEvent();
-            this._updateModel();
+            this._updateModel(e);
             if (e)
                 e.cancel = true;
         },
@@ -1112,7 +1133,7 @@
             this.isValidState = true;
             var datetime = this._objectToString(this.model.value);
             this.element.val(datetime);
-			this._removeWatermark();
+            this._removeWatermark();
         },
         _refreshTimes: function (args) {
             var value = this._getDateObj(args.value, this.datePicker.model.dateFormat);
@@ -1124,27 +1145,27 @@
                 var preTime = this._getTime();
                 this.timePicker.option("minTime", mintime);
                 if (!this.model.enableStrictMode) {
-                       this._updateInput();
-                }                
+                    this._updateInput();
+                }
             }
-            else                 
-                this.timePicker.option("minTime", this._defaultMinVal());                           
+            else
+                this.timePicker.option("minTime", this._defaultMinVal());
 
             if (this._compare(value, this._setEmptyTime(this.model.maxDateTime))) {
                 var maxtime = this._getFormat(this.model.maxDateTime, this.timePicker.model.timeFormat);
                 var preTime = this._getTime();
                 this.timePicker.option("maxTime", maxtime);
-                if(!this.model.enableStrictMode){
+                if (!this.model.enableStrictMode) {
                     this._updateInput();
-                    }               
+                }
             }
-            else                       
+            else
                 this.timePicker.option("maxTime", this._defaultMaxVal());
-            
+
             this.timePicker._changeActiveEle();
         },
 
-        _defaultMinVal:function(){
+        _defaultMinVal: function () {
             var minVal = new Date().setHours(0, 0, 0, 0);
             var minTimeVal = ej.format(this.timePicker._createObject(minVal), this.timePicker.model.timeFormat, this.timePicker.model.locale);
             return minTimeVal;
@@ -1155,14 +1176,19 @@
             return maxTimeVal;
         },
         _updateValues: function () {
-            this._setValue(this.model.value);
+            var dateValue = this.model.value;
             if (this.model.value != null) {
                 this.datePicker.option("value", this.model.value);
                 this.timePicker.option("value", this.model.value);
             }
+            this._setValue(dateValue);
             this._validateMinMax();
             this._preVal = this.element.val();
             this._checkErrorClass();
+        },
+        _specificFormat: function () {
+            var parseInfo = ej.globalize._getDateParseRegExp(ej.globalize.findCulture(this.model.locale).calendar, this.model.dateFormat);
+            return ($.inArray("dddd", parseInfo.groups) > -1 || $.inArray("ddd", parseInfo.groups) > -1)
         },
         _setValue: function (value) {
             if (!value || (typeof JSON === "object" && JSON.stringify(value) === "{}")) {
@@ -1185,7 +1211,7 @@
             this._checkErrorClass();
             return this.model.value;
         },
-        _checkObject:function(value){
+        _checkObject: function (value) {
             if (value instanceof Date && this._isValidDate(value)) {
                 this.model.value = value;
                 this._updateDateTime();
@@ -1238,10 +1264,13 @@
             var dateObj = ej.parseDate(value, this.model.dateTimeFormat);
             if (!dateObj || dateObj < this.model.minDateTime || dateObj > this.model.maxDateTime) {
                 this.model.value = null;
+                this._change("value", this.model.value);
                 this.isValidState = false;
             }
-            else 
+            else {
+                this._change("value", this.model.value);
                 this.isValidState = true;
+            }
         },
         _validateMinMax: function () {
             var value, min, max;
@@ -1275,7 +1304,7 @@
                 }
             }
 
-            else this.isValidState = true;
+            if (!(value < min) && !(value > max)) this.isValidState = true;
         },
 
         _checkProperties: function () {
@@ -1289,9 +1318,9 @@
             this._checkStrictMode();
             this._checkErrorClass();
             this._datetimeValue = new Date(this.datePicker._dateValue.toString());
-            if (!ej.isNullOrUndefined(this.model.value))            
+            if (!ej.isNullOrUndefined(this.model.value))
                 this._datetimeValue = new Date(this.model.value.toString());
-			this._setWaterMark();
+            this._setWaterMark();
         },
 
         _checkStrictMode: function () {
@@ -1355,10 +1384,10 @@
                 }
                 else
                     this._prevDateTimeVal = this.element.val();
-            } else if(this.element.val() != "")
+            } else if (this.element.val() != "")
                 this._validateValue(this.element.val());
-            if( !this._isSupport && this.element.val() == "")
-                 this._hiddenInput.css("display", "block");
+            if (!this._isSupport && this.element.val() == "")
+                this._hiddenInput.css("display", "block");
             this._checkErrorClass();
             if (!this.model.showPopupButton) this._off(this.element, "click", this._elementClick);
             this._trigger("focusOut", { value: this.model.value });
@@ -1386,7 +1415,7 @@
                     break;
                 case 13:    // Enter Key
                     if (!this.model.timeDrillDown.enabled) {
-                        this._valueChange();                       
+                        this._valueChange();
                         break;
                     }
             }
@@ -1396,15 +1425,15 @@
                 this._removeFocus();
                 target.addClass("e-focus");
                 if (target.hasClass("e-datepicker e-popup"))
-                    $(document).bind("keydown", $.proxy(this.datePicker._keyboardNavigation, this.datePicker));
+                    $(document).on("keydown", $.proxy(this.datePicker._keyboardNavigation, this.datePicker));
                 else if (target.hasClass("e-timecontainer"))
-                    $(document).bind("keydown", $.proxy(this.timePicker._keyDownOnInput, this.timePicker));
+                    $(document).on("keydown", $.proxy(this.timePicker._keyDownOnInput, this.timePicker));
                 else if (target.hasClass("e-time-hours"))
-                    $(document).bind("keydown", $.proxy(this._keyDownOnHours, this));
+                    $(document).on("keydown", $.proxy(this._keyDownOnHours, this));
                 else if (target.hasClass("e-time-minitues"))
-                    $(document).bind("keydown", $.proxy(this._keyDownOnMinutes, this));
+                    $(document).on("keydown", $.proxy(this._keyDownOnMinutes, this));
                 else if (target.hasClass("e-dt-button"))
-                    $(document).bind("keydown", $.proxy(this._buttonClick, this));
+                    $(document).on("keydown", $.proxy(this._buttonClick, this));
             }
         },
         _removeFocus: function () {
@@ -1412,15 +1441,15 @@
             if (target.length > 0) {
                 target.removeClass("e-focus");
                 if (target.hasClass("e-datepicker e-popup"))
-                    $(document).unbind("keydown", $.proxy(this.datePicker._keyboardNavigation, this.datePicker));
+                    $(document).off("keydown", $.proxy(this.datePicker._keyboardNavigation, this.datePicker));
                 else if (target.hasClass("e-timecontainer"))
-                    $(document).unbind("keydown", $.proxy(this.timePicker._keyDownOnInput, this.timePicker));
+                    $(document).off("keydown", $.proxy(this.timePicker._keyDownOnInput, this.timePicker));
                 else if (target.hasClass("e-time-hours"))
-                    $(document).unbind("keydown", $.proxy(this._keyDownOnHours, this));
+                    $(document).off("keydown", $.proxy(this._keyDownOnHours, this));
                 else if (target.hasClass("e-time-minitues"))
-                    $(document).unbind("keydown", $.proxy(this._keyDownOnMinutes, this));
+                    $(document).off("keydown", $.proxy(this._keyDownOnMinutes, this));
                 else if (target.hasClass("e-dt-button"))
-                    $(document).unbind("keydown", $.proxy(this._buttonClick, this));
+                    $(document).off("keydown", $.proxy(this._buttonClick, this));
             }
         },
         _addPrevNextFocus: function (flag) {
@@ -1454,10 +1483,10 @@
 
                 if (t.col != -1)
                     t.col = t.col + 1;
-                else 
+                else
                     t.col = this._sfTimeHour.find('tbody tr td.e-active').index() + 1;
-                   
-               
+
+
                 if (t.row != -1) {
                     t.row = t.row + 1;
                     if (this.model.timeDrillDown.showMeridian && this._sfTimeHour.find('tbody tr td.e-state-hover').hasClass('e-hour-pm'))
@@ -1482,7 +1511,7 @@
         },
 
         _changeRowCol: function (t, key, rows, cols, target, ctrlKey) {
-            var eleClass,table, cls = { parent: null, child: null };
+            var eleClass, table, cls = { parent: null, child: null };
             switch (target) {
                 case "hours": eleClass = "tbody.e-timepicker-hours tr td.e-hour";
                     cls.parent = ".e-timepicker-hours", cls.child = ".e-hour";
@@ -1495,7 +1524,7 @@
                     table = this._sfTimeMins;
                     cols = table.find('tbody' + cls.parent + ' tr:nth-child(' + t.row + ') td' + cls.child).length;
                     break;
-               
+
             }
             if (t.row <= 0 && t.col <= 0)
                 return table.find(eleClass + ':not(.e-disable):first');
@@ -1503,10 +1532,8 @@
             switch (key) {
                 case 36:
                     return table.find(eleClass + ':not(.e-disable):first');
-                    break;
                 case 35:
                     return table.find(eleClass + ':not(.e-disable):last');
-                    break;
                 case 38:
                     if (ctrlKey) {
                         this._forwardNavHandler(null, table);
@@ -1515,7 +1542,7 @@
                         t.row -= 1;
                     }
                     else {
-                        this._processNextPrev(true,table);
+                        this._processNextPrev(true, table);
                         cell = table.find(eleClass + ':nth-child(' + t.col + '):last');
                         return cell;
                     }
@@ -1527,7 +1554,6 @@
                         cell = table.find(eleClass + ':nth-child(' + t.col + '):last');
                     }
                     return cell;
-                    break;
                 case 37:
                     if (ctrlKey) {
                         this._processNextPrev(true, table);
@@ -1538,7 +1564,7 @@
                     else if (t.row > 1) {
                         t = { row: t.row - 1, col: cols }
                         // different columns for the mins popup.
-                        if(target == "mins") t.col = cols = table.find('tbody' + cls.parent + ' tr:nth-child(' + t.row + ') td' + cls.child).length;
+                        if (target == "mins") t.col = cols = table.find('tbody' + cls.parent + ' tr:nth-child(' + t.row + ') td' + cls.child).length;
                     }
                     else {
                         this._processNextPrev(true, table);
@@ -1553,7 +1579,6 @@
                         cell = table.find(eleClass + ':not(.e-disable):last');
                     }
                     return cell;
-                    break;
                 case 39:
                     if (ctrlKey) {
                         this._processNextPrev(false, table);
@@ -1577,7 +1602,6 @@
                         cell = table.find(eleClass + ':not(.e-disable):first');
                     }
                     return cell;
-                    break;
                 case 40:
                     if (!ctrlKey) {
                         if (t.row < rows) {
@@ -1596,7 +1620,6 @@
                             cell = table.find(eleClass + ':nth-child(' + t.col + '):first');
                         }
                         return cell;
-                        break;
                     }
                 case 13:
                     var ele, element;
@@ -1617,7 +1640,7 @@
                 cell = t.row <= 2 ? $(cell[0]) : $(cell[1]);
             return cell;
         },
-        _findVisible: function (t, cls, key,table) {
+        _findVisible: function (t, cls, key, table) {
             var cols = t.col, rows = t.row, requiredClass = cls.child.slice(1, cls.child.length);
             for (i = 0; i >= 0; i++) {
                 //nextElement = table.find('tbody' + cls.parent + ' tr:nth-child(' + rows + ') td:nth-child(' + cols + ')');
@@ -1686,18 +1709,18 @@
                 }
                 this._setWaterMark();
             }
-            else if (this.model.enableStrictMode){            
+            else if (this.model.enableStrictMode) {
                 if (this._preVal != this.element.val() || this.model.value < this.model.minDateTime || this.model.value > this.model.maxDateTime) {
-                    this.isValidState = false;
                     this._updateModel();
-                    if (this.model.value == null) {
-                        this.isValidState = true;
-                    }
                     this._raiseChangeEvent(isCode);
                 }
-            }           
+            }
         },
-        _updateModel: function () {
+        _updateModel: function (e) {
+            if (this._stopRefresh) {
+                this._stopRefresh = false
+                return;
+            }
             var value = this.element.val();
             if (value == "") {
                 this.model.value = null;
@@ -1705,11 +1728,15 @@
                 this.isValidState = true;
             }
             else {
-                var dateObj = ej.parseDate(value, this.model.dateTimeFormat, this.model.locale);;
+                var dateObj;
+                if (e != undefined && e.type == "select" || this._prevDateTimeVal == this.element.val()) dateObj = this.model.value;
+                else dateObj = ej.parseDate(value, this.model.dateTimeFormat, this.model.locale);
                 if (dateObj) {
                     this.model.value = dateObj;
                     this.isValidState = true;
                     this._refreshPopup();
+                    if (this._specificFormat() && this._prevDateTimeVal != this.element.val())
+                        this.element.val(this._objectToString(this.model.value));
                 }
                 else {
                     this.model.value = null;
@@ -1752,7 +1779,7 @@
             if (!this.model.enabled || this.model.readOnly) return false;
             this.timePicker.setCurrentTime();
             var mintime = this.model.minDateTime, maxtime = this.model.maxDateTime, date = this.datePicker.model.value, time = new Date();
-            date = ej.isNullOrUndefined(date) ? new Date() : date;            
+            date = ej.isNullOrUndefined(date) ? new Date() : date;
             var currTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.getHours(), time.getMinutes(), time.getSeconds());
             if (currTime < mintime)
                 this.timePicker.option("value", this.timePicker._localizeTime(mintime));
@@ -1768,6 +1795,8 @@
             e.preventDefault();
             if (!this.isFocused && (!ej.isTouchDevice())) this.element.focus();
             this._showhidePopup();
+            if(this._isIE9)
+            this.popup.find(".e-popup-container").css("display", "inline-block");
         },
         _setInitialSelection: function () {
             var elements = this.timePicker.ul.find("li");
@@ -1777,7 +1806,7 @@
             if (this.timePicker.minTime && !this._compareTime(this._createObject(currentTime), this.timePicker.minTime, true))
                 selected = this.timePicker.minTime;
             if (this.timePicker.maxTime && !this._compareTime(this.timePicker.maxTime, this._createObject(currentTime), true))
-                selected = this.timePicker.maxTime;           
+                selected = this.timePicker.maxTime;
             var firstTime = elements.first().html(), index;
             index = (this.timePicker._parse(selected) - this.timePicker._parse(firstTime)) / (this.timePicker.model.interval * 60000);
             index = Math.round(index);
@@ -1805,9 +1834,9 @@
             if (this._trigger("beforeOpen", { element: this.popup })) return false;
             this.isPopupOpen = true;
             this._setListPosition();
-            this._checkForResponsive();           
+            this._checkForResponsive();
             var proxy = this;
-            this.popup.slideDown(this.model.enableAnimation ? 200 : 0, "easeOutQuad", function () {
+            this.popup.slideDown(this.model.enableAnimation ? 200 : 0, function () {
                 proxy._on($(document), "mousedown", proxy._OnDocumentClick);
                 proxy.model.timeDrillDown.enabled && proxy._addFocus(proxy._dateContainer.find('.e-datepicker'));
                 if (!proxy.timePicker.model.value) proxy._setInitialSelection();
@@ -1818,20 +1847,24 @@
             this._on($(window), "resize", this._OnWindowResize);
             this._on(ej.getScrollableParents(this.wrapper), "scroll", this._hideResult);
             this._raiseEvent("open");
-			if (this._initial) {
+            if (this._initial) {
                 this.timePicker._refreshScroller();
                 this.timePicker._changeActiveEle();
                 this._initial = false;
             }
             this.wrapper.addClass("e-active");
         },
-        _hideResult: function () {
+        _hideResult: function (e) {
             var proxy = this;
             if (!this.isPopupOpen) return false;
             if (this._trigger("beforeClose", { element: this.popup })) return false;
             this.isPopupOpen = false;
             this._removeFocus();
-            this.popup.slideUp(this.model.enableAnimation ? 100 : 0, "easeOutQuad", function () {
+            if (this._popClose && e && e.type != "click") {
+                this.isPopupOpen = true;
+                return;
+            }
+            this.popup.slideUp(this.model.enableAnimation ? 100 : 0, function () {
                 if (proxy.model) {
                     if (proxy.model.timeDrillDown.enabled) {
                         proxy._sfTimeHour.hide();
@@ -1846,7 +1879,7 @@
             this._off($(document), "mousedown", this._OnDocumentClick);
             this._off($(window), "resize", this._OnWindowResize);
             this._off(ej.getScrollableParents(this.wrapper), "scroll", this._hideResult);
-            this.wrapper.removeClass("e-active");           
+            this.wrapper.removeClass("e-active");
         },
 
         _setListPosition: function () {
@@ -1860,11 +1893,11 @@
             border = (totalHeight - elementObj.height()) / 2,
             maxZ = this._getZindexPartial(), popupmargin = 3,
 			popupPosition = this.model.popupPosition;
-			if (this.model.popupPosition == ej.PopupPosition.Bottom)
-				var topPos = ((popupHeight < winBottomHeight || popupHeight > winTopHeight) ? pos.top + totalHeight + popupmargin : pos.top - popupHeight - popupmargin) - border;
+            if (this.model.popupPosition == ej.PopupPosition.Bottom)
+                var topPos = ((popupHeight < winBottomHeight || popupHeight > winTopHeight) ? pos.top + totalHeight + popupmargin : pos.top - popupHeight - popupmargin) - border;
             else
-				var topPos = ((popupHeight > winTopHeight) ? pos.top + totalHeight + popupmargin : pos.top - popupHeight - popupmargin) - border;
-			winWidth = $(document).scrollLeft() + $(window).width() - left;
+                var topPos = ((popupHeight > winTopHeight) ? pos.top + totalHeight + popupmargin : pos.top - popupHeight - popupmargin) - border;
+            winWidth = $(document).scrollLeft() + $(window).width() - left;
             if (this.model.enableRTL || popupWidth > winWidth && (popupWidth < left + elementObj.outerWidth())) left -= this.popup.outerWidth() - elementObj.outerWidth();
             this.popup.css({
                 "left": left + "px",
@@ -2022,7 +2055,7 @@
 
             this._change("cssClass", skin);
         },
-        _localize: function (culture) {			
+        _localize: function (culture) {
             this.model.locale = culture;
             this.model.dateTimeFormat = this.model.timeDisplayFormat = "";
             var meridianText = ["AM", "PM"];
@@ -2032,10 +2065,10 @@
                 if (!ej.isNullOrUndefined(this._options.buttonText))
                     $.extend(this._localizedLabels.buttonText, this._options.buttonText);
                 if (!ej.isNullOrUndefined(this._options.watermarkText))
-					$.extend(this._localizedLabels.watermarkText, this._options.watermarkText);
+                    this._localizedLabels.watermarkText = this._options.watermarkText;
             }
             this._localizedLabelToModel();
-            this._buttonText(this._localizedLabels.buttonText);            
+            this._buttonText(this._localizedLabels.buttonText);
             if (this.isValidState || (this.model.value instanceof Date && this._isValidDate(this.model.value)))
                 this.element.val(this._objectToString(this.model.value));
             this._preVal = this.element.val();
@@ -2066,14 +2099,14 @@
                 return true;
             }
         },
-		 _localizedLabelToModel: function () {
-			this.model.watermarkText = this._localizedLabels.watermarkText;
+        _localizedLabelToModel: function () {
+            this.model.watermarkText = this._localizedLabels.watermarkText;
             this.model.buttonText = this._localizedLabels.buttonText;
         },
         _readOnly: function (boolean) {
             this.model.readOnly = boolean;
             if (boolean) this.element.attr("readonly", "readonly");
-            else this.element.removeAttr("readonly");
+            else this.element.prop("readonly", false);
 
             this._change("readOnly", boolean);
         },
@@ -2153,10 +2186,10 @@
             if (!this.model.enabled) {
                 this.element[0].disabled = false;
                 this.model.enabled = true;
-				this.element.removeAttr("disabled");
-				this.element.removeClass("e-disable").attr("aria-disabled", false);
-				if (!this._isSupport)
-				    this._hiddenInput.removeAttr("disabled");
+                this.element.prop("disabled", false);
+                this.element.removeClass("e-disable").attr("aria-disabled", false);
+                if (!this._isSupport)
+                    this._hiddenInput.prop("disabled", false);
                 if (this.datetimeIcon) this.datetimeIcon.removeClass("e-disable").attr("aria-disabled", false);
                 if (this._isIE8 && this.datetimeIcon) this.datetimeIcon.children().removeClass("e-disable");
                 this.popup.children("div").removeClass("e-disable").attr("aria-disabled", false);
@@ -2210,16 +2243,18 @@
             this._on(this.element, "focus", this._targetFocus);
             this._on(this.element, "blur", this._targetBlur);
             this._on(this.element, "keydown", this._keyDownOnInput);
+            this.popup.on("mouseenter touchstart", $.proxy(function () { this._popClose = true; }, this));
+            this.popup.on("mouseleave touchend", $.proxy(function () { this._popClose = false; }, this));
 
         },
-        
-         _getLocalizedLabels: function(){
+
+        _getLocalizedLabels: function () {
             return ej.getLocalizedConstants(this.sfType, this.model.locale);
         }
     });
-    
+
     ej.DateTimePicker.Locale = ej.DateTimePicker.Locale || {};
-    
+
     ej.DateTimePicker.Locale['default'] = ej.DateTimePicker.Locale['en-US'] = {
         watermarkText: "Select datetime",
         buttonText: {
@@ -2229,11 +2264,11 @@
             timeTitle: "Time"
         }
     };
-    
-	ej.PopupPosition = {
-			Bottom: "bottom",
-			Top: "top"
-		};
+
+    ej.PopupPosition = {
+        Bottom: "bottom",
+        Top: "top"
+    };
 })(jQuery, Syncfusion);;
 
 });

@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.slider.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -33,6 +33,7 @@
         _addToPersist: ["value", "values"],
         _rootCSS: "e-slider",
         _setFirst: false,
+        _requiresID: true,
 
         defaults: {
 
@@ -144,7 +145,8 @@
             }
         },
 
-        _validateValue: function (value) {
+        _validateValue: function (value, animation) {
+            animation = (typeof animation === 'undefined') ? false : animation;
             if (value == null || value === "") value = this.model.minValue;
             else if (typeof value === "string") value = parseFloat(value);
 
@@ -153,10 +155,11 @@
             else if (!this._isNumber(this.value()))
                 this.value(this.model.minValue);
 
-            if (this.model.sliderType != "range") this._setValue();
+            if (this.model.sliderType != "range") this._setValue(animation);
         },
 
-        _validateRangeValue: function (value) {
+        _validateRangeValue: function (value, animation) {
+            animation = (typeof animation === 'undefined') ? false : animation;
             if (value == null) value = new Array(this.model.minValue, this.model.maxValue);
             else if (typeof value === "string") {
                 var vals = value.split(",");
@@ -168,7 +171,7 @@
             else if (!(typeof this.values() === "object" && this._isNumber(this.values()[0]) && this._isNumber(this.values()[1])))
                 this.values(new Array(this.model.minValue, this.model.maxValue));
 
-            if (this.model.sliderType == "range") this._setRangeValue();
+            if (this.model.sliderType == "range") this._setRangeValue(animation);
         },
 
         _validateStartEnd: function () {
@@ -196,10 +199,11 @@
             return this._getHandleValue();
         },
 
-        setValue: function(value) {
-            var obj = {};
-            obj[this.model.sliderType == "range" ? "values" : "value"] = value;
-            this._setModel(obj);
+        setValue: function (value, animation) {
+            if (this.model.sliderType == "range")
+                this._validateRangeValue(value, animation);
+            else
+                this._validateValue(value, animation);
         },
 
         _init: function () {
@@ -226,11 +230,11 @@
                 switch (option) {
                     case "value":
                         this._validateValue(ej.util.getVal(options[option]));
-                        options[option] = this.value();
+                        options[option] = this.model.value;
                         break;
                     case "values":
                         this._validateRangeValue(ej.util.getVal(options[option]));
-                        options[option] = this.values();
+                        options[option] = this.model.values;
                         break;
                     case "height": this.model.height = options[option]; this._setDimension();
                         if (this.model.showScale) this._scaleAlignment();
@@ -410,7 +414,8 @@
 
         _insertHiddenField: function () {
             this._hidden = ej.buildTag("input", "", {},
-                { "type": "hidden", "name": this.element[0].id }).val(this._getHandleValue());
+                { "type": "hidden", "name": this.element[0].id });
+            this._hidden.val(this._getHandleValue());
             this.element.append(this._hidden);
         },
 
@@ -637,9 +642,9 @@
 
             this.mouseDownPos = this.handlePos;
             if (!this.model.readOnly)
-                $(document).bind(ej.eventType.mouseMove, $.proxy(this._firstHandleMove, this));
-            $(document).bind(ej.eventType.mouseUp, $.proxy(this._firstHandleUp, this));
-            $(document).bind("mouseleave", $.proxy(this._firstHandleUp, this));
+            this._on($(document),ej.eventType.mouseMove, this._firstHandleMove);
+            this._on($(document),ej.eventType.mouseUp,this._firstHandleUp);
+            this._on($(document),"mouseleave",this._firstHandleUp);
             this._showTooltip();
         },
 
@@ -666,9 +671,9 @@
 
         _firstHandleUp: function (evt) {
             evt.preventDefault();
-            $(document).unbind(ej.eventType.mouseMove, $.proxy(this._firstHandleMove, this));
-            $(document).unbind(ej.eventType.mouseUp, $.proxy(this._firstHandleUp, this));
-            $(document).unbind("mouseleave", $.proxy(this._firstHandleUp, this));
+            this._off($(document),ej.eventType.mouseMove, this._firstHandleMove);
+            this._off($(document),ej.eventType.mouseUp,this._firstHandleUp);
+            this._off($(document),"mouseleave",this._firstHandleUp);
             this._hideTooltip();
 
             if (this.mouseDownPos != this.handlePos) this._raiseChangeEvent();
@@ -681,9 +686,9 @@
 
             this.mouseDownPos2 = this.handlePos2;
             if (!this.model.readOnly)
-                $(document).bind(ej.eventType.mouseMove, $.proxy(this._secondHandleMove, this));
-            $(document).bind(ej.eventType.mouseUp, $.proxy(this._secondHandleUp, this));
-            $(document).bind("mouseleave", $.proxy(this._secondHandleUp, this));
+            this._on($(document),ej.eventType.mouseMove, this._secondHandleMove);
+            this._on($(document),ej.eventType.mouseUp,this._secondHandleUp);
+            this._on($(document),"mouseleave",this._secondHandleUp);
             this._showTooltip();
         },
 
@@ -710,9 +715,9 @@
 
         _secondHandleUp: function (evt) {
             evt.preventDefault();
-            $(document).unbind(ej.eventType.mouseMove, $.proxy(this._secondHandleMove, this));
-            $(document).unbind(ej.eventType.mouseUp, $.proxy(this._secondHandleUp, this));
-            $(document).unbind("mouseleave", $.proxy(this._secondHandleUp, this));
+            this._off($(document),ej.eventType.mouseMove,this._secondHandleMove);
+            this._off($(document),ej.eventType.mouseUp,this._secondHandleUp);
+            this._off($(document),"mouseleave",this._secondHandleUp);
             this._hideTooltip();
 
             if (this.mouseDownPos2 != this.handlePos2) this._raiseChangeEvent();
@@ -723,9 +728,9 @@
                 this._isFocused = true;
                 $(evt.currentTarget).addClass("e-focus");
                 if (!this.model.readOnly)
-                    $(document).bind("keydown", $.proxy(this._moveHandle, this));
-                if (this.model.allowMouseWheel) {
-                    this._on(this.element, "mousewheel DOMMouseScroll", this._moveHandle);
+                   this._on($(document),"keydown",this._moveHandle);
+                if (this.model.allowMouseWheel && !this.model.readOnly) {
+                    this._on(this.element,"mousewheel DOMMouseScroll", this._moveHandle);
                 }
                 this.activeHandle = $(evt.currentTarget).is(this.firstHandle) ? 1 : 2;
                 this._setZindex();
@@ -735,7 +740,7 @@
         _focusOutHandle: function (evt) {
             this._isFocused = false;
             $(evt.currentTarget).removeClass("e-focus");
-            $(document).unbind("keydown", $.proxy(this._moveHandle, this));
+         this._off($(document),"keydown",this._moveHandle);
             this._off(this.element,"mousewheel DOMMouseScroll", this._moveHandle);
         },
 
@@ -836,7 +841,7 @@
 
         _sliderBarClick: function (evt) {
             if (this.model.readOnly) return false;
-            if (evt.target == this.target || (this.model.sliderType != "default" && evt.target == this.header[0])) {
+            if (evt.target == this.target || (this.model.sliderType != "default" && evt.target == this.header[0]) || $(evt.target).hasClass('e-tick') || evt.target == this.wrapper[0]) {
                 evt.preventDefault();
                 if (this._raiseEvent("start")) return false;
                 var pos = { x: evt.pageX, y: evt.pageY },
@@ -906,10 +911,10 @@
             this.activeHandle = 1;
         },
 
-        _setValue: function () {
+        _setValue: function (animation) {
             this._updateValue();
-            this._increaseHeaderWidth(this.model.enableAnimation);
-            this._setHandlePosition(this.model.enableAnimation, false, true);
+            this._increaseHeaderWidth(animation);
+            this._setHandlePosition(animation, false, true);
         },
 
         _updateRangeValue: function () {
@@ -927,13 +932,13 @@
             this.preHandlePos2 = this.handlePos2;
         },
 
-        _setRangeValue: function () {
+        _setRangeValue: function (animation) {
             this._updateRangeValue();
-            this._increaseHeaderWidth(this.model.enableAnimation);
+            this._increaseHeaderWidth(animation);
             this.activeHandle = 1;
-            this._setHandlePosition(this.model.enableAnimation, false, false);
+            this._setHandlePosition(animation, false, false);
             this.activeHandle = 2;
-            this._setHandlePosition(this.model.enableAnimation, false, true);
+            this._setHandlePosition(animation, false, true);
         },
 
         _checkHandlePosition: function (value) {
@@ -1061,7 +1066,7 @@
         },
 
         _wireEvents: function () {
-            this._on(this.element, "mousedown", this._sliderBarClick);
+            this._on(this.wrapper, "mousedown", this._sliderBarClick);
             this._on(this.firstHandle, ej.eventType.mouseDown, this._firstHandleClick);
             this._on(this.firstHandle, "mouseenter", this._hoverOnHandle);
             this._on(this.firstHandle, "mouseleave", this._leaveFromHandle);
@@ -1079,7 +1084,7 @@
 
 
         _unWireEvents: function () {
-            this._off(this.element, "mousedown");
+            this._off(this.wrapper, "mousedown");
             this._off(this.firstHandle, ej.eventType.mouseDown);
             this._off(this.firstHandle, "mouseenter");
             this._off(this.firstHandle, "mouseleave");

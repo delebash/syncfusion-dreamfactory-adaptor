@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.touch.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -23,7 +23,7 @@
 		"scrollstart scrollstop").split(" "), function (i, name) {
 
 		    $.fn[name] = function (fn) {
-		        return fn ? this.bind(name, fn) : this.trigger(name);
+		        return fn ? this.on(name, fn) : this.trigger(name);
 		    };
 
 		    // jQuery < 1.8
@@ -90,10 +90,10 @@
         setup: function () {
             var thisObj = this,
 				$this = $(thisObj);
-            $this.bind(touchStartEvent, startMoveHandler);
-            $document.bind(touchStopEvent, clearTouchMoveHandlers);
+            $this.on(touchStartEvent, startMoveHandler);
+            $document.on(touchStopEvent, clearTouchMoveHandlers);
             function clearTouchMoveHandlers() {
-               // $this.unbind(touchMoveEvent, moveHandler)
+               // $this.off(touchMoveEvent, moveHandler)
             }
             var coords = {};
             function startMoveHandler(e) {
@@ -102,7 +102,7 @@
 					origEvent = e.originalEvent;
                     if (isPointer)
                         coords = { x: origEvent.x, y: origEvent.y };
-                    $this.bind(touchMoveEvent, moveHandler);
+                    $this.on(touchMoveEvent, moveHandler);
                 }
             }
             function moveHandler(e) {
@@ -125,7 +125,7 @@
         setup: function () {
             var thisObj = this, $this = $(thisObj);
             checkMsieTouch($this);
-            $this.bind(touchStartEvent, function (e) {
+            $this.on(touchStartEvent, function (e) {
                 var _startevent = e;
                 var data = touchObj(e),
                             startPoint = {
@@ -136,7 +136,6 @@
                             stopPoint;
                 function moveHandler(e) {
                     e.preventDefault();
-                    e.stopPropagation();
                     if (!startPoint) return;
                     var data = touchObj(e);
                     stopPoint = {
@@ -147,9 +146,9 @@
                 }
 
                 $this
-                            .bind(touchMoveEvent, moveHandler)
+                            .on(touchMoveEvent, moveHandler)
                             .one(touchStopEvent, function (e) {
-                                $this.unbind(touchMoveEvent, moveHandler);
+                                $this.off(touchMoveEvent, moveHandler);
                                 if (startPoint && stopPoint) {
                                     if (stopPoint.time - startPoint.time < 1000 &&
                                     Math.abs(startPoint.coords[1] - stopPoint.coords[1]) > 30 &&
@@ -175,7 +174,7 @@
                 scrolling = scrollState;
                 initiateCustomEvent(thisObj, scrolling ? "scrollstart" : "scrollstop", e);
             }
-            $this.bind(scrollEvent, function (e) {
+            $this.on(scrollEvent, function (e) {
                 if (!$.event.special.scrollstart.isEnabled) return;
                 if (!scrolling) trigger(e, true);
                 clearTimeout(timer);
@@ -201,7 +200,7 @@
             d.preTouchend = null;
             d.preTouchstart = null;
 
-            $this.bind(mouseStartEvent, function (event) {
+            $this.on(mouseStartEvent, function (event) {
                 d = $this.data();
                 d.startTime = getTimeSpan();
                 if (!d.isDoubleTapWait) d.doubleTapStartTime = d.startTime;
@@ -218,10 +217,10 @@
                 function clearTapHandlers() {
                     clearTimeout(timer);
 
-                    $this.unbind(mouseStopEvent, clickHandler);
-                    if (isIE9) $document.unbind(mouseStopEvent, clickHandler);
-                    $this.unbind(touchCancelEvent, clearTapHandlers);
-                    $document.unbind(mouseMoveEvent, touchMoveAction);
+                    $this.off(mouseStopEvent, clickHandler);
+                    if (isIE9) $document.off(mouseStopEvent, clickHandler);
+                    $this.off(touchCancelEvent, clearTapHandlers);
+                    $this.off(mouseMoveEvent, touchMoveAction);
                 }
                 function touchMoveAction(e) {
                     var coor1 = (e.originalEvent.changedTouches ? e.originalEvent.changedTouches[0] : e.originalEvent),
@@ -262,10 +261,10 @@
 
                 if (!(event.which && event.which !== 1) && !d.stopProcess) {
 
-                    $this.bind(mouseStopEvent, clickHandler);
-                    if (isIE9) $document.bind(mouseStopEvent, clickHandler);
-                    $this.bind(touchCancelEvent, clearTapHandlers);
-                    $document.bind(mouseMoveEvent, touchMoveAction);
+                    $this.on(mouseStopEvent, clickHandler);
+                    if (isIE9) $document.on(mouseStopEvent, clickHandler);
+                    $this.on(touchCancelEvent, clearTapHandlers);
+                    $this.on(mouseMoveEvent, touchMoveAction);
 
                     timer = setTimeout(function () {
                         if (d.isDoubleTapWait) d.isDoubleTapWait = false;
@@ -320,7 +319,7 @@
             var thisObj = this, $this = $(thisObj);
             checkMsieTouch($this);
 
-            $this.bind(touchStartEvent, function (e) {
+            $this.on(touchStartEvent, function (e) {
                 var startPoint = $.event.special.swipe.startPoint(e),
 					stopPoint;
                 var _startevent = e;
@@ -332,9 +331,9 @@
                     if (Math.abs(startPoint.coords[0] - stopPoint.coords[0]) > $.event.special.swipe.scrollSupression) e.preventDefault();
                 }
 
-                $this.bind(touchMoveEvent, moveHandler)
+                $this.on(touchMoveEvent, moveHandler)
 					.one(touchStopEvent, function (e) {
-					    $this.unbind(touchMoveEvent, moveHandler);
+					    $this.off(touchMoveEvent, moveHandler);
 					    if (startPoint && stopPoint) {
 					        $.event.special.swipe.handleSwipe(startPoint, stopPoint, e, _startevent);
 					    }
@@ -356,7 +355,7 @@
         setup: function () {
             var thisObj = this, $this = $(thisObj);
             checkMsieTouch($this);
-            $this.bind(touchStartEvent, function (e) {
+            $this.on(touchStartEvent, function (e) {
                 var _startevent = e;
                 if (e.originalEvent.touches && e.originalEvent.touches.length >= 2) {
                     var startPoint = $.event.special.pinch.distance(e), stopPoint, minDistance = 5;
@@ -379,9 +378,9 @@
                         }
                     }
 
-                    $this.bind(touchMoveEvent, moveHandler)
+                    $this.on(touchMoveEvent, moveHandler)
                         .one(touchStopEvent, function () {
-                            $this.unbind(touchMoveEvent, moveHandler);
+                            $this.off(touchMoveEvent, moveHandler);
                             $(e.target).trigger($.extend(true, { type: "pinchstop" }, _getOptions(moveEvent,
                                 { _isPinch: true, _pinchDistance: stopPoint }, _startevent)));
                             startPoint = stopPoint = undefined;
@@ -397,7 +396,7 @@
             var thisObj = this, $this = $(thisObj);
             checkMsieTouch($this);
 
-            $this.bind(touchStartEvent, function (e) {
+            $this.on(touchStartEvent, function (e) {
 
                 var startPoint = touchObj(e),
 					stopPoint;
@@ -415,9 +414,9 @@
                             _getOptions(e, { _isdrag: true, stopPoint: stopPoint, _isDelta: true }, _startevent)));
                 }
 
-                $this.bind(touchMoveEvent, moveHandler)
+                $this.on(touchMoveEvent, moveHandler)
 					.one(touchStopEvent, function (e) {
-					    $this.unbind(touchMoveEvent, moveHandler);
+					    $this.off(touchMoveEvent, moveHandler);
 					    startPoint = stopPoint = undefined;
 					});
             });
@@ -499,7 +498,7 @@
 
         $.event.special[event] = {
             setup: function () {
-                $(this).bind(sourceEvent, $.noop);
+                $(this).on(sourceEvent, $.noop);
             }
         };
     });

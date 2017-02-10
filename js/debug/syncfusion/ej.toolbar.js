@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.toolbar.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./../common/ej.data"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./../common/ej.data","./ej.tooltip"], fn) : fn();
 })
 (function () {
 	
@@ -48,6 +48,10 @@
 
             hide: false,
 
+            disabledItemIndices: [],
+
+            enabledItemIndices: [],
+
             enableSeparator: false,
 
             orientation: "horizontal",
@@ -82,6 +86,17 @@
 
                 group: "group",
             },
+            tooltipSettings: {
+                associate: "mouseenter",
+                showShadow: true,
+                position: {
+                    stem: { horizontal: "left", vertical: "top" }
+                },
+                tip: {
+                    size: { width: 5, height: 5 }
+                },
+                isBalloon: false
+            },
 
             cssClass: "",
 			
@@ -104,6 +119,8 @@
             enabled: "boolean",
             hide: "boolean",
             enableSeparator: "boolean",
+            disabledItemIndices: "data",
+            enabledItemIndices: "data",
             orientation: "enum",
             enableRTL: "boolean",
             showRoundedCorner: "boolean",
@@ -135,10 +152,13 @@
             if(this.model.targetID != null)
 				this.element.html($("#" + this.model.targetID).find('ul,ol'));
 			this._cloneElement = $(this.element).clone();
+			//Stored the local & remote data source processed value. 
+			this._localDataSource=null;
             if (this.model.dataSource != null) {
                 this._generateTemplate();
             }
             (!(this.model.dataSource instanceof ej.DataManager)) && this._initialize();
+            this._renderTooltip(this.model.tooltipSettings);
         },
 
         _setModel: function (options) {
@@ -156,9 +176,23 @@
                     case "enabled":
                         this._controlStatus(options[option]);
                         break;
+                    case "disabledItemIndices": {
+                        this._disableItemByIndex(options[option]);
+						options[option] = this.model.disabledItemIndices;
+                        break;
+                    }
+                    case "enabledItemIndices": {
+						this._enableItemByIndex(options[option]); 
+						break;
+					}
                     case "isResponsive":
                         this.model.isResponsive = options[option];
-                        (this.model.isResponsive) ? this._responsiveLayout() : this._removeResponsive();
+                        if(this.model.isResponsive) {
+							this._responsiveLayout();
+							this._renderTooltip(this.model.tooltipSettings);
+						}
+						else
+							this._removeResponsive();
                         break;
                     case "hide":
                         this._controlVisibleOptions(options[option]);
@@ -168,6 +202,10 @@
                         this.model.orientation = options[option];
                         this._wireResizing();
                         break;
+					case "tooltipSettings":
+					    this.model.tooltipSettings = $.extend(true, this.model.tooltipSettings, options[option]);
+						this._renderTooltip(this.model.tooltipSettings);
+						break;
                     case "enableRTL":
                         this._enableRTL(options[option]);
                         break;
@@ -209,6 +247,7 @@
 			this.element.removeAttr('role tabindex aria-disabled style');			
 			$(this._spantag).remove();
 			$(this._liTemplte).remove();			
+			this._liTemplte = this._tipRes = null;		
 			this.element.removeClass('e-widget e-box e-toolbarspan e-rtl');
 			this.element.find('ul,ol').removeClass('e-ul e-horizontal e-vertical e-separator e-comnrtl');
 			this.element.find('li').removeClass('e-tooltxt e-comnrtl');
@@ -339,10 +378,18 @@
 
         _setSkin: function (skin) {
             this.element.removeClass(this.model.cssClass).addClass(skin);
+			var tooltipCssClass = "e-toolbarTooltip " + skin; 
+			this._subControlsSetModel("cssClass", tooltipCssClass);
         },
+		_subControlsSetModel : function (prop, value){
+			!ej.isNullOrUndefined(this._tipToolbar) && $(this.target).ejTooltip("option", prop, value);
+			!ej.isNullOrUndefined(this._tipRes) && $(this._liTemplte).ejTooltip("option", prop, value);
+		},
 
         _destroy: function () {
             this.element.html("");
+			!ej.isNullOrUndefined(this._tipToolbar) && $(this.target).ejTooltip("destroy");
+			!ej.isNullOrUndefined(this._tipRes) && $(this._liTemplte).ejTooltip("destroy");
             this._cloneElement.removeClass('e-toolbar e-js');
             this.element.replaceWith(this._cloneElement);
             this._liTemplte && this._liTemplte.remove();
@@ -360,6 +407,10 @@
         _responsiveLayout: function () {
             this._roundedCorner(this.model.showRoundedCorner);
             if (this.model.isResponsive && (this.model.orientation == "horizontal")) {
+                if (!ej.isNullOrUndefined(this._liTemplte)) {
+                    !ej.isNullOrUndefined(this._tipRes) && this._tipRes.destroy();
+                    $(this._liTemplte).remove();
+                }
                 this._spantag = $("<span id='" + this.element[0].id + "_target' class='e-icon e-toolbar-res-arrow e-rel-position e-display-block' unselectable='on'></span>");
                 this._spantag.appendTo(this.element);
                 this._spanWidth = this._spantag.outerWidth(true) + 8; // 8px from right of span 
@@ -367,17 +418,25 @@
                 if (this.model.enableRTL) this._liTemplte.addClass('e-rtl');
                 this._isResized = false;
                 this._reSizeHandler();
-                $('body').append(this._liTemplte);				
+                $('body').append(this._liTemplte);
+                this._renderTooltip(this.model.tooltipSettings);
             }
             this._on($("#" + this.element[0].id + "_target"), "mousedown", this._btnMouseClick);
             this._wireResizing();
             this._controlVisibleOptions(this.model.hide);
             this._enableRTL(this.model.enableRTL);
+			this._disabledItems = this.model.disabledItemIndices; 
             this._controlStatus(this.model.enabled);
+			this.model.disabledItemIndices = this._disabledItems;
+            if (this.model.disabledItemIndices.length != 0)
+                this._disableItemByIndex(this.model.disabledItemIndices);
+            if (this.model.enabledItemIndices.length != 0)
+                this._enableItemByIndex(this.model.enabledItemIndices);
             this._setWidth();
         },
         _removeResponsive: function () {
             $(this._spantag).remove();
+			!ej.isNullOrUndefined(this._tipRes) && $(this._liTemplte).ejTooltip("destroy");
             var list = $(this._liTemplte).children('ul');
             $(this._liTemplte).detach();
             $(this.element).append(list);
@@ -407,6 +466,7 @@
                 this.element.removeClass('e-corner');
                 this._liTemplte && this._liTemplte.removeClass('e-corner');
             }
+			this._subControlsSetModel("showRoundedCorner", value);
         },
 
         _generateTemplate: function () {
@@ -426,6 +486,7 @@
         },
         _generateGroup: function (value) {
             var proxy = this;
+			this._localDataSource=value;
             var y = -1;
             var groupArray = [];
             for (var i = 0; i < value.length; i++) {
@@ -528,24 +589,13 @@
                 for (i = 0, len = this.itemsContainer.length - 1; i < len; i++) {
                     $(this.itemsContainer[i]).addClass("e-separator");
                 }
-                if (this.model.enableRTL) {
-                    if (this.itemsContainer.length == 1) {
-                        for (i = 0, len = this.itemsContainer[0].children.length; i < len; i++) {
-                            if (i == 0) $(this.itemsContainer[0].children[i]).removeClass("e-separator");
-                            else if (!this.model.fields.group || !this.model.dataSource || !this.model.dataSource[i].group)
-                                $(this.itemsContainer[0].children[i]).addClass("e-separator");
-                        }
-                    }
-                }
-                else {
-                    if (this.itemsContainer.length == 1) {
+				if (this.itemsContainer.length == 1) {
                         for (i = 0, len = this.itemsContainer[0].children.length; i < len; i++) {
                             if (i == len - 1) $(this.itemsContainer[0].children[i]).removeClass("e-separator");
-                            else if (!this.model.fields.group || !this.model.dataSource || !this.model.dataSource[i].group)
+                            else
                                 $(this.itemsContainer[0].children[i]).addClass("e-separator");
                         }
-                    }
-                }
+                    }    
             } else {
                 this.itemsContainer.removeClass('e-separator').find('.e-separator').removeClass('e-separator');
             }
@@ -578,9 +628,35 @@
                 if (this._liTemplte) this._liTemplte.removeClass('e-rtl');
             }
             this.model.enableRTL = value;
+			this._subControlsSetModel("enableRTL", value);
             this._renderToolbarSeparator();
         },
 
+        _renderTooltip: function (options) {
+            var model =$.extend(true, {}, options); 
+			if(!ej.isNullOrUndefined(model.cssClass))//which holds the css for the tooltip
+				model.cssClass = model.cssClass + " e-toolbarTooltip " + this.model.cssClass;
+			else 
+				model.cssClass = "e-toolbarTooltip " + this.model.cssClass;
+            model.enableRTL = this.model.enableRTL;
+			model.showRoundedCorner = this.model.showRoundedCorner;
+			model.target ="li[data-content], li[title]" ;
+			model.beforeOpen = this._showTooltip;
+            this._tipToolbar = $(this.target).ejTooltip(model).data("ejTooltip");
+			if(this.model.isResponsive && !ej.isNullOrUndefined(this._liTemplte))
+				this._tipRes = $(this._liTemplte).ejTooltip(model).data("ejTooltip");
+        },
+		_showTooltip : function (e){
+			var currentItem = $(e.event.currentTarget), targetItem = e.event.target;
+			if (currentItem.hasClass("e-disable"))
+				e.cancel = true;
+		
+		},
+		_hideTooltip : function (){
+			//tap to select the items, mousemove triggered after the tap, so private variable isHided of Tooltip is set as false
+			if(!ej.isNullOrUndefined(this._tipToolbar)){ this._tipToolbar.hide(); this._tipToolbar._isHidden= false;}
+			if(!ej.isNullOrUndefined(this._tipRes)){ this._tipRes.hide(); this._tipRes._isHidden = false;}
+		},
         _addOverlay: function (element) {
             for (var i = 0; i < element.length; i++) {
                 if (!$(element[i]).hasClass('e-disable')) {
@@ -629,6 +705,35 @@
             this.enableItem(lielement);
         },
 
+        _enableItemByIndex: function (indices) {
+            var index;
+            if (!this.model.enabled) return false;
+            if (indices.length != 0) {
+                for (var i = 0; i < indices.length; i++) {
+                    if ($.inArray(indices[i], this.model.disabledItemIndices) > -1) {
+                        index = $.inArray(indices[i], this.model.disabledItemIndices);
+                        this.enableItem(this.items[this.model.disabledItemIndices[index]]);
+						this.model.disabledItemIndices.splice(index, 1);
+                    }
+
+                }
+            }
+        },
+
+        _disableItemByIndex: function (indices) {
+			if (!this.model.enabled) return false;
+			this._disabledItems = this.model.disabledItemIndices; 
+			for(var i=0; i< indices.length; i++){
+				if ($.inArray(indices[i], this.model.disabledItemIndices) < 0)
+					this._disabledItems.push(parseInt(indices[i]));
+			}
+			for (var i = 0; i < this.items.length; i++) {
+				if ($.inArray(i, this.model.disabledItemIndices) > -1)
+					this.disableItem(this.items[i]);
+			}
+			this.model.disabledItemIndices = this._disabledItems ;
+        },
+
         disable: function () {
             if (this.element.attr("aria-disabled") == "true") return false;
             this.element.attr("aria-disabled", true).removeAttr("aria-label");
@@ -636,10 +741,12 @@
             if (this.model.isResponsive && (this.model.orientation == "horizontal"))
                 this._spantag.addClass("e-disable");
             this.model.enabled = false;
+			this._subControlsSetModel("enabled", false);
         },
 
 
         enable: function () {
+			this.model.disabledItemIndices = [];
             if (this.element.attr("aria-disabled") == "false") return false;
             this.items.removeClass("e-disable");
             this._removeOverlay(this.items);
@@ -647,6 +754,7 @@
             if (this.model.isResponsive && (this.model.orientation == "horizontal"))
                 this._spantag.removeClass("e-disable");
             this.model.enabled = true;
+			this._subControlsSetModel("enabled", true);
         },
 
 
@@ -679,10 +787,16 @@
 
 
         removeItem: function (lielement) {
+            this.model.disabledItemIndices = [];
             var current = $(lielement);
+			var j=0;
             if ((current == null) || (current.length <= 0)) return;
             current.remove();
             this.items = this.itemsContainer.children('li');
+			for(var i=0; i< this.items.length ; i++){
+				if($(this.items[i]).hasClass("e-disable"))
+					this.model.disabledItemIndices [j++] = i;
+			}
         },
 
 
@@ -720,23 +834,26 @@
         },
 
         _onItemClick: function (e) {
-            if ($(e.currentTarget).hasClass('e-disable')) return false;
+            if ($(e.currentTarget).hasClass('e-disable') || e.which!=1) return false; //e.which for Opera
             var currentItem = e.currentTarget, targetItem = e.target;
+			this._hideTooltip();
             if (e.type == "mousedown") {
                 this._focusEnable = false;
                 $(currentItem).addClass('e-active');
                 this._focusedItem = this._currentItem = $(currentItem);
+				
             }
             else if (e.type == "mouseup") {
                 this._removeSelection();
-                if (!$(currentItem).hasClass("e-disable")) {
-                    args = { currentTarget: currentItem, text: currentItem.title, target: targetItem, status: this.model.enabled, event: e };
+				 if (!$(currentItem).hasClass("e-disable")) {
+                    args = { currentTarget: currentItem, text: $(currentItem).attr("data-content"), target: targetItem, status: this.model.enabled, event: e };
                     if (this.model.isResponsive && this._contstatus && $(currentItem).closest('.e-responsive-toolbar').length > 0)
                         this._activeItem = this._liTemplte.find('.e-tooltxt').index(currentItem);
                     else
                         this._activeItem = $(this.items).index(currentItem);
                     this._trigger("click", args);
                 }
+               
             }
         },
 

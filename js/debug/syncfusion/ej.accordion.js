@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.accordion.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core","./../common/ej.scroller"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./../common/ej.scroller"], fn) : fn();
 })
 (function () {
 	
@@ -188,8 +188,8 @@
                         this.element.width(options[key]);
                         if (this._scrollerObj) this._scrollerObj.option("width", options[key]);
                         if (options[key].toString().indexOf("%"))
-                            $(window).bind('resize', $.proxy(this._scrollerRefresh, this));
-                        else $(window).unbind('resize', $.proxy(this._scrollerRefresh, this));
+                            $(window).on('resize', $.proxy(this._scrollerRefresh, this));
+                        else $(window).off('resize', $.proxy(this._scrollerRefresh, this));
                         if (this._scrollerObj) this._scrollerObj.refresh();
                         break;
                     }
@@ -259,7 +259,7 @@
             this.element.children('.e-disable').removeClass("e-disable");
             this.element.removeClass("e-acrdn e-corner e-widget");
             this._headers.removeClass("e-active  e-state-disabled");
-            this._contentPanels.removeClass("e-content-active e-disable");
+            this._contentPanels.removeClass("e-content-active e-disable e-acrdn-content-active");
             $(this._headers.find(".e-icon")).remove();
             if (this.model.height) this._contentPanels.height("auto");
             if (this.model.width) this._contentPanels.width("auto");
@@ -513,9 +513,10 @@
                 if (true === (!raiseEvent && this._trigger("beforeActivate", data))) {
                     return false;
                 }
+				
                 if (!this.model.enableMultipleOpen)
                     this._hideTab(this.model.selectedItemIndex, raiseEvent, isCode);
-                this.model.selectedItemIndex = index;
+				this.model.selectedItemIndex = index;
                 if(!ej.isNullOrUndefined(this.model.selectedItemIndex)){
                     var icons = this.model.customIcon;
                     this._headers.attr("tabindex", 0).removeAttr("aria-expanded");
@@ -530,7 +531,7 @@
                     var proxy = this;
                     this._activeHeader.next().addClass("e-acrdn-content-active").removeAttr("aria-hidden", false);
                     this._paneAdjustSize();
-                    this._activeContent = this._activeHeader.next().slideDown(this.model.enableAnimation ? this._validateSpeed(this.model.expandSpeed) : 0, "easeOutQuad", function () {
+                    this._activeContent = this._activeHeader.next().slideDown(this.model.enableAnimation ? this._validateSpeed(this.model.expandSpeed) : 0, function () {
                         if (!raiseEvent) proxy._trigger("activate", data);
                         if (proxy.model.height) {
                             if (proxy.model.heightAdjustMode != "fill") {
@@ -580,7 +581,7 @@
                         .addClass(icons.header);
                 data = { inActiveHeader: this._activeHeader, inActiveIndex: index, isInteraction: !isCode };
                 var proxy = this; proxy.raiseEvent=raiseEvent;
-                this._activeHeader.next().removeClass("e-acrdn-content-active").attr("aria-hidden", true).slideUp(this.model.enableAnimation ? this._validateSpeed(this.model.collapseSpeed) : 0, "easeOutQuad", function () {
+                this._activeHeader.next().removeClass("e-acrdn-content-active").attr("aria-hidden", true).slideUp(this.model.enableAnimation ? this._validateSpeed(this.model.collapseSpeed) : 0, function () {
                     if(!proxy.raiseEvent) proxy._trigger("inActivate", data);
                     if (proxy.model.height) {
                         if (proxy.model.heightAdjustMode != "fill") {
@@ -716,7 +717,7 @@
 
         _getDimension: function (element, method) {
             var value;
-            var $hidden = $(element).parents().andSelf().filter(':hidden');
+            var $hidden = $(element).parents().addBack().filter(':hidden');
             var prop = { visibility: 'hidden', display: 'block' };
             var tmp = [];
             $hidden.each(function () {
@@ -750,6 +751,8 @@
                 if (this.model.enableMultipleOpen && this._headers.eq(index).hasClass("e-active")) {
                     this._hideTab(index);
                 }
+				else if(this.model.enableMultipleOpen && this.model.collapsible)
+					this._activeTab(index);
                 else if (this.model.selectedItemIndex == index && this.model.collapsible) {
                     this._hideTab(this.model.selectedItemIndex);
                     this.model.selectedItemIndex = -1
@@ -874,9 +877,9 @@
         _wireEvents: function () {
             this._on(this._headers, this.model.events, this._headerEventHandler);
             if (this.model.allowKeyboardNavigation) this._on(this.element, 'keydown', this._keyPress);
-            $(window).bind('resize', $.proxy(this._contentPaneSize, this));
+            $(window).on('resize', $.proxy(this._contentPaneSize, this));
             if (this.model.height && this.model.width && this.model.width.toString().indexOf("%") != -1)
-                $(window).bind('resize', $.proxy(this._scrollerRefresh, this));
+                $(window).on('resize', $.proxy(this._scrollerRefresh, this));
         },
         _scrollerRefresh: function (e) {
             if (this.model.height) {
@@ -889,8 +892,8 @@
         },
         _unWireEvents: function () {
             this._off(this._headers, this.model.events);
-            $(window).unbind('resize', $.proxy(this._contentPaneSize, this));
-            $(window).unbind('resize', $.proxy(this._scrollerRefresh, this));
+            $(window).off('resize', $.proxy(this._contentPaneSize, this));
+            $(window).off('resize', $.proxy(this._scrollerRefresh, this));
             if (this.model.allowKeyboardNavigation) {
                 this._off(this.element, 'keydown');
             }
@@ -910,7 +913,7 @@
                 for (var i = 0; i < itemIndexes.length; i++) {
                     $(this._headers[itemIndexes[i]]).addClass("e-disable");
                     $(this._contentPanels[itemIndexes[i]]).addClass("e-disable");
-                    $(this._headers[itemIndexes[i]]).unbind(this.model.events);
+                    $(this._headers[itemIndexes[i]]).off(this.model.events);
                     if (this.model.disabledItems.indexOf(itemIndexes[i]) == -1) this.model.disabledItems.push(itemIndexes[i]);
                     this._hideTab(itemIndexes[i], true);
                     this._deleteEnabledItems(itemIndexes[i]);
@@ -920,7 +923,7 @@
             else {
                 $(this._headers[itemIndexes]).addClass("e-disable");
                 $(this._contentPanels[itemIndexes]).addClass("e-disable");
-                $(this._headers[itemIndexes]).unbind(this.model.events);
+                $(this._headers[itemIndexes]).off(this.model.events);
                 if ($(this.model.disabledItems).index(itemIndexes[i]) == -1 && this.model.disabledItems != itemIndexes)
                     this.model.disabledItems.push(itemIndexes);
                 this._hideTab(itemIndexes, true);
@@ -1038,7 +1041,6 @@
 
             if (this.model.heightAdjustMode == "fill" && !this.model.enableMultipleOpen)
                 this._setHeightStyle(this.model.heightAdjustMode);
-            this._enabledAction(this.model.enabled);
             this.disableItems(this.model.disabledItems);
             this._setEnabledItems();
             if(animation)
@@ -1074,7 +1076,6 @@
                 }
                 this._unWireEvents();
                 this._wireEvents();
-                this._enabledAction(this.model.enabled);
                 if (this.model.heightAdjustMode == "fill" && !this.model.enableMultipleOpen)
                    this._setHeightStyle(this.model.heightAdjustMode);
                 if(this.model.enableMultipleOpen){
@@ -1096,7 +1097,7 @@
         },
 
         collapseAll: function () {
-            if (this.model.collapsible) {
+            if (this.model.enableMultipleOpen || this.model.collapsible) {
                 this.model.selectedItemIndex = null;
                 for (var index = 0; index < this.getItemsCount() ; index++)
                     this._hideTab(index, false, true);

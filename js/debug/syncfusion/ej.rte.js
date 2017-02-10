@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.rte.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core","./../common/ej.data","./../common/ej.scroller","./../common/ej.draggable","./../common/ej.globalize","./ej.button","./ej.togglebutton","./ej.splitbutton","./ej.checkbox","./ej.radiobutton","./ej.dropdownlist","./ej.dialog","./ej.toolbar","./ej.editor","./ej.menu","./ej.tab","./ej.slider","./ej.treeview","./ej.uploadbox","./ej.splitter","./ej.colorpicker","./ej.fileexplorer","./ej.grid"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./../common/ej.data","./../common/ej.scroller","./../common/ej.draggable","./../common/ej.globalize","./ej.button","./ej.togglebutton","./ej.splitbutton","./ej.checkbox","./ej.radiobutton","./ej.dropdownlist","./ej.dialog","./ej.toolbar","./ej.editor","./ej.menu","./ej.tab","./ej.slider","./ej.treeview","./ej.uploadbox","./ej.splitter","./ej.colorpicker","./ej.fileexplorer","./ej.grid","./ej.tooltip"], fn) : fn();
 })
 (function () {
 	
@@ -32,9 +32,10 @@
         model: null,
         _rootCSS: "e-rte",
         validTags: ["textarea"],
-		_addOnPersist:["value","height","width"],
+        _addOnPersist: ["value", "height", "width"],
         _setFirst: false,
-		_requiresID: true,
+        _requiresID: true,
+        _operationHandler: null,
         angular: {
             require: ['?ngModel', '^?form', '^?ngModelOptions']
         },
@@ -46,8 +47,8 @@
             isResponsive: false,
 
             allowKeyboardNavigation: true,
-			
-			enableTabKeyNavigation:true,
+
+            enableTabKeyNavigation: true,
 
             cssClass: "",
 
@@ -62,6 +63,13 @@
             externalCSS: null,
 
             enableXHTML: false,
+
+            importSettings: { url: "" },
+
+            exportToPdfSettings: { url: "", fileName: "PdfExport" },
+
+            exportToWordSettings: { url: "", fileName: "WordExport" },
+
             validationRules: null,
 
             validationMessage: null,
@@ -107,8 +115,8 @@
             tools: {
 
                 formatStyle: ["format"],
-				
-				edit:[]	,
+
+                edit: [],
 
                 style: ["bold", "italic", "underline", "strikethrough"],
 
@@ -120,25 +128,37 @@
 
                 doAction: ["undo", "redo"],
 
-                links: ["createLink","removeLink"],
+                links: ["createLink", "removeLink"],
 
-                    images: ["image"],
-                    media: ["video"],
+                images: ["image"],
+                media: ["video"],
 
                 tables: ["createTable", "addRowAbove", "addRowBelow", "addColumnLeft", "addColumnRight", "deleteRow", "deleteColumn", "deleteTable"],
-				view:["fullScreen"],
-				customTools:[],
-				print: [],
-				customOrderList: [],
-				customUnOrderList: [],
-				font:[],
-				clipboard: [],
+                view: ["fullScreen"],
+                customTools: [],
+                print: [],
+                customOrderList: [],
+                customUnOrderList: [],
+                font: [],
+                clipboard: [],
                 clear: [],
-				effects: [],
-				casing: []
+                effects: [],
+                casing: [],
+                importExport: [],
             },
 
-            toolsList: ["formatStyle", "font", "style", "effects", "alignment", "lists", "indenting", "clipboard", "doAction", "clear", "links", "images", "media", "tables", "casing", "customTools", "view","print","edit"],
+            tooltipSettings: {
+                associate: "mouseenter",
+                showShadow: true,
+                position: {
+                    stem: { horizontal: "left", vertical: "top" }
+                },
+                tip: {
+                    size: { width: 5, height: 5 }
+                },
+                isBalloon: false
+            },
+            toolsList: ["formatStyle", "font", "style", "effects", "alignment", "lists", "indenting", "clipboard", "doAction", "clear", "links", "images", "media", "tables", "casing", "customTools", "view", "print", "edit", "importExport"],
 
             colorCode: [
 			            "000000", "FFFFFF", "C4C4C4", "ADADAD", "595959", "262626", "4f81bd", "dbe5f1", "b8cce4", "95b3d7", "366092", "244061", "c0504d", "f2dcdb", "e5b9b7", "d99694", "953734",
@@ -203,31 +223,31 @@
             fontSize: [
                 {
                     text: "1",
-                    value: "1"
+                    value: "8pt"
                 },
                 {
                     text: "2 (10pt)",
-                    value: "2"
+                    value: "10pt"
                 },
                 {
                     text: "3 (12pt)",
-                    value: "3"
+                    value: "12pt"
                 },
                 {
                     text: "4 (14pt)",
-                    value: "4"
+                    value: "14pt"
                 },
                 {
                     text: "5 (18pt)",
-                    value: "5"
+                    value: "18pt"
                 },
                 {
                     text: "6 (24pt)",
-                    value: "6"
+                    value: "24pt"
                 },
                 {
                     text: "7 (36pt)",
-                    value: "7"
+                    value: "36pt"
                 }
             ],
 
@@ -241,7 +261,7 @@
 
             showCustomTable: true,
 
-            value: null,            
+            value: null,
 
             undoStackLimit: 50,
 
@@ -250,10 +270,10 @@
             enablePersistence: false,
 
             enableRTL: false,
-			
+
             autoHeight: false,
-			
-			zoomStep: '0.05',
+
+            zoomStep: '0.05',
 
             imageBrowser: {
 
@@ -272,7 +292,7 @@
 
                 extensionAllow: "*.doc,*.docx,*.pdf,*.txt",
 
-                ajaxAction: ""                
+                ajaxAction: ""
             },
 
 
@@ -287,7 +307,7 @@
             create: null,
 
             destroy: null,
-			contextMenuClick:null,
+            contextMenuClick: null,
             preRender: null,
             select: null
         },
@@ -301,34 +321,37 @@
             isResponsive: "boolean",
             enablePersistence: "boolean",
             showRoundedCorner: "boolean",
-			showCustomTable: "boolean",
-			enableResize: "boolean",
-			showDimensions: "boolean",
-			showFontOption: "boolean",
-			showClearFormat: "boolean",
-			showClearAll: "boolean",
-			showHtmlTagInfo: "boolean",
-			showWordCount: "boolean",
+            showCustomTable: "boolean",
+            enableResize: "boolean",
+            importSettings: { url: "string" },
+            exportToPdfSettings: { url: "string", fileName: "string" },
+            exportToWordSettings: { url: "string", fileName: "string" },
+            showDimensions: "boolean",
+            showFontOption: "boolean",
+            showClearFormat: "boolean",
+            showClearAll: "boolean",
+            showHtmlTagInfo: "boolean",
+            showWordCount: "boolean",
             showCharCount: "boolean",
-			showHtmlSource: "boolean",
-			allowKeyboardNavigation: "boolean",
-			enableTabKeyNavigation:"boolean",
-			allowEditing: "boolean",
-			showToolbar: "boolean",
-			showFooter: "boolean",
-			showContextMenu: "boolean",
-			enableRTL: "boolean",
+            showHtmlSource: "boolean",
+            allowKeyboardNavigation: "boolean",
+            enableTabKeyNavigation: "boolean",
+            allowEditing: "boolean",
+            showToolbar: "boolean",
+            showFooter: "boolean",
+            showContextMenu: "boolean",
+            enableRTL: "boolean",
             toolsList: "array",
             colorCode: "array",
             format: "data",
             fontName: "data",
             fontSize: "data",
             htmlAttributes: "data",
-            iframeAttributes:"data",
+            iframeAttributes: "data",
             tools: {
                 formatStyle: "array",
                 font: "array",
-				edit: "array",
+                edit: "array",
                 style: "array",
                 effects: "array",
                 alignment: "array",
@@ -345,75 +368,79 @@
                 customTools: "array",
                 view: "array",
                 print: "array",
-				customOrderList: "array",
-				customUnOrderList: "array"
+                importExport: "array",
+                customOrderList: "array",
+                customUnOrderList: "array"
             }
         },
-		
-		_rteIconsList : {
-			"format": "format",
-			"bold": "e-bold_01",
-			"italic": "e-italic_01",
-			"underline": "e-underline_01",
-			"strikethrough": "e-strikethrough_01",
-			"justifyLeft": "e-align-left_01",
-			"justifyCenter": "e-align-center_01",
-			"justifyRight": "e-align-right_01",
-			"justifyFull": "e-align-justify_01",
-			"unorderedList": "e-bullets_01",
-			"orderedList": "orderedList",
-			"outdent": "outdent",
-			"indent": "indent",
-			"undo": "undo",
-			"redo": "redo",
-			"createLink": "e-link_01",
-			"removeLink": "e-unlink_01",
-			"image": "e-image",
-			"video": "e-video",
-			"createTable": "e-table_02",
-			"addRowAbove": "e-insert-row-above_02",
-			"addRowBelow": "e-insert-row-below_02",
-			"addColumnLeft": "e-insert-column-left_02",
-			"addColumnRight": "e-insert-column-right_02",
-			"deleteRow": "e-delete-row_01",
-			"deleteColumn": "e-delete-column_01",
-			"deleteTable": "deleteTable",
-			"fullScreen": "fullScreen",
-			"superscript": "e-superscript_01",
-			"subscript": "e-subscript_01",
-			"upperCase": "e-uppercase_01",
-			"lowerCase": "e-lowercase_01",
-			"zoomIn": "e-zoom-in",
-			"zoomOut": "e-zoom-out",
-			"print": "print",
-			"findAndReplace": "findAndReplace",
-			"cut": "e-cut_01",
-			"copy": "e-copy_02",
-			"paste": "e-paste_01",
-			"clearFormat": "clearFormat",
-			"clearAll": "e-delete_05",
-			"fontName": "fontName",
-			"fontSize": "fontSize",
-			"fontColor": "e-font",
-			"backgroundColor": "e-background-color",
-			"rteResize": "e-resize-handle",
-			"rteSource": "e-file-code",
-			"customTableImage": "e-table",
-			"resize": "e-full-screen-collapse_01",
-			"maximize": "e-full-screen-expand_01",
-			//Added empty strings for context menu
-			"openLink": "",
-			"deleteTables": "",
-			"insertTable": "",
-			"tableProperties": "",
-			"imageProperties": ""
-		},
+
+        _rteIconsList: {
+            "format": "format",
+            "bold": "e-bold_01",
+            "italic": "e-italic_01",
+            "underline": "e-underline_01",
+            "strikethrough": "e-strikethrough_01",
+            "justifyLeft": "e-align-left_01",
+            "justifyCenter": "e-align-center_01",
+            "justifyRight": "e-align-right_01",
+            "justifyFull": "e-align-justify_01",
+            "unorderedList": "e-bullets_01",
+            "orderedList": "orderedList",
+            "outdent": "outdent",
+            "indent": "indent",
+            "undo": "undo",
+            "redo": "redo",
+            "createLink": "e-link_01",
+            "removeLink": "e-unlink_01",
+            "image": "e-image",
+            "video": "e-video",
+            "createTable": "e-table_02",
+            "addRowAbove": "e-insert-row-above_02",
+            "addRowBelow": "e-insert-row-below_02",
+            "addColumnLeft": "e-insert-column-left_02",
+            "addColumnRight": "e-insert-column-right_02",
+            "deleteRow": "e-delete-row_01",
+            "deleteColumn": "e-delete-column_01",
+            "deleteTable": "deleteTable",
+            "fullScreen": "fullScreen",
+            "superscript": "e-superscript_01",
+            "subscript": "e-subscript_01",
+            "upperCase": "e-uppercase_01",
+            "lowerCase": "e-lowercase_01",
+            "zoomIn": "e-zoom-in",
+            "zoomOut": "e-zoom-out",
+            "print": "print",
+            "import": "e-upload",
+            "wordExport": "e-icon e-word-export",
+            "pdfExport": "e-icon e-pdf-export",
+            "findAndReplace": "findAndReplace",
+            "cut": "e-cut_01",
+            "copy": "e-copy_02",
+            "paste": "e-paste_01",
+            "clearFormat": "clearFormat",
+            "clearAll": "e-delete_05",
+            "fontName": "fontName",
+            "fontSize": "fontSize",
+            "fontColor": "e-font",
+            "backgroundColor": "e-background-color",
+            "rteResize": "e-resize-handle",
+            "rteSource": "e-file-code",
+            "customTableImage": "e-table",
+            "resize": "e-full-screen-collapse_01",
+            "maximize": "e-full-screen-expand_01",
+            //Added empty strings for context menu
+            "openLink": "",
+            "deleteTables": "",
+            "insertTable": "",
+            "tableProperties": "",
+            "imageProperties": ""
+        },
 
         observables: ["value"],
         value: ej.util.valueFunction("value"),
 
         _setModel: function (options) {
-			this._isInteraction = false;
+            this._isInteraction = false;
             var option;
             for (option in options) {
                 switch (option) {
@@ -442,18 +469,25 @@
                     }
                     case "enabled": this._disabled(options[option]); break;
                     case "height": { this.model.height = options[option]; this._rteWapper.height(options[option]); } break;
-                    case "width": { this.model.height = options[option];  this._rteWapper.css("width", options[option]); } break;
+                    case "width": { this.model.height = options[option]; this._rteWapper.css("width", options[option]); } break;
                     case "cssClass": this._changeSkin(options[option]); break;
                     case "showHtmlSource": this._footerElement("div.e-rte-source", options[option]); break;
                     case "showHtmlTagInfo": this._footerElement("div.e-rte-htmltaginfo", options[option]); break;
                     case "showWordCount": {
                         this.model.showWordCount = options[option];
-                        this._createCountElement(options[option],this._wordCount);                        
+                        this._createCountElement(options[option], this._wordCount);
                         break;
                     }
                     case "showCharCount": {
                         this.model.showCharCount = options[option];
-                        this._createCountElement(options[option], this._charCount);                        
+                        this._createCountElement(options[option], this._charCount);
+                        break;
+                    }
+                    case "tooltipSettings": {
+                        this.model.tooltipSettings = $.extend(true, this.model.tooltipSettings, options[option]);
+                        if (this.model.showToolbar)
+                            this._toolBarItems.ejToolbar("option", "tooltipSettings", options[option]);
+                        this._renderTooltip(this.model.tooltipSettings);
                         break;
                     }
                     case "showClearAll": this._footerElement("div.clearAll", options[option]); break;
@@ -462,7 +496,9 @@
                     case "fontName": this._fontStyleDDL.ejDropDownList({ dataSource: options[option] }); break;
                     case "fontSize": this._fontSizeDDL.ejDropDownList({ dataSource: options[option] }); break;
                     case "format": this._formatDDL.ejDropDownList({ dataSource: options[option] }); break;
-                    case "value": this._getDocument().body.innerHTML = ej.util.getVal(options[option]);
+                    case "value":
+                        if (ej.isPlainObject(options[option])) options[option] = null;
+                        this._getDocument().body.innerHTML = ej.util.getVal(options[option]);
                         var args = { text: this._getText(), htmlText: this.getHtml() };
                         this._onChange();
                         break;
@@ -487,6 +523,18 @@
                         var model = this.model;
                         this.element.ejRTE("destroy").ejRTE(model);
                         break;
+                    case "importSettings": {
+                        this.model.importSettings = $.extend(true, this.model.importSettings, options[option]);
+                        break;
+                    }
+                    case "exportToPdfSettings": {
+                        this.model.exportToPdfSettings = $.extend(true, this.model.exportToPdfSettings, options[option]);
+                        break;
+                    }
+                    case "exportToWordSettings": {
+                        this.model.exportToWordSettings = $.extend(true, this.model.exportToWordSettings, options[option]);
+                        break;
+                    }
                     case "tableRows": {
                         this.model.tableRows = options[option];
                         var tblDiv = this._createTable.find("div.e-rte-table").html("");
@@ -537,26 +585,26 @@
                     case "showRoundedCorner":
                         this._roundedCorner(options[option]);
                         break;
-					case "validationRules":
+                    case "validationRules":
                         if (this.element.closest("form").length != 0) {
                             if (this.model.validationRules != null) {
                                 this.element.rules('remove');
                                 this.model.validationMessage = null;
                             }
                             this.model.validationRules = options[option];
-							if (this.model.validationRules != null) {
-                            this._initValidator();
-                            this._setValidation();
-							}
+                            if (this.model.validationRules != null) {
+                                this._initValidator();
+                                this._setValidation();
+                            }
                         }
                         break;
                     case "validationMessage":
                         if (this.element.closest("form").length != 0) {
                             this.model.validationMessage = options[option];
                             if (this.model.validationRules != null && this.model.validationMessage != null) {
-                            this._initValidator();
-                            this._setValidation();
-                        	}
+                                this._initValidator();
+                                this._setValidation();
+                            }
                         }
                         break;
                     case "autoHeight": this.model.autoHeight = options[option];
@@ -567,10 +615,12 @@
             }
             this._updateCount();
         },
-
-
+		_updateLocalConstant:function(){
+			this._localizedLabels = ej.getLocalizedConstants("ej.RTE", this.model.locale);
+		},
         _init: function () {
             if (!ej.isNullOrUndefined(this.element) && this.element[0].type == "textarea") {
+				this._updateLocalConstant();
                 this.element.hide();
                 this._initialize()
                     ._render();
@@ -578,19 +628,23 @@
                 this._updateIframeSkin(this.model.iframeAttributes);
                 if (this.model.enabled == false) this._disabled(this.model.enabled);
                 this._addAttr(this.model.htmlAttributes);
-                if (this.model.autoFocus)
+                if (this.model.autoFocus) {
                     this._focus();
+                    this._updateToolbarStatus();
+                    this._updateFontOptionStatus();
+                    this._updateFormat();
+                }
                 if (this.model.enableHtmlEncode)
                     this.value(this._encode(this._decode(this.value())));
-                if(this.model.showToolbar){
-                this.disableToolbarItem("removeLink");
-				if(!ej.isNullOrUndefined(this._getWindow()))
-				this._updateIndentStatus();
-				}
+                if (this.model.showToolbar) {
+                    this.disableToolbarItem("removeLink");
+                    if (!ej.isNullOrUndefined(this._getWindow()))
+                        this._updateIndentStatus();
+                }
                 if (this.model.enableRTL)
                     this._enableRTL(true);
                 this.model.externalCSS && this._addCssToIframe(this.model.externalCSS);
-                this.wrapper=this._rteWapper;
+                this.wrapper = this._rteWapper;
                 if (this.model.validationRules != null) {
                     this._initValidator();
                     this._setValidation();
@@ -598,63 +652,61 @@
                 if (this.model.showContextMenu) {
                     this._showHideContextMenu();
                 }
-				this._isInteraction = true;
+                this._isInteraction = true;
             }
         },
         _hideContextMenuByItem: function (data) {
-               for(index1=0;index1<$(this._textMenuObj.element).children("li").length;index1++)
-                    ($.inArray($($(this._textMenuObj.element).children("li")[index1]).attr("id"),data)!=-1) ? $($(this._textMenuObj.element).children("li")[index1]).show(): $($(this._textMenuObj.element).children("li")[index1]).hide(); 
+            for (index1 = 0; index1 < $(this._textMenuObj.element).children("li").length; index1++)
+                ($.inArray($($(this._textMenuObj.element).children("li")[index1]).attr("id"), data) != -1) ? $($(this._textMenuObj.element).children("li")[index1]).show() : $($(this._textMenuObj.element).children("li")[index1]).hide();
         },
         _filterMenuItems: function (e) {
-                var selectNode = (this._isIE()) ? this._currentSelNode : this._getSelectedNode(),node = this._saveSelection().commonAncestorContainer; 
-                if (!ej.isNullOrUndefined(selectNode) && !ej.isNullOrUndefined(selectNode.tagName) && (selectNode.tagName.toLowerCase() === "img" || e.target.tagName.toLowerCase() == "img")) 
-                {
-					this._hideContextMenuByItem(this._contextType.image);
-					this._updateContextMenuItemState(true);
-                }
-                else if (!ej.isNullOrUndefined(selectNode) && $(selectNode).closest("table").length) {
-                    this._hideContextMenuByItem($(selectNode).closest("a").length? this._contextType.table_hyper :this._contextType.table);
-					this._contextValidation(node,e);
-                }
-				else if (!ej.isNullOrUndefined(selectNode) && $(selectNode).closest("a").length) {
-                    this._hideContextMenuByItem(this._contextType.hyperlink);
-                    this._contextValidation(node,e);
-                }                
-                else if (this._isIE8()) {
-                    this._hideContextMenuByItem(this._contextType.text);
-                    this._updateContextMenuItemState(this._getRange().text !== "");
-                }
-                else {
-                    this._hideContextMenuByItem(this._contextType.text);
-                     this._contextValidation(node,e);
-                }
-                this._rteIframe.contents().find("body").addClass("e-cursor");
+            var selectNode = (this._isIE()) ? this._currentSelNode : this._getSelectedNode(), node = this._saveSelection().commonAncestorContainer;
+            if (!ej.isNullOrUndefined(selectNode) && !ej.isNullOrUndefined(selectNode.tagName) && (selectNode.tagName.toLowerCase() === "img" || e.target.tagName.toLowerCase() == "img")) {
+                this._hideContextMenuByItem(this._contextType.image);
+                this._updateContextMenuItemState(true);
+            }
+            else if (!ej.isNullOrUndefined(selectNode) && $(selectNode).closest("table").length) {
+                this._hideContextMenuByItem($(selectNode).closest("a").length ? this._contextType.table_hyper : this._contextType.table);
+                this._contextValidation(node, e);
+            }
+            else if (!ej.isNullOrUndefined(selectNode) && $(selectNode).closest("a").length) {
+                this._hideContextMenuByItem(this._contextType.hyperlink);
+                this._contextValidation(node, e);
+            }
+            else if (this._isIE8()) {
+                this._hideContextMenuByItem(this._contextType.text);
+                this._updateContextMenuItemState(this._getRange().text !== "");
+            }
+            else {
+                this._hideContextMenuByItem(this._contextType.text);
+                this._contextValidation(node, e);
+            }
+            this._rteIframe.contents().find("body").addClass("e-cursor");
         },
-		_contextmenuPosition:function(e)
-		{
-			var posX= e.clientX + this._rteWapper.offset().left,posY= e.clientY + this._rteWapper.offset().top + (this._rteToolbar?this._rteToolbar.outerHeight():0),menuHeight=$(this._textMenuObj.element).outerHeight(),menuWidth=$(this._textMenuObj.element).outerWidth();            
-			posY=((posY+menuHeight)< ($(document).scrollTop()+$(window).height()))? posY :((posY-menuHeight)<0?posY:(posY-menuHeight));
-			posX=((posX+menuWidth)< ($(document).scrollLeft()+$(window).width()))? posX :(posX-menuWidth);
-			$(this._textMenuObj.element).attr("style", ("width:auto;left:" + posX + "px;top:" + posY + "px;z-index:" +( this._onGetMaxZindex() + 1))).hide();
-		},
-		_contextValidation:function(node,e){
-			this._updateContextMenuItemState(node && (data = node.nodeValue ? node.nodeValue : node.textContent) && ((this._saveSelection().endContainer == this._saveSelection().startContainer)? (data.substring(this._saveSelection().startOffset, this._saveSelection().endOffset) !== ""):true));
-		},
-        _updateContextMenuItemState: function (stauts) {            
-            stauts? (this._textMenuObj.enableItemByID("cut"),this._textMenuObj.enableItemByID('copy')):(this._textMenuObj.disableItemByID("cut"),this._textMenuObj.disableItemByID('copy'));
+        _contextmenuPosition: function (e) {
+            var posX = e.clientX + this._rteWapper.offset().left, posY = e.clientY + this._rteWapper.offset().top + (this._rteToolbar ? this._rteToolbar.outerHeight() : 0), menuHeight = $(this._textMenuObj.element).outerHeight(), menuWidth = $(this._textMenuObj.element).outerWidth();
+            posY = ((posY + menuHeight) < ($(document).scrollTop() + $(window).height())) ? posY : ((posY - menuHeight) < 0 ? posY : (posY - menuHeight));
+            posX = ((posX + menuWidth) < ($(document).scrollLeft() + $(window).width())) ? posX : (posX - menuWidth);
+            $(this._textMenuObj.element).attr("style", ("width:auto;left:" + posX + "px;top:" + posY + "px;z-index:" + (this._onGetMaxZindex() + 1))).hide();
+        },
+        _contextValidation: function (node, e) {
+            this._updateContextMenuItemState(node && (data = node.nodeValue ? node.nodeValue : node.textContent) && ((this._saveSelection().endContainer == this._saveSelection().startContainer) ? (data.substring(this._saveSelection().startOffset, this._saveSelection().endOffset) !== "") : true));
+        },
+        _updateContextMenuItemState: function (stauts) {
+            stauts ? (this._textMenuObj.enableItemByID("cut"), this._textMenuObj.enableItemByID('copy')) : (this._textMenuObj.disableItemByID("cut"), this._textMenuObj.disableItemByID('copy'));
         },
         _contextMenuClick: function (e) {
             var action = e.ID ? e.ID.toLowerCase() : $(e.element).attr("id").toLowerCase(), _node;
-            this._isIE() && this._ieSelectionRange && this.selectRange(this._ieSelectionRange);  
+            this._isIE() && this._ieSelectionRange && this.selectRange(this._ieSelectionRange);
             switch (action) {
                 case "cut":
-                    (!this._isIE() && this._getValidbrowser(ej.browserInfo().name))  ? this._openAlert(this._getLocalizedLabels("cutAlert")) : this._getDocument().execCommand(action, false, undefined);
-					if(this._imgOrg && this._imgDupDiv && this._imgBoxMouseMove){
-						$(this._imgOrg).css("outline", "");
-						$(this._imgDupDiv).remove();
-						this._off($(this._getDocument()), "mousemove", this._imgBoxMouseMove);            
-					}
-					this._updateCursor();
+                    (!this._isIE() && this._getValidbrowser(ej.browserInfo().name)) ? this._openAlert(this._getLocalizedLabels("cutAlert")) : this._getDocument().execCommand(action, false, undefined);
+                    if (this._imgOrg && this._imgDupDiv && this._imgBoxMouseMove) {
+                        $(this._imgOrg).css("outline", "");
+                        $(this._imgDupDiv).remove();
+                        this._off($(this._getDocument()), "mousemove", this._imgBoxMouseMove);
+                    }
+                    this._updateCursor();
                     break;
                 case "copy":
                     (!this._isIE() && this._getValidbrowser(ej.browserInfo().name)) ? this._openAlert(this._getLocalizedLabels("copyAlert")) : this._getDocument().execCommand(action, false, undefined);
@@ -667,11 +719,11 @@
                     this._onOpen();
                     break;
                 case "createlink":
-					(!this._linkDialog) && this._renderLinkDialog();
+                    (!this._linkDialog) && this._renderLinkDialog();
                     this._hyperLinkManager(false);
                     break;
                 case "imageproperties":
-					(!this._imgDialog) && this._renderImageDialog();
+                    (!this._imgDialog) && this._renderImageDialog();
                     this._imageManager();
                     break;
                 case "addcolumnleft":
@@ -700,24 +752,23 @@
                     this.removeTable($(this._currentSelNode).closest('table'));
                     break;
                 case "tableproperties":
-				    (!this._eTblDialog) && this._renderEditTableDialog()
+                    (!this._eTblDialog) && this._renderEditTableDialog()
                     this._eTblManager();
                     this._eTblDialog.ejDialog("open");
                     break;
                 case "removelink":
                     this._onUnlink();
-                    break;				
+                    break;
             }
-			this._trigger("contextMenuClick", {event:e});
-			this._onChange();
+            this._trigger("contextMenuClick", { event: e });
+            this._onChange();
         },
-        _updateCursor: function (node,rangeData) {
-            if(!this._isIE8()){
+        _updateCursor: function (node, rangeData) {
+            if (!this._isIE8()) {
                 var _range = this._getDocument().createRange(), _currentRange = this._getRange();
-                if (node) 
+                if (node)
                     this._setRange(node, _currentRange, true);
-                else if (rangeData)
-                {
+                else if (rangeData) {
                     _range.setStart(rangeData.startContainer, rangeData.startOffset);
                     _range.setEnd(rangeData.endContainer, rangeData.endOffset);
                     this.selectRange(_range);
@@ -729,7 +780,7 @@
                 }
             }
         },
-         _loadRules: function () {
+        _loadRules: function () {
             jQuery.validator.addMethod("contentRequired", function (value, element) {
                 return $.trim($(element).data("ejRTE")._getText());
             }, "Please specify the value.");
@@ -797,17 +848,17 @@
             }
         },
         _addAttr: function (htmlAttr) {
-			if(htmlAttr != null) {
-            var proxy = this;
-            $.map(htmlAttr, function (value, key) {
-                if (key == "class") proxy._rteWapper.addClass(value);
-                else if (key == "name") proxy.element.attr(key, value);
-                else if (key == "required") proxy.element.attr(key, value);
-                else if (key == "disabled" && value == "disabled") proxy.disable();
-                else if (key == "readOnly" && value == "readOnly") proxy._enableEdit(false);
-                else proxy._rteWapper.attr(key, value);
-            });
-			}
+            if (htmlAttr != null) {
+                var proxy = this;
+                $.map(htmlAttr, function (value, key) {
+                    if (key == "class") proxy._rteWapper.addClass(value);
+                    else if (key == "name") proxy.element.attr(key, value);
+                    else if (key == "required") proxy.element.attr(key, value);
+                    else if (key == "disabled" && value == "disabled") proxy.disable();
+                    else if (key == "readOnly" && value == "readOnly") proxy._enableEdit(false);
+                    else proxy._rteWapper.attr(key, value);
+                });
+            }
         },
         _addCssToIframe: function (value) {
             var substr = $.isArray(value) ? value : value.split(',');
@@ -815,7 +866,7 @@
                 var linkTag = document.createElement("link");
                 linkTag.href = substr[i];
                 linkTag.rel = "stylesheet";
-                linkTag.type = "text/css";  
+                linkTag.type = "text/css";
                 this._rteIframe.contents().find("head").append(linkTag);
             }
         },
@@ -825,13 +876,14 @@
 
         _destroy: function () {
             this.element.insertBefore(this._rteWapper);
+            !ej.isNullOrUndefined(this._tooltip) && $(this._rteFooter).ejTooltip("destroy");
             !ej.isNullOrUndefined(this._formatDDL) && this._formatDDL.ejDropDownList("destroy");
             !ej.isNullOrUndefined(this._fontStyleDDL) && this._fontStyleDDL.ejDropDownList("destroy");
             !ej.isNullOrUndefined(this._fontSizeDDL) && this._fontSizeDDL.ejDropDownList("destroy");
             !ej.isNullOrUndefined(this._fontColorSplit) && this._fontColorSplit.ejSplitButton("destroy");
             !ej.isNullOrUndefined(this._bgColorSplit) && this._bgColorSplit.ejSplitButton("destroy");
-			!ej.isNullOrUndefined(this._unOrderSplit) && this._unOrderSplit.ejSplitButton("destroy");
-			!ej.isNullOrUndefined(this._orderSplit) && this._orderSplit.ejSplitButton("destroy");
+            !ej.isNullOrUndefined(this._unOrderSplit) && this._unOrderSplit.ejSplitButton("destroy");
+            !ej.isNullOrUndefined(this._orderSplit) && this._orderSplit.ejSplitButton("destroy");
             if (!ej.isNullOrUndefined(this._customTableDialog)) {
                 !ej.isNullOrUndefined(this._customTableDialog.find(".e-rte-ddlAlignment")) && this._customTableDialog.find(".e-rte-ddlAlignment").ejDropDownList("destroy");
                 !ej.isNullOrUndefined(this._customTableDialog.find(".e-rte-txtBorder")) && this._customTableDialog.find(".e-rte-txtBorder").ejDropDownList("destroy");
@@ -853,11 +905,13 @@
             !ej.isNullOrUndefined(this._explorerObj) && this._explorerObj.destroy();
             !ej.isNullOrUndefined(this._imgPicker) && this._imgPicker.destroy();
             !ej.isNullOrUndefined(this._fileDialog) && $(this._fileDialog).closest("div.e-rte.e-dialog-wrap").remove();
+			this._textMenuObj && this._textMenuObj.destroy();
+            this._toolBarObj && this._toolBarObj.destroy();
             this._rteWapper.remove();
             this.element.show();
-			this.element.focus();
+            this.element.focus();
             this._createTable = null;
-			this._unwireEvents();
+            this._unwireEvents();
         },
 
         _initialize: function () {
@@ -876,9 +930,9 @@
             this._styleItems = ej.isNullOrUndefined(this.model.tools["style"]) ? [] : this.model.tools["style"];
             this._alignItems = ej.isNullOrUndefined(this.model.tools["alignment"]) ? [] : this.model.tools["alignment"];
             this._listItems = ej.isNullOrUndefined(this.model.tools["lists"]) ? [] : this.model.tools["lists"];
-                this._scriptsItems = ej.isNullOrUndefined(this.model.tools["effects"]) ? [] : this.model.tools["effects"];
-            this._contextMenu =["cut", "copy", "paste", "|", "insertTable", ["addColumnLeft", "addColumnRight", "addRowAbove", "addRowBelow"], "|", "deleteTables", ["deleteRow", "deleteColumn", "deleteTable"], "|", "tableProperties", "|", "createLink","openLink","removeLink","imageProperties"];
-			this._contextType={text:["cut", "copy", "paste","createLink"],image:["cut", "copy", "paste","imageProperties"],hyperlink:["cut", "copy", "paste","createLink","openLink","removeLink"],table:["cut", "copy", "paste", "insertTable", "deleteTables","tableProperties","createLink"],table_hyper:["cut", "copy", "paste", "insertTable", "deleteTables","tableProperties","createLink","openLink","removeLink"]};
+            this._scriptsItems = ej.isNullOrUndefined(this.model.tools["effects"]) ? [] : this.model.tools["effects"];
+            this._contextMenu = ["cut", "copy", "paste", "|", "insertTable", ["addColumnLeft", "addColumnRight", "addRowAbove", "addRowBelow"], "|", "deleteTables", ["deleteRow", "deleteColumn", "deleteTable"], "|", "tableProperties", "|", "createLink", "openLink", "removeLink", "imageProperties"];
+            this._contextType = { text: ["cut", "copy", "paste", "createLink"], image: ["cut", "copy", "paste", "imageProperties"], hyperlink: ["cut", "copy", "paste", "createLink", "openLink", "removeLink"], table: ["cut", "copy", "paste", "insertTable", "deleteTables", "tableProperties", "createLink"], table_hyper: ["cut", "copy", "paste", "insertTable", "deleteTables", "tableProperties", "createLink", "openLink", "removeLink"] };
             return this;
         },
 
@@ -892,8 +946,8 @@
             this._renderEditArea();
             this.model.showFooter && this._renderFooter();
             this._setIframeHeight();
-			this._rteWidth =  this.model.width;
-			this._rteHeight = this.model.height;
+            this._rteWidth = this.model.width;
+            this._rteHeight = this.model.height;
             this._renderAlertDialog();
             this._roundedCorner(this.model.showRoundedCorner);
         },
@@ -906,23 +960,23 @@
                         var temp = i + 1;
                         for (var j = 0; j < this._contextMenu[i].length; j++) {
                             if (this._contextMenu[i][j] != "|") {
-                                menuOptions.push({ id: this._contextMenu[i][j], parentId: this._contextMenu[i-1], text: this._getLocalizedLabels(this._contextMenu[i][j]), sprite: "e-rte-toolbar-icon " + this._contextMenu[i][j] + " " + this._rteIconsList[this._contextMenu[i][j]], htmlAttr: (this._contextMenu[i + 1][j + 1] == "|" ? { "class": "e-rte-separator", "id": this._contextMenu[i][j] } : { "id": this._contextMenu[i][j] }) });
+                                menuOptions.push({ id: this._contextMenu[i][j], parentId: this._contextMenu[i - 1], text: this._getLocalizedLabels(this._contextMenu[i][j]), sprite: "e-rte-toolbar-icon " + this._contextMenu[i][j] + " " + this._rteIconsList[this._contextMenu[i][j]], htmlAttr: (this._contextMenu[i + 1][j + 1] == "|" ? { "class": "e-rte-separator", "id": this._contextMenu[i][j] } : { "id": this._contextMenu[i][j] }) });
                             }
                         }
                     } else {
-                        menuOptions.push({ id:  this._contextMenu[i], parentId: null, text: this._getLocalizedLabels(this._contextMenu[i]), sprite: "e-rte-toolbar-icon " + this._contextMenu[i] + " " + this._rteIconsList[this._contextMenu[i]], htmlAttr: (this._contextMenu[i + 1] == "|" ? { "class": "e-rte-separator", "id": this._contextMenu[i] } : { "id": this._contextMenu[i] }) });
+                        menuOptions.push({ id: this._contextMenu[i], parentId: null, text: this._getLocalizedLabels(this._contextMenu[i]), sprite: "e-rte-toolbar-icon " + this._contextMenu[i] + " " + this._rteIconsList[this._contextMenu[i]], htmlAttr: (this._contextMenu[i + 1] == "|" ? { "class": "e-rte-separator", "id": this._contextMenu[i] } : { "id": this._contextMenu[i] }) });
                     }
                 }
             }
             return menuOptions;
         },
         _createContextMenu: function () {
-            var ContextMenutag = ej.buildTag('ul.e-rte-context-menu #' + this._id+"_contextmenu" );
+            var ContextMenutag = ej.buildTag('ul.e-rte-context-menu #' + this._id + "_contextmenu");
             var proxy = this;
             ContextMenutag.ejMenu({
                 menuType: ej.MenuType.ContextMenu,
                 enableSeparator: true,
-                width:"auto",
+                width: "auto",
                 enableRTL: this.model.enableRTL,
                 cssClass: this.model.cssClass,
                 contextMenuTarget: this._getDocument(),
@@ -932,19 +986,19 @@
                     (proxy._isIE() && proxy._ieSelectionRange) && proxy.selectRange(proxy._ieSelectionRange);
                     proxy.model.enabled ? this.enable() : this.disable();
                     proxy._filterMenuItems(proxy._contextMenuEventArgs = args.events);
-					$(this.element).parent().hide();
+                    $(this.element).parent().hide();
                 },
                 open: function () {
                     $(this.element).attr("style", ("visibility:visible;width:auto;display:block;left:0px;top:0px;"));
-					$(this.element).parent().show();
+                    $(this.element).parent().show();
                     proxy._contextmenuPosition(proxy._contextMenuEventArgs);
-					this._showAnimation(this.element, this._showAnim);					
-					$(this.element).focus();
+                    this._showAnimation(this.element, this._showAnim);
+                    $(this.element).focus();
                 },
                 close: function () {
                     $(proxy._getDocument()).find("body").removeClass("e-cursor");
                 }
-            });            
+            });
             return ContextMenutag;
         },
         _showHideContextMenu: function () {
@@ -954,13 +1008,13 @@
                 this._textMenuObj["_off"]($(this._textMenuObj.model.contextMenuTarget), "mouseup taphold", this._textMenuObj._ContextMenuHandler);
                 this._textMenuObj["_on"]($(this._textMenuObj.model.contextMenuTarget), "mouseup", this._textMenuObj._ContextMenuHandler);
             }
-            else 
+            else
                 (this._textMenuObj) && this._textMenuObj.destroy();
         },
         _checkNameAttr: function () {
             if (this.model.name)
-				this.element.attr({ "name": this.model.name });               
-            else if( ej.isNullOrUndefined(this.element.attr("name")))
+                this.element.attr({ "name": this.model.name });
+            else if (ej.isNullOrUndefined(this.element.attr("name")))
                 this.element.attr({ "name": this.element[0].id });
         },
         _enableEdit: function (args) {
@@ -976,18 +1030,18 @@
                 this._rteIframe.contents().find("body").attr("contenteditable", false);
             }
             this._showHideContextMenu();
-			this._disableResizeObj(args);
+            this._disableResizeObj(args);
         },
-		_disableResizeObj: function (value) {
-			if(value) {
-				if(!this.model.enableRTL) this._on( $(this._getDocument()).find("table.e-rte-table") , "mouseover", this._tableMouseOver);
-			}
-			else {
-				if (ej.browserInfo().name === "mozilla") this._getDocument().designMode = "off";
-				this._off( $(this._getDocument()).find("table.e-rte-table") , "mouseover", this._tableMouseOver);
-				this._removeResizeObject();
-			}
-		},
+        _disableResizeObj: function (value) {
+            if (value) {
+                if (!this.model.enableRTL) this._on($(this._getDocument()).find("table.e-rte-table"), "mouseover", this._tableMouseOver);
+            }
+            else {
+                if (ej.browserInfo().name === "mozilla") this._getDocument().designMode = "off";
+                this._off($(this._getDocument()).find("table.e-rte-table"), "mouseover", this._tableMouseOver);
+                this._removeResizeObject();
+            }
+        },
         _changeSkin: function (value) {
             this._rteWapper.removeClass(this.model.cssClass).addClass(value);
             this._subControlsSetModel("cssClass", value);
@@ -996,16 +1050,16 @@
         _updateIframeSkin: function (htmlAttr) {
             try {
                 var target = this._rteIframe.contents().find("body");
-				if(htmlAttr) {
-                proxy = this;                
-                $.map(htmlAttr, function (value, key) {
-                    if (key == "class") target.addClass(value);
-                    else if (key == "required")target.attr(key, value);
-                    else if (key == "disabled" && value == "disabled") proxy.disable();
-                    else if (key == "readOnly" && value == "readOnly") proxy._enableEdit(false);
-                    else target.attr(key, value);               
-                });
-				}
+                if (htmlAttr) {
+                    proxy = this;
+                    $.map(htmlAttr, function (value, key) {
+                        if (key == "class") target.addClass(value);
+                        else if (key == "required") target.attr(key, value);
+                        else if (key == "disabled" && value == "disabled") proxy.disable();
+                        else if (key == "readOnly" && value == "readOnly") proxy._enableEdit(false);
+                        else target.attr(key, value);
+                    });
+                }
             }
             catch (err) {
                 return false;
@@ -1034,12 +1088,12 @@
             ._initToolBarItems()
             ._renderToolBarList();
             this._renderToolBarItems();
-            if( this.model.showToolbar && this.model.isResponsive) this._toolBarObj._reSizeHandler();
+            if (this.model.showToolbar && this.model.isResponsive) this._toolBarObj._reSizeHandler();
             if (!ej.isNullOrUndefined(this._explorerObj))
                 this._rteToolbar.find("li.e-rteItem-image").length > 0 && this._explorerObj.setModel({ showFooter: false, showTreeview: false });
             if (!ej.isNullOrUndefined(this._fileBrowserObj))
                 this._rteToolbar.find("li.e-rteItem-fileBrowser").length > 0 && this._fileBrowserObj.setModel({ showFooter: false, showTreeview: false });
-                if (ej.browserInfo().name === "msie" && ej.browserInfo().version === "8.0") this._toolBarObj.disableItemByID(this._rteId + "_" + "video");
+            if (ej.browserInfo().name === "msie" && ej.browserInfo().version === "8.0") this._toolBarObj.disableItemByID(this._rteId + "_" + "video");
         },
         _renderToolBarList: function () {
             var model = {};
@@ -1050,15 +1104,21 @@
             model.isResponsive = this.model.isResponsive;
             model.height = model.isResponsive ? "" : "auto";
             model.showRoundedCorner = this.model.showRoundedCorner;
-			model.create = function () {
+            model.tooltipSettings = this.model.tooltipSettings;
+            model.create = function () {
                 var ddl = $(this.element).find(".e-ddl.e-widget .e-dropdownlist"), spbtn = $(this.element).find(".e-split.e-widget .e-splitbutton");
                 ddl.length && ddl.ejDropDownList({ height: "30px" });
                 spbtn.length && spbtn.ejSplitButton({ height: '30px' });
             }
             this._toolBarItems.ejToolbar(model);
+            this._disableTabkeyNavigation(this._toolBarItems)._disableTabkeyNavigation(this._toolBarItems.find("[tabindex],.e-split-btn"));
             this._toolBarObj = this._toolBarItems.ejToolbar("instance");
-			this._on($(this._toolBarObj.itemsContainer).find(".e-rteItem-zoomIn , .e-rteItem-zoomOut") , "mouseup touchend" , this._zoomUp );
-			this._on($(this._toolBarObj.itemsContainer).find(".e-rteItem-zoomIn , .e-rteItem-zoomOut") , "mousedown touchstart" , this._zoomDown );
+            this._on($(document), "mouseup touchend", this._zoomUp);
+            this._on($(this._toolBarObj.itemsContainer).find(".e-rteItem-zoomIn , .e-rteItem-zoomOut"), "mousedown touchstart", this._zoomDown);
+        },
+        _disableTabkeyNavigation: function (elements) {
+            $(elements).attr("tabindex", '-1');
+            return this;
         },
         _crateToolbarTemplate: function () {
             this._toolBarItems = ej.buildTag("div#" + this._rteId + "_toolbar").appendTo(this._rteToolbar).height(30);
@@ -1081,18 +1141,18 @@
         },
 
         _createToolsItems: function (items, itemName) {
-                var ulTag = ej.buildTag("ul#" + (this._rteId + "_" + itemName)), liTag;
+            var ulTag = ej.buildTag("ul#" + (this._rteId + "_" + itemName)), liTag;
             (itemName == "font") && ulTag.addClass("e-rte-fontgroup");
             (itemName == "formatStyle") && ulTag.addClass("e-rte-format");
-			(itemName == "lists") && ulTag.addClass("e-rte-lists");
+            (itemName == "lists") && ulTag.addClass("e-rte-lists");
             for (var i = 0; i < items.length; i++) {
-                    liTag = $("<li id='" + (this._rteId + "_" + items[i].replace(/ /g, '')) + "' class='e-rteItem-" + items[i] + "' ><div class='e-rte-toolbar-icon " + items[i] + " " + this._rteIconsList[items[i]] + "' unselectable = 'on'></div></li>");
+                liTag = $("<li id='" + (this._rteId + "_" + items[i].replace(/ /g, '')) + "' class='e-rteItem-" + items[i] + "' ><div class='e-rte-toolbar-icon " + items[i] + " " + this._rteIconsList[items[i]] + "' unselectable = 'on'></div></li>");
                 if (items[i] === "video" && ej.browserInfo().name === "msie" && ej.browserInfo().version === "8.0") liTag.attr('title', this._getLocalizedLabels("html5Support"));
                 else liTag.attr('title', this._getLocalizedLabels(items[i].replace(/ /g, '')));
-                if (items[i] === "fullScreen")  liTag.attr('title', this._getLocalizedLabels("maximize")).children(".e-rte-toolbar-icon").addClass(this._rteIconsList["maximize"]);              
+                if (items[i] === "fullScreen") liTag.attr('title', this._getLocalizedLabels("maximize")).children(".e-rte-toolbar-icon").addClass(this._rteIconsList["maximize"]);
                 else if (items[i] === "findAndReplace")
                     liTag.attr('title', this._getLocalizedLabels("FindAndReplace"));
-			   liTag.appendTo(ulTag);
+                liTag.appendTo(ulTag);
             }
             ulTag.appendTo(this._toolBarItems);
             if (itemName == "font" && !this.model.showFontOption)
@@ -1126,19 +1186,20 @@
             this._rteToolbar.find("li.e-rteItem-backgroundColor").length > 0 && this._renderBGColor();
             this._rteToolbar.find("li.e-rteItem-createTable").length > 0 && this._renderEditTableDialog();
             this._rteToolbar.find("li.e-rteItem-fileBrowser").length > 0 && this._renderFileBrowserDialog();
-			this._rteToolbar.find("li.e-rteItem-unorderedList").length > 0 && this._renderUnOrderList();
-			this._rteToolbar.find("li.e-rteItem-orderedList").length > 0 && this._renderOrderList();
+            this._rteToolbar.find("li.e-rteItem-unorderedList").length > 0 && this._renderUnOrderList();
+            this._rteToolbar.find("li.e-rteItem-orderedList").length > 0 && this._renderOrderList();
+            this._rteToolbar.find("li.e-rteItem-import").length > 0 && this._renderimport();
             !this.model.showClearAll && this._rteToolbar.find("li.e-rteItem-clearAll").hide();
             return this;
         },
         _renderToolBarItems: function () {
-                this._toolBarObj.disableItemByID(this._rteId + "_" + "undo");
-                this._toolBarObj.disableItemByID(this._rteId + "_" + "redo");
+            this._toolBarObj.disableItemByID(this._rteId + "_" + "undo");
+            this._toolBarObj.disableItemByID(this._rteId + "_" + "redo");
             // Default action when render the RTE
             if (!this.model.enableRTL)
-                    this._toolBarObj.selectItemByID(this._rteId + "_" + "justifyLeft");
+                this._toolBarObj.selectItemByID(this._rteId + "_" + "justifyLeft");
             else
-                    this._toolBarObj.selectItemByID(this._rteId + "_" + "justifyRight");
+                this._toolBarObj.selectItemByID(this._rteId + "_" + "justifyRight");
             //Hide the editable table icons
             var items = this._rteToolbar.find("li.e-rteItem-addColumnLeft,li.e-rteItem-addColumnRight,li.e-rteItem-addRowAbove,li.e-rteItem-addRowBelow,li.e-rteItem-deleteRow,li.e-rteItem-deleteColumn,li.e-rteItem-deleteTable");
             if (this.model.isResponsive && items.length == 0) this._toolBarObj._liTemplte.find("li.e-rteItem-addColumnLeft,li.e-rteItem-addColumnRight,li.e-rteItem-addRowAbove,li.e-rteItem-addRowBelow,li.e-rteItem-deleteRow,li.e-rteItem-deleteColumn,li.e-rteItem-deleteTable").hide();
@@ -1156,8 +1217,8 @@
 
         _xhtmlTagValidation: function () {
             if (this.value() != null) {
-			 var htmlText = this.value();
-                htmlText= htmlText.replace(/\r/gi, " ").replace(/\n/gi, "<br/> ").replace(/\r\n/gi, " ").replace(/( )+/gi, " ").replace(/&nbsp;/gi, " ").replace(/&bull;/gi, "*").replace(/&ltquo;/gi, "<").replace(/&rtquo;/gi, ">").replace(/&trze;/gi, "(tm)").replace(/&copy;/gi, "(c)").replace(/&reg;/gi, "(r)");
+                var htmlText = this.value();
+                htmlText = htmlText.replace(/\r/gi, " ").replace(/\n/gi, "<br/> ").replace(/\r\n/gi, " ").replace(/( )+/gi, " ").replace(/&nbsp;/gi, " ").replace(/&bull;/gi, "*").replace(/&ltquo;/gi, "<").replace(/&rtquo;/gi, ">").replace(/&trze;/gi, "(tm)").replace(/&copy;/gi, "(c)").replace(/&reg;/gi, "(r)");
                 if (htmlText.indexOf("<body>") != -1) {
                     var indexBody = htmlText.indexOf("<body>");
                     var delBody = htmlText.slice(0, indexBody + 6);
@@ -1181,28 +1242,28 @@
                     }
                 }
                 if (!ej.isNullOrUndefined(this._fontXhtml(htmlText))) {
-                htmlText = this._fontXhtml(htmlText);
-                if (htmlText.indexOf("ol") != -1) {
-                    var olStyle = /<ol(.*)<\/ol>/ig;
-                    var tempOl;
-                    var k = 0;
-                    var olTemp = new Array();
-                    while ((tempOl = olStyle.exec(htmlText)) !== null) {
-                        olTemp[k] = tempOl[0].toString();
-                        k++;
+                    htmlText = this._fontXhtml(htmlText);
+                    if (htmlText.indexOf("ol") != -1) {
+                        var olStyle = /<ol(.*)<\/ol>/ig;
+                        var tempOl;
+                        var k = 0;
+                        var olTemp = new Array();
+                        while ((tempOl = olStyle.exec(htmlText)) !== null) {
+                            olTemp[k] = tempOl[0].toString();
+                            k++;
+                        }
+                        var olEx = new Array();
+                        for (var f = 0; f < olTemp.length; f++) {
+                            olEx[f] = olTemp[f];
+                        }
+                        for (var i = 0; i < olTemp.length; i++) {
+                            olTemp[i] = olTemp[i].replace(/<br\/>/gi, "");
+                        }
+                        for (var i = 0; i < olTemp.length; i++) {
+                            htmlText = htmlText.replace(olEx[i], olTemp[i]);
+                        }
                     }
-                    var olEx = new Array();
-                    for (var f = 0; f < olTemp.length; f++) {
-                        olEx[f] = olTemp[f];
-                    }
-                    for (var i = 0; i < olTemp.length; i++) {
-                        olTemp[i] = olTemp[i].replace(/<br\/>/gi, "");
-                    }
-                    for (var i = 0; i < olTemp.length; i++) {
-                        htmlText = htmlText.replace(olEx[i], olTemp[i]);
-                    }
-                }
-                htmlText = htmlText.replace(/<o:p>/gi, "").replace(/<\/o:p>/gi, "");
+                    htmlText = htmlText.replace(/<o:p>/gi, "").replace(/<\/o:p>/gi, "");
                 }
                 this.value(htmlText);
             }
@@ -1213,23 +1274,25 @@
             if ((this.value() != null && this.value() != "")) rteContent = this.value().replace(/'/g, "\"");
             if (rteContent == null) this.value($.trim(this.element[0].value));
             var isIE8 = ej.browserInfo().name == 'msie' && parseInt(ej.browserInfo().version) == 8;
-            var _htmlText = ("<!DOCTYPE html> <html> <head> <meta charset='utf-8' /> <style>body.e-cursor{cursor:default} span.e-selected-node	{background-color: #939393;color: white;}span.e-selected-node.e-highlight{background-color: #1d9dd8;}body{font-family:Times New Roman,Times,serif;}.e-rte-table caption{border: 1px solid;border-bottom:none}body{color:#5C5C5C;}td{word-wrap:break-word;word-break:break-all;}.e-rteColumnResizer{position: absolute;bottom:0;overflow: visible;cursor: col-resize;background-repeat:repeat;background-color:transparent}.e-rteRowResizer{position: absolute;bottom:0;overflow: visible;margin-left: -4px;cursor: row-resize;background-repeat:repeat;background-color:transparent} span.e-rte-imageboxmark{width:5px;height:5px;position:absolute;display:block;background:#fff;border:1px solid #000;}</style></head><body spellcheck='false' autocorrect='off' contenteditable=" + (this.model.allowEditing ? 'true' : 'false') + ">" + $.trim(this.value()) + "</body></html>");
-            this._rteIframe.css({ "width": "100%"});
+            var _htmlText = ("<!DOCTYPE html> <html> <head> <meta charset='utf-8' /> <style>body.e-cursor{cursor:default} span.e-selected-node	{background-color: #939393;color: white;}span.e-selected-node.e-highlight{background-color: #1d9dd8;}body{font-family:Times New Roman,Times,serif;color:#5C5C5C;word-wrap:break-word;}.e-rte-table caption{border: 1px solid;border-bottom:none}td{word-wrap:break-word;word-break:break-all;}.e-rteColumnResizer{position: absolute;bottom:0;overflow: visible;cursor: col-resize;background-repeat:repeat;background-color:transparent}.e-rteRowResizer{position: absolute;bottom:0;overflow: visible;margin-left: -4px;cursor: row-resize;background-repeat:repeat;background-color:transparent} span.e-rte-imageboxmark{width:5px;height:5px;position:absolute;display:block;background:#fff;border:1px solid #000;}</style></head><body spellcheck='false' autocorrect='off' contenteditable=" + (this.model.allowEditing ? 'true' : 'false') + ">" + $.trim(this.value()) + "</body></html>");
+            this._rteIframe.css({ "width": "100%" });
             if (this.element[0].value == "<div></div>" || this.element[0].value == "")
                 this.element[0].innerHTML = this.value();
 
             this._setContent(_htmlText);
-			if(this._isIE8()) this.value(this._getDocument().body.innerHTML);
+            if (this._isIE8()) this.value(this._getDocument().body.innerHTML);
+			var _tableEle = $(this._getDocument()).find("table");       
+            if (!this.model.enableRTL && _tableEle.length > 0 ) this._on(_tableEle, "mouseover", this._tableMouseOver);
             if (this.model.enableXHTML) this._updateValue();
             this._setAutoHeight();
-			if (!ej.isNullOrUndefined(this.model.undoStackLimit) || this.model.undoStackLimit !== "" || this.model.undoStackLimit > 0)
+            if (!ej.isNullOrUndefined(this.model.undoStackLimit) || this.model.undoStackLimit !== "" || this.model.undoStackLimit > 0)
                 this._backupArray[0] = this.getHtml();
         },
 
 
         _setIframeHeight: function () {
             var _height = (!ej.isNullOrUndefined(this._rteToolbar) && this._rteToolbar.is(':visible') ? this._rteToolbar.outerHeight() : 6) + (!ej.isNullOrUndefined(this._rteFooter) && this._rteFooter.is(':visible') ? this._rteFooter.outerHeight() : 0);
-            this._rteIframe.css("height" ,(_height == 0 ? this.model.height : ((this._rteWapper.outerHeight() - _height) - (parseInt(this._rteEditor.css("padding-top")) + parseInt($(".e-rte-wrapper").css("border-bottom-width")) +parseInt(this.model.showFooter ? $(".e-rte-footer").css("margin-top"): 0)))));  
+            this._rteIframe.css("height", (_height == 0 ? this.model.height : ((this._rteWapper.outerHeight() - _height) - (parseInt(this._rteEditor.css("padding-top")) + parseInt($(".e-rte-wrapper").css("border-bottom-width")) + parseInt(this.model.showFooter ? $(".e-rte-footer").css("margin-top") : 0)))));
         },
 
         // Footer Div render 
@@ -1243,7 +1306,7 @@
             var _rightPan = ej.buildTag("div.e-rte-footer-right");
             this._wordCount = ej.buildTag("div.e-rte-wordcount e-rte-footeritems").appendTo(_rightPan);
             this._charCount = ej.buildTag("div.e-rte-charcount e-rte-footeritems").appendTo(_rightPan);
-            this._clearFormat = ej.buildTag("div.e-rte-icons " + this._rteIconsList["clearFormat"] + " e-rte-footericon e-rte-footeritems", "", {}, { title: this._getLocalizedLabels("clearFormat"),"unselectable":"on" }).appendTo(_rightPan);
+            this._clearFormat = ej.buildTag("div.e-rte-icons " + this._rteIconsList["clearFormat"] + " e-rte-footericon e-rte-footeritems", "", {}, { title: this._getLocalizedLabels("clearFormat"), "unselectable": "on" }).appendTo(_rightPan);
             this._clearAll = ej.buildTag("div.e-rte-icons clearAll " + this._rteIconsList["clearAll"] + " e-rte-footericon e-rte-footeritems", "", {}, { title: this._getLocalizedLabels("clearAll") }).appendTo(_rightPan);
             this._resize = ej.buildTag("div.e-icons e-rte-resize " + this._rteIconsList["rteResize"] + " e-rte-footeritems").appendTo(_rightPan);
             _rightPan.appendTo(this._rteFooter);
@@ -1259,12 +1322,28 @@
                 this._enableResize();
             else
                 this._resize.hide().removeClass("e-rte-footeritems");
-                this._updateCount();            
-			if(this.model.showWordCount) this._on(this._wordCount,"click",this._wordCharClick);
-			if (this.model.showCharCount) this._on(this._charCount, "click", this._wordCharClick);
-			
-        },
+            this._updateCount();
+            if (this.model.showWordCount) this._on(this._wordCount, "click", this._wordCharClick);
+            if (this.model.showCharCount) this._on(this._charCount, "click", this._wordCharClick);
+            this._renderTooltip(this.model.tooltipSettings);
 
+        },
+        _renderTooltip: function (options) {
+            var model = $.extend(true, {}, options);
+            if (!ej.isNullOrUndefined(model.cssClass))//which holds the css for the tooltip
+                model.cssClass = model.cssClass + " e-rteTooltip " + this.model.cssClass;
+            else
+                model.cssClass = "e-rteTooltip " + this.model.cssClass;
+            model.enableRTL = this.model.enableRTL;
+            model.showRoundedCorner = this.model.showRoundedCorner;
+            model.target = ".e-rte-icons";
+            if (this.model.showFooter)
+                this._tooltip = $(this._rteFooter).ejTooltip(model).data("ejTooltip");
+        },
+        _hideTooltip: function () {
+            if (!ej.isNullOrUndefined(this._tooltip))
+                this._tooltip.hide();
+        },
         _footerElement: function (selector, visible) {
             if (this.model.showFooter) {
                 var ele = this._rteFooter.find(selector);
@@ -1272,13 +1351,13 @@
             }
         },
         _wordCharClick: function (e) {
-			this._alertWindow.ejDialog("option", {"showHeader":true,"title": "<span style='padding-left:0.4em;'>"+this._getLocalizedLabels("wordCount")+"</span>"});
-			this.model.enableRTL && this._alertWindow.find(".e-alert-ok").removeClass("e-rte-alertBtnRTL");
-			this._alertWindow.find(".e-rte-button").removeClass("e-fieldseparate").css({"text-align":"center","padding-bottom":"1em","padding-top":"0.5em"});
-			this._alertWindow.ejDialog("instance").refresh();
-			this._openAlert("<div style='padding-left:0.3em;padding-right:0.3em;'><div style='"+((this.model.enableRTL)?'float:right':'float:left')+"'>" + this._getLocalizedLabels("words") + "<p style='margin:0.875em 0em;'>" +this._getLocalizedLabels("charSpace") + "</p><p style='margin:0.875em 0em;'>" + this._getLocalizedLabels("charNoSpace") + "</p></div><div style='"+((this.model.enableRTL)? 'float:left;padding-right:2em;':'float:right;padding-left:2em;')+"'>" 
-			+ ($.trim(this._getText()) != "" ? $.trim(this._getText()).split(/\W+/).length : 0) +"<p style='margin:0.875em 0em;'>" + this._getText().length +"</p><p style='margin:0.875em 0em;'>"  + this._getText().replace(/\s/g,"").length + "</p></div></div><br/>");
-		},
+            this._alertWindow.ejDialog("option", { "showHeader": true, "title": "<span style='padding-left:0.4em;'>" + this._getLocalizedLabels("wordCount") + "</span>" });
+            this.model.enableRTL && this._alertWindow.find(".e-alert-ok").removeClass("e-rte-alertBtnRTL");
+            this._alertWindow.find(".e-rte-button").removeClass("e-fieldseparate").css({ "text-align": "center", "padding-bottom": "1em", "padding-top": "0.5em" });
+            this._alertWindow.ejDialog("instance").refresh();
+            this._openAlert("<div style='padding-left:0.3em;padding-right:0.3em;'><div style='" + ((this.model.enableRTL) ? 'float:right' : 'float:left') + "'>" + this._getLocalizedLabels("words") + "<p style='margin:0.875em 0em;'>" + this._getLocalizedLabels("charSpace") + "</p><p style='margin:0.875em 0em;'>" + this._getLocalizedLabels("charNoSpace") + "</p></div><div style='" + ((this.model.enableRTL) ? 'float:left;padding-right:2em;' : 'float:right;padding-left:2em;') + "'>"
+			+ ($.trim(this._getText()) != "" ? $.trim(this._getText()).split(/\W+/).length : 0) + "<p style='margin:0.875em 0em;'>" + this._getText().length + "</p><p style='margin:0.875em 0em;'>" + this._getText().replace(/\s/g, "").length + "</p></div></div><br/>");
+        },
         _updateColorPalette: function () {
             var _fontColor = $("ul#" + this._rteId + "_colorTable");
             var _bgColor = $("ul#" + this._rteId + "_colorBGTable");
@@ -1300,10 +1379,16 @@
             //if (this.model.showFooter && this._rteFooter) this._rteFooter.addClass("e-rtl");
         },
         _roundedCorner: function (value) {
-            if(value) this._rteWapper.toggleClass('e-corner-all');
+            if (value) this._rteWapper.toggleClass('e-corner-all');
             this._subControlsSetModel("showRoundedCorner", value);
         },
         _subControlsSetModel: function (prop, value) {
+            if (!ej.isNullOrUndefined(this._tooltip)) {
+                if (prop == "cssClass")
+                    $(this._rteFooter).ejTooltip("option", prop, "e-rteTooltip " + value);
+                else
+                    $(this._rteFooter).ejTooltip("option", prop, value);
+            }
             !ej.isNullOrUndefined(this._formatDDL) && this._formatDDL.ejDropDownList("option", prop, value);
             !ej.isNullOrUndefined(this._fontStyleDDL) && this._fontStyleDDL.ejDropDownList("option", prop, value);
             !ej.isNullOrUndefined(this._fontSizeDDL) && this._fontSizeDDL.ejDropDownList("option", prop, value);
@@ -1373,10 +1458,10 @@
                 this._chkFileTarget.ejCheckBox("option", prop, value);
                 if (prop == "showRoundedCorner") (value == true) ? this._fileDialog.find(".e-inputtext").addClass('e-corner-all') : this._fileDialog.find(".e-inputtext").removeClass('e-corner-all');
             }
-			if (!ej.isNullOrUndefined(this._explorerObj))
+            if (!ej.isNullOrUndefined(this._explorerObj))
                 this._explorerObj.option(prop, value);
-            if(!ej.isNullOrUndefined(this._fileBrowserObj))
-                this._fileBrowserObj.option(prop,value);
+            if (!ej.isNullOrUndefined(this._fileBrowserObj))
+                this._fileBrowserObj.option(prop, value);
         },
         _createCountElement: function (option, element) {
             option ? element.show() : element.hide();
@@ -1419,16 +1504,19 @@
                     }
                 });
         },
-
-		_resizeHeight: function(element) {
-			var reElement = $(element).parents("div.e-rte-wrapper");
+        _getDocumentHandler: function () {
+            (!this._operationHandler) && (this._operationHandler = new ej.editorManager(this.getDocument(), this._getWindow()));
+            return this._operationHandler;
+        },
+        _resizeHeight: function (element) {
+            var reElement = $(element).parents("div.e-rte-wrapper");
             this._rteWidth = $(reElement).width();
-		    this._rteHeight = $(reElement).height();
-			this._rteWapper.height(this._rteHeight);
+            this._rteHeight = $(reElement).height();
+            this._rteWapper.height(this._rteHeight);
             this._rteWapper.width(this._rteWidth);
             this._setIframeHeight();
-		},
-		
+        },
+
         _getDialogModel: function () {
             var rtecontent = this._rteWapper;
             return dialogModel = {
@@ -1447,6 +1535,7 @@
             return this._rteId ? " id=" + this._rteId + val + " " : "";
         },
         _renderLinkDialog: function () {
+            var proxy = this;
             var btnDiv = (this.model.enableRTL) ? "e-rtlrte" : "";
             var createLink = this._linkDialog = ej.buildTag("div#" + this._rteId + "_link");
             var content = $("<div class='e-rte-label " + btnDiv + "'><label " + this._labelFor("_link_url") + ">" + this._getLocalizedLabels("linkWebUrl") + "</label></div><div class='e-rte-field " + btnDiv + "'><input type='text'  data-role ='none' class='e-inputtext e-rte-linkUrl' " + this._TagId("_link_url") + "/></div><div class='e-rte-label " + btnDiv + "'>" +
@@ -1461,8 +1550,11 @@
             model.target = null;
             model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
             model.showRoundedCorner = this.model.showRoundedCorner;
+            model.close = function () {
+                proxy._ieCursorMaintainance();
+            };
             createLink.ejDialog(model);
-            $($(createLink.parents()).find(".e-dialog-wrap")).addClass("e-rte");
+            createLink.closest(".e-dialog-wrap").addClass("e-rte");
             this.model.showRoundedCorner && createLink.find(".e-inputtext").addClass('e-corner-all');
             this._chkTarget = createLink.find(".e-rte-linkTarget");
             this._chkTarget.ejCheckBox({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, showRoundedCorner: this.model.showRoundedCorner });
@@ -1505,24 +1597,24 @@
             model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
             model.showRoundedCorner = this.model.showRoundedCorner;
             model.open = function () {
-                proxy._explorerObj&& proxy._explorerObj.adjustSize();
+                proxy._explorerObj && proxy._explorerObj.adjustSize();
                 if (!ej.isNullOrUndefined(proxy._imgSplitObj))
                     proxy._imgSplitObj.option("enableAutoResize", true);
             };
             model.close = function () {
+                proxy._ieCursorMaintainance();
                 if (!ej.isNullOrUndefined(proxy._imgSplitObj))
                     proxy._imgSplitObj.option("enableAutoResize", false);
             };
             this._imgDialog.ejDialog(model);
-            this._imgDialog.parents("#" + this._rteId + "_Image_wrapper").css({ "visibility": "hidden", "display": "block" });
-            $($(this._imgDialog.parents()).find(".e-dialog-wrap")).addClass("e-rte");
+            this._imgDialog.closest(".e-dialog-wrap").css({ "visibility": "hidden", "display": "block" }).addClass("e-rte");
             if (this.model.imageBrowser.filePath != "") {
                 var ajaxSettings = { upload: { url: this.model.imageBrowser.uploadAction } };
                 if (this.model.imageBrowser.ajaxSettings)
                     $.extend(true, ajaxSettings, this.model.imageBrowser.ajaxSettings);
 
                 this._explorerObj = this._imgDialog.find("div.e-rte-imgBrowser").ejFileExplorer({
-                    allowMultiSelection: false, enableRTL: this.model.enableRTL, showRoundedCorner:this.model.showRoundedCorner, cssClass: this.model.cssClass, width: "690px", height: "300px", path: this.model.imageBrowser.filePath, fileTypes: this.model.imageBrowser.extensionAllow, layout: "list", select: function (e) { proxy._UpdateImgDetails(e); },
+                    allowMultiSelection: false, enableRTL: this.model.enableRTL, showRoundedCorner: this.model.showRoundedCorner, cssClass: this.model.cssClass, width: "690px", height: "300px", path: this.model.imageBrowser.filePath, fileTypes: this.model.imageBrowser.extensionAllow, layout: ej.FileExplorer.layoutType.LargeIcons, select: function (e) { proxy._UpdateImgDetails(e); },
                     tools: {
                         creation: ["NewFolder", "Open"],
                         navigation: ["Back", "Forward"],
@@ -1574,18 +1666,18 @@
                     proxy._fileSplitObj.option("enableAutoResize", true);
             };
             model.close = function () {
+                proxy._ieCursorMaintainance();
                 if (!ej.isNullOrUndefined(proxy._fileSplitObj))
                     proxy._fileSplitObj.option("enableAutoResize", false);
             };
             this._fileDialog.ejDialog(model);
-            this._fileDialog.parents("#" + this._rteId + "_fileDialog_wrapper").css({ "visibility": "hidden", "display": "block" });
-            $($(this._fileDialog.parents()).find(".e-dialog-wrap")).addClass("e-rte");
+            this._fileDialog.closest(".e-dialog-wrap").css({ "visibility": "hidden", "display": "block" }).addClass("e-rte");
             var ajaxSettings = { upload: { url: this.model.fileBrowser.uploadAction } };
             if (this.model.fileBrowser.ajaxSettings)
                 $.extend(true, ajaxSettings, this.model.fileBrowser.ajaxSettings);
 
             this._fileBrowserObj = this._fileDialog.find("div.e-rte-fileBrowser").ejFileExplorer({
-                allowMultiSelection: false, enableRTL: this.model.enableRTL, showRoundedCorner:this.model.showRoundedCorner, cssClass: this.model.cssClass, width: "690px", height: "300px", path: this.model.fileBrowser.filePath, fileTypes: this.model.fileBrowser.extensionAllow, layout: "list", select: function (e) { proxy._UpdateFileDetails(e); },
+                allowMultiSelection: false, enableRTL: this.model.enableRTL, showRoundedCorner: this.model.showRoundedCorner, cssClass: this.model.cssClass, width: "690px", height: "300px", path: this.model.fileBrowser.filePath, fileTypes: this.model.fileBrowser.extensionAllow, layout: "list", select: function (e) { proxy._UpdateFileDetails(e); },
                 tools: {
                     creation: ["NewFolder", "Open"],
                     navigation: ["Back", "Forward"],
@@ -1619,10 +1711,10 @@
             if (sender.target.id === this._rteId + "_file_cancel") {
                 this._clearFileFields();
                 this._fileDialog.ejDialog("close");
-				this._ieCursorMaintainance();
+                this._ieCursorMaintainance();
             }
             else if (sender.target.id === this._rteId + "_file_insert") {
-				if(this._isIE() && !this._isIE8()) this._ieLinkRange();
+                if (this._isIE() && !this._isIE8()) this._ieLinkRange();
                 this._restoreSelection(this._selectionRange);
                 if (this._fileDialog.find('e-rte-fileUrl').val() != "")
                     this._onInsertFileLink();
@@ -1648,7 +1740,7 @@
             var fileVal = this._fileURL.val().match(/(ftp:|http:|https:)\/\//g);
             var fsrcUrl = (this._fileURL.val().startsWith("~")) ? this._fileURL.val().replace(this._fileURL.val().substr('0', '1'), "..") : this._fileURL.val();
             if ((ej.isNullOrUndefined(fileVal) && fsrcUrl !== "") || (!ej.isNullOrUndefined(fileVal) && fileVal[0].length < fsrcUrl.length)) {
-                var selectedNode = ((this._isIE()) && $(this._currentSelNode).parents("body").length > 0 ) ? this._currentSelNode : this._getSelectedNode();
+                var selectedNode = ((this._isIE()) && $(this._currentSelNode).parents("body").length > 0) ? this._currentSelNode : this._getSelectedNode();
                 if (!ej.isNullOrUndefined(selectedNode) && selectedNode.tagName.toUpperCase() == 'A') {
                     selectedNode.href = fsrcUrl;
                     selectedNode.innerHTML = this._fileLinkText.val();
@@ -1703,6 +1795,7 @@
         },
         //Render the Table selection rows and columans popup
         _renderVideoDialog: function () {
+            var proxy = this;
             this._videoDialog = ej.buildTag("div#" + this._rteId + "_video");
             var btnDiv = (this.model.enableRTL) ? "e-rtlrte" : "";
             var content = $("<div><label>" + this._getLocalizedLabels("embedVideo") + "</label></div><textarea class='e-rte-video e-inputtext'  aria-label=" + this._getLocalizedLabels("embedVideo") + "></textarea>" +
@@ -1718,8 +1811,11 @@
             model.title = this._getLocalizedLabels("video");
             model.target = null;
             model.showRoundedCorner = this.model.showRoundedCorner;
+            model.close = function () {
+                proxy._ieCursorMaintainance();
+            };
             this._videoDialog.ejDialog(model);
-            $($(this._videoDialog.parents()).find(".e-dialog-wrap")).addClass("e-rte");
+            this._videoDialog.closest(".e-dialog-wrap").addClass("e-rte");
             this.model.showRoundedCorner && this._videoDialog.find(".e-inputtext").addClass('e-corner-all');
             this._chkvideoDimensions = this._videoDialog.find(".e-rte-videoConsrn");
             this._chkvideoDimensions.ejCheckBox({ checked: true, enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, showRoundedCorner: this.model.showRoundedCorner });
@@ -1730,6 +1826,7 @@
 
 
         _renderTableDialog: function () {
+            var proxy = this;
             this._createTable = ej.buildTag("div.e-rte-table-picker#" + this._rteId + "_table");
             var tableCell, rowDiv, colDiv, tableDiv;
             this._tblheaderDiv = ej.buildTag("div.e-rte-tableheader");
@@ -1747,6 +1844,9 @@
             model.minWidth = "270px";
             model.maxWidth = "270px";
             model.showRoundedCorner = this.model.showRoundedCorner;
+            model.close = function (args) {
+				args.event&& args.event.clickAction && proxy._ieCursorMaintainance();
+            };
             this._createTable.ejDialog(model);
         },
 
@@ -1775,9 +1875,9 @@
             model.title = this._getLocalizedLabels("customTable");
             model.target = null;
             model.showRoundedCorner = this.model.showRoundedCorner;
-			model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
+            model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
             this._customTableDialog.ejDialog(model);
-            $($(this._customTableDialog.parents()).find(".e-dialog-wrap")).addClass("e-rte");
+            this._customTableDialog.closest(".e-dialog-wrap").addClass("e-rte");
             this.model.showRoundedCorner && this._customTableDialog.find(".e-inputtext").addClass('e-corner-all');
             this._createTable.find("div.e-rte-eTblProperties").addClass('e-disable');
             this._customTableDialog.find(".e-rte-btn").ejButton({ enableRTL: this.model.enableRTL, type: "button", cssClass: this.model.cssClass, showRoundedCorner: this.model.showRoundedCorner });
@@ -1790,9 +1890,10 @@
             this._on(this._customTableDialog.find(".e-rte-btn"), "click", this._insertCustomTable);
         },
         _renderEditTableDialog: function () {
+            var proxy = this;
             this._eTblDialog = ej.buildTag("div#" + this._rteId + "_eTbl");
             var rteID = this._rteId;
-			var btnDiv = (this.model.enableRTL) ? "e-rtlrte" : "";
+            var btnDiv = (this.model.enableRTL) ? "e-rtlrte" : "";
             var content = $("<div id='" + this._rteId + "_eTbl_Tab'><ul><li class='e-first'><a href='#" + this._rteId + "_eTblTable'>" + this._getLocalizedLabels("table") + " </a></li><li class='e-nofirst'><a href='#" + this._rteId + "_eTblRow'>" + this._getLocalizedLabels("row") + " </a></li><li class='e-nofirst'><a href='#" + this._rteId + "_eTblCell'>" + this._getLocalizedLabels("cell") + " </a></li></ul>" +
             "<div id='" + this._rteId + "_eTblTable'>" +
                     "<div class='e-rte-tablefields'><label " + this._labelFor("_eTblWidth") + ">" + this._getLocalizedLabels("tableWidth") + "</label></div><div class='e-rte-tablefields'><input type='text' data-role ='none'  class='e-inputtext' " + this._TagId("_eTblWidth") + "></div>" +
@@ -1826,9 +1927,12 @@
             model.title = this._getLocalizedLabels("editTable");
             model.target = null;
             model.showRoundedCorner = this.model.showRoundedCorner;
-			model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
+            model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
+            model.close = function () {
+                proxy._ieCursorMaintainance();
+            };
             this._eTblDialog.ejDialog(model);
-            $($(this._eTblDialog.parents()).find(".e-dialog-wrap")).addClass("e-rte");
+            this._eTblDialog.closest(".e-dialog-wrap").addClass("e-rte");
             this.model.showRoundedCorner && this._eTblDialog.find(".e-inputtext").addClass('e-corner-all');
             this._eTblDialog.find(".e-numerictextbox").ejNumericTextbox({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, width: "100%", minValue: 0, value: 0, showRoundedCorner: this.model.showRoundedCorner });
             this._eTblDialog.find(".e-rte-dropdown").ejDropDownList({ enableRTL: this.model.enableRTL, cssClass: this.model.cssClass, width: "100%", showRoundedCorner: this.model.showRoundedCorner });
@@ -1854,8 +1958,9 @@
 
 
         _renderSourceDialog: function () {
+            var proxy = this;
             this._sourceDialog = ej.buildTag("div#" + this._rteId + "_Source");
-			var btnDiv = (this.model.enableRTL) ? "e-rtlrte" : "";
+            var btnDiv = (this.model.enableRTL) ? "e-rtlrte" : "";
             var content = $("<textarea class='e-rte-srctextarea e-inputtext'></textarea><div class='e-rte-button e-fieldseparate'><button id='src_update' data-role ='none' class='e-rte-btn " + btnDiv + "'>" + this._getLocalizedLabels("dialogUpdate") + "</button><button id='src_cancel' class='e-rte-btn " + btnDiv + "'>" + this._getLocalizedLabels("dialogCancel") + "</button></div>");
             content.appendTo(this._sourceDialog);
             var model = this._getDialogModel();
@@ -1863,7 +1968,10 @@
             model.width = "auto";
             model.target = null;
             model.showRoundedCorner = this.model.showRoundedCorner;
-			model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
+            model.close = function () {
+                proxy._ieCursorMaintainance();
+            };
+            model.closeIconTooltip = this._getLocalizedLabels("closeIcon");
             this._sourceDialog.ejDialog(model);
             this.model.showRoundedCorner && this._sourceDialog.find(".e-inputtext").addClass('e-corner-all');
             this._sourceDialog.find(".e-rte-btn").ejButton({ enableRTL: this.model.enableRTL, type: "button", cssClass: this.model.cssClass, showRoundedCorner: this.model.showRoundedCorner });
@@ -1872,6 +1980,7 @@
 
 
         _renderAlertDialog: function () {
+            var proxy = this;
             this._alertWindow = ej.buildTag("div#" + this._rteId + "_Alert");
             var content = $("<p class='e-alerttext' style='margin:0.875em 0em;'></p><div class='e-rte-button e-fieldseparate'><button data-role ='none' class='e-rte-btn e-alert-ok' type='button'>" + this._getLocalizedLabels("dialogOk") + "</button><button class='e-rte-btn e-alert-cancel' data-role='none'>" + this._getLocalizedLabels("dialogCancel") + "</button></div>");
             content.appendTo(this._alertWindow);
@@ -1880,9 +1989,12 @@
             model.width = "auto";
             model.target = null;
             model.showRoundedCorner = this.model.showRoundedCorner;
-			model.minHeight = "50px";
+            model.close = function () {
+                proxy._ieCursorMaintainance();
+            };
+            model.minHeight = "50px";
             this._alertWindow.ejDialog(model);
-            $($(this._alertWindow.parents()).find(".e-dialog-wrap")).addClass("e-rte");
+            this._alertWindow.closest(".e-dialog-wrap").addClass("e-rte");
             this._alertWindow.find(".e-rte-btn").ejButton({ enableRTL: this.model.enableRTL, type: "button", cssClass: this.model.cssClass, showRoundedCorner: this.model.showRoundedCorner });
             this._on(this._alertWindow.find(".e-rte-btn"), "click", this._alertBtnClick)
             this._alertWindow.find(".e-alert-cancel").hide();
@@ -1892,9 +2004,9 @@
             if ($.trim(this._alertWindow.find(".e-alerttext").html()) == this._getLocalizedLabels("deleteAlert") && $(e.target).hasClass("e-alert-ok")) {
                 this._getDocument().body.innerHTML = " ";
                 if (this.model.showToolbar)
-                        this._toolBarObj.selectItemByID(this._rteId + "_" + "justifyLeft");
+                    this._toolBarObj.selectItemByID(this._rteId + "_" + "justifyLeft");
                 this._setBackupData();
-                this._updateCount();                
+                this._updateCount();
                 var selectNode = (this._isIE()) ? this._currentSelNode : this._getSelectedNode();
                 this._updateTagInfo(selectNode);
                 this._onChange();
@@ -1905,8 +2017,8 @@
 
         _openAlert: function (alertText) {
             this._alertWindow.find(".e-alerttext").html(alertText);
-			this._alertWindow.ejDialog("instance")._centerPosition();
-			$("#" + this._rteId + "_Alert_wrapper").css({"z-index":this._onGetMaxZindex()});
+            this._alertWindow.ejDialog("instance")._centerPosition();
+            $("#" + this._rteId + "_Alert_wrapper").css({ "z-index": this._onGetMaxZindex() });
             this._alertWindow.ejDialog("open");
         },
 
@@ -1914,22 +2026,22 @@
         _renderFormat: function () {
             this._formatDDL = ej.buildTag("input#" + this._rteId + "_formatDDL", "", "", { type: "text", title: this._getLocalizedLabels("format"), "data-role": "none" });
             var defaultText = [
-                { text: "paragraph", value: "<p>"},
-                { text: "quotation", value: "<blockquote>"},
-                { text: "heading1", value: "<h1>"},
-                { text: "heading2", value: "<h2>"},
-                { text: "heading3", value: "<h3>"},
-                { text: "heading4", value: "<h4>"},
-                { text: "heading5", value: "<h5>"},
-                { text: "heading6", value: "<h6>"} ];
+                { text: "paragraph", value: "<p>" },
+                { text: "quotation", value: "<blockquote>" },
+                { text: "heading1", value: "<h1>" },
+                { text: "heading2", value: "<h2>" },
+                { text: "heading3", value: "<h3>" },
+                { text: "heading4", value: "<h4>" },
+                { text: "heading5", value: "<h5>" },
+                { text: "heading6", value: "<h6>" }];
             var model = {};
-            model.dataSource = this._formatText(this.model.format , defaultText);
+            model.dataSource = this._formatText(this.model.format, defaultText);
             model.width = "105px";
             model.enableRTL = this.model.enableRTL;
             model.popupWidth = "175px";
             model.popupHeight = "auto";
             model.selectedItemIndex = 0;
-            model.popupHide = this._formatChange;
+            model.select = this._formatChange;
             model.cssClass = "e-rte-format-ddl";
             model.showRoundedCorner = this.model.showRoundedCorner;
             model.fields = { text: "text", value: "value", spriteCssClass: "spriteCssClass" };
@@ -1937,16 +2049,16 @@
             this._formatDDL.ejDropDownList(model);
             this._formatPopupStyle();
         },
-		
-		_formatText: function(formatSource , formatText) {
-			for (var i = 0; i < formatSource.length; i++) 
-				for(var j = 0; j < formatText.length; j++)
-                    if(formatSource[i].value == formatText[j].value) { 
-						formatSource[i].text = this._getLocalizedLabels(formatText[j].text) ? this._getLocalizedLabels(formatText[j].text): formatSource[i].text;
-			            break;
-					}
-			return  formatSource;
-		},
+
+        _formatText: function (formatSource, formatText) {
+            for (var i = 0; i < formatSource.length; i++)
+                for (var j = 0; j < formatText.length; j++)
+                    if (formatSource[i].value == formatText[j].value) {
+                        formatSource[i].text = this._getLocalizedLabels(formatText[j].text) ? this._getLocalizedLabels(formatText[j].text) : formatSource[i].text;
+                        break;
+                    }
+            return formatSource;
+        },
 
         _formatPopupStyle: function () {
             var _liList = this._formatDDL.data("ejDropDownList").popupPanelWrapper.find("li");
@@ -1960,9 +2072,9 @@
             this._fontStyleDDL = ej.buildTag("input#" + this._rteId + "_fontNameDDL", "", "", { type: "text", title: this._getLocalizedLabels("fontName"), "data-role": "none" });
             var defaultText = [
 				{ text: "timesnewroman", value: "Times New Roman,Times,serif" },
-			    { text: "segoeui",  value: "Segoe UI"},
+			    { text: "segoeui", value: "Segoe UI" },
 				{ text: "arial", value: "Arial,Helvetica,sans-serif" },
-				{ text: "couriernew", value: "Courier New,Courier,monospace"  },
+				{ text: "couriernew", value: "Courier New,Courier,monospace" },
 				{ text: "georgia", value: "Georgia,serif" },
 				{ text: "impact", value: "Impact,Charcoal,sans-serif" },
                 { text: "lucidaconsole", value: "Lucida Console,Monaco,monospace" },
@@ -1971,10 +2083,10 @@
                 { text: "verdana", value: "Verdana,Geneva,sans-serif" }
             ];
             var model = {};
-            model.dataSource = this._formatText(this.model.fontName , defaultText);
+            model.dataSource = this._formatText(this.model.fontName, defaultText);
             model.enableRTL = this.model.enableRTL;
             model.selectedItemIndex = 0;
-            model.popupHide = this._fontStyleChange;
+            model.select = this._fontStyleChange;
             model.showRoundedCorner = this.model.showRoundedCorner;
             model.fields = { text: "text", value: "value" };
             this._fontStyleDDL.appendTo(this._rteToolbar.find("li.e-rteItem-fontName").html(""));
@@ -1989,7 +2101,7 @@
             model.width = "100px";
             model.enableRTL = this.model.enableRTL
             model.selectedItemIndex = 2;
-            model.popupHide = this._fontSizeChange;
+            model.select = this._fontSizeChange;
             model.showRoundedCorner = this.model.showRoundedCorner;
             model.fields = { text: "text", value: "value" };
             this._fontSizeDDL.appendTo(this._rteToolbar.find("li.e-rteItem-fontSize").html(""));
@@ -2022,72 +2134,72 @@
             this._splitObj = this._fontColorSplit.ejSplitButton("instance");
             this._splitObj.option("beforeOpen", function () { proxy._bindClickOperation("FontColor"); });
             this._on(this._fontColorSplit, "click", this._fontColorClick);
-            this._fontColorSplit.find("span."+this._rteIconsList["fontColor"]).removeClass("e-icon");
+            this._fontColorSplit.find("span." + this._rteIconsList["fontColor"]).removeClass("e-icon");
             this._fontColorSplit.find("span.e-btntxt").css("background-color", this._fontColor);
         },
-        _renderUnOrderList: function() {
-	        var proxy = this;
+        _renderUnOrderList: function () {
+            var proxy = this;
             this._unOrderSplit = ej.buildTag("button#" + this._rteId + "_unorder", "", {}, { type: "button", "data-role": "none" });
-            this._unorderLiTemplate = ej.buildTag("ul#" + this._rteId + "_unorderlist","",{"height":"auto","width":"84px"},{"class":"e-rte-unorderlistname"});
-			$("<li id='none' title='"+this._getLocalizedLabels("none")+"' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-nonelist-icon'></span></li><li id='disc' title='"+this._getLocalizedLabels("disc")+"' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-disclist-icon'></span></li><li id='square' title='"+this._getLocalizedLabels("square")+"' class='square' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-squarelist-icon'></span></li><li id='circle' title='"+this._getLocalizedLabels("circle")+"' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-circlelist-icon'></span></li>").appendTo(this._unorderLiTemplate);
-		    if(!ej.isNullOrUndefined(proxy.model.tools["customUnorderedList"]))
-		    $.each( proxy.model.tools["customUnorderedList"], function( i, val ) {
-               if(i==0) $(proxy._unorderLiTemplate).find("#circle,#square").attr("class", "e-liseparator");
-			   $("<li id='"+(val["name"]?val["name"]:("ulcustom" + i))+"' class='"+(val["css"]?val["css"]:"")+"' title='"+(val["tooltip"]?val["tooltip"]:"")+"' style='float:left;width:100%;'>"+(val["text"] ?val["text"]:"") +"</li>").appendTo(proxy._unorderLiTemplate);
-            });
-			var model = {};
+            this._unorderLiTemplate = ej.buildTag("ul#" + this._rteId + "_unorderlist", "", { "height": "auto", "width": "84px" }, { "class": "e-rte-unorderlistname" });
+            $("<li id='none' title='" + this._getLocalizedLabels("none") + "' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-nonelist-icon'></span></li><li id='disc' title='" + this._getLocalizedLabels("disc") + "' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-disclist-icon'></span></li><li id='square' title='" + this._getLocalizedLabels("square") + "' class='square' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-squarelist-icon'></span></li><li id='circle' title='" + this._getLocalizedLabels("circle") + "' style='float:left;width:50%;'><span class='e-rte-toolbar-icon e-rte-unlistitems e-circlelist-icon'></span></li>").appendTo(this._unorderLiTemplate);
+            if (!ej.isNullOrUndefined(proxy.model.tools["customUnorderedList"]))
+                $.each(proxy.model.tools["customUnorderedList"], function (i, val) {
+                    if (i == 0) $(proxy._unorderLiTemplate).find("#circle,#square").attr("class", "e-liseparator");
+                    $("<li id='" + (val["name"] ? val["name"] : ("ulcustom" + i)) + "' class='" + (val["css"] ? val["css"] : "") + "' title='" + (val["tooltip"] ? val["tooltip"] : "") + "' style='float:left;width:100%;'>" + (val["text"] ? val["text"] : "") + "</li>").appendTo(proxy._unorderLiTemplate);
+                });
+            var model = {};
             model.width = "42px";
             model.contentType = "imageonly";
             model.targetID = this._rteId + "_unorderlist";
             model.enableRTL = this.model.enableRTL;
-            model.prefixIcon = "e-rte-toolbar-icon " + this._rteIconsList["unorderedList"];
+            model.prefixIcon = "e-icon e-rte-toolbar-icon " + this._rteIconsList["unorderedList"];
             model.showRoundedCorner = this.model.showRoundedCorner;
-			model.itemSelected = $.proxy(this._onUnorderList,this);
-			this._unOrderSplit.appendTo(this._rteToolbar.find("li.e-rteItem-unorderedList").html(""));
-			var oldWrapper = $("#" + this._rteId + "_unorderlist").get(0);
+            model.itemSelected = $.proxy(this._onUnorderList, this);
+            this._unOrderSplit.appendTo(this._rteToolbar.find("li.e-rteItem-unorderedList").html(""));
+            var oldWrapper = $("#" + this._rteId + "_unorderlist").get(0);
             if (oldWrapper) {
                 if ($(oldWrapper).parent().hasClass("e-menu-wrap"))
                     $(oldWrapper).parent().remove();
                 else
                     $(oldWrapper).remove();
             }
-			this._unorderLiTemplate.appendTo((this._rteToolbar.parents("body").length > 0 ? this._rteToolbar.find("li.e-rteItem-unorderedList") : $('body')));
+            this._unorderLiTemplate.appendTo((this._rteToolbar.parents("body").length > 0 ? this._rteToolbar.find("li.e-rteItem-unorderedList") : $('body')));
             this._unOrderSplit.ejSplitButton(model);
-			this._unOrderSplitObj = this._unOrderSplit.ejSplitButton("instance");
-			this._unOrderSplit.find("span.e-unorderedList-icon").removeClass("e-icon");
+            this._unOrderSplitObj = this._unOrderSplit.ejSplitButton("instance");
+            this._unOrderSplit.find("span.e-unorderedList-icon").removeClass("e-icon");
             this._on(this._unOrderSplit, "click", this._onUnorderList);
-			},
-		_renderOrderList: function () {
-			var proxy = this;
-			this._orderSplit = ej.buildTag("button#" + this._rteId + "_order", "", {}, { type: "button", "data-role": "none" });
-			this._orderLiTemplate = ej.buildTag("ul#" + this._rteId + "_orderlist","",{"height":"auto","width":"124.05px"},{"class":"e-rte-orderlistname"});
-		    $("<li id='none' title='"+this._getLocalizedLabels("none")+"' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-nonelist-icon'></span></li><li id='decimal' title='"+this._getLocalizedLabels("number")+"' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-numbering-icon'></span></li><li id='lower-alpha' title='"+this._getLocalizedLabels("loweralpha")+"'  style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-loweralpha-icon'></span></li><li id='lower-roman' title='"+this._getLocalizedLabels("lowerroman")+"' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-lowerroman-icon'></span></li><li id='upper-alpha' title='"+this._getLocalizedLabels("upperalpha")+"' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-upperalpha-icon'></span></li><li id='upper-roman' title='"+this._getLocalizedLabels("upperroman")+"' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-upperroman-icon'></span></li>").appendTo(this._orderLiTemplate);  
-			if(!ej.isNullOrUndefined(proxy.model.tools["customOrderedList"]))
-			 $.each( proxy.model.tools["customOrderedList"], function( i, val ) {
-			   if(i==0) $(proxy._orderLiTemplate).find("#upper-roman,#upper-alpha,#lower-roman").attr("class", "e-liseparator");
-               $("<li id='"+(val["name"]?val["name"]:("olcustom" + i))+"' class='"+(val["css"]?val["css"]:"")+"' title='"+(val["tooltip"]?val["tooltip"]:"")+"' style='float:left;width:100%;'>"+(val["text"] ?val["text"]:"")+"</li>").appendTo(proxy._orderLiTemplate);
-            });
-			var model = {};
+        },
+        _renderOrderList: function () {
+            var proxy = this;
+            this._orderSplit = ej.buildTag("button#" + this._rteId + "_order", "", {}, { type: "button", "data-role": "none" });
+            this._orderLiTemplate = ej.buildTag("ul#" + this._rteId + "_orderlist", "", { "height": "auto", "width": "124.05px" }, { "class": "e-rte-orderlistname" });
+            $("<li id='none' title='" + this._getLocalizedLabels("none") + "' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-nonelist-icon'></span></li><li id='decimal' title='" + this._getLocalizedLabels("number") + "' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-numbering-icon'></span></li><li id='lower-alpha' title='" + this._getLocalizedLabels("loweralpha") + "'  style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-loweralpha-icon'></span></li><li id='lower-roman' title='" + this._getLocalizedLabels("lowerroman") + "' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-lowerroman-icon'></span></li><li id='upper-alpha' title='" + this._getLocalizedLabels("upperalpha") + "' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-upperalpha-icon'></span></li><li id='upper-roman' title='" + this._getLocalizedLabels("upperroman") + "' style='float:left;width:33.33%;'><span class='e-rte-toolbar-icon e-rte-listitems e-upperroman-icon'></span></li>").appendTo(this._orderLiTemplate);
+            if (!ej.isNullOrUndefined(proxy.model.tools["customOrderedList"]))
+                $.each(proxy.model.tools["customOrderedList"], function (i, val) {
+                    if (i == 0) $(proxy._orderLiTemplate).find("#upper-roman,#upper-alpha,#lower-roman").attr("class", "e-liseparator");
+                    $("<li id='" + (val["name"] ? val["name"] : ("olcustom" + i)) + "' class='" + (val["css"] ? val["css"] : "") + "' title='" + (val["tooltip"] ? val["tooltip"] : "") + "' style='float:left;width:100%;'>" + (val["text"] ? val["text"] : "") + "</li>").appendTo(proxy._orderLiTemplate);
+                });
+            var model = {};
             model.width = "42px";
             model.contentType = "imageonly";
-			model.enableRTL = this.model.enableRTL;
-			model.showRoundedCorner = this.model.showRoundedCorner;
-			model.targetID = this._rteId + "_orderlist";
-			model.prefixIcon = "e-rte-toolbar-icon " + this._rteIconsList["orderedList"];
-			model.itemSelected = $.proxy(this._onOrderList, this);
-			this._orderSplit.appendTo(this._rteToolbar.find("li.e-rteItem-orderedList").html(""));
-			var oldWrapper = $("#" + this._rteId + "_orderlist").get(0);
+            model.enableRTL = this.model.enableRTL;
+            model.showRoundedCorner = this.model.showRoundedCorner;
+            model.targetID = this._rteId + "_orderlist";
+            model.prefixIcon = "e-icon e-rte-toolbar-icon " + this._rteIconsList["orderedList"];
+            model.itemSelected = $.proxy(this._onOrderList, this);
+            this._orderSplit.appendTo(this._rteToolbar.find("li.e-rteItem-orderedList").html(""));
+            var oldWrapper = $("#" + this._rteId + "_orderlist").get(0);
             if (oldWrapper) {
                 if ($(oldWrapper).parent().hasClass("e-menu-wrap"))
                     $(oldWrapper).parent().remove();
                 else
                     $(oldWrapper).remove();
             }
-			this._orderLiTemplate.appendTo((this._rteToolbar.parents("body").length > 0 ? this._rteToolbar.find("li.e-rteItem-orderedList") : $('body')));
-			this._orderSplit.ejSplitButton(model);
-			this._orderSplitObj = this._orderSplit.ejSplitButton("instance");
-			this._on(this._orderSplit, "click", this._onOrderList);
-			},
+            this._orderLiTemplate.appendTo((this._rteToolbar.parents("body").length > 0 ? this._rteToolbar.find("li.e-rteItem-orderedList") : $('body')));
+            this._orderSplit.ejSplitButton(model);
+            this._orderSplitObj = this._orderSplit.ejSplitButton("instance");
+            this._on(this._orderSplit, "click", this._onOrderList);
+        },
         _renderBGColor: function () {
             var proxy = this;
             this._bgColorSplit = ej.buildTag("button#" + this._rteId + "_backgroundColorbtn", "", {}, { type: "button", "data-role": "none" });
@@ -2113,7 +2225,7 @@
             this._bgSplitObj = this._bgColorSplit.ejSplitButton("instance");
             this._bgSplitObj.option("beforeOpen", function () { proxy._bindClickOperation("BGColor"); });
             this._on(this._bgColorSplit, "click", this._bgColorClick);
-            this._bgColorSplit.find("span."+this._rteIconsList["backgroundColor"]).removeClass("e-icon");
+            this._bgColorSplit.find("span." + this._rteIconsList["backgroundColor"]).removeClass("e-icon");
             this._bgColorSplit.find("span.e-btntxt").css("background-color", this._bgColor);
         },
         _bindClickOperation: function (toolName) {
@@ -2192,27 +2304,33 @@
             var _target = $(e.target);
             _target.hasClass("e-error") && _target.removeClass("e-error");
         },
-		_ieLinkRange: function () {
-			var rang = this._getRange();
-            !ej.isNullOrUndefined(this._currentSelNode) && this._currentSelNode.nodeName.toLowerCase()!="html" && rang.setStart(this._currentSelNode, this._currentSelNode.childNodes.length)
-            this._selectionRange = rang;
-		},
-		_ieCursorMaintainance: function () {
-			if(this._isIE() && !this._isIE8()) {
-				this._ieLinkRange();
-			    this._focus();
-			}
-			else if(this._isIE8())
-			    this._setRange(this._currentSelNode,this._getDocument().body.createTextRange(),true);
-		},
+        _ieLinkRange: function () {
+            var rang = this._getRange();
+            if (!this._isIE() && !this._isIE8()) {
+                !ej.isNullOrUndefined(this._currentSelNode) && this._currentSelNode.nodeName.toLowerCase() != "html"
+                this._selectionRange = rang;
+            }
+            else {
+                !ej.isNullOrUndefined(this._currentSelNode) && this._currentSelNode.nodeName.toLowerCase() != "html" && rang.setStart(this._currentSelNode, this._currentSelNode.childNodes.length)
+                this._selectionRange = rang;
+            }
+        },
+        _ieCursorMaintainance: function () {
+            if (!this._isIE8()) {
+                this._ieLinkRange();
+                this._focus();
+            }
+            else
+                this._setRange(this._currentSelNode, this._getDocument().body.createTextRange(), true);
+        },
         _linkBtnClick: function (sender) {
             if (sender.target.id === "link_cancel") {
                 this._clearLinkFields();
                 this._linkDialog.ejDialog("close");
-				this._ieCursorMaintainance();
+                this._ieCursorMaintainance();
             }
             else if (sender.target.id === "link_insert") {
-				if(this._isIE() && !this._isIE8()) this._ieLinkRange();
+                if (this._isIE() && !this._isIE8()) this._ieLinkRange();
                 this._restoreSelection(this._selectionRange);
                 if (this._txtURL.val() != "")
                     this._onInsertLink();
@@ -2229,7 +2347,7 @@
         _imageBtnClick: function (sender) {
             if (sender.target.id === this._rteId + "_img_cancel") {
                 this._imgDialog.ejDialog("close");
-				this._ieCursorMaintainance();
+                this._ieCursorMaintainance();
             }
             else if (sender.target.id === this._rteId + "_img_insert") {
                 var imageVal = this._imgURL.val().match(/(ftp:|http:|https:)\/\//g);
@@ -2239,7 +2357,7 @@
                     this._setBackupData();
                 } else {
                     this._imgURL.addClass("e-error");
-					if (!this._isUrl($.trim(this._imageLink.val()))) this._imageLink.addClass("e-error");
+                    if (!this._isUrl($.trim(this._imageLink.val()))) this._imageLink.addClass("e-error");
                     return false;
                 }
             }
@@ -2253,33 +2371,33 @@
                     _editHTML = this._decode(_editHTML);
                 try {
                     this._getDocument().documentElement.innerHTML = _editHTML.replace("<html>", "").replace("</html>", "");
-					if (this.model.enableXHTML) 
-                      this._getDocument().documentElement.innerHTML = this._updateXhtml();
+                    if (this.model.enableXHTML)
+                        this._getDocument().documentElement.innerHTML = this._updateXhtml();
                 }
                 catch (e) {
                     var regEX = /<body[^>]*>((.|[\n\r])*)<\/body>/i;
-					if(!ej.isNullOrUndefined(regEX.exec(_editHTML))) {
-                      _editHTML = regEX.exec(_editHTML)[1];
-                      this._getDocument().body.innerHTML = _editHTML;
-					}
+                    if (!ej.isNullOrUndefined(regEX.exec(_editHTML))) {
+                        _editHTML = regEX.exec(_editHTML)[1];
+                        this._getDocument().body.innerHTML = _editHTML;
+                    }
                 }
                 this._onChange();
-                this._updateCount();               
+                this._updateCount();
             }
             this._sourceDialog.find("textarea.e-rte-srctextarea")[0].value = "";
-			 var _tableEle = $(this._getDocument()).find("table.e-rte-table");
-			if(!this.model.enableRTL) this._on( _tableEle , "mouseover", this._tableMouseOver);
+            var _tableEle = $(this._getDocument()).find("table.e-rte-table");
+            if (!this.model.enableRTL) this._on(_tableEle, "mouseover", this._tableMouseOver);
             this._sourceDialog.ejDialog("close");
-			this._showHideContextMenu();
+            this._showHideContextMenu();
         },
 
         _eTblBtnClick: function (sender) {
             if (sender.target.id === this._rteId + "_eTbl_cancel") {
                 this._eTblDialog.ejDialog("close");
-				this._ieCursorMaintainance();
+                this._ieCursorMaintainance();
             }
             else if (sender.target.id === this._rteId + "_eTbl_apply") {
-				if(this._isIE() && !this._isIE8()) this._ieLinkRange();
+                if (this._isIE() && !this._isIE8()) this._ieLinkRange();
                 this._oneditTable();
                 this._onChange();
                 this._setBackupData();
@@ -2287,7 +2405,7 @@
         },
 
         _insertCustomTable: function (sender) {
-			this._customTableValidation = false;
+            this._customTableValidation = false;
             if (sender.target.id === "insert") {
                 var cols = this._customTableDialog.find(".e-rte-txtColumns").ejNumericTextbox("getValue");
                 var row = this._customTableDialog.find(".e-rte-txtRows").ejNumericTextbox("getValue");
@@ -2298,45 +2416,45 @@
                 var padding = this._customInputValidation(this._customTableDialog.find(".e-rte-txtPadding"));
                 var border = this._customTableDialog.find(".e-rte-txtBorder").ejDropDownList("getSelectedValue");
                 var caption = this._chkTblCaption.ejCheckBox("isChecked");
-                if(!this._customTableValidation) {
-                if (!ej.isNullOrUndefined(this._tableInsertAt) && !ej.isNullOrUndefined(this._tableInsertAt.startContainer))
-                    this._restoreSelection(this._tableInsertAt);
-                var tableEle = this._tableGenerator(row, cols, false, width, height, spacing, padding, align, border, caption);
-                this.executeCommand('inserthtml', tableEle);
-                var _tableEle = $(this._getDocument()).find("table.e-rte-table");
-                var drpDwnObj = this._customTableDialog.find(".e-rte-ddlAlignment").data("ejDropDownList");
-                if (drpDwnObj.option('value') == "Center")
-                    _tableEle.attr('style', "margin: 0 auto");
-                if(!this.model.enableRTL) this._on( _tableEle , "mouseover", this._tableMouseOver);
-                this._onChange();
-                drpDwnObj.option({ value: "", enabled: false });
-				}
-				this._on(this._customTableDialog.find(".e-rte-txtHeight"), "keypress", this._urlValidation)
+                if (!this._customTableValidation) {
+                    if (!ej.isNullOrUndefined(this._tableInsertAt) && !ej.isNullOrUndefined(this._tableInsertAt.startContainer))
+                        this._restoreSelection(this._tableInsertAt);
+                    var tableEle = this._tableGenerator(row, cols, false, width, height, spacing, padding, align, border, caption);
+                    this.executeCommand('inserthtml', tableEle);
+                    var _tableEle = $(this._getDocument()).find("table.e-rte-table");
+                    var drpDwnObj = this._customTableDialog.find(".e-rte-ddlAlignment").data("ejDropDownList");
+                    if (drpDwnObj.option('value') == "Center")
+                        _tableEle.attr('style', "margin: 0 auto");
+                    if (!this.model.enableRTL) this._on(_tableEle, "mouseover", this._tableMouseOver);
+                    this._onChange();
+                    drpDwnObj.option({ value: "", enabled: false });
+                }
+                this._on(this._customTableDialog.find(".e-rte-txtHeight"), "keypress", this._urlValidation)
 				._on(this._customTableDialog.find(".e-rte-txtWidth"), "keypress", this._urlValidation)
 				._on(this._customTableDialog.find(".e-rte-txtSpacing"), "keypress", this._urlValidation)
 				._on(this._customTableDialog.find(".e-rte-txtPadding"), "keypress", this._urlValidation);
-				
+
             }
-			if(!this._customTableValidation) {
-            this._customTableDialog.ejDialog("close");
-            this._clearTableFields();
-			this._ieCursorMaintainance();
-			}
+            if (!this._customTableValidation) {
+                this._customTableDialog.ejDialog("close");
+                this._clearTableFields();
+                this._ieCursorMaintainance();
+            }
         },
-		
-		_customInputValidation: function(validation) {
-			var value = validation.val().toLowerCase();
-			var lastPos = value.substr(value.length -2 ,2);
-			var specChar = value.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,<>\/?]/gi);
-			var alphaChar = value.match(/[a-z]/gi);
-			if(((!isNaN(value) && (specChar == null || specChar.length == 0)) || (value.length >1 && value.substr(value.length -1 ,1) == "%" && specChar.length == 1 ) && (alphaChar == null || alphaChar.length == 0) )||(value.length >2 && (specChar == null || specChar.length == 0) && (alphaChar != null && alphaChar.length == 2) &&( lastPos == "px" ||lastPos == "in" ||lastPos == "cm" ||lastPos == "mm" ||lastPos == "em" || lastPos == "ex" ||lastPos == "pt" ||lastPos == "pc" ) ))
-				return value;
-			else {
-				 validation.addClass("e-error");
-				this._customTableValidation = true;
-				return 0;
-			}
-		},
+
+        _customInputValidation: function (validation) {
+            var value = validation.val().toLowerCase();
+            var lastPos = value.substr(value.length - 2, 2);
+            var specChar = value.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,<>\/?]/gi);
+            var alphaChar = value.match(/[a-z]/gi);
+            if (((!isNaN(value) && (specChar == null || specChar.length == 0)) || (value.length > 1 && value.substr(value.length - 1, 1) == "%" && specChar.length == 1) && (alphaChar == null || alphaChar.length == 0)) || (value.length > 2 && (specChar == null || specChar.length == 0) && (alphaChar != null && alphaChar.length == 2) && (lastPos == "px" || lastPos == "in" || lastPos == "cm" || lastPos == "mm" || lastPos == "em" || lastPos == "ex" || lastPos == "pt" || lastPos == "pc")))
+                return value;
+            else {
+                validation.addClass("e-error");
+                this._customTableValidation = true;
+                return 0;
+            }
+        },
 
         _clearTableFields: function () {
             this._customTableDialog.find(".e-rte-txtColumns").ejNumericTextbox("option", "value", 3);
@@ -2369,16 +2487,16 @@
             this._chkTarget.ejCheckBox({ check: false });
             this._txtURL.focus();
         },
-		_textFieldFocus: function (ele , start, end ) {
-			if(!this._isIE8()) ele.setSelectionRange(start,end);
-		    else {
-				var range = ele.createTextRange();
+        _textFieldFocus: function (ele, start, end) {
+            if (!this._isIE8()) ele.setSelectionRange(start, end);
+            else {
+                var range = ele.createTextRange();
                 range.collapse(true);
                 range.moveEnd('character', start);
                 range.moveStart('character', end);
                 range.select();
-			}
-		},
+            }
+        },
         _clearImgFields: function () {
             this._imgURL = this._imgDialog.find(".e-rte-imgUrl").val("http://").removeClass("e-error");
             this._imgDialog.find(".e-rte-imgText").val("");
@@ -2400,17 +2518,17 @@
         _videoManager: function () {
             var selectNode = this._getSelectedNode();
             this._editVideo = null;
-            this._getPasteRangeVal();            
+            this._getPasteRangeVal();
             if (selectNode && !ej.isNullOrUndefined(selectNode.tagName)) {
-                this._editVideo = selectNode;                
-                this._videoWidth = parseInt($(selectNode).width());               
+                this._editVideo = selectNode;
+                this._videoWidth = parseInt($(selectNode).width());
                 this._videoHeight = parseInt($(selectNode).width());
-				if(this.model.showDimensions){
-                this._videoDialog.find(".e-rte-videoX").val(this._videoWidth);
-                this._videoDialog.find(".e-rte-videoY").val(this._videoHeight);
-				}
+                if (this.model.showDimensions) {
+                    this._videoDialog.find(".e-rte-videoX").val(this._videoWidth);
+                    this._videoDialog.find(".e-rte-videoY").val(this._videoHeight);
+                }
             }
-			$("#" + this._rteId + "_video_wrapper").css({"z-index":this._onGetMaxZindex()});
+            $("#" + this._rteId + "_video_wrapper").css({ "z-index": this._onGetMaxZindex() });
             this._videoDialog.ejDialog("open");
             this._videoDialog.find("textarea.e-rte-video").focus();
         },
@@ -2418,38 +2536,39 @@
         _sourceCodeManager: function () {
             ej.isNullOrUndefined(this._sourceDialog) && this._renderSourceDialog();
             this._updateTagInfo("body");
-			if(!ej.isNullOrUndefined(this._getDocument().documentElement)){
-            this._sourceDialog.find("textarea.e-rte-srctextarea")[0].value = (this.model.enableHtmlEncode) ? this._encode(this._getDocument().documentElement.outerHTML) : this._getDocument().documentElement.outerHTML ;           
-			$("#" + this._rteId + "_Source_wrapper").css({"z-index":this._onGetMaxZindex()});
-            this._sourceDialog.ejDialog("open");
-            this._sourceDialog.find("textarea.e-rte-srctextarea").focus();
-			}
-			else
-			    this._htmlSource.addClass("e-disable");			
+            this._hideTooltip();
+            if (!ej.isNullOrUndefined(this._getDocument().documentElement)) {
+                this._sourceDialog.find("textarea.e-rte-srctextarea")[0].value = (this.model.enableHtmlEncode) ? this._encode(this._getDocument().documentElement.outerHTML) : this._getDocument().documentElement.outerHTML;
+                $("#" + this._rteId + "_Source_wrapper").css({ "z-index": this._onGetMaxZindex() });
+                this._sourceDialog.ejDialog("open");
+                this._sourceDialog.find("textarea.e-rte-srctextarea").focus();
+            }
+            else
+                this._htmlSource.addClass("e-disable");
         },
-        _getPasteRangeVal: function(){
+        _getPasteRangeVal: function () {
             if (this._isIE()) {
                 this._pasteRangeVal = this._getRange();
                 this._pasteFlag = true;
             }
         },
         _hyperLinkManager: function (filebrowser) {
-            this._getPasteRangeVal();          
+            this._getPasteRangeVal();
             var selectNode = (this._isIE()) ? this._currentSelNode : this._getSelectedNode();
 
             this._selectedHTML = (ej.browserInfo().name === "msie" && ej.browserInfo().version === "11.0") ? this._pasteRangeVal.toString() : this._getSelText();
             if (filebrowser) {
                 this._clearFileFields();
                 (!ej.isNullOrUndefined(selectNode) && selectNode.tagName.toUpperCase() == 'A') ? this._fileLinkText.val($(selectNode).html()) : this._fileLinkText.val(this._selectedHTML);
-                $("#" + this._rteId + "_fileDialog_wrapper").css({"z-index":this._onGetMaxZindex()});
+                $("#" + this._rteId + "_fileDialog_wrapper").css({ "z-index": this._onGetMaxZindex() });
                 this._fileDialog.ejDialog("open");
             }
             else {
-            this._clearLinkFields();
-            (!ej.isNullOrUndefined(selectNode) && selectNode.tagName.toUpperCase() == 'A') ? this._txtLinkText.val($(selectNode).html()) : this._txtLinkText.val(this._selectedHTML);
-                $("#" + this._rteId + "_link_wrapper").css({"z-index":this._onGetMaxZindex()});
+                this._clearLinkFields();
+                (!ej.isNullOrUndefined(selectNode) && selectNode.tagName.toUpperCase() == 'A') ? this._txtLinkText.val($(selectNode).html()) : this._txtLinkText.val(this._selectedHTML);
+                $("#" + this._rteId + "_link_wrapper").css({ "z-index": this._onGetMaxZindex() });
                 this._linkDialog.ejDialog("open");
-				this._textFieldFocus(this._txtURL[0] , this._txtURL.val().length ,this._txtURL.val().length);
+                this._textFieldFocus(this._txtURL[0], this._txtURL.val().length, this._txtURL.val().length);
             }
 
             if (selectNode && !(/^(A)$/).test(selectNode.nodeName)) {
@@ -2479,29 +2598,30 @@
             }
             else
                 Xpos = $(tableLi).position().left, Ypos = $(tableLi).position().top + tableLi.height() + 7;
-			if(((parseInt(Xpos) + parseInt($("#" + this._id + "_table_wrapper").css("width"))) > document.body.clientWidth) || ((parseInt(Xpos) + parseInt($("#" + this._id + "_table_wrapper").css("width"))) > parseInt($("#" + this._id + "_wrapper").css("width")) + $("#" + this._id + "_wrapper").position().left )) Xpos = (parseInt(Xpos) -(parseInt($("#" + this._id + "_table_wrapper").css("width")) - $(tableLi).width())) + "px";
+            if (((parseInt(Xpos) + parseInt($("#" + this._id + "_table_wrapper").css("width"))) > document.body.clientWidth) || ((parseInt(Xpos) + parseInt($("#" + this._id + "_table_wrapper").css("width"))) > parseInt($("#" + this._id + "_wrapper").css("width")) + $("#" + this._id + "_wrapper").position().left)) Xpos = (parseInt(Xpos) - (parseInt($("#" + this._id + "_table_wrapper").css("width")) - $(tableLi).width())) + "px";
             var top = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
-			if(top < Ypos && $(window).height() < ( Ypos - top + parseInt( $("#" + this._id + "_table_wrapper").css("height"))))
-                Ypos = (parseInt( $("#" + this._id + "_table_wrapper").css("height")) > $(window).height()) ? top : ( $(window).height()  - parseInt( $("#" + this._id + "_table_wrapper").css("height"))) > 0 ? ( $(window).height() - parseInt( $("#" + this._id + "_table_wrapper").css("height")) + top): top; 
+            if (top < Ypos && $(window).height() < (Ypos - top + parseInt($("#" + this._id + "_table_wrapper").css("height"))))
+                Ypos = (parseInt($("#" + this._id + "_table_wrapper").css("height")) > $(window).height()) ? top : ($(window).height() - parseInt($("#" + this._id + "_table_wrapper").css("height"))) > 0 ? ($(window).height() - parseInt($("#" + this._id + "_table_wrapper").css("height")) + top) : top;
             this._createTable.ejDialog("option", "position", { X: Xpos, Y: Ypos });
             this._createTable.ejDialog("open");
-			this._on(ej.getScrollableParents(this._createTable), "scroll", function(){
-				this._createTable.ejDialog("close");
-			});
+            this._on(ej.getScrollableParents(this._createTable), "scroll", function () {
+                this._createTable.ejDialog("close");
+            });
         },
         _eTblManager: function () {
             this._clearEditTableFields();
             var rteID = this._rteId;
-            var selectNode = this._currentSelNode;
+            var isTable = $(this._getSelectedNode()).closest("td");
+            var selectNode = (isTable.length > 0) ? isTable[0] : this._currentSelNode;
             if (!ej.isNullOrUndefined(selectNode) && selectNode.tagName.toLowerCase() === "td") {
                 var parentTable = $(selectNode).closest('tbody').closest('table');
                 this._getTableObj("Height").val($(parentTable).height());
                 this._getTableObj("Width").val($(parentTable).width());
-                if(!ej.isNullOrUndefined(parentTable[0])){
-                this._getTableObj("CellSpace").data('ejNumericTextbox').option('value', parentTable[0].cellSpacing);
-                this._getTableObj("CellPad").data('ejNumericTextbox').option('value', parentTable[0].cellPadding);
-                var align = parentTable[0].align;
-                }                
+                if (!ej.isNullOrUndefined(parentTable[0])) {
+                    this._getTableObj("CellSpace").data('ejNumericTextbox').option('value', parentTable[0].cellSpacing);
+                    this._getTableObj("CellPad").data('ejNumericTextbox').option('value', parentTable[0].cellPadding);
+                    var align = parentTable[0].align;
+                }
                 if (!ej.isNullOrUndefined(align) && align != "") {
                     this._eTblAlign.enable();
                     this._eTblAlign.option('value', align);
@@ -2551,35 +2671,35 @@
             if (selectNode && !ej.isNullOrUndefined(selectNode)) {
                 this._imgWidth = parseInt($(selectNode).width());
                 this._imgHeight = parseInt($(selectNode).height());
-				if(this.model.showDimensions){
-                this._imgDialog.find(".e-rte-imgX").val(this._imgWidth);
-                this._imgDialog.find(".e-rte-imgY").val(this._imgHeight);
-				}
+                if (this.model.showDimensions) {
+                    this._imgDialog.find(".e-rte-imgX").val(this._imgWidth);
+                    this._imgDialog.find(".e-rte-imgY").val(this._imgHeight);
+                }
                 var linkNode = $(selectNode).parent('a');
                 if (linkNode.length > 0)
                     this._imageLink.val(linkNode.attr('href'));
-				if(selectNode.tagName.toLowerCase() === "img") {
-					this._imgDialog.find(".e-rte-imgUrl").val(selectNode.src);
+                if (selectNode.tagName.toLowerCase() === "img") {
+                    this._imgDialog.find(".e-rte-imgUrl").val(selectNode.src);
                     this._imgDialog.find(".e-rte-imgText").val(selectNode.alt);
-                if (selectNode.style != "") {
-                    this._imageBorderPx.option('value', selectNode.style.borderWidth.split('px')[0]);
-                    this._imageBorderStyle.option('value', selectNode.style.borderStyle);
-                    if (selectNode.style.borderColor.length > 0) {
-                        if (ej.browserInfo().name === "msie" && ej.browserInfo().version === "8.0") this._imgPicker.option('value', selectNode.style.borderColor);
-                        else {
-                            var colorCode = selectNode.style.borderColor.split("(")[1].split(")")[0];
-                            colorCode = colorCode.split(",");
-                            colorCode = { r: $.trim(colorCode[0]), g: $.trim(colorCode[1]), b: $.trim(colorCode[2]) };
-                            this._imgPicker.option('value', this._imgPicker.RGBToHEX(colorCode));
+                    if (selectNode.style != "") {
+                        this._imageBorderPx.option('value', selectNode.style.borderWidth.split('px')[0]);
+                        this._imageBorderStyle.option('value', selectNode.style.borderStyle);
+                        if (selectNode.style.borderColor.length > 0) {
+                            if (ej.browserInfo().name === "msie" && ej.browserInfo().version === "8.0") this._imgPicker.option('value', selectNode.style.borderColor);
+                            else {
+                                var colorCode = selectNode.style.borderColor.split("(")[1].split(")")[0];
+                                colorCode = colorCode.split(",");
+                                colorCode = { r: $.trim(colorCode[0]), g: $.trim(colorCode[1]), b: $.trim(colorCode[2]) };
+                                this._imgPicker.option('value', this._imgPicker.RGBToHEX(colorCode));
+                            }
                         }
                     }
+                    this._imageStyle.val($(selectNode).attr('style'));
                 }
-                this._imageStyle.val($(selectNode).attr('style'));
-				}
             }
-			$("#" + this._rteId + "_Image_wrapper").css({"z-index":this._onGetMaxZindex()});
+            $("#" + this._rteId + "_Image_wrapper").css({ "z-index": this._onGetMaxZindex() });
             this._imgDialog.ejDialog("open");
-			this._textFieldFocus(this._imgURL[0] ,this._imgURL.val().length,this._imgURL.val().length);
+            this._textFieldFocus(this._imgURL[0], this._imgURL.val().length, this._imgURL.val().length);
             if (ej.isNullOrUndefined(this._explorerObj)) this._imgDialog.find(".e-rte-imgUrl").focus();
         },
         _getValidbrowser: function (name) {
@@ -2598,37 +2718,37 @@
                     break;
             }
         },
-		_alertHeader: function (rteInstcne) {
-			 rteInstcne._alertWindow.ejDialog("option","showHeader",false);
-			 this.model.enableRTL && !this._alertWindow.find(".e-alert-ok").hasClass("e-rte-alertBtnRTL") && this._alertWindow.find(".e-alert-ok").addClass("e-rte-alertBtnRTL");
-			 rteInstcne._alertWindow.find(".e-rte-button").css({"text-align":"","padding-bottom":"","padding-top":""}).addClass("e-fieldseparate");
-			rteInstcne._alertWindow.ejDialog("instance").refresh();
-		},
+        _alertHeader: function (rteInstcne) {
+            rteInstcne._alertWindow.ejDialog("option", "showHeader", false);
+            this.model.enableRTL && !this._alertWindow.find(".e-alert-ok").hasClass("e-rte-alertBtnRTL") && this._alertWindow.find(".e-alert-ok").addClass("e-rte-alertBtnRTL");
+            rteInstcne._alertWindow.find(".e-rte-button").css({ "text-align": "", "padding-bottom": "", "padding-top": "" }).addClass("e-fieldseparate");
+            rteInstcne._alertWindow.ejDialog("instance").refresh();
+        },
         _toolBarClick: function (sender) {
-			if(sender.event &&((sender.event.which&& sender.event.which==3)||(sender.event.button&&sender.event.button==2)))
-				return;
+            if (sender.event && ((sender.event.which && sender.event.which == 3) || (sender.event.button && sender.event.button == 2)))
+                return;
             var $rteEle = $(this.itemsContainer).closest("div.e-rte").find("textarea.e-rte"), rteInstcne = $rteEle.ejRTE("instance"), rteId = $rteEle.attr('id');
             var _itemId = ej.isNullOrUndefined(rteId) ? sender.currentTarget.id.replace("_", "") : sender.currentTarget.id.replace(rteId + "_", "");
-			rteInstcne._alertHeader(rteInstcne);
-			if (ej.browserInfo().name === "mozilla") rteInstcne._getDocument().designMode = "off";
+            rteInstcne._alertHeader(rteInstcne);
+            if (ej.browserInfo().name === "mozilla") rteInstcne._getDocument().designMode = "off";
             if ($(sender.currentTarget).hasClass("e-rteItem-copy") && !rteInstcne._isIE() && rteInstcne._getValidbrowser(ej.browserInfo().name))
                 rteInstcne._openAlert(rteInstcne._getLocalizedLabels("copyAlert"));
-            else if($(sender.currentTarget).hasClass("e-rteItem-cut") && !rteInstcne._isIE() && rteInstcne._getValidbrowser(ej.browserInfo().name))
-				rteInstcne._openAlert(rteInstcne._getLocalizedLabels("cutAlert"));
-			else if($(sender.currentTarget).hasClass("e-rteItem-paste") && !rteInstcne._isIE())
-				rteInstcne._openAlert(rteInstcne._getLocalizedLabels("pasteAlert"));
-			else {
+            else if ($(sender.currentTarget).hasClass("e-rteItem-cut") && !rteInstcne._isIE() && rteInstcne._getValidbrowser(ej.browserInfo().name))
+                rteInstcne._openAlert(rteInstcne._getLocalizedLabels("cutAlert"));
+            else if ($(sender.currentTarget).hasClass("e-rteItem-paste") && !rteInstcne._isIE())
+                rteInstcne._openAlert(rteInstcne._getLocalizedLabels("pasteAlert"));
+            else {
                 if (ej.browserInfo().name != "chrome") {
                     var index = rteInstcne._scriptsItems.indexOf(_itemId);
-                    if (rteInstcne._scriptsItems.indexOf(_itemId) >= 0 && $("#" + rteId+ "_" + rteInstcne._scriptsItems[index == 0 ? 1 : 0]).hasClass("e-active"))
-                        rteInstcne._selectCommand(rteId+ "_"+ rteInstcne._scriptsItems[index == 0 ? 1 : 0]);
+                    if (rteInstcne._scriptsItems.indexOf(_itemId) >= 0 && $("#" + rteId + "_" + rteInstcne._scriptsItems[index == 0 ? 1 : 0]).hasClass("e-active"))
+                        rteInstcne._selectCommand(rteId + "_" + rteInstcne._scriptsItems[index == 0 ? 1 : 0]);
                 }
-                    var commandName = $.grep(sender.currentTarget.children[0].className.split(/\s+/), function (a) {
-                        return !/^e-(rteItem|rte-toolbar-icon)$/i.test(a)
-                    });
+                var commandName = $.grep(sender.currentTarget.children[0].className.split(/\s+/), function (a) {
+                    return !/^e-(rteItem|rte-toolbar-icon)$/i.test(a)
+                });
                 if (commandName.indexOf("e-split") >= 0 || commandName.indexOf("e-ddl") >= 0)
                     commandName[0] = _itemId;
-                    rteInstcne._selectCommand(commandName[0]);
+                rteInstcne._selectCommand(commandName[0]);
             }
 
             if (rteInstcne._styleItems.indexOf(_itemId) >= 0 || rteInstcne._scriptsItems.indexOf(_itemId) >= 0) {
@@ -2639,8 +2759,8 @@
                 $(sender.currentTarget).hasClass("e-isactive") ? $(sender.currentTarget).removeClass("e-isactive") : $(sender.currentTarget).addClass("e-isactive");
                 if (rteInstcne._scriptsItems.indexOf(_itemId) >= 0) {
                     var index = rteInstcne._scriptsItems.indexOf(_itemId);
-                    $("#" + rteId+ "_" + rteInstcne._scriptsItems[index == 0 ? 1 : 0]).removeClass("e-isactive");
-                    this.deselectItemByID(rteId+ "_"+ rteInstcne._scriptsItems[index == 0 ? 1 : 0]);
+                    $("#" + rteId + "_" + rteInstcne._scriptsItems[index == 0 ? 1 : 0]).removeClass("e-isactive");
+                    this.deselectItemByID(rteId + "_" + rteInstcne._scriptsItems[index == 0 ? 1 : 0]);
                 }
             }
 
@@ -2650,7 +2770,7 @@
                 var index = rteInstcne._alignItems.indexOf(_itemId)
                 for (var i = 0; i < rteInstcne._alignItems.length; i++) {
                     if (i != index)
-                        this.deselectItemByID(rteId+ "_"+ rteInstcne._alignItems[i]);
+                        this.deselectItemByID(rteId + "_" + rteInstcne._alignItems[i]);
                 }
             }
 
@@ -2661,18 +2781,19 @@
                     this.deselectItemByID(sender.currentTarget.id);
                 $(sender.currentTarget).hasClass("e-isactive") ? $(sender.currentTarget).removeClass("e-isactive") : $(sender.currentTarget).addClass("e-isactive");
                 var index = rteInstcne._listItems.indexOf(_itemId);
-                $("#" + rteId+"_" + rteInstcne._listItems[index == 0 ? 1 : 0]).removeClass("e-isactive");
+                $("#" + rteId + "_" + rteInstcne._listItems[index == 0 ? 1 : 0]).removeClass("e-isactive");
                 if (index == 0)
-                    this.deselectItemByID(rteId+"_" + rteInstcne._listItems[1]);
+                    this.deselectItemByID(rteId + "_" + rteInstcne._listItems[1]);
                 else
-                    this.deselectItemByID(rteId+"_" + rteInstcne._listItems[0]);
+                    this.deselectItemByID(rteId + "_" + rteInstcne._listItems[0]);
             }
         },
 
         _toggleEditTable: function () {
-			 if(this._isIE8())
-                this._currentSelNode=this._getRange().parentElement();
-            var selTag = (this._isIE8()) ? this._currentSelNode : this._getSelectedNode(), _eTblItems;
+            if (this._isIE8())
+                this._getRange().parentElement&& (this._currentSelNode = this._getRange().parentElement());
+            var isTable = $(this._getSelectedNode()).closest("table");
+            var selTag = (isTable.length > 0) ? isTable[0] : this._getSelectedNode(), _eTblItems;
             if (ej.isNullOrUndefined(selTag)) return false;
             if (!ej.isNullOrUndefined(this._toolBarItems)) {
                 var items = this._rteToolbar.find("li.e-rteItem-addColumnLeft,li.e-rteItem-addColumnRight,li.e-rteItem-addRowAbove,li.e-rteItem-addRowBelow,li.e-rteItem-deleteRow,li.e-rteItem-deleteColumn,li.e-rteItem-deleteTable");
@@ -2697,26 +2818,36 @@
 
 
         _formatChange: function (args) {
-            var $rteEle = $(this.element).closest("div.e-rte").find("textarea.e-rte"), rteInstcne = $rteEle.ejRTE("instance"), rteId = $rteEle.attr('id');
-            this.getSelectedValue() !== "" && rteInstcne._onFormatBlock(this.getSelectedValue());
-            rteInstcne._isIE() && rteInstcne._focus();
-            rteInstcne._onChange();
+            if (args.isInteraction) {
+                var $rteEle = $(this.element).closest("div.e-rte").find("textarea.e-rte"), rteInstcne = $rteEle.ejRTE("instance"), rteId = $rteEle.attr('id');
+                args.value !== "" && rteInstcne._onFormatBlock(args.value);
+                rteInstcne._isIE() && rteInstcne._focus();
+                rteInstcne._onChange();
+				rteInstcne._setBackupData();
+            }
+
         },
 
 
         _fontStyleChange: function (args) {
-            var $rteEle = $(this.element).closest("div.e-rte").find("textarea.e-rte"), rteInstcne = $rteEle.ejRTE("instance"), rteId = $rteEle.attr('id');
-            rteInstcne._focus();
-            this.getSelectedValue() !== "" && rteInstcne._onFontName(this.getSelectedValue());
-            rteInstcne._onChange();
+            if (args.isInteraction) {
+                var $rteEle = $(this.element).closest("div.e-rte").find("textarea.e-rte"), rteInstcne = $rteEle.ejRTE("instance"), rteId = $rteEle.attr('id');
+                rteInstcne._focus();
+                args.value !== "" && rteInstcne._onFontName(args.value);
+                rteInstcne._onChange();
+				rteInstcne._setBackupData();
+            }
         },
 
 
         _fontSizeChange: function (args) {
-            var $rteEle = $(this.element).closest("div.e-rte").find("textarea.e-rte"), rteInstcne = $rteEle.ejRTE("instance"), rteId = $rteEle.attr('id');
-            rteInstcne._focus();
-            this.getSelectedValue() !== "" && rteInstcne._onFontSize(this.getSelectedValue());
-            rteInstcne._onChange();
+            if (args.isInteraction) {
+                var $rteEle = $(this.element).closest("div.e-rte").find("textarea.e-rte"), rteInstcne = $rteEle.ejRTE("instance"), rteId = $rteEle.attr('id');
+                rteInstcne._focus();
+                args.value !== "" && rteInstcne._onFontSize(args.value);
+                rteInstcne._onChange();
+				rteInstcne._setBackupData();
+            }
         },
 
 
@@ -2728,6 +2859,8 @@
                 this._splitMenu.hide(e);
                 this._fontColor = value;
                 this._fontColorSplit.find("span.e-btntxt").css("background-color", value);
+				this._onChange();
+				this._setBackupData();
             }
         },
 
@@ -2740,6 +2873,8 @@
                 this._bgSplitMenu.hide(e);
                 this._bgColor = value;
                 this._bgColorSplit.find("span.e-btntxt").css("background-color", value);
+				this._onChange();
+				this._setBackupData();
             }
         },
 
@@ -2758,137 +2893,146 @@
         _selectCommand: function (selectedId) {
 			$(this._imgDupDiv).remove();
             $(this._imgOrg).css("outline","");
-                if (!(selectedId == "format" || selectedId == "fontName" || selectedId == "fontSize" || selectedId == "fontColor" || selectedId == "backgroundColor" || selectedId == "createTable" )) {
+                if (ej.browserInfo().name != "edge" && !(selectedId == "format" || selectedId == "fontName" || selectedId == "fontSize" || selectedId == "fontColor" || selectedId == "backgroundColor" || selectedId == "createTable" )) {
                 this._focus();
             }
             switch (selectedId) {
-			        case "fullScreen":
-					this._onFullScreen();
-					break;
-					case "print":
-					this._onPrint();
-					break;
-					case "findAndReplace":
-					if(ej.RTE.FindAndReplace)
-						this._showFindAndReplace();
-					break;
-                    case "bold":
+                case "fullScreen":
+                    this._onFullScreen();
+                    break;
+                case "print":
+                    this._onPrint();
+                    break;
+                case "import":
+                    this._onImport();
+                    break;
+                case "wordExport":
+                    this._onExportToWord();
+                    break;
+                case "pdfExport":
+                    this._onExportToPdf();
+                    break;
+                case "findAndReplace":
+                    if (ej.RTE.FindAndReplace)
+                        this._showFindAndReplace();
+                    break;
+                case "bold":
                     this._onBold();
                     break;
-                    case "italic":
+                case "italic":
                     this._onItalics();
                     break;
-                    case "underline":
+                case "underline":
                     this._onUnderLine();
                     break;
-                    case "strikethrough":
+                case "strikethrough":
                     this._onStrikeThrough();
                     break;
-                    case "justifyLeft":
+                case "justifyLeft":
                     this._onJustifyLeft();
                     break;
-                    case "justifyRight":
+                case "justifyRight":
                     this._onJustifyRight();
                     break;
-                    case "justifyCenter":
+                case "justifyCenter":
                     this._onJustifyCenter();
                     break;
-                    case "justifyFull":
+                case "justifyFull":
                     this._onJustifyFull();
                     break;
-                    case "cut":
+                case "cut":
                     this._onCut();
                     break;
-                    case "copy":
+                case "copy":
                     this._onCopy();
                     break;
-                    case "paste":
+                case "paste":
                     this._onPaste();
                     break;
-                    case "clearFormat":
+                case "clearFormat":
                     this._onClearFormat();
                     break;
-                    case "clearAll":
+                case "clearAll":
                     this._clearAllManager();
                     break;
-                    case "orderedList":
-                    case "unorderedList":
+                case "orderedList":
+                case "unorderedList":
                     this._getPasteRangeVal();
                     break;
-                    case "undo":
+                case "undo":
                     this._undo();
                     break;
-                    case "redo":
+                case "redo":
                     this._redo();
                     break;
-                    case "indent":
+                case "indent":
                     this._onIndent();
                     this._indentdepth++;
                     break;
-                    case "outdent":
+                case "outdent":
                     this._onOutdent();
                     if (this._indentdepth > 0)
                         this._indentdepth--;
                     break;
-                    case "createLink":
+                case "createLink":
                     this._hyperLinkManager(false);
                     break;
                 case "removeLink":
                     this._onUnlink();
                     break;
-                    case "image":
+                case "image":
                     this._imageManager();
                     break;
-                    case "createTable":
-					(!this._createTable.ejDialog("isOpen")) ? this._tableManager() : this._createTable.ejDialog("close");
+                case "createTable":
+                    (!this._createTable.ejDialog("isOpen")) ? this._tableManager() : this._createTable.ejDialog("close");
                     break;
-                    case "addRowAbove":
+                case "addRowAbove":
                     this.insertRow(true);
                     break;
-                    case "addRowBelow":
+                case "addRowBelow":
                     this.insertRow(false);
                     break;
-                    case "addColumnLeft":
+                case "addColumnLeft":
                     this.insertColumn(true);
                     break;
-                    case "addColumnRight":
+                case "addColumnRight":
                     this.insertColumn(false);
                     break;
-                    case "deleteRow":
+                case "deleteRow":
                     this.removeRow();
                     break;
-                    case "deleteColumn":
+                case "deleteColumn":
                     this.removeColumn();
                     break;
-                    case "deleteTable":
+                case "deleteTable":
                     this.removeTable();
                     break;
-                    case "superscript":
+                case "superscript":
                     this._onSuperScript();
                     break;
-                    case "subscript":
+                case "subscript":
                     this._onSubScript();
                     break;
-                    case "upperCase":
+                case "upperCase":
                     this._onUpperCase();
                     break;
-                    case "lowerCase":
+                case "lowerCase":
                     this._onLowerCase();
                     break;
-                    case "video":
+                case "video":
                     this._videoManager();
                     break;
-                    case "fileBrowser":
+                case "fileBrowser":
                     this._hyperLinkManager(true);
                     break;
                 default:
                     this._onChange();
                     break;
             }
-                if (selectedId != "createLink" && selectedId != "image" && selectedId != "video" && selectedId != "createTable") {
+            if (selectedId != "createLink" && selectedId != "image" && selectedId != "video" && selectedId != "createTable") {
                 this._onChange();
             }
-                if ((selectedId != "undo") && (selectedId != "redo"))
+            if ((selectedId != "undo") && (selectedId != "redo"))
                 this._setBackupData();
             var selectEle = (this._isIE()) ? this._currentSelNode : this._getSelectedNode();
             this._updateTagInfo(selectEle);
@@ -2914,112 +3058,190 @@
                 return "";
             }
         },
-        _onFullScreen: function(){
-		    if(!$(this._toolBarObj.itemsContainer.find("." + this._rteIconsList["resize"])).length){
-		        this._rteOffset = $(this._rteWapper).position();
-                this._rtePosition = $(this._rteWapper).css("position");				
-		        $(this._rteWapper).css({"top":"0px","left":"0px","width":"100%","height":"100%","position":"fixed","z-index":this._onGetMaxZindex()});
-			    $("body").css("overflow", "hidden");
-			    $(this._toolBarObj.itemsContainer.find("." + this._rteIconsList["maximize"])).removeClass(this._rteIconsList["maximize"]).addClass(this._rteIconsList["resize"]).parent("li").attr("title",this._getLocalizedLabels("resize"));
-		    }
-			else{
-		        $(this._rteWapper).css({ "top": this._rteOffset.top, "left": this._rteOffset.left, "width": this._rteWidth, "height": this._rteHeight, "position": this._rtePosition, "z-index": "" });
-			    $("body").css("overflow", "");
-			    $(this._toolBarObj.itemsContainer.find("." + this._rteIconsList["resize"])).addClass(this._rteIconsList["maximize"]).removeClass(this._rteIconsList["resize"]).parent("li").attr("title",this._getLocalizedLabels("maximize"));
-		    }
-			if( $(this._getDocument()).find("table.e-rte-table").length > 0 )this._removeResizeObject();
-			this._setAutoHeight();
-			if (this.model.showToolbar && this.model.isResponsive) this._toolBarObj._reSizeHandler();
-			this._setIframeHeight();
-			if(!ej.isNullOrUndefined(this._createTable))
-			this._createTableClose();
-		},
-		_onGetMaxZindex: function(){
-		    return Math.max.apply(null, 
-                  $.map($('body *'), function(e,n) {
-                  return parseInt($(e).css('z-index')) + 1 || 1;
-            }));
+        _onFullScreen: function () {
+            if (!$(this._toolBarObj.itemsContainer.find("." + this._rteIconsList["resize"])).length) {
+                this._rteOffset = $(this._rteWapper).position();
+                this._rtePosition = $(this._rteWapper).css("position");
+                $(this._rteWapper).css({ "top": "0px", "left": "0px", "width": "100%", "height": "100%", "position": "fixed", "z-index": this._onGetMaxZindex() });
+                $("body").css("overflow", "hidden");
+                $(this._toolBarObj.itemsContainer.find("." + this._rteIconsList["maximize"])).removeClass(this._rteIconsList["maximize"]).addClass(this._rteIconsList["resize"]).parent("li").attr("title", this._getLocalizedLabels("resize"));
+            }
+            else {
+                $(this._rteWapper).css({ "top": this._rteOffset.top, "left": this._rteOffset.left, "width": this._rteWidth, "height": this._rteHeight, "position": this._rtePosition, "z-index": "" });
+                $("body").css("overflow", "");
+                $(this._toolBarObj.itemsContainer.find("." + this._rteIconsList["resize"])).addClass(this._rteIconsList["maximize"]).removeClass(this._rteIconsList["resize"]).parent("li").attr("title", this._getLocalizedLabels("maximize"));
+            }
+            if ($(this._getDocument()).find("table.e-rte-table").length > 0) this._removeResizeObject();
+            this._setAutoHeight();
+            if (this.model.showToolbar && this.model.isResponsive) this._toolBarObj._reSizeHandler();
+            this._setIframeHeight();
+            if (!ej.isNullOrUndefined(this._createTable))
+                this._createTableClose();
         },
-		_onZooming: function (_proxy) {
-			_proxy._zoomValue = 0;
-		    var size = Number(_proxy.getDocument().body.style.zoom == "" || ej.isNullOrUndefined(_proxy.getDocument().body.style.zoom) ? 1 : _proxy.getDocument().body.style.zoom);
-			var zoomStep = (isNaN(_proxy.model.zoomStep) && _proxy.model.zoomStep.indexOf("%") != -1) ? parseInt(_proxy.model.zoomStep)/100 : Number(_proxy.model.zoomStep);
-			_proxy._zoomValue = (_proxy._zoomArgs == "IN") ? size + zoomStep : ((size - zoomStep) > 0.1) ? size - zoomStep : 0.1;
-			$(_proxy.getDocument().body).css({"zoom":_proxy._zoomValue,"transform":"scale("+_proxy._zoomValue+")","transform-origin":"0 0","-o-transform":"scale("+_proxy._zoomValue+")","-o-transform-origin":"0 0","-webkit-transform":"scale("+_proxy._zoomValue+")","-webkit-transform-origin":"0 0"});		   
-		    $(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomIn")).attr("title",_proxy._getLocalizedLabels("zoomIn")+" "+Math.round(_proxy._zoomValue * 100)+"%");
-			$(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomOut")).attr("title",_proxy._getLocalizedLabels("zoomOut")+" "+Math.round(_proxy._zoomValue * 100)+"%");
-		    if(_proxy._isIE()) return _proxy;
-		},
-		_onKeyZoom: function (args) {
-			var _proxy = this;
-			this._mouseStillDown = true;
-			this._zoomArgs = args;
-			this._setInterval = setInterval(_proxy._onZooming(_proxy) , 100 );
-		},
-		_onPrint: function () {
-		    var _proxy = this;
-			if(this._isIE() || ej.browserInfo().name === "mozilla") this._getWindow().onafterprint = function() { $(_proxy.getDocument().body).css({"zoom":((_proxy._zoomValue)?_proxy._zoomValue:1),"transform":"scale("+((_proxy._zoomValue)?_proxy._zoomValue:1)+")","transform-origin":"0 0","-o-transform":"scale("+((_proxy._zoomValue)?_proxy._zoomValue:1)+")","-o-transform-origin":"0 0","-webkit-transform":"scale("+((_proxy._zoomValue)?_proxy._zoomValue:1)+")","-webkit-transform-origin":"0 0"}); };
-			else _proxy._getWindow().matchMedia('print').addListener(function(args) {
-			       if (!args.matches) $(_proxy.getDocument().body).css({"zoom":((_proxy._zoomValue)?_proxy._zoomValue:1),"transform":"scale("+((_proxy._zoomValue)?_proxy._zoomValue:1)+")","transform-origin":"0 0","-o-transform":"scale("+((_proxy._zoomValue)?_proxy._zoomValue:1)+")","-o-transform-origin":"0 0","-webkit-transform":"scale("+((_proxy._zoomValue)?_proxy._zoomValue:1)+")","-webkit-transform-origin":"0 0"});
-			    });
-			$(_proxy.getDocument().body).css({"zoom":"","transform":"","-o-transform":"","-webkit-transform":""});
-			this._getWindow().print();
-		},
-		_zoomUp: function (e) {
-			if(e && ((e.which&& e.which==3)||(e.button && e.button==2)))
-				return;
-			if(this._setInterval) {
-			    this._mouseStillDown = false;
-			    clearInterval(this._setInterval);
-			    this._setInterval = null;
-			}
-		},
-        _zoomDown: function (e) { 
-			if(e && ((e.which&& e.which==3)||(e.button && e.button==2)))
-				return;
-		    var _proxy = this;
-			_proxy._mouseStillDown = true;
-			_proxy._zoomArgs = $(e.target).hasClass("e-rte-toolbar-icon zoomIn "+this._rteIconsList["zoomIn"]) || $(e.target).hasClass("e-rteItem-zoomIn") ?  "IN" : "OUT";
-            if(e.type == "mousedown") _proxy._setInterval = setInterval(function () {  _proxy._onZooming(_proxy); }, 100 );
-			else _proxy._setInterval = setInterval(_proxy._onZooming(_proxy) , 100 );
-		},
+        _onGetMaxZindex: function () {
+            return Math.max.apply(null,
+                  $.map($('body *'), function (e, n) {
+                      return parseInt($(e).css('z-index')) + 1 || 1;
+                  }));
+        },
+        _onZooming: function (_proxy) {
+            _proxy._zoomValue = 0;
+            var size = Number(_proxy.getDocument().body.style.zoom == "" || ej.isNullOrUndefined(_proxy.getDocument().body.style.zoom) ? 1 : _proxy.getDocument().body.style.zoom);
+            var zoomStep = (isNaN(_proxy.model.zoomStep) && _proxy.model.zoomStep.indexOf("%") != -1) ? parseInt(_proxy.model.zoomStep) / 100 : Number(_proxy.model.zoomStep);
+            _proxy._zoomValue = (_proxy._zoomArgs == "IN") ? size + zoomStep : ((size - zoomStep) > 0.1) ? size - zoomStep : 0.1;
+            $(_proxy.getDocument().body).css({ "zoom": _proxy._zoomValue, "transform": "scale(" + _proxy._zoomValue + ")", "transform-origin": "0 0", "-o-transform": "scale(" + _proxy._zoomValue + ")", "-o-transform-origin": "0 0", "-webkit-transform": "scale(" + _proxy._zoomValue + ")", "-webkit-transform-origin": "0 0" });
+            $(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomIn")).attr("title", _proxy._getLocalizedLabels("zoomIn") + " " + Math.round(_proxy._zoomValue * 100) + "%");
+            $(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomOut")).attr("title", _proxy._getLocalizedLabels("zoomOut") + " " + Math.round(_proxy._zoomValue * 100) + "%");
+            if (_proxy._isIE()) return _proxy;
+        },
+        _onKeyZoom: function (args) {
+            var _proxy = this;
+            this._mouseStillDown = true;
+            this._zoomArgs = args;
+            this._setInterval = setInterval(_proxy._onZooming(_proxy), 100);
+        },
+        _onPrint: function () {
+            var _proxy = this;
+            if (this._isIE() || ej.browserInfo().name === "mozilla") this._getWindow().onafterprint = function () { $(_proxy.getDocument().body).css({ "zoom": ((_proxy._zoomValue) ? _proxy._zoomValue : 1), "transform": "scale(" + ((_proxy._zoomValue) ? _proxy._zoomValue : 1) + ")", "transform-origin": "0 0", "-o-transform": "scale(" + ((_proxy._zoomValue) ? _proxy._zoomValue : 1) + ")", "-o-transform-origin": "0 0", "-webkit-transform": "scale(" + ((_proxy._zoomValue) ? _proxy._zoomValue : 1) + ")", "-webkit-transform-origin": "0 0" }); };
+            else _proxy._getWindow().matchMedia('print').addListener(function (args) {
+                if (!args.matches) $(_proxy.getDocument().body).css({ "zoom": ((_proxy._zoomValue) ? _proxy._zoomValue : 1), "transform": "scale(" + ((_proxy._zoomValue) ? _proxy._zoomValue : 1) + ")", "transform-origin": "0 0", "-o-transform": "scale(" + ((_proxy._zoomValue) ? _proxy._zoomValue : 1) + ")", "-o-transform-origin": "0 0", "-webkit-transform": "scale(" + ((_proxy._zoomValue) ? _proxy._zoomValue : 1) + ")", "-webkit-transform-origin": "0 0" });
+            });
+            $(_proxy.getDocument().body).css({ "zoom": "", "transform": "", "-o-transform": "", "-webkit-transform": "" });
+            this._getWindow().print();
+        },
+        _renderimport: function () {
+            var divEle = ej.buildTag("div#" + this._id + "_importUpload", "", "", ""), url = this.model.importSettings.url + "?rteid=" + this._id;
+            this._rteToolbar.find("li.e-rteItem-import").append(divEle);
+            divEle.ejUploadbox({
+                multipleFilesSelection: false, width: "0px", height: "0px", autoUpload: true, extensionsAllow: ".docx,.doc", showBrowseButton: false, buttonText: { browse: this._id }, showFileDetails: false, saveUrl: url,
+                success: function (args) {
+                    var rteID = args.model.buttonText.browse, rteObj = $("#" + rteID).data("ejRTE"), htmlText = args.responseText, iframe = $(rteObj._getDocument().body);
+                    htmlText = htmlText.replace('<string xmlns="http://schemas.microsoft.com/2003/10/Serialization/">', '').replace('</string>', '').replace(/"/gi, '');
+                    iframe.children().remove();
+                    iframe.append($.parseHTML(htmlText));
+                }
+            });
+            divEle.addClass("e-browse-hide");
+        },
+        _onImport: function () {
+            this._toolBarItems.find("div#" + this._id + "_importUpload").find('input[type=file]').trigger("click");
+        },
+        _onExportToWord: function () {
+            var str = this._getDocument().body, url = this.model.exportToWordSettings.url, htmlText = str.innerHTML, formAttr = { action: url + "?rteid=" + this._id, method: "post" }, formEle = ej.buildTag("form", "", null, formAttr), textAttr = { name: this._id + "_inputVal", type: "hidden", value: htmlText }, textEle = ej.buildTag("input", "", null, textAttr), textAttr2 = { name: this._id + "_inputFile", type: "hidden", value: this.model.exportToWordSettings.fileName }, textEle2 = ej.buildTag("input", "", null, textAttr2);
+            $("body").append(formEle.append(textEle).append(textEle2));
+            formEle.submit();
+            formEle.remove();
+        },
+        _onExportToPdf: function () {
+            var str = this._getDocument().body, url = this.model.exportToPdfSettings.url, htmlText = str.innerHTML, formAttr = { action: url + "?rteid=" + this._id, method: "post" }, formEle = ej.buildTag("form", "", null, formAttr), textAttr = { name: this._id + "_inputVal", type: "hidden", value: htmlText }, textEle = ej.buildTag("input", "", null, textAttr), textAttr2 = { name: this._id + "_inputFile", type: "hidden", value: this.model.exportToPdfSettings.fileName }, textEle2 = ej.buildTag("input", "", null, textAttr2);
+            $("body").append(formEle.append(textEle).append(textEle2));
+            formEle.submit();
+            formEle.remove();
+        },
+        _zoomUp: function (e) {
+            if (e && ((e.which && e.which == 3) || (e.button && e.button == 2)))
+                return;
+            if (this._setInterval) {
+                this._mouseStillDown = false;
+                clearInterval(this._setInterval);
+                this._setInterval = null;
+            }
+        },
+        _zoomDown: function (e) {
+            if (e && ((e.which && e.which == 3) || (e.button && e.button == 2)))
+                return;
+            var _proxy = this;
+            _proxy._mouseStillDown = true;
+            _proxy._zoomArgs = $(e.target).hasClass("e-rte-toolbar-icon zoomIn " + this._rteIconsList["zoomIn"]) || $(e.target).hasClass("e-rteItem-zoomIn") ? "IN" : "OUT";
+            if (e.type == "mousedown") _proxy._setInterval = setInterval(function () { _proxy._onZooming(_proxy); }, 100);
+            else _proxy._setInterval = setInterval(_proxy._onZooming(_proxy), 100);
+        },
         _onBold: function () {
             var args;
-            this.executeCommand('bold', args);
+            if ((this._isIE8()))
+                this.executeCommand('bold', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.bold, null);
+                this._trigger("execute", { commandName: "bold" });
+            }
         },
 
         _onItalics: function () {
             var args;
-            this.executeCommand('italic', args);
+            if ((this._isIE8()))
+                this.executeCommand('italic', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.italic, null);
+                this._trigger("execute", { commandName: "italic" });
+            }
+
         },
         _onStrikeThrough: function () {
             var args;
-            this.executeCommand('strikethrough', args);
+            if ((this._isIE8()))
+                this.executeCommand('strikethrough', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.strikethrough, null);
+                this._trigger("execute", { commandName: "strikethrough" });
+            }
         },
 
         _onUnderLine: function () {
             var args;
-            this.executeCommand('underline', args);
+            if ((this._isIE8()))
+                this.executeCommand('underline', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.underline, null);
+                this._trigger("execute", { commandName: "underline" });
+            }
         },
 
         _onJustifyLeft: function () {
             var args;
-            this.executeCommand('JustifyLeft', args);
+            if ((this._isIE8()))
+                this.executeCommand('JustifyLeft', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.justifyleft, null);
+                this._trigger("execute", { commandName: "JustifyLeft" });
+            }
         },
 
         _onJustifyRight: function () {
             var args;
-            this.executeCommand('JustifyRight', args);
+            if ((this._isIE8()))
+                this.executeCommand('JustifyRight', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.justifyright, null);
+                this._trigger("execute", { commandName: "JustifyRight" });
+            }
         },
 
         _onJustifyCenter: function () {
             var args;
-            this.executeCommand('JustifyCenter', args);
+            if ((this._isIE8()))
+                this.executeCommand('JustifyCenter', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.justifycenter, null);
+                this._trigger("execute", { commandName: "JustifyCenter" });
+            }
         },
 
         _onJustifyFull: function () {
             this._alignFlag = true;
-            this.executeCommand('justifyfull');
+            if ((this._isIE8()))
+                this.executeCommand('justifyfull');
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.justifyfull, null);
+                this._trigger("execute", { commandName: "justifyfull" });
+            }
         },
 
         _onCut: function () {
@@ -3040,41 +3262,44 @@
 
         },
         _onOrderList: function (e) {
-			 var _listSelect = (this._isIE()) ?((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode):this._getSelectedNode();
-            if( (($(_listSelect).prop("tagName")!= "OL" && $(_listSelect).parents("ol").length == 0 && e.ID != "none" ) || e.type=="click" || (($(_listSelect).prop("tagName") == "OL" || $(_listSelect).parents("ol").length > 0) && e.ID == "none" )) && !(ej.isNullOrUndefined(e.ID) && this._listOrderType == "none" )) 
-				this.executeCommand('insertorderedlist', "listItem");
-			_listSelect = (this._isIE()) ?((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode):this._getSelectedNode();
-			if(e.type == "click" && $(_listSelect).parents("ol").length >= 0) e.ID = this._listOrderType;
-			if(!ej.isNullOrUndefined(e.ID)) var orderParent = ($(_listSelect).prop("tagName")=="OL") ? _listSelect : $(_listSelect).parents("ol");
-			this._generateListItems(e,orderParent,!ej.isNullOrUndefined(this.model.tools["customOrderedList"]) ? this.model.tools["customOrderedList"] : []);
-		    this._listOrderType = e.ID;
-			this._updateIndent(_listSelect);
-		},
+            var _listSelect = (this._isIE()) ? ((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode) : this._getSelectedNode();
+            if ((($(_listSelect).prop("tagName") != "OL" && $(_listSelect).parents("ol").length == 0 && e.ID != "none") || e.type == "click" || (($(_listSelect).prop("tagName") == "OL" || $(_listSelect).parents("ol").length > 0) && e.ID == "none")) && !(ej.isNullOrUndefined(e.ID) && this._listOrderType == "none"))
+                this.executeCommand('insertorderedlist', "listItem");
+            _listSelect = (this._isIE()) ? ((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode) : this._getSelectedNode();
+            if (e.type == "click" && $(_listSelect).parents("ol").length >= 0) e.ID = this._listOrderType;
+            if (!ej.isNullOrUndefined(e.ID)) var orderParent = ($(_listSelect).prop("tagName") == "OL") ? _listSelect : $(_listSelect).parents("ol");
+            this._generateListItems(e, orderParent, !ej.isNullOrUndefined(this.model.tools["customOrderedList"]) ? this.model.tools["customOrderedList"] : []);
+            this._listOrderType = e.ID;
+            this._updateIndent(_listSelect);
+        },
         _onUnorderList: function (e) {
-			var _listSelect = (this._isIE()) ?((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode):this._getSelectedNode();
-			if( (($(_listSelect).prop("tagName")!="UL" && $(_listSelect).parents("ul").length == 0 && e.ID != "none" ) || e.type=="click" || (($(_listSelect).prop("tagName") == "UL" || $(_listSelect).parents("ul").length > 0) && e.ID == "none" )) && !(ej.isNullOrUndefined(e.ID) && this._listType == "none" )) 
-				this.executeCommand('insertunorderedlist', "listItem");
-			_listSelect = (this._isIE()) ?((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode):this._getSelectedNode();
-			if(e.type == "click" && $(_listSelect).parents("ul").length >= 0) e.ID = this._listType;
-			if(!ej.isNullOrUndefined(e.ID)) var unOrderParent = ($(_listSelect).prop("tagName")=="UL") ? _listSelect : $(_listSelect).parents("ul");
-			this._generateListItems(e,unOrderParent,!ej.isNullOrUndefined(this.model.tools["customUnorderedList"]) ? this.model.tools["customUnorderedList"] : []);	
-            this._listType = e.ID;	
-			this._updateIndent(_listSelect);
-		},
-		_generateListItems: function (e , list , template) {
-			$(list).css({"list-style-type": e.ID,"list-style-image": "" });
-			var proxy =  this;
-			if(["none", "disc","circle","square","decimal","upper-roman","lower-roman","upper-alpha","lower-alpha"].indexOf(e.ID) == -1)
-				 $.each( template, function( i, val ) {
-                    if(val["name"] == e.ID)  $(list).css({"list-style-type": val["listStyle"],"list-style-image": val["listImage"] });
-            });
-			this._setBackupData();
-            (this._isIE()) ? this.selectRange(this._pasteRangeVal) : this.selectRange(this._getRange());	
-            this._updateTagInfo((this._isIE()) ? this._currentSelNode : this._getSelectedNode());	
-		} ,
+            var _listSelect = (this._isIE()) ? ((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode) : this._getSelectedNode();
+            if ((($(_listSelect).prop("tagName") != "UL" && $(_listSelect).parents("ul").length == 0 && e.ID != "none") || e.type == "click" || (($(_listSelect).prop("tagName") == "UL" || $(_listSelect).parents("ul").length > 0) && e.ID == "none")) && !(ej.isNullOrUndefined(e.ID) && this._listType == "none"))
+                this.executeCommand('insertunorderedlist', "listItem");
+            _listSelect = (this._isIE()) ? ((this._isIE8()) ? this._pasteRangeVal.parentElement() : this._pasteRangeVal.startContainer.parentNode) : this._getSelectedNode();
+            if (e.type == "click" && $(_listSelect).parents("ul").length >= 0) e.ID = this._listType;
+            if (!ej.isNullOrUndefined(e.ID)) var unOrderParent = ($(_listSelect).prop("tagName") == "UL") ? _listSelect : $(_listSelect).parents("ul");
+            this._generateListItems(e, unOrderParent, !ej.isNullOrUndefined(this.model.tools["customUnorderedList"]) ? this.model.tools["customUnorderedList"] : []);
+            this._listType = e.ID;
+            this._updateIndent(_listSelect);
+        },
+        _generateListItems: function (e, list, template) {
+            $(list).css({ "list-style-type": e.ID, "list-style-image": "" });
+            var proxy = this;
+            if (["none", "disc", "circle", "square", "decimal", "upper-roman", "lower-roman", "upper-alpha", "lower-alpha"].indexOf(e.ID) == -1)
+                $.each(template, function (i, val) {
+                    if (val["name"] == e.ID) $(list).css({ "list-style-type": val["listStyle"], "list-style-image": val["listImage"] });
+                });
+            this._setBackupData();
+            (this._isIE()) ? this.selectRange(this._pasteRangeVal) : this.selectRange(this._getRange());
+            this._updateTagInfo((this._isIE()) ? this._currentSelNode : this._getSelectedNode());
+        },
         _onUndo: function () {
             var args;
-            this.executeCommand('undo', null);
+            if (this._isIE8())
+                this.executeCommand('undo', null);
+            else
+                this._undo();
         },
         _onDelete: function () {
             var args;
@@ -3083,79 +3308,126 @@
 
         _onRedo: function () {
             var args;
-            this.executeCommand('redo', null);
+            if (this._isIE8())
+                this.executeCommand('redo', null);
+            else
+                this._redo();
         },
 
         _onClearFormat: function () {
             var args;
             this.executeCommand('removeformat', args);
-
+            this._hideTooltip();
             this._setBackupData();
             this._onChange();
             this._updateIframeSkin(this.model.iframeAttributes);
-			this._updateToolbarStatus();
+            this._updateToolbarStatus();
         },
 
         _onFormatBlock: function (formatBlock) {
             this._focus();
-            var selection, range, node;
-            node = document.getSelection ? this._getSelectedNode() : this._getWindow().document.selection.createRange().parentElement();
-            this._onClearFormat();
-            this.executeCommand('formatBlock', formatBlock);
-            // if (!ej.isNullOrUndefined(this._tempEle) && !ej.isNullOrUndefined(this._tempEle.get(0))) {
-                // if ($(this._tempEle).get(0).nodeName == "OL") {
-                    // $($(this._tempEle).get(0)).find("li").each(function () {
-                        // $(this).contents().unwrap();
-                    // });
-                // }
-                // else if ($(this._tempEle).get(0).nodeName == "LI") this._tempEle.contents().unwrap();
-            // }
+            if ((this._isIE8())) {
+                var selection, range, node;
+                node = document.getSelection ? this._getSelectedNode() : this._getWindow().document.selection.createRange().parentElement();
+                this._onClearFormat();
+                this.executeCommand('formatBlock', formatBlock);
+            }
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.formatblock, formatBlock);
+                this._trigger("execute", { commandName: "formatBlock" });
+            }
+
+            
+            this._updateToolbarStatus();
+            this._updateFontOptionStatus();
+
         },
 
         _onFontName: function (fontsname) {
-            this.executeCommand("fontName", fontsname);
+            if ((this._isIE8()))
+                this.executeCommand("fontName", fontsname);//backColor,fontName,fontSize,foreColor
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.fontname, fontsname);
+                this._trigger("execute", { commandName: "fontName" });
+            }
         },
 
         _onFontSize: function (Size) {
-            this.executeCommand('fontSize', Size);
+            if ((this._isIE8()))
+                this.executeCommand('fontSize', Size);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.fontsize, Size);
+                this._trigger("execute", { commandName: "fontSize" });
+            }
         },
 
         _onFontColor: function (color) {
-            this.executeCommand('foreColor', color);
+            if (this._isIE8())
+                this.executeCommand('foreColor', color);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.forecolor, color);
+                this._trigger("execute", { commandName: "foreColor" });
+            }
             this._onChange();
             this._updateIframeSkin(this.model.iframeAttributes);
         },
 
         _onBGColor: function (color) {
-            this.executeCommand('backColor', color);
+            if (this._isIE8())
+                this.executeCommand('backColor', color);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.backcolor, color);
+                this._trigger("execute", { commandName: "backColor" });
+            }
             this._onChange();
         },
 
         _onIndent: function () {
-            this._getWindow().document.body.style.wordWrap = "break-word";
-            var node = document.getSelection ? this._getWindow().document.getSelection().focusNode : this._getWindow().document.selection.createRange().parentElement();
-            if (node && (/^(OL|UL|LI)$/).test(node.nodeName))
-                this._listIndent(node);
-            else if (node && (/^(#text)$/).test(node.nodeName) && (/^(OL|UL|LI)$/).test($(node).parent()[0].nodeName)) {
-                this._listIndent($(node).parents("li")[0], node);
+            if (this._isIE8()) {
+                this._getWindow().document.body.style.wordWrap = "break-word";
+                var node = document.getSelection ? this._getWindow().document.getSelection().focusNode : this._getWindow().document.selection.createRange().parentElement();
+                if (node && (/^(OL|UL|LI)$/).test(node.nodeName))
+                    this._listIndent(node);
+                else if (node && (/^(#text)$/).test(node.nodeName) && (/^(OL|UL|LI)$/).test($(node).parent()[0].nodeName)) {
+                    this._listIndent($(node).parents("li")[0], node);
+                }
+                else
+                    this.executeCommand('indent', false);
+
+                node && $(node).focus();
             }
             else
-                this.executeCommand('indent', false);
-            node && $(node).focus();
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.indent, null);
+                this._trigger("execute", { commandName: "indent" });
+            }
+
             this._updateIframeSkin(this.model.iframeAttributes);
-			this._updateIndentStatus();
+            this._updateIndentStatus();
         },
 
         _onOutdent: function () {
-            var node = document.getSelection ? this._getWindow().document.getSelection().focusNode : this._getWindow().document.selection.createRange().parentElement();
-            if (node && (/^(OL|UL|LI)$/).test(node.nodeName))
-                this._listOutdent(node);
-            else if (node && (/^(#text)$/).test(node.nodeName) && (/^(OL|UL|LI)$/).test($(node).parent()[0].nodeName)) {
-                this._listOutdent($(node).parents("li")[0], node);
+            if (this._isIE8()) {
+                var node = document.getSelection ? this._getWindow().document.getSelection().focusNode : this._getWindow().document.selection.createRange().parentElement();
+                if (node && (/^(OL|UL|LI)$/).test(node.nodeName))
+                    this._listOutdent(node);
+                else if (node && (/^(#text)$/).test(node.nodeName) && (/^(OL|UL|LI)$/).test($(node).parent()[0].nodeName)) {
+                    this._listOutdent($(node).parents("li")[0], node);
+                }
+                else
+                    this.executeCommand('outdent', false);
             }
             else
-                this.executeCommand('outdent', false);
-			this._updateIndentStatus();
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.outdent, null);
+                this._trigger("execute", { commandName: "outdent" });
+            }
+            this._updateIndentStatus();
         },
 
         _onSelectAll: function () {
@@ -3174,29 +3446,29 @@
                 this._txtURL.addClass("e-error");
                 return false;
             }
-            var selectedNode = ((ej.browserInfo().name == "msie" || ej.browserInfo().name == "chrome") && $(this._currentSelNode).parents("body").length > 0 ) ? this._currentSelNode : this._getSelectedNode();
+            var selectedNode = ((ej.browserInfo().name == "msie" || ej.browserInfo().name == "chrome") && $(this._currentSelNode).parents("body").length > 0) ? this._currentSelNode : this._getSelectedNode();
             if (!ej.isNullOrUndefined(selectedNode) && selectedNode.tagName.toUpperCase() == 'A') {
                 selectedNode.href = this._txtURL.val();
                 selectedNode.title = this._txtLinkTitle.val();
                 selectedNode.innerHTML = this._txtLinkText.val();
-                (this._chkTarget.ejCheckBox("isChecked")) ? selectedNode.target  = "_blank":selectedNode.target  = "";
+                (this._chkTarget.ejCheckBox("isChecked")) ? selectedNode.target = "_blank" : selectedNode.target = "";
             }
             else if (!ej.isNullOrUndefined(selectedNode) && selectedNode.tagName.toUpperCase() == 'IMG') {
                 var parentNode = $(selectedNode).parent('a')[0];
                 if (ej.isNullOrUndefined(parentNode)) {
-                    oEl = ej.buildTag("a", "", {}, { href: this._txtURL.val(), title: this._txtLinkTitle.val() == "" ? (this._txtURL.val() +"\n"+this._getLocalizedLabels("linktooltip")) : this._txtLinkTitle.val() });
+                    oEl = ej.buildTag("a", "", {}, { href: this._txtURL.val(), title: this._txtLinkTitle.val() == "" ? (this._txtURL.val() + "\n" + this._getLocalizedLabels("linktooltip")) : this._txtLinkTitle.val() });
                     (this._chkTarget.ejCheckBox("isChecked")) ? oEl[0].target = "_blank" : oEl[0].target = "";
                     $(selectedNode.outerHTML).appendTo($(oEl));
                     $(selectedNode).replaceWith($(oEl));
                 } else {
                     parentNode.href = this._txtURL.val();
                     parentNode.title = this._txtLinkTitle.val();
-                    (this._chkTarget.ejCheckBox("isChecked"))? parentNode.target = "_blank" : parentNode.target = "";
+                    (this._chkTarget.ejCheckBox("isChecked")) ? parentNode.target = "_blank" : parentNode.target = "";
                 }
             }
             else {
-                oEl = ej.buildTag("a", "", {}, { href: this._txtURL.val(), title: this._txtLinkTitle.val() == "" ? (this._txtURL.val() +"\n"+this._getLocalizedLabels("linktooltip") ) : this._txtLinkTitle.val() });
-                (this._chkTarget.ejCheckBox("isChecked"))?  oEl[0].target = "_blank":oEl[0].target = "";
+                oEl = ej.buildTag("a", "", {}, { href: this._txtURL.val(), title: this._txtLinkTitle.val() == "" ? (this._txtURL.val() + "\n" + this._getLocalizedLabels("linktooltip")) : this._txtLinkTitle.val() });
+                (this._chkTarget.ejCheckBox("isChecked")) ? oEl[0].target = "_blank" : oEl[0].target = "";
 
                 var oSelection;
                 var oSelRange;
@@ -3221,7 +3493,7 @@
             }
             this._linkDialog.ejDialog("close");
             this.enableToolbarItem("removeLink");
-            this._updateCount();           
+            this._updateCount();
         },
 
         _setImageProperties: function (imgEle, imgX, imgY, imageStyle, borderPx, borderStyle, borderColor) {
@@ -3294,14 +3566,14 @@
                         return false;
                     }
                 }
-                else
+                else 
                     (linkNode.length > 0) && (linkNode.attr('href', ""));
                 if (!ej.isNullOrUndefined(linkNode) && linkNode.length > 0)
                     (this._dialogchkTarget.ejCheckBox("isChecked")) ? linkNode[0].target = "_blank" : linkNode[0].target = "_self";
             }
             proxy._setAutoHeight();
-            if(!proxy._imageLink.hasClass("e-error")) proxy._imgDialog.ejDialog("close");
-			proxy._on(proxy._imageLink, "keypress", proxy._urlValidation)._on(proxy._imageLink, "blur", proxy._urlValidation);
+            if (!proxy._imageLink.hasClass("e-error")) proxy._imgDialog.ejDialog("close");
+            proxy._on(proxy._imageLink, "keypress", proxy._urlValidation)._on(proxy._imageLink, "blur", proxy._urlValidation);
         },
 
         _insertVideo: function (sender) {
@@ -3309,15 +3581,15 @@
             var videoX = this._videoDialog.find(".e-rte-videoX").val();
             var videoY = this._videoDialog.find(".e-rte-videoY").val();
             this._restoreSelection(this._selectionRange);
-			this._alertHeader(this);
+            this._alertHeader(this);
             if (sender.target.id === "video_insert" && videoLink !== "") {
-				if(this._isIE() && !this._isIE8()) this._ieLinkRange();
+                if (this._isIE() && !this._isIE8()) this._ieLinkRange();
                 var ele = $(videoLink)[0];
                 if (this.model.showDimensions && !ej.isNullOrUndefined(ele)) {
                     (videoX != "") && (ele.width = videoX);
                     (videoY != "") && (ele.height = videoY);
                 }
-                    if (!ej.isNullOrUndefined(ele) && (this.model.maxLength != null && (this.model.maxLength > $.trim(this._getText()).length)))
+                if (!ej.isNullOrUndefined(ele) && (this.model.maxLength != null && (this.model.maxLength > $.trim(this._getText()).length)))
                     this.executeCommand('inserthtml', ele.outerHTML + "<br/>");
 
                 this._onChange();
@@ -3326,8 +3598,8 @@
             }
             else if (sender.target.id === "video_cancel") {
                 this._videoDialog.ejDialog("close");
-				this._ieCursorMaintainance();
-			}
+                this._ieCursorMaintainance();
+            }
             else
                 this._openAlert(this._getLocalizedLabels("videoError"));
             this._videoDialog.find("textarea.e-rte-video")[0].value = "";
@@ -3338,8 +3610,9 @@
         },
 
         _oneditTable: function () {
-            var selectedNode = this._currentSelNode;
-
+            //var selectedNode = this._currentSelNode;
+            var isTable = $(this._getSelectedNode()).closest("td");
+            var selectedNode = (isTable.length > 0) ? isTable[0] : this._currentSelNode;
             var parentTable = $(selectedNode).closest('tbody').closest('table');
             var captionEle = $($(selectedNode).closest('tbody')).prev('caption');
             (this._eTblCaption.ejCheckBox("isChecked")) ? (captionEle.length == 0) && ej.buildTag('caption').append($('<br type="_moz">')).insertBefore($($(selectedNode).closest('tbody'))) : (captionEle.length > 0) && captionEle.remove();
@@ -3347,45 +3620,45 @@
             var style = this._getTableObj("Style").val();
             if (tblAlign == 'center') style += ";margin: 0 auto;";
             (style) && parentTable.attr('style', style);
-			this._customTableValidation = false;
-			var tableWid = this._customInputValidation(this._getTableObj("Width"));
-			var tableHgt = this._customInputValidation(this._getTableObj("Height"));
-			var rowHgt = this._customInputValidation(this._getTableObj("RHeight"));
-			var cellWid = this._customInputValidation(this._getTableObj("ClWidth"));
-			if(!this._customTableValidation) {
-            parentTable.attr({
-                width: tableWid,
-                height: tableHgt,
-                cellPadding: this._getTableObj("CellPad").data('ejNumericTextbox').getValue(),
-                cellSpacing: this._getTableObj("CellSpace").data('ejNumericTextbox').getValue(),
-                align: tblAlign,
-            }).css({
-                'border-width': this._getTableObj("BrdrPx").data('ejNumericTextbox').getValue() + "px",
-                'border-style': this._getTableObj("_border_style").data('ejDropDownList').getSelectedValue(),
-                'border-color': this._getTableObj("_border_color").val()
-            });
-            var parentRow = $(selectedNode).closest('tr');
-            parentRow.attr({
-                style: this._getTableObj("RStyle").val()
-            }).css({
-                'height':rowHgt ,
-                'text-align': this._getTableObj("RAlign").data('ejDropDownList').getSelectedValue(),
-                'border-width': this._getTableObj("RBrdrPx").data('ejNumericTextbox').getValue() + "px",
-                'border-style': this._getTableObj("RBrdrStyle").data('ejDropDownList').getSelectedValue(),
-                'border-color': this._getTableObj("RBrdrColor").val()
-            });
-            $(selectedNode).attr({
-                style: this._getTableObj("ClStyle").val()
-            }).css({
+            this._customTableValidation = false;
+            var tableWid = this._customInputValidation(this._getTableObj("Width"));
+            var tableHgt = this._customInputValidation(this._getTableObj("Height"));
+            var rowHgt = this._customInputValidation(this._getTableObj("RHeight"));
+            var cellWid = this._customInputValidation(this._getTableObj("ClWidth"));
+            if (!this._customTableValidation) {
+                parentTable.attr({
+                    width: tableWid,
+                    height: tableHgt,
+                    cellPadding: this._getTableObj("CellPad").data('ejNumericTextbox').getValue(),
+                    cellSpacing: this._getTableObj("CellSpace").data('ejNumericTextbox').getValue(),
+                    align: tblAlign,
+                }).css({
+                    'border-width': this._getTableObj("BrdrPx").data('ejNumericTextbox').getValue() + "px",
+                    'border-style': this._getTableObj("_border_style").data('ejDropDownList').getSelectedValue(),
+                    'border-color': this._getTableObj("_border_color").val()
+                });
+                var parentRow = $(selectedNode).closest('tr');
+                parentRow.attr({
+                    style: this._getTableObj("RStyle").val()
+                }).css({
+                    'height': rowHgt,
+                    'text-align': this._getTableObj("RAlign").data('ejDropDownList').getSelectedValue(),
+                    'border-width': this._getTableObj("RBrdrPx").data('ejNumericTextbox').getValue() + "px",
+                    'border-style': this._getTableObj("RBrdrStyle").data('ejDropDownList').getSelectedValue(),
+                    'border-color': this._getTableObj("RBrdrColor").val()
+                });
+                $(selectedNode).attr({
+                    style: this._getTableObj("ClStyle").val()
+                }).css({
                     'width': cellWid,
-                'text-align': this._getTableObj("ClAlign").data('ejDropDownList').getSelectedValue(),
-                'border-width': this._getTableObj("ClBrdrPx").data('ejNumericTextbox').getValue() + "px",
-                'border-style': this._getTableObj("ClBrdrStyle").data('ejDropDownList').getSelectedValue(),
-                'border-color': this._getTableObj("ClBrdrColor").val()
-            });
-            this._eTblDialog.ejDialog("close");
-			}
-			this._on(this._getTableObj("Width"), "keypress", this._urlValidation)
+                    'text-align': this._getTableObj("ClAlign").data('ejDropDownList').getSelectedValue(),
+                    'border-width': this._getTableObj("ClBrdrPx").data('ejNumericTextbox').getValue() + "px",
+                    'border-style': this._getTableObj("ClBrdrStyle").data('ejDropDownList').getSelectedValue(),
+                    'border-color': this._getTableObj("ClBrdrColor").val()
+                });
+                this._eTblDialog.ejDialog("close");
+            }
+            this._on(this._getTableObj("Width"), "keypress", this._urlValidation)
 				._on(this._getTableObj("Height"), "keypress", this._urlValidation)
 				._on(this._getTableObj("RHeight"), "keypress", this._urlValidation)
 				._on(this._getTableObj("ClWidth"), "keypress", this._urlValidation);
@@ -3393,65 +3666,84 @@
 
 
         _clearAllManager: function () {
+            this._hideTooltip();
             this._alertWindow.find(".e-alert-cancel").show();
-			this._alertHeader(this);
+            this._alertHeader(this);
             this._openAlert(this._getLocalizedLabels("deleteAlert"));
         },
 
         _onUnlink: function () {
             var args;
             this.executeCommand('unlink', args);
-			this.disableToolbarItem("removeLink");
+            this.disableToolbarItem("removeLink");
         },
         _onSuperScript: function () {
             var args;
-            this.executeCommand('SuperScript', args);
+            if (this._isIE8())
+                this.executeCommand('SuperScript', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.superscript, null);
+                this._trigger("execute", { commandName: "SuperScript" });
+            }
         },
         _onSubScript: function () {
             var args;
-            this.executeCommand('SubScript', args);
+            if (this._isIE8())
+                this.executeCommand('SubScript', args);
+            else
+            {
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.subscript, null);
+                this._trigger("execute", { commandName: "SubScript" });
+            }
         },
         _onInsertTable: function (rows, cols, designTime) {
             if (this.model.maxLength != null && (this.model.maxLength > $.trim(this._getText()).length)) {
-			$(this._getDocument().body).css("display","inline-block");
-            var tableEle = this._tableGenerator(rows, cols, designTime);
-            this.executeCommand('inserthtml', tableEle);
-            if ((ej.isNullOrUndefined($(this._getDocument().body).find("table:last")[0].nextSibling)) ||($(this._getDocument().body).find("table:last")[0].nextSibling.nodeName.toLowerCase()=="#text" && $.trim($(this._getDocument().body).find("table:last")[0].nextSibling.nodeValue)=="\n"))
-            $("<p><br/></p>").insertAfter($(this._getDocument().body).find("table"))
-            $(this._getDocument().body).css("display","");
-            this._setAutoHeight();
+                $(this._getDocument().body).css("display", "inline-block");
+                var tableEle = this._tableGenerator(rows, cols, designTime);
+                this.executeCommand('inserthtml', tableEle);
+                if ((ej.isNullOrUndefined($(this._getDocument().body).find("table:last")[0].nextSibling)) || ($(this._getDocument().body).find("table:last")[0].nextSibling.nodeName.toLowerCase() == "#text" && $.trim($(this._getDocument().body).find("table:last")[0].nextSibling.nodeValue) == "\n"))
+                    $("<p><br/></p>").insertAfter($(this._getDocument().body).find("table"))
+                $(this._getDocument().body).css("display", "");
+                this._setAutoHeight();
             }
         },
 
         _onUpperCase: function () {
-            if (!document.getSelection) {
-                if (this._getWindow().document.selection.type.toLowerCase() == "control") {
-                    return;
-                }
-                this._seleText = ej.isNullOrUndefined(this._seleText) ? "" : this._seleText;
-                this._getDocument().selection.createRange().pasteHTML(this._seleText.toUpperCase());
-            }
-            else {
-                var selection = this._getWindow().getSelection();
-                var range = this._saveSelection();
-                var node = range.commonAncestorContainer;
-                var children = range.commonAncestorContainer.children;
-                if (children != null) {
-                    var contents = range.cloneContents()
-                    var result = this._changeCase(contents, "Upper");
-                    var resultCopy = $(result).clone();
-                    var tempDiv = document.createElement('div');
-                    $(tempDiv).append($(resultCopy));
-                    if (tempDiv.innerHTML != null && tempDiv.innerHTML != "")
-                        this._getWindow().document.execCommand('inserthtml', false, tempDiv.innerHTML);
+            if (this._isIE8()) {
+                if (!document.getSelection) {
+                    if (this._getWindow().document.selection.type.toLowerCase() == "control") {
+                        return;
+                    }
+                    this._seleText = ej.isNullOrUndefined(this._seleText) ? "" : this._seleText;
+                    this._getDocument().selection.createRange().pasteHTML(this._seleText.toUpperCase());
                 }
                 else {
-                    var replaceString = node.nodeValue.substring(range.startOffset, range.endOffset).toUpperCase();
-                    var startString = node.nodeValue.substr(0, range.startOffset);
-                    var endString = node.nodeValue.substring(range.endOffset);
-                    node.nodeValue = startString + replaceString + endString;
+                    var selection = this._getWindow().getSelection();
+                    var range = this._saveSelection();
+                    var node = range.commonAncestorContainer;
+                    var children = range.commonAncestorContainer.children;
+                    if (children != null) {
+                        var contents = range.cloneContents()
+                        var result = this._changeCase(contents, "Upper");
+                        var resultCopy = $(result).clone();
+                        var tempDiv = document.createElement('div');
+                        $(tempDiv).append($(resultCopy));
+                        if (tempDiv.innerHTML != null && tempDiv.innerHTML != "")
+                            this._getWindow().document.execCommand('inserthtml', false, tempDiv.innerHTML);
+                    }
+                    else {
+                        var replaceString = node.nodeValue.substring(range.startOffset, range.endOffset).toUpperCase();
+                        var startString = node.nodeValue.substr(0, range.startOffset);
+                        var endString = node.nodeValue.substring(range.endOffset);
+                        node.nodeValue = startString + replaceString + endString;
+                    }
                 }
             }
+            else
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.uppercase, null);
+
+
             this._trigger("execute", { commandName: "uppercase" });
         },
 
@@ -3474,34 +3766,39 @@
 
 
         _onLowerCase: function () {
-            if (!document.getSelection) {
-                if (this._getWindow().document.selection.type.toUpperCase() == "control") {
-                    return;
-                }
-                this._seleText = ej.isNullOrUndefined(this._seleText) ? "" : this._seleText;
-                this._getDocument().selection.createRange().pasteHTML(this._seleText.toLowerCase());
-            }
-            else {
-                var selection = this._getWindow().getSelection();
-                var range = this._saveSelection();
-                var node = range.commonAncestorContainer;
-                var children = range.commonAncestorContainer.children;
-                if (children != null) {
-                    var contents = range.cloneContents();
-                    var result = this._changeCase(contents, "Lower");
-                    var resultCopy = $(result).clone();
-                    var tempDiv = document.createElement('div');
-                    $(tempDiv).append($(resultCopy));
-                    if (tempDiv.innerHTML != null && tempDiv.innerHTML != "")
-                        this._getWindow().document.execCommand('inserthtml', false, tempDiv.innerHTML);
+            if (this._isIE8()) {
+                if (!document.getSelection) {
+                    if (this._getWindow().document.selection.type.toUpperCase() == "control") {
+                        return;
+                    }
+                    this._seleText = ej.isNullOrUndefined(this._seleText) ? "" : this._seleText;
+                    this._getDocument().selection.createRange().pasteHTML(this._seleText.toLowerCase());
                 }
                 else {
-                    var replaceString = node.nodeValue.substring(range.startOffset, range.endOffset).toLowerCase();
-                    var startString = node.nodeValue.substr(0, range.startOffset);
-                    var endString = node.nodeValue.substring(range.endOffset);
-                    node.nodeValue = startString + replaceString + endString;
+                    var selection = this._getWindow().getSelection();
+                    var range = this._saveSelection();
+                    var node = range.commonAncestorContainer;
+                    var children = range.commonAncestorContainer.children;
+                    if (children != null) {
+                        var contents = range.cloneContents();
+                        var result = this._changeCase(contents, "Lower");
+                        var resultCopy = $(result).clone();
+                        var tempDiv = document.createElement('div');
+                        $(tempDiv).append($(resultCopy));
+                        if (tempDiv.innerHTML != null && tempDiv.innerHTML != "")
+                            this._getWindow().document.execCommand('inserthtml', false, tempDiv.innerHTML);
+                    }
+                    else {
+                        var replaceString = node.nodeValue.substring(range.startOffset, range.endOffset).toLowerCase();
+                        var startString = node.nodeValue.substr(0, range.startOffset);
+                        var endString = node.nodeValue.substring(range.endOffset);
+                        node.nodeValue = startString + replaceString + endString;
+                    }
                 }
             }
+            else
+                this._getDocumentHandler() && this._operationHandler.execCommand(ej.execCommand.lowercase, null);
+            //execCommand=emphasize-contentformat-indent-contentalignment-formatblock-captionconvertion
             this._trigger("execute", { commandName: "lowercase" });
         },
 
@@ -3602,26 +3899,26 @@
         },
         _updateIndent: function (node) {
             if (!ej.isNullOrUndefined(this._toolBarObj)) {
-                    if ($("#" + this._rteId + "_" + "indent").hasClass('e-disable')) this._toolBarObj.enableItemByID(this._rteId + "_" + "indent");
+                if ($("#" + this._rteId + "_" + "indent").hasClass('e-disable')) this._toolBarObj.enableItemByID(this._rteId + "_" + "indent");
                 if (node && (/^(LI)$/).test(node.nodeName)) {
                     if ($(node).parents(node.parentNode.nodeName).last().find("li").index(node) === 0)
-                            this._toolBarObj.disableItemByID(this._rteId + "_" + "indent");
+                        this._toolBarObj.disableItemByID(this._rteId + "_" + "indent");
                 }
             }
         },
         _updateCount: function () {
             if (!ej.isNullOrUndefined(this.model)) {
-            if (this.model.showFooter && this.model.showWordCount)                
-                this._wordCount.html(this._getLocalizedLabels("words") + " : " + ($.trim(this._getText()) != "" ? $.trim(this._getText()).split(/\W+/).length : 0));
-            if (this.model.showFooter && this.model.showCharCount)
+                if (this.model.showFooter && this.model.showWordCount)
+                    this._wordCount.html(this._getLocalizedLabels("words") + " : " + ($.trim(this._getText()) != "" ? $.trim(this._getText()).split(/\W+/).length : 0));
+                if (this.model.showFooter && this.model.showCharCount)
                     this._charCount.html(this._getLocalizedLabels("characters") + " : " + this._getText().length);
             }
         },
         _updateTagInfo: function (element) {
             var text = "", pTag, count = 1;
-                if (!ej.isNullOrUndefined(element))
-            if (element.localName == "body" || element.localName == "html")
-                element = this._getSelectedNode();
+            if (!ej.isNullOrUndefined(element))
+                if (element.localName == "body" || element.localName == "html")
+                    element = this._getSelectedNode();
             if (ej.isNullOrUndefined(element)) this._curNode = "";
             else this._curNode = element.tagName ? element.tagName.toLowerCase() : "html";
             if (this.model.showFooter && this.model.showHtmlTagInfo) {
@@ -3649,8 +3946,12 @@
                 $(this._htmlInfo).html(" » " + this._pTag + " » ... ...  » " + this._curNode);
             else $(this._htmlInfo).html(this._tags);
         },
+		_removeNoSpaceChar:function(data){
+			data &&(data=data.replace(/[\uFEFF]/g,""));
+			return data
+		},
         _updateValue: function () {
-            var updatedval = this._updateXhtml();
+            var updatedval = this._removeNoSpaceChar(this._updateXhtml());
             if (this.model.enableHtmlEncode)
                 updatedval = this._encode(this._decode(updatedval));
             this.value(updatedval);
@@ -3715,10 +4016,17 @@
                 return styleDup;
             }
         },
-		_updateIndentStatus:function()
-		{
-			($(this._getSelectedNode()).closest("BLOCKQUOTE").length>0)?this.enableToolbarItem("outdent"):this.disableToolbarItem("outdent");
-		},
+        _updateIndentStatus: function () {
+            if (this._isIE8())
+                ($(this._getSelectedNode()).closest("BLOCKQUOTE").length > 0) ? this.enableToolbarItem("outdent") : this.disableToolbarItem("outdent");
+            else {
+                if (this._getDocumentHandler() && this._operationHandler._validateIndent(this._getRange().startContainer))
+                    this.enableToolbarItem("outdent");
+                else
+                    this.disableToolbarItem("outdent");
+            }
+
+        },
         _replaceHeightWidth: function (htmlTagreg, styleDup) {
             var styleRegval = htmlTagreg.exec(styleDup);
             if (!ej.isNullOrUndefined(styleRegval)) {
@@ -3767,7 +4075,7 @@
                     if (styleDup[i].indexOf("height=") != -1) {
                         var htmlTagreg = /( height)=("[^"]*")/i;
                         styleDup[i] = this._replaceHeightWidth(htmlTagreg, styleDup[i]);
-                        }
+                    }
                     if (styleDup[i].indexOf("width=") != -1) {
                         var widthTag = /( width)=("[^"]*")/i;
                         styleDup[i] = this._replaceHeightWidth(widthTag, styleDup[i]);
@@ -3831,15 +4139,15 @@
             return styleVal;
         },
         _getFormatXhtml: function (startRegex, startVal) {
-                var startDup = new Array();
-                var j = 0;
-                var startTemp;
-                while ((startTemp = startRegex.exec(startVal)) != null) {
+            var startDup = new Array();
+            var j = 0;
+            var startTemp;
+            while ((startTemp = startRegex.exec(startVal)) != null) {
                 startDup.push(startTemp[0]);
-                }
-                for (var i = 0; i < startDup.length; i++) {
-                    startVal = startVal.replace(startDup[i], "");
-                }
+            }
+            for (var i = 0; i < startDup.length; i++) {
+                startVal = startVal.replace(startDup[i], "");
+            }
         },
         _startXhtml: function (startVal) {
             if (startVal.indexOf("start=") != -1) {
@@ -4252,109 +4560,108 @@
         },
         //Updates the status of the toolbar items
         _updateToolbarStatus: function () {
-		try{
-            var _isAligned = false;
-            if (this.model.showToolbar) {
-                //Style Tools
-                for (var i = 0; i < this._styleItems.length; i++) {
-                    if (this._getCommandStatus($.trim(this._styleItems[i].toLowerCase()))) {
+            try {
+                var _isAligned = false;
+                if (this.model.showToolbar) {
+                    //Style Tools
+                    for (var i = 0; i < this._styleItems.length; i++) {
+                        if (this._getCommandStatus($.trim(this._styleItems[i].toLowerCase()))) {
                             this._toolBarObj.selectItemByID(this._rteId + "_" + this._styleItems[i]);
                             $("#" + this._rteId + "_" + this._styleItems[i]).addClass("e-isactive");
-                    } else {
+                        } else {
                             this._toolBarObj.deselectItemByID(this._rteId + "_" + this._styleItems[i]);
                             $("#" + this._rteId + "_" + this._styleItems[i]).removeClass("e-isactive");
+                        }
                     }
-                }
-                for (var i = 0; i < this._alignItems.length; i++) {
-                    if (this._getCommandStatus($.trim(this._alignItems[i].toLowerCase()))) {
+                    for (var i = 0; i < this._alignItems.length; i++) {
+                        if (this._getCommandStatus($.trim(this._alignItems[i].toLowerCase()))) {
                             this._toolBarObj.selectItemByID(this._rteId + "_" + this._alignItems[i]);
-                        _isAligned = true;
-                    } else
+                            _isAligned = true;
+                        } else
                             this._toolBarObj.deselectItemByID(this._rteId + "_" + this._alignItems[i]);
-                }
+                    }
                     if (!_isAligned) this._toolBarObj.selectItemByID(this._rteId + "_" + "justifyLeft");
-                for (var i = 0; i < this._scriptsItems.length; i++) {
-                    if (this._getCommandStatus($.trim(this._scriptsItems[i].toLowerCase()))) {
+                    for (var i = 0; i < this._scriptsItems.length; i++) {
+                        if (this._getCommandStatus($.trim(this._scriptsItems[i].toLowerCase()))) {
                             this._toolBarObj.selectItemByID(this._rteId + "_" + this._scriptsItems[i]);
                             $("#" + this._rteId + "_" + this._scriptsItems[i]).addClass("e-isactive");
-                    } else {
+                        } else {
                             this._toolBarObj.deselectItemByID(this._rteId + "_" + this._scriptsItems[i]);
                             $("#" + this._rteId + "_" + this._scriptsItems[i]).removeClass("e-isactive");
+                        }
                     }
-                }
-                if (this._getCommandStatus('InsertOrderedList')) {
+                    if (this._getCommandStatus('InsertOrderedList')) {
                         this._toolBarObj.selectItemByID(this._rteId + "_" + "orderedList");
                         $("#" + this._rteId + "_" + "orderedList").addClass("e-isactive");
-                } else {
+                    } else {
                         this._toolBarObj.deselectItemByID(this._rteId + "_" + "orderedList");
                         $("#" + this._rteId + "_" + "orderedList").removeClass("e-isactive");
-                } if (this._getCommandStatus('InsertUnorderedList')) {
+                    } if (this._getCommandStatus('InsertUnorderedList')) {
                         this._toolBarObj.selectItemByID(this._rteId + "_" + "unorderedList");
                         $("#" + this._rteId + "_" + "unorderedList").addClass("e-isactive");
-                } else {
+                    } else {
                         this._toolBarObj.deselectItemByID(this._rteId + "_" + "unorderedList");
                         $("#" + this._rteId + "_" + "unorderedList").removeClass("e-isactive");
+                    }
+                    this._updateIndentStatus();
                 }
-				this._updateIndentStatus();
             }
-			}
-			catch(error){}
+            catch (error) { }
         },
 
         _updateFormat: function () {
-		try{
-            if (this._formatDDL && this.model.showToolbar && !ej.isNullOrUndefined(this.model.tools["formatStyle"])) {
-                var formatName = $.trim(this._getCommandValue('formatblock').replace(/'/g, ""));
-                if (!this._isIE())
-                    formatName = "<" + formatName + ">";
-				else
-					switch(formatName)
-                    {
-                        case "Heading 6":
-                           formatName =  "<h6>";
-                           break;
-                        case "Heading 5":
-                           formatName =  "<h5>";
-                           break;
-                        case "Heading 4":
-                           formatName =  "<h4>";
-                           break;
-				        case "Heading 3":
-                           formatName =  "<h3>";
-                           break;
-                        case "Heading 2":
-                           formatName =  "<h2>";
-                           break;
-                        case "Heading 1":
-                           formatName =  "<h1>";
-                           break;
+            try {
+                if (this._formatDDL && this.model.showToolbar && !ej.isNullOrUndefined(this.model.tools["formatStyle"])) {
+                    var formatName = $.trim(this._getCommandValue('formatblock').replace(/'/g, ""));
+                    if (!this._isIE())
+                        formatName = "<" + formatName + ">";
+                    else
+                        switch (formatName) {
+                            case "Heading 6":
+                                formatName = "<h6>";
+                                break;
+                            case "Heading 5":
+                                formatName = "<h5>";
+                                break;
+                            case "Heading 4":
+                                formatName = "<h4>";
+                                break;
+                            case "Heading 3":
+                                formatName = "<h3>";
+                                break;
+                            case "Heading 2":
+                                formatName = "<h2>";
+                                break;
+                            case "Heading 1":
+                                formatName = "<h1>";
+                                break;
+                        }
+                    if (this._formatDDL.hasClass('e-dropdownlist')) {
+                        if (ej.isNullOrUndefined(formatName) || formatName == "")
+                            this._formatDDL.ejDropDownList({ "value": this._getLocalizedLabels("format") });
+                        else if (!$(this._formatDDL).parents("ul.e-rte-format").length == 0)
+                            this._formatDDL.ejDropDownList("setSelectedValue", formatName);
                     }
-                if (this._formatDDL.hasClass('e-dropdownlist')) {
-                    if (ej.isNullOrUndefined(formatName) || formatName == "")
-                        this._formatDDL.ejDropDownList({ "value": this._getLocalizedLabels("format") });
-                    else if (!$(this._formatDDL).parents("ul.e-rte-format").length == 0)
-                        this._formatDDL.ejDropDownList("setSelectedValue", formatName);
                 }
             }
-			}
-			catch(error){}
+            catch (error) { }
         },
 
         _updateFontOptionStatus: function () {
-		try{
-            if (this.model.showFontOption && this.model.showToolbar && !ej.isNullOrUndefined(this.model.tools["font"])) {
-                var fontName = $.trim(this._getCommandValue('fontname').replace(/"/g, "").replace(/'/g, "").replace(/, /g, ","));
-                (ej.isNullOrUndefined(fontName) || fontName == "") && (fontName = "Segoe UI");
-                if (!ej.isNullOrUndefined(this._fontStyleDDL) && this._fontStyleDDL.hasClass('e-dropdownlist') && !$(this._fontStyleDDL).parents("ul.e-rte-fontgroup").length == 0)
-                    this._fontStyleDDL.ejDropDownList("setSelectedValue", fontName);
+            try {
+                if (this.model.showFontOption && this.model.showToolbar && !ej.isNullOrUndefined(this.model.tools["font"])) {
+                    var fontName = $.trim(this._getCommandValue('fontname').replace(/"/g, "").replace(/'/g, "").replace(/, /g, ","));
+                    (ej.isNullOrUndefined(fontName) || fontName == "") && (fontName = "Segoe UI");
+                    if (!ej.isNullOrUndefined(this._fontStyleDDL) && this._fontStyleDDL.hasClass('e-dropdownlist') && !$(this._fontStyleDDL).parents("ul.e-rte-fontgroup").length == 0)
+                        this._fontStyleDDL.ejDropDownList("setSelectedValue", fontName);
 
-                var fontSize = this._getCommandValue('fontsize');
-                (ej.isNullOrUndefined(fontSize) || fontSize == "") && (fontSize = 2);
-                if (!ej.isNullOrUndefined(this._fontSizeDDL) && this._fontSizeDDL.hasClass('e-dropdownlist') && !$(this._fontSizeDDL).parents("ul.e-rte-fontgroup").length == 0)
-                    this._fontSizeDDL.ejDropDownList("setSelectedValue", fontSize);
+                    var fontSize = (this._isIE8()) ? this._getCommandValue('fontsize') : (this._getDocumentHandler() && this._operationHandler._validateFontSize(this._getRange().startContainer));
+                    (ej.isNullOrUndefined(fontSize) || fontSize == "") && (fontSize = 2);
+                    if (!ej.isNullOrUndefined(this._fontSizeDDL) && this._fontSizeDDL.hasClass('e-dropdownlist') && !$(this._fontSizeDDL).parents("ul.e-rte-fontgroup").length == 0)
+                        this._fontSizeDDL.ejDropDownList("setSelectedValue", fontSize);
+                }
             }
-			}
-			catch(error){}
+            catch (error) { }
         },
 
         _getSelText: function () {
@@ -4397,15 +4704,14 @@
             var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
             return regexp.test(url);
         },
-        _pasteHtml: function (html,textnodeType) {
+        _pasteHtml: function (html, textnodeType) {
             var sel, range;
-           if(this._pasteAPIFlag)
-			{
-			if(this._isIE())
-				this._focus();
-			}
-			else
-				this._focus();
+            if (this._pasteAPIFlag) {
+                if (this._isIE())
+                    this._focus();
+            }
+            else
+                this._focus();
             if (window.getSelection) {
                 // IE9 and non-IE
                 sel = this._getWindow().getSelection();
@@ -4424,7 +4730,7 @@
                     var el = document.createElement("div");
                     el.innerHTML = html;
                     var frag = this._getDocument().createDocumentFragment(), node, lastNode;
-                    var parent = el.firstChild;                    
+                    var parent = el.firstChild;
                     if (!(this._pasteFlag || this._pasteAPIFlag)) {
                         while ((node = el.firstChild)) {
                             lastNode = frag.appendChild(node);
@@ -4434,28 +4740,27 @@
                         while ((node = el.firstChild)) {
                             if (parent != node)
                                 lastNode = parent.appendChild(node);
-                            else                              
+                            else
                                 el.removeChild(el.firstChild);
                         }
                         lastNode = frag.appendChild(parent);
                     }
                     range.insertNode(frag);
                     // Preserve the selection
-                   if (lastNode&&!textnodeType) {
+                    if (lastNode && !textnodeType) {
                         range = range.cloneRange();
                         range.setStartAfter(lastNode);
                         range.collapse(true);
                         sel.removeAllRanges();
                         sel.addRange(range);
                     }
-					else
-					{
-						range = this.createRange();
-						range.setStart(lastNode, lastNode.data.length);
-						range.setEnd(lastNode, lastNode.data.length);
-                        sel.removeAllRanges();						
+                    else {
+                        range = this.createRange();
+                        range.setStart(lastNode, lastNode.data.length);
+                        range.setEnd(lastNode, lastNode.data.length);
+                        sel.removeAllRanges();
                         sel.addRange(range);
-					}
+                    }
                 }
             } else if (this._getDocument().selection && this._getDocument().selection.type != "Control") {
                 // IE < 9
@@ -4467,16 +4772,16 @@
                         this._getRange().pasteHTML(html);
                     else {
                         var text = this._getRange().text;
-                    for (i = ieParentElement.length - 1; i >= 0; i--) {
+                        for (i = ieParentElement.length - 1; i >= 0; i--) {
                             if (ieParentElement[i].innerText == text && ieParentElement[i].nodeName.toLowerCase() != "li") {
-                            ieParentElement[i].nodeName == "BODY" ? ieParentElement[i].innerHTML = html : ieParentElement[i].outerHTML = html;
-                            isParent = true;
-                            break;
+                                ieParentElement[i].nodeName == "BODY" ? ieParentElement[i].innerHTML = html : ieParentElement[i].outerHTML = html;
+                                isParent = true;
+                                break;
+                            }
                         }
-                    }
-                    if (!isParent)
+                        if (!isParent)
                             this._getRange().pasteHTML(html);
-                }
+                    }
                 }
                 else
                     this._getDocument().body.insertAdjacentHTML("afterBegin", html);
@@ -4497,7 +4802,7 @@
         },
 
         _getLocalizedLabels: function (property) {
-            return ej.RTE.Locale[this.model.locale][property] === undefined ? ej.RTE.Locale["en-US"][property] : ej.RTE.Locale[this.model.locale][property];
+			return this._localizedLabels[property] === undefined ? ej.RTE.Locale["en-US"][property] : this._localizedLabels[property];
         },
 
 
@@ -4507,14 +4812,14 @@
             var startContainer = rng.startContainer, endContainer = rng.endContainer;
             var startOffset = rng.startOffset, endOffset = rng.endOffset;
             // if (!ej.isNullOrUndefined(rng.commonAncestorContainer))
-                // if (rng.commonAncestorContainer.nodeName == "BODY")
-                    // this._tempEle = $(rng.commonAncestorContainer);
-                // else if ($(rng.cloneContents()).text() == $($($(rng.startContainer).parents("li")).contents()[0]).text() && (startOffset == 0 && endOffset == $(rng.startContainer).parents("li").text().length) || startOffset == endOffset || startOffset == 0 && endOffset == 1)
-                    // this._tempEle = $($(rng.startContainer).parents("li"));
-                // else if ((rng.commonAncestorContainer.nodeName == "OL") && startOffset != endOffset && endOffset != 0 && endOffset != 1)
-                    // this._tempEle = $(rng.commonAncestorContainer);
-                // else
-                    // this._tempEle = $(rng.startContainer);
+            // if (rng.commonAncestorContainer.nodeName == "BODY")
+            // this._tempEle = $(rng.commonAncestorContainer);
+            // else if ($(rng.cloneContents()).text() == $($($(rng.startContainer).parents("li")).contents()[0]).text() && (startOffset == 0 && endOffset == $(rng.startContainer).parents("li").text().length) || startOffset == endOffset || startOffset == 0 && endOffset == 1)
+            // this._tempEle = $($(rng.startContainer).parents("li"));
+            // else if ((rng.commonAncestorContainer.nodeName == "OL") && startOffset != endOffset && endOffset != 0 && endOffset != 1)
+            // this._tempEle = $(rng.commonAncestorContainer);
+            // else
+            // this._tempEle = $(rng.startContainer);
             if (!rng) {
                 return this._getDocument().selection;
             }
@@ -4601,9 +4906,8 @@
                         range.setStart(sel.focusNode, sel.focusOffset);
                         range.setEnd(sel.anchorNode, sel.anchorOffset);
                     }
-                } 
-                else if(doc.createRange())
-                {
+                }
+                else if (doc.createRange()) {
                     range = doc.createRange();
                     range.setStart(win.document.body, 0);
                     range.setEnd(win.document.body, 0);
@@ -4640,7 +4944,7 @@
                 return rng;
             }
             else if (this._isIE())
-			//Table Aciton Not working in IE condition (this._selectionRange.length>0)
+                //Table Aciton Not working in IE condition (this._selectionRange.length>0)
                 return this._ieSelection = (window.getSelection && (ej.isNullOrUndefined(this._selectionRange) ? false : (this._selectionRange.length > 0))) ? this._selectionRange : this._saveSelection();
             else if (this._getWindow().getSelection() && this._getWindow().getSelection().rangeCount > 0)
                 return this._getWindow().getSelection().getRangeAt(0);
@@ -4648,21 +4952,19 @@
                 var iframe = document.getElementsByTagName("iframe")[0];
                 var win = iframe.contentWindow;
                 var range
-                try{
+                try {
                     range = win.document.createRange();
                     range.setStart(win.document.body, 0);
                     range.setEnd(win.document.body, 0);
                 }
-                catch(error)
-                {
-                 range = this._getDocument().createRange();
-                 range.setStart(this._getDocument().body, 0);
-                range.setEnd(this._getDocument().body, 0);
+                catch (error) {
+                    range = this._getDocument().createRange();
+                    range.setStart(this._getDocument().body, 0);
+                    range.setEnd(this._getDocument().body, 0);
                 }
                 return range;
             }
         },
-
         _setBackupData: function () {
             var htmlTxt = this.getHtml();
             var bkuplen = this._backupArray.length;
@@ -4671,8 +4973,8 @@
             if (htmlTxt != this._backupArray[bkuplen - 1] && this.model.undoStackLimit > 0)
                 this._backupArray.push(htmlTxt);
             this._undoRedoPosition = this._backupArray.length - 1;
-                if (this.model.showToolbar && this._rteToolbar.find("li.e-rteItem-undo") && this._backupArray.length > 1 && !$("#" + this._rteId + "_" + "undo").hasClass("e-rteTooldisable"))
-                    this._toolBarObj.enableItemByID(this._rteId + "_" + "undo");
+            if (this.model.showToolbar && this._rteToolbar.find("li.e-rteItem-undo") && this._backupArray.length > 1 && !$("#" + this._rteId + "_" + "undo").hasClass("e-rteTooldisable"))
+                this._toolBarObj.enableItemByID(this._rteId + "_" + "undo");
         },
         _getSelectedHtmlString: function () {
             if (typeof document.selection != "undefined" && this._isIE8()) {
@@ -4693,7 +4995,7 @@
                 parentElement = cnode.nodeType == 3 ? $(cnode).parentsUntil("body") : $(cnode).children();
                 for (i = parentElement.length - 1; i >= 0; i--) {
                     if (parentElement[i].textContent != "" && parentElement[i].textContent == range.toString()) {
-                      range.selectNode(parentElement[i]);                    
+                        range.selectNode(parentElement[i]);
                         break;
                     }
                 }
@@ -4734,9 +5036,9 @@
         _alignToolUpdate: function (name) {
             for (var i = 0; i < this._alignItems.length; i++) {
                 if (this._alignItems[i] === name)
-                        this._toolBarObj.selectItemByID(this._rteId + "_" + name);
+                    this._toolBarObj.selectItemByID(this._rteId + "_" + name);
                 else
-                        this._toolBarObj.deselectItemByID(this._rteId + "_" + this._alignItems[i]);
+                    this._toolBarObj.deselectItemByID(this._rteId + "_" + this._alignItems[i]);
             }
         },
 
@@ -4780,24 +5082,24 @@
                 if (this.model.enableHtmlEncode)
                     this.setHtml(this._decode(this._backupArray[this._undoRedoPosition - 1]));
                 else
-                this.setHtml(this._backupArray[this._undoRedoPosition - 1]);
+                    this.setHtml(this._backupArray[this._undoRedoPosition - 1]);
                 this._undoRedoPosition--;
-				this._focus();
+                this._focus();
                 this._updateFontOptionStatus();
                 this._updateFormat();
                 this._updateCount();
-				this._toggleEditTable();
-				if(this.model.isResponsive) this._toolBarObj._liTemplte.removeClass("e-display-none");
+                this._toggleEditTable();
+                if (this.model.isResponsive) this._toolBarObj._liTemplte.removeClass("e-display-none");
                 this._toolBarObj.enableItemByID(this._rteId + "_" + "redo");
             }
             if (this._undoRedoPosition == 0) {
-                    this._toolBarObj.disableItemByID(this._rteId + "_" + "undo");
-                    this._toolBarObj.enableItemByID(this._rteId + "_" + "redo");
-            }            
-			this._updateToolbarStatus();
+                this._toolBarObj.disableItemByID(this._rteId + "_" + "undo");
+                this._toolBarObj.enableItemByID(this._rteId + "_" + "redo");
+            }
+            this._updateToolbarStatus();
             this._trigger("execute", { commandName: "undo" });
         },
-        _getRedoContent: function(){
+        _getRedoContent: function () {
             if (this.model.enableHtmlEncode)
                 return (this._decode(this._backupArray[this._undoRedoPosition + 1]));
             else
@@ -4811,23 +5113,23 @@
                     this.setHtml(_redoContent)
                     this._undoRedoPosition++;
                 }
-                else {                    
+                else {
                     var redoString = this._getRedoContent();
                     if (!ej.isNullOrUndefined(redoString)) this.setHtml(redoString);
                     this._undoRedoPosition = this._backupArray.length - 2;
                 }
-				this._focus();
+                this._focus();
                 this._updateToolbarStatus();
                 this._updateFontOptionStatus();
                 this._updateFormat();
-                this._updateCount();                   
+                this._updateCount();
                 if (!ej.isNullOrUndefined(this._toolBarObj)) {
                     if (this._backupArray.length - 1 > 0)
-                            this._toolBarObj.enableItemByID(this._rteId + "_" + "undo");
+                        this._toolBarObj.enableItemByID(this._rteId + "_" + "undo");
                     if (this._undoRedoPosition == this._backupArray.length - 1)
-                            this._toolBarObj.disableItemByID(this._rteId + "_" + "redo");
+                        this._toolBarObj.disableItemByID(this._rteId + "_" + "redo");
                 }
-            }            
+            }
             this._trigger("execute", { commandName: "redo" });
         },
 
@@ -4841,45 +5143,45 @@
                 editdoc.EditMode = true;
             }
         },
-		_removeResizeObject: function() {
-			$(this._getDocument()).find(".e-rteColumnResizer , .e-rteRowResizer , .e-rteLastcolumn").remove();
-		},
-		 _tableMouseOver: function(e) {
-			 if(e.target.nodeName == "TABLE" ||(ej.browserInfo().name === "mozilla" && e.target.nodeName == "TD" ) ) {
-			    this._curTable = (e.target.nodeName == "TD") ? $(e.target).closest("table")[0] :e.target;
-			    this._removeResizeObject();
-				$(this._getDocument()).find(".e-rte-tablebox").remove();
-				this._tableResizeObject($(this._curTable));
-			 }
-		 },
-		_preventDefaultResize: function() {
-			var proxy = this._getDocument();
-			(ej.browserInfo().name === "msie" && ej.browserInfo().version === "11.0") ? proxy.body.addEventListener('mscontrolselect', this._ieDefaultTableHandler) : (this._isIE()) && proxy.body.attachEvent( 'oncontrolselect', this._ieTableHandler );
-			if (ej.browserInfo().name === "mozilla") {
-			   proxy.designMode = "on";
-               proxy.execCommand("enableObjectResizing", false, "false");
-			   proxy.execCommand("enableInlineTableEditing", false, "false");
-			}
-		},
+        _removeResizeObject: function () {
+            $(this._getDocument()).find(".e-rteColumnResizer , .e-rteRowResizer , .e-rteLastcolumn").remove();
+        },
+        _tableMouseOver: function (e) {
+            if (e.target.nodeName == "TABLE" || (ej.browserInfo().name === "mozilla" && e.target.nodeName == "TD")) {
+                this._curTable = (e.target.nodeName == "TD") ? $(e.target).closest("table")[0] : e.target;
+                this._removeResizeObject();
+                $(this._getDocument()).find(".e-rte-tablebox").remove();
+                this._tableResizeObject($(this._curTable));
+            }
+        },
+        _preventDefaultResize: function () {
+            var proxy = this._getDocument();
+            (ej.browserInfo().name === "msie" && ej.browserInfo().version === "11.0") ? proxy.body.addEventListener('mscontrolselect', this._ieDefaultTableHandler) : (this._isIE()) && proxy.body.attachEvent('oncontrolselect', this._ieTableHandler);
+            if (ej.browserInfo().name === "mozilla") {
+                proxy.designMode = "on";
+                proxy.execCommand("enableObjectResizing", false, "false");
+                proxy.execCommand("enableInlineTableEditing", false, "false");
+            }
+        },
         _tableResizeObject: function (_tableEle) {
-		    if(this.model.allowEditing) this._preventDefaultResize();
-			var cellspace = parseInt($(_tableEle).attr("cellspacing") ? $(_tableEle).attr("cellspacing") : 0);
-			this._newcol = _tableEle.find("tr:first td").not(":first"),this._newRow = _tableEle.find("tr td:nth-child(1)"),this._newlas = _tableEle.find("tr:first td:last");
-            for(var i = 0;this._newcol.length > i ; i++) 
-				$(this._getDocument().body).after("<div class =\"e-rteColumnResizer\"  unselectable=\"on\" contenteditable=\"false\" data-col ="+(i+1)+" style=\"top:"+$(this._newcol[i]).closest("table").offset().top+"px;left:"+$(this._newcol[i]).offset().left+"px;height:"+$(this._newcol[i]).closest("table").outerHeight()+"px;width:"+(5 + cellspace )+"px;margin-left: "+(-4 - cellspace  )+"px;\"></div>");
-            for(var i = 0;this._newRow.length > i ; i++)
-			    $(this._getDocument().body).after("<div class =\"e-rteRowResizer\" unselectable=\"on\"  contenteditable=\"false\" data-row ="+(i)+" style=\"top:"+($(this._newRow[i]).offset().top + $(this._newRow[i]).height())+"px;left:"+$(this._newRow[i]).offset().left+"px;width:"+$(this._newRow[i]).closest("table").width()+"px;height:"+(5 + cellspace )+"px;\"></div>");
-			$(this._getDocument().body).after("<div class =\"e-rteColumnResizer e-rtelastcol\" data-col ="+(this._newcol.length)+"  contenteditable=\"false\" style=\"top:"+$(this._newlas).closest("table").offset().top+"px;left:"+($(this._newlas).offset().left +$(this._newlas).width() )+"px;height:"+$(this._newlas).closest("table").outerHeight()+"px;width:"+(5 + cellspace )+"px;margin-left:3px;\"></div>");
-			this._botRigTab = ej.buildTag("span.e-rte-tablebox e-rte-botrig","",{"cursor":"nwse-resize","width":"5px","height":"5px","position":"absolute","display":"block","background":"#fff","border":"1px solid #000"},{});
-			var tableBox = _tableEle.find("tr:last td:last:not(:has(>span.e-rte-tablebox))");
-			if(tableBox.length > 0) $(this._getDocument().body).after($(this._botRigTab).css({"left":((parseInt( tableBox.closest("table").width()))+tableBox.closest("table").offset().left)+"px","top":((parseInt( tableBox.closest("table").height()))+ tableBox.closest("table").offset().top)+"px"}));
-		},
-		 _ieDefaultTableHandler: function(e){
-			e.preventDefault();
-		},	
-        _ieTableHandler: function(e){
-			return false;
-		},
+            if (this.model.allowEditing) this._preventDefaultResize();
+            var cellspace = parseInt($(_tableEle).attr("cellspacing") ? $(_tableEle).attr("cellspacing") : 0);
+            this._newcol = _tableEle.find("tr:first td").not(":first"), this._newRow = _tableEle.find("tr td:nth-child(1)"), this._newlas = _tableEle.find("tr:first td:last");
+            for (var i = 0; this._newcol.length > i ; i++)
+                $(this._getDocument().body).after("<div class =\"e-rteColumnResizer\"  unselectable=\"on\" contenteditable=\"false\" data-col =" + (i + 1) + " style=\"top:" + $(this._newcol[i]).closest("table").offset().top + "px;left:" + $(this._newcol[i]).offset().left + "px;height:" + $(this._newcol[i]).closest("table").outerHeight() + "px;width:" + (5 + cellspace) + "px;margin-left: " + (-4 - cellspace) + "px;\"></div>");
+            for (var i = 0; this._newRow.length > i ; i++)
+                $(this._getDocument().body).after("<div class =\"e-rteRowResizer\" unselectable=\"on\"  contenteditable=\"false\" data-row =" + (i) + " style=\"top:" + ($(this._newRow[i]).offset().top + $(this._newRow[i]).height()) + "px;left:" + $(this._newRow[i]).offset().left + "px;width:" + $(this._newRow[i]).closest("table").width() + "px;height:" + (5 + cellspace) + "px;\"></div>");
+            $(this._getDocument().body).after("<div class =\"e-rteColumnResizer e-rtelastcol\" data-col =" + (this._newcol.length) + "  contenteditable=\"false\" style=\"top:" + $(this._newlas).closest("table").offset().top + "px;left:" + ($(this._newlas).offset().left + $(this._newlas).width()) + "px;height:" + $(this._newlas).closest("table").outerHeight() + "px;width:" + (5 + cellspace) + "px;margin-left:3px;\"></div>");
+            this._botRigTab = ej.buildTag("span.e-rte-tablebox e-rte-botrig", "", { "cursor": "nwse-resize", "width": "5px", "height": "5px", "position": "absolute", "display": "block", "background": "#fff", "border": "1px solid #000" }, {});
+            var tableBox = _tableEle.find("tr:last td:last:not(:has(>span.e-rte-tablebox))");
+            if (tableBox.length > 0) $(this._getDocument().body).after($(this._botRigTab).css({ "left": ((parseInt(tableBox.closest("table").width())) + tableBox.closest("table").offset().left) + "px", "top": ((parseInt(tableBox.closest("table").height())) + tableBox.closest("table").offset().top) + "px" }));
+        },
+        _ieDefaultTableHandler: function (e) {
+            e.preventDefault();
+        },
+        _ieTableHandler: function (e) {
+            return false;
+        },
 
 
         _tableCellStart: function (e) {
@@ -4921,10 +5223,10 @@
                 this._onInsertTable(row, col, false);
             }
             var _tableEle = $(this._getDocument()).find("table.e-rte-table");
-                //Content editable propert for table and td removed and key navigation support added in keydown           
-			if(!this.model.enableRTL) this._on( _tableEle , "mouseover", this._tableMouseOver);
-			_tableEle.attr({"width":"99%"});
-            this._createTable.ejDialog("close");
+            //Content editable propert for table and td removed and key navigation support added in keydown           
+            if (!this.model.enableRTL) this._on(_tableEle, "mouseover", this._tableMouseOver);
+            _tableEle.attr({ "width": "99%" });
+            this._createTable.ejDialog("close",{clickAction:true});
             this._setBackupData();
             this._onChange();
             if (this.model.isResponsive && this._toolBarObj._liTemplte) {
@@ -4968,33 +5270,33 @@
 
         _openCustomTable: function (e) {
             if (e.currentTarget.id == this._rteId + "_createCustomTableLink") {
-			$("#" + this._rteId + "_customTable_wrapper").css({"z-index":this._onGetMaxZindex()});
+                $("#" + this._rteId + "_customTable_wrapper").css({ "z-index": this._onGetMaxZindex() });
                 this._customTableDialog.ejDialog("open");
-				this._createTable.ejDialog("close");
-				this._widthFocusOut();
-			}
+                this._createTable.ejDialog("close");
+                this._widthFocusOut();
+            }
             else {
                 if (!this._createTable.find("div.e-rte-eTblProperties").hasClass('e-disable')) {
                     this._eTblManager();
-					$("#" + this._rteId + "_eTbl_wrapper").css({"z-index":this._onGetMaxZindex()});
+                    $("#" + this._rteId + "_eTbl_wrapper").css({ "z-index": this._onGetMaxZindex() });
                     this._eTblDialog.ejDialog("open");
-					this._createTable.ejDialog("close");
+                    this._createTable.ejDialog("close");
                     this._on(this._getTableObj("Width"), "focusout", this._widthFocusOut);
                     this._widthFocusOut();
                 }
             }
         },
-		_createTableClose: function(e) {
-		    if ((!ej.isNullOrUndefined(this._createTable)) && ((!ej.isNullOrUndefined(e) && $(e.target).parents("#" + this._rteId + "_" + "tables").length <= 0) || ej.isNullOrUndefined(e) )) {
+        _createTableClose: function (e) {
+            if ((!ej.isNullOrUndefined(this._createTable)) && ((!ej.isNullOrUndefined(e) && $(e.target).parents("#" + this._rteId + "_" + "tables").length <= 0) || ej.isNullOrUndefined(e))) {
                 if (!ej.isNullOrUndefined(this._createTable.data("ejDialog"))) {
-			    if( ej.isNullOrUndefined(e) || ( e.target != this._createTable[0] && $(e.target).parents(".e-rte-table-picker").length <= 0 ) ) {					
-                this._createTable.ejDialog("isOpened") && this._createTable.ejDialog("close");
-                this._createTable.find("div.e-rte-eTblProperties").addClass('e-disable');
-				}
-				if(this._createTable.ejDialog("isOpened") && this.model.isResponsive )  this._toolBarObj._liTemplte.removeClass("e-display-none");
-				else if (this.model.isResponsive && !ej.isNullOrUndefined(e) && !$(e.target).is($("#" + this._toolBarObj.element[0].id + "_target")) && !($(e.target).closest("div#" + this._toolBarObj.element[0].id + "_hiddenlist").length != 0 || $(e.target).parents().hasClass("e-ddl-popup"))) this._toolBarObj._liTemplte.addClass("e-display-none");
-				}
-			}
+                    if (ej.isNullOrUndefined(e) || (e.target != this._createTable[0] && $(e.target).parents(".e-rte-table-picker").length <= 0)) {
+                        this._createTable.ejDialog("isOpened") && this._createTable.ejDialog("close");
+                        this._createTable.find("div.e-rte-eTblProperties").addClass('e-disable');
+                    }
+                    if (this._createTable.ejDialog("isOpened") && this.model.isResponsive) this._toolBarObj._liTemplte.removeClass("e-display-none");
+                    else if (this.model.isResponsive && !ej.isNullOrUndefined(e) && !$(e.target).is($("#" + this._toolBarObj.element[0].id + "_target")) && !($(e.target).closest("div#" + this._toolBarObj.element[0].id + "_hiddenlist").length != 0 || $(e.target).parents().hasClass("e-ddl-popup"))) this._toolBarObj._liTemplte.addClass("e-display-none");
+                }
+            }
             else
                 $(this._createTable.find("div.e-rte-eTblProperties").hasClass('e-disable')).addClass('e-disable');
         },
@@ -5018,9 +5320,8 @@
             !ej.isNullOrUndefined(this._createTable) && this._createTable.ejDialog("close");
             !ej.isNullOrUndefined(this._splitMenu) && this._splitMenu.hide(e);
             !ej.isNullOrUndefined(this._bgSplitMenu) && this._bgSplitMenu.hide(e);
-			!ej.isNullOrUndefined(this._orderSplitObj) && this._orderSplitObj.hide(e);
-			 !ej.isNullOrUndefined(this._unOrderSplitObj) && this._unOrderSplitObj.hide(e);
-            this._contentBeforfocus = this.value();
+            !ej.isNullOrUndefined(this._orderSplitObj) && this._orderSplitObj.hide(e);
+            !ej.isNullOrUndefined(this._unOrderSplitObj) && this._unOrderSplitObj.hide(e);
         },
         _updateKeyDownSelectStatus: function (_toolEle, commandName) {
             if (!_toolEle.hasClass("e-active"))
@@ -5030,78 +5331,84 @@
         },
         _iframeKeyDown: function (e) {
             var _toolEle;
-			this._contentBeforfocus = this.value();
+            
             if (this.model.showToolbar && this.model.allowKeyboardNavigation && e) {
                 if (e.ctrlKey) {
-                    e.keyCode == 65 ? this._contolAKeyfalg = true : ej.isNullOrUndefined(this._contolAKeyfalg) ? this._contolAKeyfalg : this._contolAKeyfalg = false;                   
+                    e.keyCode == 65 ? this._contolAKeyfalg = true : ej.isNullOrUndefined(this._contolAKeyfalg) ? this._contolAKeyfalg : this._contolAKeyfalg = false;
                     var _proxy = this;
-					switch (e.keyCode) {
-						case 48://Reset zoom
-						e.preventDefault();
-						$(this.getDocument().body).css({"zoom":1,"transform":"scale(1)","transform-origin":"0 0","-o-transform":"scale(1)","-o-transform-origin":"0 0","-webkit-transform":"scale(1)","-webkit-transform-origin":"0 0"});		   
-						$(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomIn")).attr("title",_proxy._getLocalizedLabels("zoomIn")+" 100%");
-			            $(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomOut")).attr("title",_proxy._getLocalizedLabels("zoomOut")+" 100%");
-						_proxy._zoomValue = 1;
-						return false;
-						case 57:// Zoom in
-						e.preventDefault();
-						this._onKeyZoom("IN");
-						return false;
-						case 173:
-						case 189:// Zoom out
-						e.preventDefault();
-						this._onKeyZoom("OUT");
-						return false;
-						case 80:// Print
-						e.preventDefault();
-						this._onPrint();
-						return false;
+                    switch (e.keyCode) {
+                        case 48://Reset zoom
+                            e.preventDefault();
+                            $(this.getDocument().body).css({ "zoom": 1, "transform": "scale(1)", "transform-origin": "0 0", "-o-transform": "scale(1)", "-o-transform-origin": "0 0", "-webkit-transform": "scale(1)", "-webkit-transform-origin": "0 0" });
+                            $(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomIn")).attr("title", _proxy._getLocalizedLabels("zoomIn") + " 100%");
+                            $(_proxy._toolBarObj.itemsContainer.find(".e-rteItem-zoomOut")).attr("title", _proxy._getLocalizedLabels("zoomOut") + " 100%");
+                            _proxy._zoomValue = 1;
+                            return false;
+                        case 57:// Zoom in
+                            e.preventDefault();
+                            this._onKeyZoom("IN");
+                            return false;
+                        case 173:
+                        case 189:// Zoom out
+                            e.preventDefault();
+                            this._onKeyZoom("OUT");
+                            return false;
+                        case 80:// Print
+                            e.preventDefault();
+                            this._onPrint();
+                            return false;
                         case 66://B
-                            if (!e.shiftKey){//bold
-								e.preventDefault();
+                            if (!e.shiftKey) {//bold
+                                e.preventDefault();
                                 _toolEle = this._toolBarItems.find("li.e-rteItem-bold");
                                 if (!_toolEle.hasClass("e-disable")) {
                                     this._onBold();
                                     this._updateKeyDownSelectStatus(_toolEle, "bold");
-                                }
-								return false;
+                                    this._onChange();
+                                    this._setBackupData()
+                                };
+                                return false;
                             }
                             break;
-						case 72:						
-                            if(e.shiftKey){//sourcecode	view.
-								e.preventDefault();
+                        case 72:
+                            if (e.shiftKey) {//sourcecode	view.
+                                e.preventDefault();
                                 this._getPasteRangeVal();
                                 this._sourceCodeManager();
-								return false
+                                return false
                             }
-							break;
+                            break;
                         case 73://I
-							e.preventDefault();
-                            if(e.shiftKey)
-								this._imageManager();
-							else{
-                            _toolEle = this._toolBarItems.find("li.e-rteItem-italic");
-                            if (!_toolEle.hasClass("e-disable")) {
-									this._onItalics();
-									this._updateKeyDownSelectStatus(_toolEle, "italic");
-								}
-							}
-							return false;
+                            e.preventDefault();
+                            if (e.shiftKey)
+                                this._imageManager();
+                            else {
+                                _toolEle = this._toolBarItems.find("li.e-rteItem-italic");
+                                if (!_toolEle.hasClass("e-disable")) {
+                                    this._onItalics();
+                                    this._setBackupData();
+                                    this._updateKeyDownSelectStatus(_toolEle, "italic");
+                                    this._onChange();
+                                }
+                            }
+                            return false;
                         case 85://U
-							e.preventDefault();
+                            e.preventDefault();
                             if (e.shiftKey)//UpperCase
                                 this._onUpperCase();
                             else//Underline
                             {
-								_toolEle = this._toolBarItems.find("li.e-rteItem-underline");
+                                _toolEle = this._toolBarItems.find("li.e-rteItem-underline");
                                 if (!_toolEle.hasClass("e-disable")) {
                                     this._onUnderLine();
-                                    this._updateKeyDownSelectStatus(_toolEle, "underline");
+                                    this._updateKeyDownSelectStatus(_toolEle, "underline");                                    
                                 }
                             }
-							return false;
+                            this._setBackupData();
+                            this._onChange();
+                            return false;
                         case 76://L
-							e.preventDefault();
+                            e.preventDefault();
                             if (e.shiftKey)//Lowercase
                                 this._onLowerCase();
                             else {
@@ -5110,105 +5417,114 @@
                                     this._alignToolUpdate("justifyLeft");
                                 }
                             }
-							return false;
+                            this._setBackupData();
+                            this._onChange();
+                            return false;
                         case 82://R
-							e.preventDefault();
+                            e.preventDefault();
                             if (e.altKey)//Remove table row.
                                 this.removeRow();
-                            else if(e.shiftKey)//remove formate
-								this._onClearFormat();	
-							else{//Jutfy Right.
+                            else if (e.shiftKey)//remove formate
+                                this._onClearFormat();
+                            else {//Jutfy Right.
                                 _toolEle = this._toolBarItems.find("li.e-rteItem-justifyRight");
                                 if (!_toolEle.hasClass("e-disable")) {
-                                this._onJustifyRight();
-                                this._alignToolUpdate("justifyRight");
+                                    this._onJustifyRight();
+                                    this._alignToolUpdate("justifyRight");
                                 }
-							}
-							return false;
+                            }
+                            this._setBackupData();
+                            this._onChange();
+                            return false;
                         case 69://E
-							if (e.shiftKey) {//editable                          
-								e.preventDefault();
-								this._openCustomTable(e);
-								return false;
+                            if (e.shiftKey) {//editable                          
+                                e.preventDefault();
+                                this._openCustomTable(e);
+                                this._setBackupData();
+                                this._onChange();
+                                return false;
                             }
                             else if (!this._toolBarItems.find("li.e-rteItem-justifyCenter").hasClass("e-disable")) {
-								e.preventDefault();
+                                e.preventDefault();
                                 this._onJustifyCenter();
+                                this._setBackupData();
                                 this._alignToolUpdate("justifyCenter");
-								return false;
+                                this._onChange();
+                                return false;
                             }
                             break;
                         case 74://J							
                             if (!this._toolBarItems.find("li.e-rteItem-justifyFull").hasClass("e-disable")) {
-								e.preventDefault();
+                                e.preventDefault();
                                 this._onJustifyFull();
                                 this._alignToolUpdate("justifyFull");
-								return false;
+                                this._setBackupData();
+                                this._onChange();
+                                return false;
                             }
                             break;
                         case 90://Z							
                             if (!this._toolBarItems.find("li.e-rteItem-undo").hasClass("e-disable")) {
-								e.preventDefault();
+                                e.preventDefault();
                                 this._onUndo();
-                                this._toolBarItems.find("li.e-rteItem-redo").removeClass("e-disable");
-                                this._toolBarObj.deselectItemByID(this._rteId + "_redo")
-								return false;
+                                return false;
+
                             }
                             break;
                         case 89://Y
-							
+
                             if (!this._toolBarItems.find("li.e-rteItem-redo").hasClass("e-disable")) {
-								e.preventDefault();
+                                e.preventDefault();
                                 this._onRedo();
-                                this._toolBarItems.find("li.e-rteItem-undo").addClass("e-disable");
-                                this._toolBarObj.deselectItemByID(this._rteId + "_undo");
-								return false;
-                            }							
+                                return false;
+                            }
                             break;
                         case 67://C							
                             if (e.altKey)//Remove table column
                             {
-								e.preventDefault();
-								this.removeColumn();
-								return false;
-							}
-                            else if (e.shiftKey){//custom Table
-								e.preventDefault();
+                                e.preventDefault();
+                                this.removeColumn();
+                                return false;
+                            }
+                            else if (e.shiftKey) {//custom Table
+                                e.preventDefault();
                                 this._getPasteRangeVal();
                                 if (this._customTableDialog)
                                     this._renderTableDialog();
                                 this._customTableDialog.ejDialog("open");
-								return false;
+                                return false;
                             }
-							else if (this._toolBarItems.find("li.e-rteItem-copy").hasClass("e-disable")) {
-								e.preventDefault();
-								this._keypressFlag = false;
-								return false;
+                            else if (this._toolBarItems.find("li.e-rteItem-copy").hasClass("e-disable")) {
+                                e.preventDefault();
+                                this._keypressFlag = false;
+                                return false;
                             }
                             break
                         case 88://X
-							if (this._toolBarItems.find("li.e-rteItem-cut").hasClass("e-disable")) {
+                            if (this._toolBarItems.find("li.e-rteItem-cut").hasClass("e-disable")) {
                                 e.preventDefault();
-								this._keypressFlag = false;
-								return false;                          
+                                this._keypressFlag = false;
+                                return false;
                             }
+                            this._onChange();
                             break;
                         case 86://V
                             if (this._toolBarItems.find("li.e-rteItem-paste").hasClass("e-disable") || ((this.model.maxLength <= $.trim(this._getText()).length) && (ej.isNullOrUndefined(this._contolAKeyfalg) ? true : this._contolAKeyfalg))) {
                                 e.preventDefault();
-								this._keypressFlag = false;
-								return false;                                
+                                this._keypressFlag = false;
+                                return false;
                             }
-                            else if(e.shiftKey)//Video insertion.
-							{
-								e.preventDefault();
-								this._keypressFlag = false;
-								this._selectCommand("video");
-								return false;
-							}
-							break;
+                            else if (e.shiftKey)//Video insertion.
+                            {
+                                e.preventDefault();
+                                this._keypressFlag = false;
+                                this._selectCommand("video");
+                                return false;
+                            }
+                            this._onChange();
+                            break;
                         case 77://M
-							e.preventDefault();
+                            e.preventDefault();
                             if (e.shiftKey) {//Outdent.
                                 if (!this._toolBarItems.find("li.e-rteItem-outdent").hasClass("e-disable")) {
                                     this._onOutdent();
@@ -5222,125 +5538,138 @@
                                     this._indentdepth++;
                                 }
                             }
-							return false;
+                            this._setBackupData();
+                            this._onChange();
+                            return false;
                         case 75:
-							e.preventDefault();
+                            e.preventDefault();
                             if (e.shiftKey)
                                 this._onUnlink();
                             else
                                 if (!this._toolBarItems.find("li.e-rteItem-createLink").hasClass("e-disable"))
                                     this._hyperLinkManager(false);
-							return false;					
-									
+                            return false;
+
                         case 188://<							
-							if(e.shiftKey)
-							{
-								e.preventDefault();
-								this._changeFontsize(false);
-								return false;
-							}
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                this._changeFontsize(false);
+                                this._onChange();
+                                return false;
+                            }
+                            this._setBackupData();
+                            this._onChange();
                             break;
                         case 190://>							
-							if(e.shiftKey)
-							{
-								e.preventDefault();
-								this._changeFontsize(true);
-								return false;
-							}
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                this._changeFontsize(true);
+                                this._onChange();
+                                return false;
+                            }
+                            this._setBackupData();
                             break;
-						case 61:
+                        case 61:
                         case 187://+
-							e.preventDefault();
-							(e.shiftKey)?this._onSuperScript():this._onSubScript();
-							return false;
+                            e.preventDefault();
+                            (e.shiftKey) ? this._onSuperScript() : this._onSubScript();
+                            this._onChange();
+                            this._setBackupData();
+                            return false;
                         case 79://O							
-                            if(e.shiftKey)
-							{	
-								e.preventDefault();
-								this.executeCommand('insertorderedlist', "listItem");
-								return false;
-							}
-							else if(e.altKey)
-							{
-								e.preventDefault();
-								this.executeCommand('insertunorderedlist', "listItem");
-								return false;
-							}
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                this.executeCommand('insertorderedlist', "listItem");
+                                this._onChange();
+                                this._setBackupData();
+                                return false;
+                            }
+                            else if (e.altKey) {
+                                e.preventDefault();
+                                this.executeCommand('insertunorderedlist', "listItem");
+                                this._onChange();
+                                this._setBackupData();
+                                return false;
+                            }
                             break;
                         case 83://S							
                             if (e.shiftKey)//strike the content.
                             {
-								e.preventDefault();
-								this._onStrikeThrough();
-								return false;
-							}
+                                e.preventDefault();
+                                this._onStrikeThrough();
+                                this._onChange();
+                                this._setBackupData();
+                                return false;
+                            }
                             break;
                         case 70://F							
-							if(e.shiftKey)
-							{
-								e.preventDefault();
-								this._selectCommand("fullScreen");
-								return false;
-							}
-							else if(!e.altKey)
-							{
-								e.preventDefault();
-								if(ej.RTE.FindAndReplace)
-									this._showFindAndReplace();
-								return false;
-							}
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                this._selectCommand("fullScreen");
+                                return false;
+                            }
+                            else if (!e.altKey) {
+                                e.preventDefault();
+                                if (ej.RTE.FindAndReplace)
+                                    this._showFindAndReplace();
+                                return false;
+                            }
                             break;
                         case 37://left arrow.							
-                            if (e.shiftKey)
-                            {  
-								e.preventDefault();
-								this.insertColumn(true);
-								return false;
-							}
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                this.insertColumn(true);
+                                this._onChange();
+                                return false;
+                            }
                             break;
                         case 39://right arrow.							
-                            if (e.shiftKey)
-                            {
-								e.preventDefault();
-								this.insertColumn(false);
-								return false;
-							}
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                this.insertColumn(false);
+                                this._onChange();
+                                return false;
+                            }
                             break;
                         case 38://up arrow.
-                            if (e.shiftKey)
-                            { 
-								e.preventDefault();
-								this.insertRow(true);
-								return false;
-							}	
+                            if (e.shiftKey) {
+                                e.preventDefault();
+                                this.insertRow(true);
+                                this._onChange();
+                                return false;
+                            }
                             break;
                         case 40://downarrow							
-                            if (e.shiftKey)
-							{
-								e.preventDefault();
+                            if (e.shiftKey) {
+                                e.preventDefault();
                                 this.insertRow(false);
-								return false;
-							}
+                                this._onChange();
+                                return false;
+                            }
                             break;
                         case 65://A
                             if (e.altKey) {
-								e.preventDefault();
-								this.removeTable();
-								return false;
-							};                            
+                                e.preventDefault();
+                                this.removeTable();
+                                return false;
+                            };
                             break
-						case 121://F10
-							e.preventDefault();
-							this._clearAllManager();
-							return false;
-                    }                    
+                        case 121://F10
+                            e.preventDefault();
+                            this._clearAllManager();
+                            return false;
+                        case 84://T
+                            if (e.altKey && this._toolBarItems) { // Alt+ Ctrl + T.
+                                this._toolBarItems.focus();
+                                break;
+                            }
+                    }
                 }
-				else if((e.keyCode==9 && this.model.enableTabKeyNavigation) && !(this._isIE8() ? this._currentSelNode.nodeName.toLowerCase() == "td" : this._getSelectedNode().nodeName.toLowerCase() == "td"))
-				{					
-					this._keypressFlag = false;
-					this.executeCommand('inserthtml', "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",true);
-					return false;
-				}
+                else if ((e.keyCode == 9 && this.model.enableTabKeyNavigation) && !(this._isIE8() ? this._currentSelNode.nodeName.toLowerCase() == "td" : this._getSelectedNode().nodeName.toLowerCase() == "td")) {
+                    this._keypressFlag = true;
+                    this.executeCommand('inserthtml', "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;", true);
+                    return false;
+                }
                 else if (e.keyCode == 8) {//Backspace for removing the indent.
                     ele = this._getSelectedNode();
                     if ($(ele).find("span#RTE_imgDupDiv").length > 0)
@@ -5351,51 +5680,51 @@
                     }
                 }
             }
-            else if (e.ctrlKey == true && (e.keyCode == 66 || e.keyCode == 73 || e.keyCode == 85 || e.keyCode == 76 || e.keyCode == 82 || e.keyCode == 69 || e.keyCode == 74 || e.keyCode == 90 || e.keyCode == 89 || e.keyCode == 67 || e.keyCode == 88 || e.keyCode == 86 || e.keyCode == 8 || e.keyCode == 46)&& !this.model.allowKeyboardNavigation)
+            else if (e.ctrlKey == true && (e.keyCode == 66 || e.keyCode == 73 || e.keyCode == 85 || e.keyCode == 76 || e.keyCode == 82 || e.keyCode == 69 || e.keyCode == 74 || e.keyCode == 90 || e.keyCode == 89 || e.keyCode == 67 || e.keyCode == 88 || e.keyCode == 86 || e.keyCode == 8 || e.keyCode == 46) && !this.model.allowKeyboardNavigation)
                 e.preventDefault();
             if (this.model.maxLength != null && (ej.isNullOrUndefined(this._contolAKeyfalg) ? true : !this._contolAKeyfalg)) {
-                try{
+                try {
                     if (this._isIE8() && e.keyCode == 86 && !((this.model.maxLength) >= (window.clipboardData.getData("Text").length + $.trim(this._getText()).length)))
                         e.preventDefault();
                     else
                         this._validateMaxLength(e);
                 }
-                catch(error){}
+                catch (error) { }
             }
-            if (this._isIE8() ? this._currentSelNode.nodeName.toLowerCase() == "td" : this._getSelectedNode().nodeName.toLowerCase() == "td") {
+            if (this._isIE8() ? (this._currentSelNode && this._currentSelNode.nodeName.toLowerCase() == "td") : this._getSelectedNode().nodeName.toLowerCase() == "td") {
                 ele = this._isIE8() ? this._currentSelNode : this._getSelectedNode();
                 _newElementIndex = $(ele).parent().children().index($(ele));
                 if (e.keyCode == 9 && !e.shiftKey) {
-					_newElement = (!ej.isNullOrUndefined(ele.nextSibling)) ? ele.nextSibling : (!ej.isNullOrUndefined($(ele).parents("tr")[0].nextSibling) ? $(ele).parents("tr")[0].nextSibling.childNodes[0] : (!ej.isNullOrUndefined($(ele).parents("table")[0].nextSibling)) ? ($(ele).parents("table")[0].nextSibling.nodeName.toLowerCase() == "td") ? $(ele).parents("table")[0].nextSibling : ele : ele);
-					this._setTableSelection(_newElement,e);
-				}
-				 if (e.keyCode == 9 && e.shiftKey) {
-					_newElement = (!ej.isNullOrUndefined(ele.previousSibling)) ? ele.previousSibling : (!ej.isNullOrUndefined($(ele).parents("tr")[0].previousSibling) ? $(ele).parents("tr")[0].previousSibling.childNodes[$(ele).parents("tr")[0].previousSibling.childNodes.length - 1] : (!ej.isNullOrUndefined($(ele).parents("table")[0].previousSibling)) ? ($(ele).parents("table")[0].previousSibling.nodeName.toLowerCase() == "td") ? $(ele).parents("table")[0].previousSibling : ele : ele);
-					this._setTableSelection(_newElement,e);
-				}
+                    _newElement = (!ej.isNullOrUndefined(ele.nextSibling)) ? ele.nextSibling : (!ej.isNullOrUndefined($(ele).parents("tr")[0].nextSibling) ? $(ele).parents("tr")[0].nextSibling.childNodes[0] : (!ej.isNullOrUndefined($(ele).parents("table")[0].nextSibling)) ? ($(ele).parents("table")[0].nextSibling.nodeName.toLowerCase() == "td") ? $(ele).parents("table")[0].nextSibling : ele : ele);
+                    this._setTableSelection(_newElement, e);
+                }
+                if (e.keyCode == 9 && e.shiftKey) {
+                    _newElement = (!ej.isNullOrUndefined(ele.previousSibling)) ? ele.previousSibling : (!ej.isNullOrUndefined($(ele).parents("tr")[0].previousSibling) ? $(ele).parents("tr")[0].previousSibling.childNodes[$(ele).parents("tr")[0].previousSibling.childNodes.length - 1] : (!ej.isNullOrUndefined($(ele).parents("table")[0].previousSibling)) ? ($(ele).parents("table")[0].previousSibling.nodeName.toLowerCase() == "td") ? $(ele).parents("table")[0].previousSibling : ele : ele);
+                    this._setTableSelection(_newElement, e);
+                }
                 else if (e.keyCode == 40)
                     _newElement = (!ej.isNullOrUndefined($(ele).parents("tr")[0].nextSibling)) ? $(ele).parents("tr")[0].nextSibling.children[_newElementIndex] : ((!ej.isNullOrUndefined($(ele).parents("table")[0].nextSibling) && !this._isIE8()) ? $(ele).parents("table")[0].nextSibling : ele);
                 else if (e.keyCode == 38)
                     _newElement = (!ej.isNullOrUndefined($(ele).parents("tr")[0].previousSibling)) ? $(ele).parents("tr")[0].previousSibling.children[_newElementIndex] : ((!ej.isNullOrUndefined($(ele).parents("table")[0].previousSibling)) && !this._isIE8() ? $(ele).parents("table")[0].previousSibling : ele);
-                 if (e.keyCode == 9 && ele == _newElement && !ej.isNullOrUndefined($(ele).parents("tr")[0].previousSibling)) {
-                     this.insertRow(false);
-                     this._setRange(this._isIE8()?$(this._getRange().parentElement()).parents("tr").next().children().first()[0]:$(this._getRange().startContainer).parents("tr").next().children().first()[0], this._getRange(), true);
-                     e.preventDefault();
+                if (e.keyCode == 9 && ele == _newElement && !ej.isNullOrUndefined($(ele).parents("tr")[0].previousSibling)) {
+                    this.insertRow(false);
+                    this._setRange(this._isIE8() ? $(this._getRange().parentElement()).parents("tr").next().children().first()[0] : $(this._getRange().startContainer).parents("tr").next().children().first()[0], this._getRange(), true);
+                    e.preventDefault();
                 }
                 else if ((e.keyCode == 9 && this._isIE8()) || e.keyCode == 40 || e.keyCode == 38) {
                     this._setRange(_newElement, this._getRange(), true);
                     e.preventDefault();
                 }
-                if(this._isIE8())
-                this._currentSelNode=this._getRange().parentElement();
+                if (this._isIE8())
+                    this._getRange().parentElement && (this._currentSelNode = this._getRange().parentElement());
             }
-			if($(e.target).parents("table").length == 0)$(this._getDocument()).find(".e-rte-tablebox").remove();
+            if ($(e.target).parents("table").length == 0) $(this._getDocument()).find(".e-rte-tablebox").remove();
             this._setAutoHeight();
             this._trigger("keydown", { keyCode: e.keyCode });
-        }, 
-		_changeFontsize: function (status) {
-            var fontSize = parseInt(this._getCommandValue('fontsize'))?parseInt(this._getCommandValue('fontsize')):2;
-            if ((!status && fontSize > this.model.fontSize[0].value)||(status && fontSize < this.model.fontSize[this.model.fontSize.length - 1].value)) {
+        },
+        _changeFontsize: function (status) {
+            var fontSize = parseInt(this._getCommandValue('fontsize')) ? parseInt(this._getCommandValue('fontsize')) : 2;
+            if ((!status && fontSize > this.model.fontSize[0].value) || (status && fontSize < this.model.fontSize[this.model.fontSize.length - 1].value)) {
                 this._onFontSize(status ? fontSize + 1 : fontSize - 1);
                 this._updateFontOptionStatus();
             }
@@ -5407,21 +5736,21 @@
                 return false;
             }
         },
-		_setTableSelection: function (_newElement,e) {
-			if (!this._isIE8() && !(( _newElement.childNodes.length == 1 && _newElement.childNodes[0].nodeName == "BR") || (_newElement.childNodes.length == 0))) {
-				range = this._getDocument().createRange();
+        _setTableSelection: function (_newElement, e) {
+            if (!this._isIE8() && !((_newElement.childNodes.length == 1 && _newElement.childNodes[0].nodeName == "BR") || (_newElement.childNodes.length == 0))) {
+                range = this._getDocument().createRange();
                 range.selectNodeContents(_newElement);
-				this.selectRange(range);
-			}
-			else this._setRange(_newElement, this._getRange(), true);
-			e.preventDefault();
-		},
+                this.selectRange(range);
+            }
+            else this._setRange(_newElement, this._getRange(), true);
+            e.preventDefault();
+        },
         _setAutoHeightValue: function (selectedtext) {
             if (selectedtext.nodeName == "#text") {
                 if (selectedtext.parentNode.nodeName == "BODY") {
                     $(selectedtext).wrap("<div></div>");
-					this.selectRange(this._getRange());
-				}
+                    this.selectRange(this._getRange());
+                }
                 range = $(selectedtext.parentNode).position().top + parseInt($(selectedtext.parentNode).css("height"));
             }
             if (selectedtext.nodeName == "DIV")
@@ -5430,28 +5759,28 @@
         },
         _setAutoHeight: function () {
             if (this.model.autoHeight && this.model.showToolbar && !$(this._toolBarObj.itemsContainer.find(".resize")).length)
-			    this._autoHeight();
-			else if (!ej.isNullOrUndefined(this._getDocument())) $(this._getDocument().body).css("overflow", "");
-		},
-	    _autoHeight: function(){
+                this._autoHeight();
+            else if (!ej.isNullOrUndefined(this._getDocument())) $(this._getDocument().body).css("overflow", "");
+        },
+        _autoHeight: function () {
             if (!ej.isNullOrUndefined(this._getDocument().body)) {
-		        $(this._getDocument().body).css("overflow","hidden");
+                $(this._getDocument().body).css("overflow", "hidden");
                 var iframeTop = (!ej.isNullOrUndefined(this._getDocument().body.lastChild)) ? this._getDocument().body.lastChild.clientHeight + this._getDocument().body.lastChild.offsetTop : 0;
                 if ((parseInt($(this._rteWapper[0]).css("min-height")) - this._toolBarItems.outerHeight()) <= iframeTop)
                     $(this._rteIframe[0]).css("height", (iframeTop + 30) + "px");
-			    else
-			        $(this._rteIframe[0]).css("height", (parseInt($(this._rteWapper[0]).css("min-height")) - this._toolBarItems.outerHeight()) + "px");
-			    range = 0;
-			    range = (window.getSelection && !ej.isNullOrUndefined(this._getRange().startContainer)) ? this._setAutoHeightValue(this._getRange().startContainer) : (((this._getDocument().selection) && !ej.isNullOrUndefined(this._ieParents(this._getRange())[0])) ? this._setAutoHeightValue(this._ieParents(this._getRange())[0]) : 0);
-			    if(range >= (this._rteIframe.height() - 30)) {
-			        if(this._rteIframe[0].contentDocument)
-                    $(this._rteIframe[0]).css("height", (this._rteIframe[0].contentDocument.documentElement.scrollHeight + 20) + "px");
                 else
-                    $(this._rteIframe[0]).css("height", (this._rteIframe[0].contentWindow.document.body.scrollHeight + 20) + "px");
-			    }
-			    this._rteWapper.outerHeight(this._rteEditor.outerHeight() + this._toolBarItems.outerHeight() + parseInt(this.model.showFooter ? 19 : 0));
+                    $(this._rteIframe[0]).css("height", (parseInt($(this._rteWapper[0]).css("min-height")) - this._toolBarItems.outerHeight()) + "px");
+                range = 0;
+                range = (window.getSelection && !ej.isNullOrUndefined(this._getRange().startContainer)) ? this._setAutoHeightValue(this._getRange().startContainer) : (((this._getDocument().selection) && !ej.isNullOrUndefined(this._ieParents(this._getRange())[0])) ? this._setAutoHeightValue(this._ieParents(this._getRange())[0]) : 0);
+                if (range >= (this._rteIframe.height() - 30)) {
+                    if (this._rteIframe[0].contentDocument)
+                        $(this._rteIframe[0]).css("height", (this._rteIframe[0].contentDocument.documentElement.scrollHeight + 20) + "px");
+                    else
+                        $(this._rteIframe[0]).css("height", (this._rteIframe[0].contentWindow.document.body.scrollHeight + 20) + "px");
+                }
+                this._rteWapper.outerHeight(this._rteEditor.outerHeight() + this._toolBarItems.outerHeight() + parseInt(this.model.showFooter ? 19 : 0));
             }
-		},
+        },
         _ieSelRange: function () {
             if (this._isIE()) {
                 this._selectionRange = "";
@@ -5461,115 +5790,124 @@
             else
                 this._ieSelectionRange = this._ieSelection;
         },
-        _iframeSelectionChange: function (e) {          
+        _iframeSelectionChange: function (e) {
             this._trigger("select", { event: e, model: this.model });
         },
+        _ignorekeyArray: [13, 32, 8, 46],
         _iframeKeyUp: function (e) {
+            //if (!(e.which >= 37 && e.which <= 40))
+            //    this._updateValue();
             $(this._imgDupDiv).remove();
-            $(this._imgOrg).css("outline","");
+            $(this._imgOrg).css("outline", "");
             this._toggleEditTable();
-            this._setBackupData();
-			if(e.ctrlKey && (e.keyCode == 57 || e.keyCode == 189 )) 
-				this._zoomUp();
+            if ($.inArray(e.which, this._ignorekeyArray) != -1)
+                this._setBackupData();
+            if (e.ctrlKey && (e.keyCode == 57 || e.keyCode == 189))
+                this._zoomUp();
             this._updateToolbarStatus();
             this._updateFontOptionStatus();
             this._updateFormat();
-            this._updateCount();            
+            this._updateCount();
             var selectEle = this._isIE8() ? this._currentSelNode : this._getSelectedNode();
             if (this.model.showToolbar)
-            this._isIE8() ? selectEle.nodeName.toLowerCase() : selectEle.nodeName.toLowerCase() != "a" ? this.disableToolbarItem("removeLink") : this.enableToolbarItem("removeLink");
-            this._updateTagInfo(selectEle);
-            this._updateValue();
+                this._isIE8() ? selectEle.nodeName.toLowerCase() : selectEle.nodeName.toLowerCase() != "a" ? this.disableToolbarItem("removeLink") : this.enableToolbarItem("removeLink");
+            this._updateTagInfo(selectEle);            
             this._setAutoHeight();
             this._ieSelRange();
             this._trigger("keyup", { keyCode: e.keyCode });
             this._iframeSelectionChange(e);
+            if (e.ctrlKey)
+                switch (e.keyCode) {
+                    case 88://X
+                    case 86://V
+                        this._onChange();
+                        break;
+                }
         },
         _iframeMouseUp: function (e) {
-			this._tableResizeUp(e);
-		   this._resizeBtnInit();
-			if(!ej.isNullOrUndefined(this._imgDup) && $(this._imgOrg).parents("body").length > 0 ){
-			 $(this._imgOrg).css({"width" :$(this._imgDup).css("width"),"height" :$(this._imgDup).css("height")});
-			  $(this._imgOrg).position({left:$(this._imgDup).position().left,top : $(this._imgDup).position().top});
-			  $(this._imgDup).css("display","none");
-			  this._resizeImgPos();
-			  this._setAutoHeight();
-			  }
-			 if(e.target.nodeName != "IMG" && !$(e.target).hasClass("e-rte-imageboxmark"))
-			 {
-			   $(this._imgOrg).css("outline","");
-			   $(this._imgDupDiv).remove();
-			this._off($(this._getDocument()), "mousemove",this._imgBoxMouseMove);
-			   }
-			if(e.target.nodeName == "IMG" && $(e.target).parents("body").length > 0) {
-			    var range = (this._isIE8()) ? this._getDocument().body.createTextRange() : this._getDocument().createRange();
-			    (this._isIE8()) ? range.moveToElementText(e.target) : range.selectNode(e.target);
-				this.selectRange(range);
-		    }
+            this._tableResizeUp(e);
+			this._zoomUp(e);
+            this._resizeBtnInit();
+            if (!ej.isNullOrUndefined(this._imgDup) && $(this._imgOrg).parents("body").length > 0) {
+                $(this._imgOrg).css({ "width": $(this._imgDup).css("width"), "height": $(this._imgDup).css("height") });
+                $(this._imgOrg).position({ left: $(this._imgDup).position().left, top: $(this._imgDup).position().top });
+                $(this._imgDup).css("display", "none");
+                this._resizeImgPos();
+                this._setAutoHeight();
+            }
+            if (e.target.nodeName != "IMG" && !$(e.target).hasClass("e-rte-imageboxmark")) {
+                $(this._imgOrg).css("outline", "");
+                $(this._imgDupDiv).remove();
+                this._off($(this._getDocument()), "mousemove", this._imgBoxMouseMove);
+            }
+            if (e.target.nodeName == "IMG" && $(e.target).parents("body").length > 0) {
+                var range = (this._isIE8()) ? this._getDocument().body.createTextRange() : this._getDocument().createRange();
+                (this._isIE8()) ? range.moveToElementText(e.target) : range.selectNode(e.target);
+                this.selectRange(range);
+            }
             this._currentSelNode = e.target; //For IE
-			if (e.currentTarget && e.target.nodeName && e.target.nodeName.toLowerCase() == "html" && this._getDocument() && this._getDocument().body && (this._isIE8() ? true : this._getRange().startOffset == this._getRange().endOffset)) {
-		        this._isIE() && e.currentTarget.createRange && this._setRange(this._isIE8() ? this._getDocument().body : this._getRange().startContainer, e.currentTarget.createRange(),true);
-		        this._getDocument().body.focus();				 
-		    }
+            if (e.currentTarget && e.target.nodeName && e.target.nodeName.toLowerCase() == "html" && this._getDocument() && this._getDocument().body && (this._isIE8() ? true : this._getRange().startOffset == this._getRange().endOffset)) {
+                this._isIE() && e.currentTarget.createRange && this._setRange(this._isIE8() ? this._getDocument().body : this._getRange().startContainer, e.currentTarget.createRange(), true);
+                this._getDocument().body.focus();
+            }
             this._toggleEditTable();
             this._updateToolbarStatus();
             if (e.button) isRightClick = (e.button == 2);
             else if (e.which) isRightClick = (e.which == 3);
             if (!isRightClick) {
-            this._updateFormat();
+                this._updateFormat();
                 this._updateFontOptionStatus();
             }
             this._ieSelRange();
             this._iframeSelectionChange(e);
-			if(this._fontStyleDDL && !ej.isNullOrUndefined(this._fontStyleDDL.data("ejDropDownList")) && this._fontStyleDDL.ejDropDownList("instance")._isPopupShown()) $(this._fontStyleDDL.ejDropDownList("instance").popupList.ejScroller("instance").element).trigger("mouseup");
-		    if(this._fontSizeDDL && !ej.isNullOrUndefined(this._fontSizeDDL.data("ejDropDownList")) &&this._fontSizeDDL.ejDropDownList("instance")._isPopupShown()) $(this._fontSizeDDL.ejDropDownList("instance").popupList.ejScroller("instance").element).trigger("mouseup");
-		    
+            if (this._fontStyleDDL && !ej.isNullOrUndefined(this._fontStyleDDL.data("ejDropDownList")) && this._fontStyleDDL.ejDropDownList("instance")._isPopupShown()) $(this._fontStyleDDL.ejDropDownList("instance").popupList.ejScroller("instance").element).trigger("mouseup");
+            if (this._fontSizeDDL && !ej.isNullOrUndefined(this._fontSizeDDL.data("ejDropDownList")) && this._fontSizeDDL.ejDropDownList("instance")._isPopupShown()) $(this._fontSizeDDL.ejDropDownList("instance").popupList.ejScroller("instance").element).trigger("mouseup");
+
         },
         _iframeMouseDown: function (e) {
-			if (ej.browserInfo().name === "mozilla") this._getDocument().designMode = "off";
+            if (ej.browserInfo().name === "mozilla") this._getDocument().designMode = "off";
             if (ej.browserInfo().name == "msie" && ej.browserInfo().version == "8.0")
                 this._focus();
             this._contolAKeyfalg = false;
             this._updateTagInfo(e.target);
             this._updateIndent(e.target);
             if (this.model.showToolbar)
-            e.target.nodeName != "A" ? this.disableToolbarItem("removeLink") : this.enableToolbarItem("removeLink");
-		    if (e.target.nodeName == "VIDEO" && this.model.allowEditing) this._preventDefaultResize();
-			if(e.target.nodeName =="IMG" && this.model.allowEditing) {
-			   this._preventDefaultResize();
- 			   this._imageClick(e.target);
-			}
-			if($(e.target).hasClass("e-rte-imageboxmark")) {
-			       this._resizeBtnInit();
-			       this._commonBoxDown = true;
-		           if($(e.target).hasClass("e-rte-rigmed")) this._rigMidBox = true;
-		           if($(e.target).hasClass("e-rte-toplef")) this._topLefBox = true;
-		           if($(e.target).hasClass("e-rte-topmed")) this._topMidBox = true;
-		           if($(e.target).hasClass("e-rte-toprig")) this._topRigBox = true;
-		           if($(e.target).hasClass("e-rte-lefmed")) this._lefMidBox = true;
-		           if($(e.target).hasClass("e-rte-botlef")) this._botLefBox = true;
-		           if($(e.target).hasClass("e-rte-botmid")) this._botMidBox = true;
-		           if($(e.target).hasClass("e-rte-botrig")) this._botRigBox = true;
-                   return false;				   
-			}			
-		   if($(e.target).hasClass("e-rteColumnResizer"))
-			{		   
-			   this._lastCol = $(e.target).hasClass("e-rtelastcol") ? true:false;
-			   this._columnEle = $(this._curTable).find("tr:first td").eq(parseInt($(e.target).attr("data-col")))[0];
-			   this._columnDown = true;
-			   this._columnIndex = this._columnEle.cellIndex;		   
-			   $(this._getDocument().body).after("<span class='colresizerline'style='cursor:col-resize;position:absolute;width:0px;border-left: 1px dashed #787878;height:"+$(this._columnEle).closest("table").height()+"px;left:"+e.pageX+"px;top:"+$(this._columnEle).offset().top+"px;'></span>");
-			}  
-			if($(e.target).hasClass("e-rteRowResizer")) {
-				this._rowEle = $(this._curTable).find("tr").eq(parseInt($(e.target).attr("data-row")))[0];
-			    this._rowDown = true;
-			}
-			if($(e.target).hasClass("e-rte-tablebox")) {
-			   this._boxDown = true;
-			   this._boxElement = this._curTable;
-			}
-			if($(e.target).hasClass("e-rte-tablebox") || $(e.target).hasClass("e-rteRowResizer") || $(e.target).hasClass("e-rteColumnResizer") )
-				this._on( $(this._getDocument()), "mousemove", this._imgBoxMouseMove );
+                e.target.nodeName != "A" ? this.disableToolbarItem("removeLink") : this.enableToolbarItem("removeLink");
+            if (e.target.nodeName == "VIDEO" && this.model.allowEditing) this._preventDefaultResize();
+            if (e.target.nodeName == "IMG" && this.model.allowEditing) {
+                this._preventDefaultResize();
+                this._imageClick(e.target);
+            }
+            if ($(e.target).hasClass("e-rte-imageboxmark")) {
+                this._resizeBtnInit();
+                this._commonBoxDown = true;
+                if ($(e.target).hasClass("e-rte-rigmed")) this._rigMidBox = true;
+                if ($(e.target).hasClass("e-rte-toplef")) this._topLefBox = true;
+                if ($(e.target).hasClass("e-rte-topmed")) this._topMidBox = true;
+                if ($(e.target).hasClass("e-rte-toprig")) this._topRigBox = true;
+                if ($(e.target).hasClass("e-rte-lefmed")) this._lefMidBox = true;
+                if ($(e.target).hasClass("e-rte-botlef")) this._botLefBox = true;
+                if ($(e.target).hasClass("e-rte-botmid")) this._botMidBox = true;
+                if ($(e.target).hasClass("e-rte-botrig")) this._botRigBox = true;
+                return false;
+            }
+            if ($(e.target).hasClass("e-rteColumnResizer")) {
+                this._lastCol = $(e.target).hasClass("e-rtelastcol") ? true : false;
+                this._columnEle = $(this._curTable).find("tr:first td").eq(parseInt($(e.target).attr("data-col")))[0];
+                this._columnDown = true;
+                this._columnIndex = this._columnEle.cellIndex;
+                $(this._getDocument().body).after("<span class='colresizerline'style='cursor:col-resize;position:absolute;width:0px;border-left: 1px dashed #787878;height:" + $(this._columnEle).closest("table").height() + "px;left:" + e.pageX + "px;top:" + $(this._columnEle).offset().top + "px;'></span>");
+            }
+            if ($(e.target).hasClass("e-rteRowResizer")) {
+                this._rowEle = $(this._curTable).find("tr").eq(parseInt($(e.target).attr("data-row")))[0];
+                this._rowDown = true;
+            }
+            if ($(e.target).hasClass("e-rte-tablebox")) {
+                this._boxDown = true;
+                this._boxElement = this._curTable;
+            }
+            if ($(e.target).hasClass("e-rte-tablebox") || $(e.target).hasClass("e-rteRowResizer") || $(e.target).hasClass("e-rteColumnResizer"))
+                this._on($(this._getDocument()), "mousemove", this._imgBoxMouseMove);
             if ((ej.browserInfo().name == "msie" || ej.browserInfo().name == "chrome") && (e.ctrlKey == true && e.which == 1)) {
                 if (e.target.tagName.toUpperCase() == 'A' && !ej.isNullOrUndefined($(e.target).attr('href')))
                     window.open($(e.target).attr('href'), "_blank");
@@ -5580,13 +5918,14 @@
                 this._toolBarObj.contstatus = false;
             }
             this._iframeFocus();
+            this._onChange();
         },
         _iframeFocusOut: function (e) {
-			if(e.data){
-            e.data._proxy._onChange();
-            e.data._proxy._selectionRange = e.data._proxy._isIE8() ? e.data._proxy._getRange() : e.data._proxy._saveSelection();
-            e.data._proxy._seleText = ej.isNullOrUndefined(e.data._proxy._getWindow().document.selection) ? e.data._proxy._selectionRange.toString() : !e.data._proxy._isIE8() ? e.data._proxy._getWindow().getSelection().toString() : e.data._proxy._getWindow().document.selection.createRange().text;
-			}
+            if (e.data) {
+                e.data._proxy._onChange();
+                e.data._proxy._selectionRange = e.data._proxy._isIE8() ? e.data._proxy._getRange() : e.data._proxy._saveSelection();
+                e.data._proxy._seleText = ej.isNullOrUndefined(e.data._proxy._getWindow().document.selection) ? e.data._proxy._selectionRange.toString() : !e.data._proxy._isIE8() ? e.data._proxy._getWindow().getSelection().toString() : e.data._proxy._getWindow().document.selection.createRange().text;
+            }
         },
         _widthFocusOut: function (e) {
             var dialog, drpdwnId, widthId;
@@ -5609,207 +5948,210 @@
             this._setAutoHeight();
             this._setIframeHeight();
         },
-		_tableResizeUp: function (e) {
-			if($(this._getDocument()).find("table.e-rte-table").length && ( this._columnDown || this._rowDown || this._boxDown ))
-			{
-			    if( this._currentTable && this._columnDown && this._columnDownClick ) {
-			    if( !this._lastCol ){
-			       this._currentTable.eq(this._columnIndex - 1).width(this.nexColIndexWid); 
-		           this._currentTable.eq(this._columnIndex).width(this._columnIndexWid); 
-			    }
-			    else {
-				   this._currentTable.closest("table").find("tr:first td").each(function(){
-					   if(this.style.width == "" ) $(this).width(parseInt($(this).closest("table").width()/($(this).siblings().length + 1 )));
-				   });
-			       this._currentTable.eq(this._columnIndex).width(this.lasColIndexWid); 
-			       this._currentTable.closest("table").attr({"width":""});
-				   $(this._getDocument()).find(".e-rte-tablebox").css({"left":(this._currentTable.eq(this._columnIndex).offset().left + this._currentTable.eq(this._columnIndex).outerWidth() )+"px"});
-			    }
-				}
+        _tableResizeUp: function (e) {
+            if ($(this._getDocument()).find("table.e-rte-table").length && (this._columnDown || this._rowDown || this._boxDown)) {
+                if (this._currentTable && this._columnDown && this._columnDownClick) {
+                    if (!this._lastCol) {
+                        this._currentTable.eq(this._columnIndex - 1).width(this.nexColIndexWid);
+                        this._currentTable.eq(this._columnIndex).width(this._columnIndexWid);
+                    }
+                    else {
+                        this._currentTable.closest("table").find("tr:first td").each(function () {
+                            if (this.style.width == "") $(this).width(parseInt($(this).closest("table").width() / ($(this).siblings().length + 1)));
+                        });
+                        this._currentTable.eq(this._columnIndex).width(this.lasColIndexWid);
+                        this._currentTable.closest("table").attr({ "width": "" });
+                        $(this._getDocument()).find(".e-rte-tablebox").css({ "left": (this._currentTable.eq(this._columnIndex).offset().left + this._currentTable.eq(this._columnIndex).outerWidth()) + "px" });
+                    }
+                }
                 this._removeResizeObject();
-			    $(this._getDocument()).find(".colresizerline").remove();
-		    this._restoreSelection(this._tableSelection);
-			this._columnDown = false;
-			this._rowDown = false;
-			this._boxDown = false;
-			this._columnDownClick = false;
-			}
-			else  { 
-			$(this._getDocument()).find(".e-rte-tablebox").remove();
-			this._tableSelection =  this._getRange();
-			}
-		},
-		_resizeBtnInit: function(){
-		    this._commonBoxDown = false;
-		    this._rigMidBox = false;
-		    this._topLefBox = false;
-		    this._topMidBox = false;
-		    this._topRigBox = false;
-		    this._lefMidBox = false;
-		    this._botLefBox = false;
-		    this._botMidBox = false;
-		    this._botRigBox = false;
-		 },
-		_imgSpanBox: function(e){
-		    this._resizeBtnInit();
-		    this._imgOrg = e;	  
-            this._imgDupDiv = ej.buildTag("span#RTE_imgDupDiv");	
-            this._imgDup = ej.buildTag("img#RTE_imgdivspan","",{"display":"none","position":"absolute","background-size":"100% 100%","outline":"1px dashed #000","opacity":".64"},{}).appendTo(this._imgDupDiv);		
-		    this._topLef = ej.buildTag("span.e-rte-imageboxmark e-rte-toplef#RTE_toplef","",{"cursor":"nwse-resize"},{}).appendTo(this._imgDupDiv);	
-            this._topMid = ej.buildTag("span.e-rte-imageboxmark e-rte-topmed#RTE_topmed","",{"cursor":"ns-resize"},{}).appendTo(this._imgDupDiv);	
-            this._topRig = ej.buildTag("span.e-rte-imageboxmark e-rte-toprig#RTE_toprig","",{"cursor":"nesw-resize"},{}).appendTo(this._imgDupDiv);	
-            this._leftMid = ej.buildTag("span.e-rte-imageboxmark e-rte-lefmed#RTE_lefmed","",{"cursor":"ew-resize"},{}).appendTo(this._imgDupDiv);	
-            this._rigMid = ej.buildTag("span.e-rte-imageboxmark e-rte-rigmed#RTE_rigmed","",{"cursor":"ew-resize"},{}).appendTo(this._imgDupDiv);	
-            this._botLef = ej.buildTag("span.e-rte-imageboxmark e-rte-botlef#RTE_botlef","",{"cursor":"nesw-resize"},{}).appendTo(this._imgDupDiv);	
-            this._botMid = ej.buildTag("span.e-rte-imageboxmark e-rte-botmid#RTE_botmid","",{"cursor":"ns-resize"},{}).appendTo(this._imgDupDiv);	
-            this._botRig = ej.buildTag("span.e-rte-imageboxmark e-rte-botrig#RTE_botrig","",{"cursor":"nwse-resize"},{}).appendTo(this._imgDupDiv);
-            this._resizeImgPos(); 
-            this._resizeImgDupPos();		 
-	        $(this._getDocument().body).after(this._imgDupDiv);
-			$(e).css({"outline":"1px dashed #5C5C5C"});		
-		    this._on($(this._getDocument()),"mousemove",this._imgBoxMouseMove);
-		
-		},	
-        _resizeImgPos: function(){
-		    this._ltPos = $(this._imgOrg).position();
-		    this._imgWid = $(this._imgOrg).css("width");
-		    this._imgHgt = $(this._imgOrg).css("height");
-		    this._imgDup.css({"width":this._imgWid,"height":this._imgHgt,"left":this._ltPos.left+"px","top":this._ltPos.top+"px","border":$(this._imgOrg).css("border")});
-		    this._imgDup.attr({"src":$(this._imgOrg).attr("src")});
-		    var _wid = (parseInt($(this._imgOrg).css("width")) - 2)+this._ltPos.left;
-		    var _midWid = ((parseInt($(this._imgOrg).css("width")) - 2)/2)+this._ltPos.left;
-		    var _hgt = (parseInt($(this._imgOrg).css("height")) - 2)+this._ltPos.top;
-		    var _midHgt = ((parseInt($(this._imgOrg).css("height")) - 2)/2)+this._ltPos.top; 
-		    var _imgborder = parseInt($(this._imgOrg).css("border-width") == "" ? 0 : $(this._imgOrg).css("border-width") );
-		    $(this._rigMid).css({"left":(_wid+ (2*_imgborder))+"px","top":(_midHgt)+"px"});
-			$(this._botLef).css({"left":(this._ltPos.left-3)+"px","top":(_hgt+ (2*_imgborder))+"px"});
-			$(this._botRig).css({"left":(_wid+ (2*_imgborder))+"px","top":(_hgt+ (2*_imgborder))+"px"});
-			$(this._botMid).css({"left":(_midWid)+"px","top":(_hgt + (2*_imgborder))+"px"});			  
-			$(this._topRig).css({"left":(_wid+ (2*_imgborder))+"px","top":(this._ltPos.top-3)+"px"});
-			$(this._topLef).css({"left":(this._ltPos.left-3)+"px","top":(this._ltPos.top-3)+"px"});
-			$(this._topMid).css({"left":(_midWid)+"px","top":(this._ltPos.top-3)+"px"});
-            $(this._leftMid).css({"left":(this._ltPos.left-3)+"px","top":(_midHgt)+"px"});			  
-		
-		},		
-		_resizeImgDupPos: function(){
-		    this._ltDupPos = $(this._imgOrg).position();
-		    this._imgMidWid = $(this._imgOrg).css("width");
-		    this._imgDupHgt = $(this._imgOrg).css("height");
-		},
-		_imgBoxMouseMove: function(e) {
-		   if(this._commonBoxDown) 
-		   {		
-		        if(this._rigMidBox)		  
-		            this._imgDupMouseMove(parseInt(e.pageX)-this._ltDupPos.left +"px",this._imgDupHgt,e);
-		        else if(this._lefMidBox)
-		        {	 	
-		            this._imgDupMouseMove(((parseInt(this._imgMidWid) +this._ltDupPos.left) - e.pageX)+"px",this._imgDupHgt,e);
-                    $(this._imgDup).offset({left:e.pageX});			  
-		        }
-		        else if(this._topMidBox)
-		        {	  
-		            this._imgDupMouseMove(this._img_wid,((parseInt(this._imgDupHgt)+this._ltDupPos.top)-e.pageY) +"px",e);
-                    $(this._imgDup).offset({top:e.pageY});		  
-		        }
-		        else if(this._botMidBox)
-		            this._imgDupMouseMove(this._img_wid,(e.pageY - this._ltDupPos.top) +"px",e);		  
-		        else if(this._botRigBox)
-		            this._imgDupMouseMove((e.pageX - this._ltDupPos.left)+"px",(e.pageY - this._ltDupPos.top)+"px",e);
-		        else if(this._botLefBox)
-		        {	
-		            this._imgDupMouseMove(((parseInt(this._imgMidWid) +this._ltDupPos.left) - e.pageX)+"px",(e.pageY - this._ltDupPos.top) +"px",e);
-                    $(this._imgDup).offset({left:e.pageX});	   
-		        }
-		        else if(this._topRigBox)
-		        {	 
-		            this._imgDupMouseMove((e.pageX - this._ltDupPos.left)+"px",((parseInt(this._imgDupHgt) + this._ltDupPos.top) - e.pageY)+"px",e);
-                    $(this._imgDup).offset({top:e.pageY});           
-		        }
-		        else if(this._topLefBox)
-		        {
-		            this._imgDupMouseMove(((parseInt(this._imgMidWid) +this._ltDupPos.left) - e.pageX)+"px",((parseInt(this._imgDupHgt)+this._ltDupPos.top)-e.pageY)+"px",e);
-                    $(this._imgDup).offset({top:e.pageY,left:e.pageX});				
-		        }
-		    }
-			else if(this._columnDown) 
-			{
-				this._columnDownClick = true;
-				this._currentTable = $(this._columnEle).closest("table").find("tr:first td");
-			    var prevcolwid = (this._columnEle.style.width == "" ) ? $(this._columnEle).width() : parseInt(this._columnEle.style.width);
-				var _columnEleLeft = $(this._columnEle).offset().left , actualwid =(_columnEleLeft > e.pageX)? prevcolwid+(_columnEleLeft - e.pageX) : prevcolwid-(e.pageX - _columnEleLeft);			       
-			    var nexnodeWid = ($(this._currentTable).eq(this._columnIndex -1)[0].style.width == "" ) ? $($(this._currentTable).eq(this._columnIndex -1)).width() : parseInt($(this._currentTable).eq(this._columnIndex -1)[0].style.width) , totalwid = prevcolwid + nexnodeWid;
-				if(!this._lastCol && actualwid > 15 && totalwid - actualwid > 15) {
-			       this.nexColIndexWid = totalwid - actualwid; 
-				   this._columnIndexWid = actualwid;
-                   $(this._getDocument()).find(".colresizerline").css({"left":e.pageX+"px"});				   
-			    }
-				else if(this._lastCol && _columnEleLeft < e.pageX && e.pageX - _columnEleLeft > 15) {
-					this.lasColIndexWid = e.pageX - _columnEleLeft ; 
-					$(this._getDocument()).find(".colresizerline").css({"left":e.pageX+"px"}); 
-                }					
-				this._removeMouseSelection(e);
-				$(this._columnEle).closest("table").find("tr:last td:last span.e-rte-tablebox").css({"display":"none"});
-			}
-			else if(this._rowDown){
-                if ( ej.browserInfo().name === "chrome" || ej.browserInfo().name === "mozilla" ) select = this._getDocument().getSelection().removeAllRanges();
-			    var _rowOffset = this._rowEle.offsetTop , _rowParentTop = this._rowEle.parentElement.parentElement.offsetTop;
-				if((e.pageY - ( _rowOffset + _rowParentTop )) > 20)
-			        this._rowEle.style.height = (e.pageY - ( _rowOffset + _rowParentTop )) + "px";
-				this._removeMouseSelection(e);
-				$(this._getDocument()).find(".e-rte-tablebox").css({"left":($(this._rowEle).closest("table").width()+$(this._rowEle).closest("table").offset().left)+"px","top":($(this._rowEle).closest("table").height()+$(this._rowEle).closest("table").offset().top)+"px"});
-			}
-			else if(this._boxDown) {
-				if(ej.browserInfo().name === "chrome" || ej.browserInfo().name === "mozilla") this._getDocument().getSelection().removeAllRanges();
-			    $(this._boxElement).attr({"width": ((((e.pageX - $(this._boxElement).offset().left)/$(this._boxElement).parent().width())*100)+"%"),"height":((((e.pageY - $(this._boxElement).offset().top)/$(this._boxElement).parent().height())*100)+"%")});
-			    $(this._getDocument()).find(".e-rte-tablebox").css({"left":($(this._boxElement).width()+$(this._boxElement).offset().left)+"px","top":($(this._boxElement).height()+$(this._boxElement).offset().top)+"px"});
-			    $(this._boxElement).find("tr:first td").each(function(){ $(this).width(parseInt($(this).closest("table").width()/($(this).siblings().length + 1 ))); });
-				this._removeMouseSelection(e);
-			}
-			 
-		},
-		_removeMouseSelection: function(e) {
-			if(ej.browserInfo().name === "mozilla") this._getDocument().getSelection().removeAllRanges();
-			if(e.stopPropagation) e.stopPropagation();
-            if(e.preventDefault) e.preventDefault();
-            e.cancelBubble=true;
-            e.returnValue=false;
-            return false;				
-		},
-		_imgDupMouseMove: function (width,height,e) {
-		  	$(this._imgDup).css({"display":"block","width":width,"height":height});
-		    this._resizeImgDupPos();
-			if(this._isIE8())this._removeMouseSelection(e);
-		},
-		_imageClick: function (e) {	
-         	$(this._getDocument().body).find("img").css("outline","");
-		   if(this._imgDupDiv)
-		       this._imgDupDiv.remove();
-		   this._imgSpanBox(e);		
-		},
-		_iframePaste: function (e) {
-		    var _proxy = this;
-		    try {
-		        var val = ej.isNullOrUndefined(window.clipboardData) ? e.originalEvent.clipboardData.getData("text/plain") : window.clipboardData.getData("Text");
-		        if (val.length != 0) {
-		            if (!((_proxy.model.maxLength) >= (val.length + $.trim(_proxy._getText()).length)))		                
-		                e.preventDefault();
-		        }
-		        else {
-		            var blob = e.originalEvent.clipboardData.items[0].getAsFile();
-		            var reader = new FileReader();
-		            reader.onload = function (event) {
-		                _proxy.executeCommand('inserthtml',"<img src=" + event.target.result + " alt />");
-		            };
-		            reader.readAsDataURL(blob);
-		        }
-		    }
-		    catch (error) { }
-		    setTimeout(function () {
-		        _proxy._updateValue();
-		        _proxy._setAutoHeight();
-		        _proxy._updateCount();
-		    }, 0);
-		},
+                $(this._getDocument()).find(".colresizerline").remove();
+                $(this._getDocument()).find(".e-rte-tablebox").css("display", "none");
+                this._restoreSelection(this._tableSelection);
+                this._columnDown = false;
+                this._rowDown = false;
+                this._boxDown = false;
+                this._columnDownClick = false;
+            }
+            else {
+                $(this._getDocument()).find(".e-rte-tablebox").remove();
+                this._tableSelection = this._getRange();
+            }
+        },
+        _resizeBtnInit: function () {
+            this._commonBoxDown = false;
+            this._rigMidBox = false;
+            this._topLefBox = false;
+            this._topMidBox = false;
+            this._topRigBox = false;
+            this._lefMidBox = false;
+            this._botLefBox = false;
+            this._botMidBox = false;
+            this._botRigBox = false;
+        },
+        _imgSpanBox: function (e) {
+            this._resizeBtnInit();
+            this._imgOrg = e;
+            this._imgDupDiv = ej.buildTag("span#RTE_imgDupDiv");
+            this._imgDup = ej.buildTag("img#RTE_imgdivspan", "", { "display": "none", "position": "absolute", "background-size": "100% 100%", "outline": "1px dashed #000", "opacity": ".64" }, {}).appendTo(this._imgDupDiv);
+            this._topLef = ej.buildTag("span.e-rte-imageboxmark e-rte-toplef#RTE_toplef", "", { "cursor": "nwse-resize" }, {}).appendTo(this._imgDupDiv);
+            this._topMid = ej.buildTag("span.e-rte-imageboxmark e-rte-topmed#RTE_topmed", "", { "cursor": "ns-resize" }, {}).appendTo(this._imgDupDiv);
+            this._topRig = ej.buildTag("span.e-rte-imageboxmark e-rte-toprig#RTE_toprig", "", { "cursor": "nesw-resize" }, {}).appendTo(this._imgDupDiv);
+            this._leftMid = ej.buildTag("span.e-rte-imageboxmark e-rte-lefmed#RTE_lefmed", "", { "cursor": "ew-resize" }, {}).appendTo(this._imgDupDiv);
+            this._rigMid = ej.buildTag("span.e-rte-imageboxmark e-rte-rigmed#RTE_rigmed", "", { "cursor": "ew-resize" }, {}).appendTo(this._imgDupDiv);
+            this._botLef = ej.buildTag("span.e-rte-imageboxmark e-rte-botlef#RTE_botlef", "", { "cursor": "nesw-resize" }, {}).appendTo(this._imgDupDiv);
+            this._botMid = ej.buildTag("span.e-rte-imageboxmark e-rte-botmid#RTE_botmid", "", { "cursor": "ns-resize" }, {}).appendTo(this._imgDupDiv);
+            this._botRig = ej.buildTag("span.e-rte-imageboxmark e-rte-botrig#RTE_botrig", "", { "cursor": "nwse-resize" }, {}).appendTo(this._imgDupDiv);
+            this._resizeImgPos();
+            this._resizeImgDupPos();
+            $(this._getDocument().body).after(this._imgDupDiv);
+            $(e).css({ "outline": "1px dashed #5C5C5C" });
+            this._on($(this._getDocument()), "mousemove", this._imgBoxMouseMove);
+
+        },
+        _resizeImgPos: function () {
+            this._ltPos = $(this._imgOrg).position();
+            this._imgWid = $(this._imgOrg).css("width");
+            this._imgHgt = $(this._imgOrg).css("height");
+            this._imgDup.css({ "width": this._imgWid, "height": this._imgHgt, "left": this._ltPos.left + "px", "top": this._ltPos.top + "px", "border": $(this._imgOrg).css("border") });
+            this._imgDup.attr({ "src": $(this._imgOrg).attr("src") });
+            var _wid = (parseInt($(this._imgOrg).css("width")) - 2) + this._ltPos.left;
+            var _midWid = ((parseInt($(this._imgOrg).css("width")) - 2) / 2) + this._ltPos.left;
+            var _hgt = (parseInt($(this._imgOrg).css("height")) - 2) + this._ltPos.top;
+            var _midHgt = ((parseInt($(this._imgOrg).css("height")) - 2) / 2) + this._ltPos.top;
+            var _imgborder = parseInt($(this._imgOrg).css("border-width") == "" ? 0 : $(this._imgOrg).css("border-width"));
+            $(this._rigMid).css({ "left": (_wid + (2 * _imgborder)) + "px", "top": (_midHgt) + "px" });
+            $(this._botLef).css({ "left": (this._ltPos.left - 3) + "px", "top": (_hgt + (2 * _imgborder)) + "px" });
+            $(this._botRig).css({ "left": (_wid + (2 * _imgborder)) + "px", "top": (_hgt + (2 * _imgborder)) + "px" });
+            $(this._botMid).css({ "left": (_midWid) + "px", "top": (_hgt + (2 * _imgborder)) + "px" });
+            $(this._topRig).css({ "left": (_wid + (2 * _imgborder)) + "px", "top": (this._ltPos.top - 3) + "px" });
+            $(this._topLef).css({ "left": (this._ltPos.left - 3) + "px", "top": (this._ltPos.top - 3) + "px" });
+            $(this._topMid).css({ "left": (_midWid) + "px", "top": (this._ltPos.top - 3) + "px" });
+            $(this._leftMid).css({ "left": (this._ltPos.left - 3) + "px", "top": (_midHgt) + "px" });
+
+        },
+        _resizeImgDupPos: function () {
+            this._ltDupPos = $(this._imgOrg).position();
+            this._imgMidWid = $(this._imgOrg).css("width");
+            this._imgDupHgt = $(this._imgOrg).css("height");
+        },
+        _imgBoxMouseMove: function (e) {
+            if (this._commonBoxDown) {
+                if (this._rigMidBox)
+                    this._imgDupMouseMove(parseInt(e.pageX) - this._ltDupPos.left + "px", this._imgDupHgt, e);
+                else if (this._lefMidBox) {
+                    this._imgDupMouseMove(((parseInt(this._imgMidWid) + this._ltDupPos.left) - e.pageX) + "px", this._imgDupHgt, e);
+                    $(this._imgDup).offset({ left: e.pageX });
+                }
+                else if (this._topMidBox) {
+                    this._imgDupMouseMove(this._img_wid, ((parseInt(this._imgDupHgt) + this._ltDupPos.top) - e.pageY) + "px", e);
+                    $(this._imgDup).offset({ top: e.pageY });
+                }
+                else if (this._botMidBox)
+                    this._imgDupMouseMove(this._img_wid, (e.pageY - this._ltDupPos.top) + "px", e);
+                else if (this._botRigBox)
+                    this._imgDupMouseMove((e.pageX - this._ltDupPos.left) + "px", (e.pageY - this._ltDupPos.top) + "px", e);
+                else if (this._botLefBox) {
+                    this._imgDupMouseMove(((parseInt(this._imgMidWid) + this._ltDupPos.left) - e.pageX) + "px", (e.pageY - this._ltDupPos.top) + "px", e);
+                    $(this._imgDup).offset({ left: e.pageX });
+                }
+                else if (this._topRigBox) {
+                    this._imgDupMouseMove((e.pageX - this._ltDupPos.left) + "px", ((parseInt(this._imgDupHgt) + this._ltDupPos.top) - e.pageY) + "px", e);
+                    $(this._imgDup).offset({ top: e.pageY });
+                }
+                else if (this._topLefBox) {
+                    this._imgDupMouseMove(((parseInt(this._imgMidWid) + this._ltDupPos.left) - e.pageX) + "px", ((parseInt(this._imgDupHgt) + this._ltDupPos.top) - e.pageY) + "px", e);
+                    $(this._imgDup).offset({ top: e.pageY, left: e.pageX });
+                }
+            }
+            else if (this._columnDown) {
+                this._columnDownClick = true;
+                this._currentTable = $(this._columnEle).closest("table").find("tr:first td");
+                var prevcolwid = (this._columnEle.style.width == "") ? $(this._columnEle).width() : parseInt(this._columnEle.style.width);
+                var _columnEleLeft = $(this._columnEle).offset().left, actualwid = (_columnEleLeft > e.pageX) ? prevcolwid + (_columnEleLeft - e.pageX) : prevcolwid - (e.pageX - _columnEleLeft);
+                var nexnodeWid = ($(this._currentTable).eq(this._columnIndex - 1)[0].style.width == "") ? $($(this._currentTable).eq(this._columnIndex - 1)).width() : parseInt($(this._currentTable).eq(this._columnIndex - 1)[0].style.width), totalwid = prevcolwid + nexnodeWid;
+                if (!this._lastCol && actualwid > 15 && totalwid - actualwid > 15) {
+                    this.nexColIndexWid = totalwid - actualwid;
+                    this._columnIndexWid = actualwid;
+                    $(this._getDocument()).find(".colresizerline").css({ "left": e.pageX + "px" });
+                }
+                else if (this._lastCol && _columnEleLeft < e.pageX && e.pageX - _columnEleLeft > 15) {
+                    this.lasColIndexWid = e.pageX - _columnEleLeft;
+                    $(this._getDocument()).find(".colresizerline").css({ "left": e.pageX + "px" });
+                }
+                this._removeMouseSelection(e);
+                $(this._columnEle).closest("table").find("tr:last td:last span.e-rte-tablebox").css({ "display": "none" });
+            }
+            else if (this._rowDown) {
+                if (ej.browserInfo().name === "chrome" || ej.browserInfo().name === "mozilla") select = this._getDocument().getSelection().removeAllRanges();
+                var _rowOffset = this._rowEle.offsetTop, _rowParentTop = this._rowEle.parentElement.parentElement.offsetTop;
+                if ((e.pageY - (_rowOffset + _rowParentTop)) > 20)
+                    this._rowEle.style.height = (e.pageY - (_rowOffset + _rowParentTop)) + "px";
+                this._removeMouseSelection(e);
+                $(this._getDocument()).find(".e-rte-tablebox").css({ "left": ($(this._rowEle).closest("table").width() + $(this._rowEle).closest("table").offset().left) + "px", "top": ($(this._rowEle).closest("table").height() + $(this._rowEle).closest("table").offset().top) + "px" });
+            }
+            else if (this._boxDown) {
+                if (ej.browserInfo().name === "chrome" || ej.browserInfo().name === "mozilla") this._getDocument().getSelection().removeAllRanges();
+                $(this._boxElement).attr({ "width": ((((e.pageX - $(this._boxElement).offset().left) / $(this._boxElement).parent().width()) * 100) + "%"), "height": ((((e.pageY - $(this._boxElement).offset().top) / $(this._boxElement).parent().height()) * 100) + "%") });
+                $(this._getDocument()).find(".e-rte-tablebox").css({ "left": ($(this._boxElement).width() + $(this._boxElement).offset().left) + "px", "top": ($(this._boxElement).height() + $(this._boxElement).offset().top) + "px" });
+                $(this._boxElement).find("tr:first td").each(function () { $(this).width(parseInt($(this).closest("table").width() / ($(this).siblings().length + 1))); });
+                this._removeMouseSelection(e);
+            }
+
+        },
+        _removeMouseSelection: function (e) {
+            if (ej.browserInfo().name === "mozilla") this._getDocument().getSelection().removeAllRanges();
+            if (e.stopPropagation) e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+            e.cancelBubble = true;
+            e.returnValue = false;
+            return false;
+        },
+        _imgDupMouseMove: function (width, height, e) {
+            $(this._imgDup).css({ "display": "block", "width": width, "height": height });
+            this._resizeImgDupPos();
+            if (this._isIE8()) this._removeMouseSelection(e);
+        },
+        _imageClick: function (e) {
+            $(this._getDocument().body).find("img").css("outline", "");
+            if (this._imgDupDiv)
+                this._imgDupDiv.remove();
+            this._imgSpanBox(e);
+        },
+        _iframePaste: function (e) {
+            var _proxy = this;
+            try {
+                var val = ej.isNullOrUndefined(window.clipboardData) ? e.originalEvent.clipboardData.getData("text/plain") : window.clipboardData.getData("Text");
+                if (val.length != 0) {
+                    if (!((_proxy.model.maxLength) >= (val.length + $.trim(_proxy._getText()).length)))
+                        e.preventDefault();
+                }
+                else {
+                    var blob = e.originalEvent.clipboardData.items[0].getAsFile();
+                    var reader = new FileReader();
+                    reader.onload = function (event) {
+                        _proxy.executeCommand('inserthtml', "<img src=" + event.target.result + " alt />");
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            }
+            catch (error) { }
+            setTimeout(function () {
+				_proxy._onChange();
+                _proxy._setAutoHeight();
+                _proxy._updateCount();
+                _proxy._pasteTableResize();
+            }, 0);
+        },
+        _pasteTableResize: function () {
+            var tableCollection = $(this._getDocument()).find("table").not(".e-rte-table"), tableElement;
+            for (var tableItem = 0; tableItem < tableCollection.length; tableItem++) {
+                tableElement = $(tableCollection[tableItem]);
+                tableElement.addClass("e-rte-table").removeAttr("style cellspacing").attr({ "border": 1, "cellspacing": 1, "width": tableElement.width() }).css({ "border": "1px solid#5C5C5C", "border-collapse": "separate", "border-spacing": "2px" });
+                tableElement.find("table tr,td").removeAttr("style width");
+                this._on(tableElement, "mouseover", this._tableMouseOver);
+            }
+        },
         _wireEvents: function () {
             var _iframe = $(this._getDocument());
             if (this._getDocument() != "") {
@@ -5829,7 +6171,7 @@
                 ._on(_iframe, "paste", this._iframePaste)
                 ._on($(window), "resize", this._windowResize);
                 if (!ej.isNullOrUndefined((document.getElementById(this._id + "_Iframe"))))
-                $(document.getElementById(this._id + "_Iframe").contentWindow).on('blur',{_proxy : this}, this._iframeFocusOut);
+                    $(document.getElementById(this._id + "_Iframe").contentWindow).on('blur', { _proxy: this }, this._iframeFocusOut);
                 if (!ej.isNullOrUndefined(this._customTableDialog))
                     this._on(this._customTableDialog.find(".e-rte-txtWidth"), "focusout", this._widthFocusOut);
             }
@@ -5838,9 +6180,9 @@
         _unwireEvents: function () {
             var _iframe = $(this._getDocument());
             if (!ej.isNullOrUndefined(this._createTable)) {
-                this._off(this._createTable.find("div.e-rte-tablecell"), "mousemove")
-                ._off(this._createTable.find("div.e-rte-table"), "mouseleave")
-                ._off(this._createTable.find("div.e-rte-tablecell"), "mousedown")
+                this._off(this._createTable, "mousemove", "div.e-rte-tablecell")
+                ._off(this._createTable, "mouseleave", "div.e-rte-table")
+                ._off(this._createTable, "mousedown", "div.e-rte-tablecell")
                 ._off($(document), "click", this._documentClick);
             }
             this._off(_iframe, "focus")
@@ -5852,8 +6194,7 @@
             $(document.getElementById(this._id + "_Iframe").contentWindow).off('blur', this._iframeFocusOut);
             if (!ej.isNullOrUndefined(this._customTableDialog))
                 this._off(this._customTableDialog.find(".e-rte-txtWidth"), "focusout");
-			$(window).unbind('resize', $.proxy(this._reSizeHandler, this));
-			
+
         },
 
         _footerEvents: function (val) {
@@ -5867,15 +6208,14 @@
             _prevhtml = $.trim(this.value());
             if (this.model.enableXHTML) {
                 this._updateXhtml();
-				if (this.model.enableHtmlEncode)
-                   this.value(this._encode(this.value()));
-			}
-            if (_prevhtml !== this.getHtml() || (ej.isNullOrUndefined((this._contentBeforfocus)) ? false : ($.trim(this._contentBeforfocus) !== this.getHtml()))) {
+                if (this.model.enableHtmlEncode)
+                    this.value(this._encode(this._removeNoSpaceChar(this.value())));
+            }
+            if (_prevhtml !== this._removeNoSpaceChar(this.getHtml())) {
                 this._updateValue();
-                var args = { text: this._getText(), htmlText: this.getHtml() , isInteraction: this._isInteraction,};
-                this._contentBeforfocus = this.value();
+                var args = { text: this._getText(), htmlText: this.getHtml(), isInteraction: this._isInteraction, };
                 this._trigger("change", args);
-				this._isInteraction = true;
+                this._isInteraction = true;
             }
         },
         _disableIframeContent: function () {
@@ -5887,9 +6227,10 @@
 
         disable: function () {
             this.model.enabled = false; this._showHideContextMenu();
-			this.element.attr("disabled","disabled");
+            this.element.attr("disabled", "disabled");
             this._unwireEvents();
             this.model.showToolbar && this._toolBarObj.disable();
+            $(this._rteFooter).ejTooltip("option", "enabled", false);
             this._disableIframeContent();
             this._rteEditor.addClass("e-disable");
             if (this.model.showFooter) {
@@ -5897,14 +6238,15 @@
                 this._resize.removeClass("e-resizable");
                 this._footerEvents("_off");
             }
-			this._disableResizeObj(false);
+            this._disableResizeObj(false);
         },
 
         enable: function () {
             this.model.enabled = true; this._showHideContextMenu();
-			this.element.removeAttr("disabled");
+            this.element.removeAttr("disabled");
             this._wireEvents();
             this.model.showToolbar && this._toolBarObj.enable();
+            $(this._rteFooter).ejTooltip("option", "enabled", true);
             this._rteIframe.contents().find("body,[contenteditable='false']").attr("contenteditable", true);
             this._rteEditor.removeClass("e-disable");
             if (this.model.showFooter) {
@@ -5912,24 +6254,24 @@
                 this._resize.addClass("e-resizable");
                 this._footerEvents("_on");
             }
-			this._disableResizeObj(true);
+            this._disableResizeObj(true);
         },
 
         disableToolbarItem: function (id) {
-                !ej.isNullOrUndefined(id) && ($(this._toolBarObj.target).find("#" + this._rteId + "_" + id).length != 0 || $(this._toolBarObj._liTemplte).find("#" + this._rteId + "_" + id).length != 0) ? this._toolBarObj.disableItemByID(this._rteId + "_" + id) : this._toolBarObj.disableItemByID(id);
-                if (id == "undo") $("#" + this._rteId + "_" + id).addClass("e-rteTooldisable");
+            !ej.isNullOrUndefined(id) && ($(this._toolBarObj.target).find("#" + this._rteId + "_" + id).length != 0 || $(this._toolBarObj._liTemplte).find("#" + this._rteId + "_" + id).length != 0) ? this._toolBarObj.disableItemByID(this._rteId + "_" + id) : this._toolBarObj.disableItemByID(id);
+            if (id == "undo") $("#" + this._rteId + "_" + id).addClass("e-rteTooldisable");
         },
 
 
         enableToolbarItem: function (id) {
-                !ej.isNullOrUndefined(id) && ($(this._toolBarObj.target).find("#"+this._rteId + "_" + id).length !=0 || $(this._toolBarObj._liTemplte).find("#" + this._rteId + "_" + id).length != 0) ? this._toolBarObj.enableItemByID(this._rteId + "_" + id) : this._toolBarObj.enableItemByID(id) ;
-                if (id == "undo" && $("#" + this._rteId + "_" + id).hasClass("e-rteTooldisable"));
+            !ej.isNullOrUndefined(id) && ($(this._toolBarObj.target).find("#" + this._rteId + "_" + id).length != 0 || $(this._toolBarObj._liTemplte).find("#" + this._rteId + "_" + id).length != 0) ? this._toolBarObj.enableItemByID(this._rteId + "_" + id) : this._toolBarObj.enableItemByID(id);
+            if (id == "undo" && $("#" + this._rteId + "_" + id).hasClass("e-rteTooldisable"));
             $("#" + id).removeClass("e-rteTooldisable");
         },
 
 
         removeToolbarItem: function (id) {
-                !ej.isNullOrUndefined(id) && this._toolBarObj.removeItemByID(this._rteId + "_" + id);
+            !ej.isNullOrUndefined(id) && this._toolBarObj.removeItemByID(this._rteId + "_" + id);
             this._setIframeHeight();
         },
 
@@ -5946,6 +6288,7 @@
 
         show: function () {
             this._rteWapper.show();
+            this._setIFrames();
         },
 
 
@@ -5975,8 +6318,8 @@
                     else
                         return $.trim(this.value());
                 }
-				else
-                        return $.trim(this.value());
+                else
+                    return $.trim(this.value());
             }
             else {
                 try {
@@ -6006,9 +6349,9 @@
         },
 
 
-        executeCommand: function (cmdName, args,textnodeType) {
+        executeCommand: function (cmdName, args, textnodeType) {
             if (this._isIE8() && ej.isNullOrUndefined(this._ieSelectionRange)) this._ieSelectionRange = this._getRange();
-			 else if (this._isIE() && cmdName.toLowerCase()=="inserthtml" && !this._isIE8()) { 
+            else if (this._isIE() && cmdName.toLowerCase() == "inserthtml" && !this._isIE8()) {
                 if (this._getRange().startContainer.nodeName.toLowerCase() != "body") {
                     this._currentSelNode = this._getRange().startContainer;
                 }
@@ -6031,7 +6374,7 @@
             }
             else if (cmdName.toLowerCase() == "inserthtml") {
                 if (this._isIE()) {
-                    this._pasteHtml(args,textnodeType);
+                    this._pasteHtml(args, textnodeType);
                 }
                 else
                     this._getDocument().execCommand(cmdName, false, args);
@@ -6047,49 +6390,49 @@
                 this._focus();
             if (this._isIE() && cmdName == "fontName") args = args.substring(0, args.indexOf(","));
             // if (!ej.isNullOrUndefined(this._tempEle) && this._tempEle.length > 0)
-                // if ((this._tempEle.get(0).nodeName == "#text") && ($(this._tempEle.parents("li")).length > 0))
-                    // if ($(this._tempEle.parents("li")).prop("style")["font-size"] != "")
-                        // var lisize = $(this._tempEle.parents("li")).css("font-size");
+            // if ((this._tempEle.get(0).nodeName == "#text") && ($(this._tempEle.parents("li")).length > 0))
+            // if ($(this._tempEle.parents("li")).prop("style")["font-size"] != "")
+            // var lisize = $(this._tempEle.parents("li")).css("font-size");
             this._getDocument().execCommand(cmdName, false, args);
             this._onChange();
-            if (cmdName != "fontName" && cmdName != "fontSize" && cmdName != "indent" && cmdName!="cut" && cmdName!="copy" && cmdName!="paste" && cmdName != "undo" && cmdName != "redo" && cmdName != "outdent" && !ej.isNullOrUndefined(this._toolBarObj))
+            if (cmdName != "fontName" && cmdName != "fontSize" && cmdName != "indent" && cmdName != "cut" && cmdName != "copy" && cmdName != "paste" && cmdName != "undo" && cmdName != "redo" && cmdName != "outdent" && !ej.isNullOrUndefined(this._toolBarObj))
                 if (!this._toolBarObj.itemsContainer.find("li#" + this._rteId + "_" + cmdName).hasClass("e-active"))
-                        this._toolBarObj.selectItemByID(this._rteId + "_" + cmdName);
+                    this._toolBarObj.selectItemByID(this._rteId + "_" + cmdName);
                 else
-                        this._toolBarObj.deselectItemByID(this._rteId + "_" + cmdName);
-          //  if (!ej.isNullOrUndefined(this._tempEle)) this._bulletsResizing(lisize, cmdName);
-            if(args != "listItem") this._setBackupData();
+                    this._toolBarObj.deselectItemByID(this._rteId + "_" + cmdName);
+            //  if (!ej.isNullOrUndefined(this._tempEle)) this._bulletsResizing(lisize, cmdName);
+            if (args != "listItem") this._setBackupData();
         },
-		//The commented lines behavior need to achieve in custom exec-command task if possible
+        //The commented lines behavior need to achieve in custom exec-command task if possible
         // _bulletsResizing: function (lisize, cmd) {
-            // if ((!ej.isNullOrUndefined(this._tempEle.get(0))) && cmd=="fontSize")
-                // var li = this._tempEle.get(0).tagName == "BODY" ? this._tempEle.find("li") : this._tempEle.get(0).nodeName != "#text" ? $(this._tempEle.parents("body")).find("li") : "";
-            // if (li != "")
-                // $(li).each(function (index) {
-				// //refreshig the li font size after font size of li content executed
-                    // fonttag = $(this).find("font")[0] || "";
-                    // if (fonttag != "") {
-                        // $(this).css("font-size", $($(fonttag)[0]).css("font-size"));
-                       // // $(li).find("font").removeAttr("style");
-					   // }
-                     // else
-                    // {
-                        // $(this).css("font-size", $(this).css("font-size"));
-                    // }
-                // });
+        // if ((!ej.isNullOrUndefined(this._tempEle.get(0))) && cmd=="fontSize")
+        // var li = this._tempEle.get(0).tagName == "BODY" ? this._tempEle.find("li") : this._tempEle.get(0).nodeName != "#text" ? $(this._tempEle.parents("body")).find("li") : "";
+        // if (li != "")
+        // $(li).each(function (index) {
+        // //refreshig the li font size after font size of li content executed
+        // fonttag = $(this).find("font")[0] || "";
+        // if (fonttag != "") {
+        // $(this).css("font-size", $($(fonttag)[0]).css("font-size"));
+        // // $(li).find("font").removeAttr("style");
+        // }
+        // else
+        // {
+        // $(this).css("font-size", $(this).css("font-size"));
+        // }
+        // });
 
 
-            // if (cmd == "fontSize" && (this._getCommandStatus('InsertOrderedList') || this._getCommandStatus('InsertOrderedList')))
-                // if (this._tempEle.get(0).tagName == "LI" || this._tempEle.get(0).tagName == "OL") {
+        // if (cmd == "fontSize" && (this._getCommandStatus('InsertOrderedList') || this._getCommandStatus('InsertOrderedList')))
+        // if (this._tempEle.get(0).tagName == "LI" || this._tempEle.get(0).tagName == "OL") {
 
-                    // this._tempEle.css("font-Size", this._tempEle.find("font").css("font-Size"));
-                    // $(this._tempEle.find("font")).removeProp("style")["font-size"];
-                // }
-            // if (lisize != null) {
+        // this._tempEle.css("font-Size", this._tempEle.find("font").css("font-Size"));
+        // $(this._tempEle.find("font")).removeProp("style")["font-size"];
+        // }
+        // if (lisize != null) {
 
-                // $(this._tempEle.parents("li")).css("font-size", lisize);
-                // $(this._tempEle.parents("li")).find("font").removeAttr("style");
-            // }
+        // $(this._tempEle.parents("li")).css("font-size", lisize);
+        // $(this._tempEle.parents("li")).find("font").removeAttr("style");
+        // }
 
         // },
 
@@ -6109,61 +6452,63 @@
             return this._getSelectedHtmlString();
         },
 
-        insertMenuOption:function(option){
-            if(option.newItem && option.targetItem && option.insertType && option.menuType){
-                var menuObj = this._textMenuObj,element,elementId=option.newItem,data = option.spriteCssClass?[{ text: option.newItem, id: elementId,spriteCssClass:option.spriteCssClass}]:[{ text: option.newItem, id: elementId }];
+        insertMenuOption: function (option) {
+            if (option.newItem && option.targetItem && option.insertType && option.menuType) {
+                var menuObj = this._textMenuObj, element, elementId = option.newItem, data = option.spriteCssClass ? [{ text: option.newItem, id: elementId, spriteCssClass: option.spriteCssClass }] : [{ text: option.newItem, id: elementId }];
                 for (i = 0; i < menuObj.element.find('li a').length; i++) {
-                if ($(menuObj.element.find('li a')[i]).text() == option.targetItem) {
-                    element = $(menuObj.element.find('li')[i]).attr('id');
-                    break;
-                }}
-            if (option.insertType == "insert") menuObj.insert(data, element?"#" + element:element);
-            else if (option.insertType == "insertAfter") menuObj.insertAfter(data, "#" + element);
-            else if (option.insertType == "insertBefore") menuObj.insertBefore(data, "#" + element);
-			(option.menuType.text&& this._contextType.text.push(elementId));
-			(option.menuType.image&& this._contextType.image.push(elementId));
-			(option.menuType.hyperlink&& this._contextType.hyperlink.push(elementId));
-			(option.menuType.table&& (this._contextType.table.push(elementId),this._contextType.table_hyper.push(elementId)));
+                    if ($(menuObj.element.find('li a')[i]).text() == option.targetItem) {
+                        element = $(menuObj.element.find('li')[i]).attr('id');
+                        break;
+                    }
+                }
+                if (option.insertType == "insert") menuObj.insert(data, element ? "#" + element : element);
+                else if (option.insertType == "insertAfter") menuObj.insertAfter(data, "#" + element);
+                else if (option.insertType == "insertBefore") menuObj.insertBefore(data, "#" + element);
+                (option.menuType.text && this._contextType.text.push(elementId));
+                (option.menuType.image && this._contextType.image.push(elementId));
+                (option.menuType.hyperlink && this._contextType.hyperlink.push(elementId));
+                (option.menuType.table && (this._contextType.table.push(elementId), this._contextType.table_hyper.push(elementId)));
             }
         },
-        removeMenuOption:function(targetElement){
-            var menuObj = this._textMenuObj;menuObj.remove(["#"+targetElement]);
-			(index=$.inArray(targetElement,this._contextType.text))!=-1&&(this._contextType.text=this._removeContextData(index,this._contextType.text));
-			(index=$.inArray(targetElement,this._contextType.image))!=-1&&(this._contextType.image=this._removeContextData(index,this._contextType.image));
-			(index=$.inArray(targetElement,this._contextType.hyperlink))!=-1&&(this._contextType.hyperlink=this._removeContextData(index,this._contextType.hyperlink));
-			(index=$.inArray(targetElement,this._contextType.table))!=-1&&(this._contextType.textablet=this._removeContextData(index,this._contextType.table));
-			(index=$.inArray(targetElement,this._contextType.table_hyper))!=-1&&(this._contextType.textablet=this._removeContextData(index,this._contextType.table_hyper));
+        removeMenuOption: function (targetElement) {
+            var menuObj = this._textMenuObj; menuObj.remove(["#" + targetElement]);
+            (index = $.inArray(targetElement, this._contextType.text)) != -1 && (this._contextType.text = this._removeContextData(index, this._contextType.text));
+            (index = $.inArray(targetElement, this._contextType.image)) != -1 && (this._contextType.image = this._removeContextData(index, this._contextType.image));
+            (index = $.inArray(targetElement, this._contextType.hyperlink)) != -1 && (this._contextType.hyperlink = this._removeContextData(index, this._contextType.hyperlink));
+            (index = $.inArray(targetElement, this._contextType.table)) != -1 && (this._contextType.textablet = this._removeContextData(index, this._contextType.table));
+            (index = $.inArray(targetElement, this._contextType.table_hyper)) != -1 && (this._contextType.textablet = this._removeContextData(index, this._contextType.table_hyper));
         },
-		_removeContextData:function(index,data){
-			var temp=[];
-			$(data).each(function(ind,elem){(index!=ind)&&temp.push(elem);});
-			return temp;
-		},
+        _removeContextData: function (index, data) {
+            var temp = [];
+            $(data).each(function (ind, elem) { (index != ind) && temp.push(elem); });
+            return temp;
+        },
         insertRow: function (before, cell) {
             if (this.model.maxLength != null && (this.model.maxLength > $.trim(this._getText()).length)) {
-            var seletedCell = ej.isNullOrUndefined(cell) ? this._getSelectedNode() : cell;
-            var colTemplate = "<td " + this._border + "contentEditable='true'><br _moz_dirty=''/></td>", curRow = $(seletedCell).closest("tr");
-            var cols = curRow.find("td").length;
-            var newRow = $("<tr>" + Array(cols + 1).join(colTemplate) + "</tr>");
-            before ? newRow.insertBefore(curRow) : newRow.insertAfter(curRow);
-            newRow.find("td:first").focus();
-            this._setAutoHeight();
-            return seletedCell;
-			}
+                var seletedCell = ej.isNullOrUndefined(cell) ? this._getSelectedNode() : cell;
+                var colTemplate = "<td " + this._border + "contentEditable='true'><br _moz_dirty=''/></td>", curRow = $(seletedCell).closest("tr");
+                var cols = curRow.find("td").length;
+                var newRow = $("<tr>" + Array(cols + 1).join(colTemplate) + "</tr>");
+                before ? newRow.insertBefore(curRow) : newRow.insertAfter(curRow);
+                newRow.find("td:first").focus();
+                this._setAutoHeight();
+                return seletedCell;
+            }
         },
 
 
         insertColumn: function (before, cell) {
             if (this.model.maxLength != null && (this.model.maxLength > $.trim(this._getText()).length)) {
-            var seletedCell = ej.isNullOrUndefined(cell) ? this._getSelectedNode() : cell;
-            var colTemplate = "<td " + this._border + "contentEditable='true'><br _moz_dirty=''/></td>", curRow = $(seletedCell).closest("tr"), curCell;
-            var allRows = curRow.closest("table").find("tr");
-            var colIndex = curRow.find("td").index(seletedCell);
-            for (var i = 0; i < allRows.length; i++) {
-                curCell = $(allRows[i]).find("td")[colIndex];
-                before ? $(colTemplate).insertBefore(curCell) : $(colTemplate).insertAfter(curCell);
-            }
-            return seletedCell;
+                var isTable = $(this._getSelectedNode()).closest("td");
+                var seletedCell = ej.isNullOrUndefined(cell) ? (isTable.length > 0) ? isTable[0] : this._getSelectedNode() : cell;
+                var colTemplate = "<td " + this._border + "contentEditable='true'><br _moz_dirty=''/></td>", curRow = $(seletedCell).closest("tr"), curCell;
+                var allRows = curRow.closest("table").find("tr");
+                var colIndex = curRow.find("td").index(seletedCell);
+                for (var i = 0; i < allRows.length; i++) {
+                    curCell = $(allRows[i]).find("td")[colIndex];
+                    before ? $(colTemplate).insertBefore(curCell) : $(colTemplate).insertAfter(curCell);
+                }
+                return seletedCell;
             }
         },
 
@@ -6231,7 +6576,8 @@
         },
 
         removeColumn: function (cell) {
-            var seletedCell = ej.isNullOrUndefined(cell) ? this._getSelectedNode() : cell;
+            var isTable = $(this._getSelectedNode()).closest("td");
+            var seletedCell = ej.isNullOrUndefined(cell) ? (isTable.length > 0) ? isTable[0] : this._getSelectedNode() : cell;
             var range = this._getRange();
             var curRow = $(seletedCell).closest("tr");
             var allRows = curRow.closest("table").find("tr");
@@ -6254,15 +6600,15 @@
             var seletedTable = ej.isNullOrUndefined(table) ? $(this._getSelectedNode()).closest("table") : table, tableAction = $(seletedTable).parent().closest('table').length < 1;
             this._currentSelNode = $(seletedTable).parent()[0];
             $(seletedTable).remove();
-            if (tableAction)      
+            if (tableAction)
                 this._toggleEditTable();
             this._setAutoHeight();
-			this._removeResizeObject();
-			$(this._getDocument()).find(".e-rte-tablebox").remove();
+            this._removeResizeObject();
+            $(this._getDocument()).find(".e-rte-tablebox").remove();
         }
     });
 
-    ej.RTE.Locale = ej.RTE.Locale || {} ;
+    ej.RTE.Locale = ej.RTE.Locale || {};
 
     ej.RTE.Locale["default"] = ej.RTE.Locale["en-US"] = {
         bold: "Bold",
@@ -6310,8 +6656,8 @@
         style: "Styles",
         deleteAlert: "Are you sure you want to clear all the contents?",
         copyAlert: "Your browser doesn't support direct access to the clipboard. Please use the Ctrl+C keyboard shortcut instead of copy operation.",
-        pasteAlert:"Your browser doesn't support direct access to the clipboard. Please use the Ctrl+V keyboard shortcut instead of paste operation.",
-		cutAlert:"Your browser doesn't support direct access to the clipboard. Please use the Ctrl+X keyboard shortcut instead of cut operation.",
+        pasteAlert: "Your browser doesn't support direct access to the clipboard. Please use the Ctrl+V keyboard shortcut instead of paste operation.",
+        cutAlert: "Your browser doesn't support direct access to the clipboard. Please use the Ctrl+X keyboard shortcut instead of cut operation.",
         videoError: "The text area can not be empty",
         imageWebUrl: "Web Address",
         imageAltText: "Alternate text",
@@ -6341,7 +6687,7 @@
         dialogApply: "Apply",
         dialogOk: "Ok",
         createTable: "Insert Table",
-        insertTable:"Insert",
+        insertTable: "Insert",
         addColumnLeft: "Insert Columns to the Left",
         addColumnRight: "Insert Columns to the Right",
         addRowAbove: "Insert Rows Above",
@@ -6362,54 +6708,57 @@
         dotted: "Dotted",
         dashed: "Dashed",
         doubled: "Double",
-		maximize:"Maximize",
-		resize: "Minimize",
-		swatches: "Swatches",
-		paragraph:"Paragraph",
-		quotation:"Quotation",
-		heading1:"Heading 1",
-		heading2:"Heading 2",
-		heading3:"Heading 3",
-		heading4:"Heading 4",
-		heading5:"Heading 5",
-		heading6:"Heading 6",
-		segoeui:"Segoe UI",
-		arial:"Arial",
-		couriernew:"Courier New",
-		georgia:"Georgia",
-		impact:"Impact",
-		lucidaconsole:"Lucida Console",
-		tahoma:"Tahoma",
-		timesnewroman:"Times New Roman",
-		trebuchetms:"Trebuchet MS",
-		verdana:"Verdana",
-		disc:"Disc",
-		circle:"Circle",
-		square:"Square",
-		number:"Number",
-		loweralpha:"Lower Alpha",
-		upperalpha:"Upper Alpha",
-		lowerroman:"Lower Roman",
-		upperroman:"Upper Roman",
-		none:"None",
-		linktooltip:"ctrl + click to follow link",
-		charSpace: "Characters (with spaces)",
-		charNoSpace: "Characters (no spaces)",
-		wordCount: "Word Count",
-		left:"Left",
-		right:"Right",
-		center:"Center",
-		zoomIn: "Zoom In",
-		zoomOut: "Zoom Out",
-		print: "Print",
-		FindAndReplace:"Find and Replace",
-		Find:"Find",
-		MatchCase:"Match Case",
-		WholeWord:"Whole Word",	
-		ReplaceWith:"Replace with",		
-		Replace:"Replace",
-		ReplaceAll:"Replace All",
-		FindErrorMsg:"Couldn't found the specified word."
+        maximize: "Maximize",
+        resize: "Minimize",
+        swatches: "Swatches",
+        paragraph: "Paragraph",
+        quotation: "Quotation",
+        heading1: "Heading 1",
+        heading2: "Heading 2",
+        heading3: "Heading 3",
+        heading4: "Heading 4",
+        heading5: "Heading 5",
+        heading6: "Heading 6",
+        segoeui: "Segoe UI",
+        arial: "Arial",
+        couriernew: "Courier New",
+        georgia: "Georgia",
+        impact: "Impact",
+        lucidaconsole: "Lucida Console",
+        tahoma: "Tahoma",
+        timesnewroman: "Times New Roman",
+        trebuchetms: "Trebuchet MS",
+        verdana: "Verdana",
+        disc: "Disc",
+        circle: "Circle",
+        square: "Square",
+        number: "Number",
+        loweralpha: "Lower Alpha",
+        upperalpha: "Upper Alpha",
+        lowerroman: "Lower Roman",
+        upperroman: "Upper Roman",
+        none: "None",
+        linktooltip: "ctrl + click to follow link",
+        charSpace: "Characters (with spaces)",
+        charNoSpace: "Characters (no spaces)",
+        wordCount: "Word Count",
+        left: "Left",
+        right: "Right",
+        center: "Center",
+        zoomIn: "Zoom In",
+        zoomOut: "Zoom Out",
+        print: "Print",
+        'import': "Import a Document",
+        wordExport: "Export as Word Document",
+        pdfExport: "Export as Pdf File",
+        FindAndReplace: "Find and Replace",
+        Find: "Find",
+        MatchCase: "Match Case",
+        WholeWord: "Whole Word",
+        ReplaceWith: "Replace with",
+        Replace: "Replace",
+        ReplaceAll: "Replace All",
+        FindErrorMsg: "Couldn't find specified word."
     };
 })(jQuery, Syncfusion);;
 (function ($, ej, undefined) {
@@ -6499,7 +6848,7 @@
 			$(target._findDialog.element).find("button").ejButton({height: 30});
 			$(target._findDialog.element).find("[ej-function='replace'],[ej-function='replaceAll'],[ej-function='prev'],[ej-function='next']").ejButton("disable");
 			$(target._findDialog.element).find("[ej-function='prev'],[ej-function='next']").ejButton({height: 30, width: 30,contentType: "imageonly"});
-			$(target._findDialog.element).find("[ej-function='prev']").ejButton({ prefixIcon:"e-chevron-left_02"}).next().ejButton({ prefixIcon: "e-chevron-right_02"});
+			$(target._findDialog.element).find("[ej-function='prev']").ejButton({ prefixIcon:"e-icon e-chevron-left_02"}).next().ejButton({ prefixIcon: "e-icon e-chevron-right_02"});
 			$(target._findDialog.element).find("[ej-function='wholeWords'],[ej-function='matchCase']").ejCheckBox({enableRTL:target.model.enableRTL,checked:  false});				
 			this._findObject=new ej.FindAndReplace()
 			this._on(target._findDialog.element.find("button"), "click", this._findAndReplaceClick);
@@ -6694,5 +7043,1391 @@ else
 
 if(ej.RTE.FindAndReplace)
  $.extend(ej.RTE.prototype, ej.RTE.FindAndReplace);;
+"use strict";
+var documentManager;
+(function (documentManager) {
+    var editorManager = (function () {
+        function editorManager(target, win) {
+            this.formatInfo = new formateDataCollection();
+            this._nodeCollection = [];
+            this._iterationStatus = false;
+            this.filterNode = ["div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "address", "applet", "blockquote", "button", "center", "dd", "dir", "dl", "dt", "fieldset", "form", "frameset", "hr", "iframe", "isindex", "li", "map", "menu", "noframes", "noscript", "object", "ol", "pre", "script", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul", "header", "article", "nav", "footer", "section", "aside", "main", "figure", "figcaption"];
+            this.advanceFilterNode = ["img", "video", "table", "tbody", "tr", "td", "th"];
+            this.indentFilter = ["img", "video"];
+            this._junkSpanNodes = [];
+            this.currentDocument = target;
+            this.currentWindow = win;
+            this._rangeExtract = new RangeExtractor(this.currentDocument);
+            this._bindEvent();
+        }
+        editorManager.prototype._bindEvent = function () {
+            $(this.currentDocument.body).on("keydown", $.proxy(this._editorKeyUpEvent, this));
+        };
+        editorManager.prototype._editorKeyUpEvent = function (e) {
+            if (this._junkContentStatus) {
+                var range = this._getRangy(this.currentWindow, this.currentDocument), rangeContainer = range.startContainer, rangeOffset = range.startOffset;
+                if (!e.shiftKey && (e.which >= 37 && e.which <= 40) && (rangeContainer.nodeType == 3)) {
+                    this._junkContentStatus = false;
+                    this._iterateCompleteNode(rangeContainer, e, rangeOffset);
+                }
+            }
+        };
+        editorManager.prototype._iterateCompleteNode = function (element, e, range) {
+            var oldlen = element.data.length;
+            this._junkSpanNodes = [];
+            this._removeJunkContent(this.currentDocument.body);
+            this._collectJunkSpanNodes(this.currentDocument.body);
+            this._removeJunkSpanNodes();
+            (oldlen > element.data.length) && range--;
+            !element.data && $(element).remove();
+            if (element.data.trim()) {
+                this._updateCursor(element, range);
+            }
+        };
+        editorManager.prototype._collectJunkSpanNodes = function (stNode) {
+            var startNode = stNode;
+            if ($(startNode).is("span") && !$(startNode).attr("style"))
+                this._junkSpanNodes.push(startNode);
+            if (startNode = startNode.firstChild)
+                do {
+                    if ($(startNode).is("span") && !$(startNode).attr("style"))
+                        this._junkSpanNodes.push(startNode);
+                    this._collectJunkSpanNodes(startNode);
+                } while (startNode = startNode.nextSibling);
+        };
+        editorManager.prototype._removeJunkSpanNodes = function () {
+            var temp;
+            while (temp = this._junkSpanNodes.shift()) {
+                if (temp.childNodes.length)
+                    $(temp).replaceWith(temp.childNodes);
+                else
+                    $(temp).remove();
+            }
+        };
+        editorManager.prototype._removeJunkContent = function (startNode) {
+            var temp = startNode;
+            if (temp.nodeType == 3)
+                this._removeCursorText(temp);
+            if (temp = temp.firstChild)
+                do {
+                    if (temp.nodeType == 3)
+                        this._removeCursorText(temp);
+                    else
+                        this._removeJunkContent(temp);
+                } while (temp = temp.nextSibling);
+        };
+        editorManager.prototype._removeCursorText = function (element) {
+            element.data = element.data.replace(String.fromCharCode(65279), "");
+        };
+        editorManager.prototype.focus = function () {
+            var objExec = this;
+            setTimeout(function () {
+                var browserInfo = ej.browserInfo();
+                if (browserInfo.name == "webkit")
+                    objExec.currentWindow.focus();
+                else
+                    objExec.currentWindow.document.body.focus();
+            }, 100);
+        };
+        editorManager.prototype._justifyContent = function (Value) {
+            this._backUpRange(this.currentDocument, this.currentWindow);
+            this._getModifedRange(this._getRangy(this.currentWindow, this.currentDocument));
+            this._onApplyjustify(Value, this.currentDocument, this.currentWindow);
+            this._resetRange(this.currentDocument, this.currentWindow);
+        };
+        editorManager.prototype._applyFormateBlock = function (Value) {
+            var range = this._getRangy(this.currentWindow, this.currentDocument);
+            this._backUpRange(this.currentDocument, this.currentWindow);
+            this._applyChanges(Value, this.currentDocument, this.currentWindow);
+            this._resetRange(this.currentDocument, this.currentWindow);
+            this._selectionRange = this._getRangy(this.currentWindow, this.currentDocument);
+        };
+        editorManager.prototype._applyList = function (value, listType) {
+            this._backUpRange(this.currentDocument, this.currentWindow);
+            this._getModifedRange(this._getRangy(this.currentWindow, this.currentDocument));
+            this._applyOrderedList(value.toLowerCase() == "orderlist" ? "ol" : "ul", this.currentDocument, this.currentWindow, listType);
+            this._resetRange(this.currentDocument, this.currentWindow);
+        };
+        editorManager.prototype._applyIndent = function (value) {
+            this._backUpRange(this.currentDocument, this.currentWindow);
+            this._getModifedRange(this._getRangy(this.currentWindow, this.currentDocument));
+            if (value)
+                this._onApplyIndent(this.currentDocument, this.currentWindow);
+            else
+                this._onApplyDecreaseIndent(this.currentDocument, this.currentWindow);
+            this._resetRange(this.currentDocument, this.currentWindow);
+        };
+        editorManager.prototype._getRangy = function (_window, _document) {
+            if (_window.getSelection() && _window.getSelection().rangeCount > 0)
+                return _window.getSelection().getRangeAt(0);
+            else {
+                var range;
+                try {
+                    range = _window.document.createRange();
+                    range.setStart(_window.document.body, 0);
+                    range.setEnd(_window.document.body, 0);
+                }
+                catch (error) {
+                    range = _document.createRange();
+                    range.setStart(_document.body, 0);
+                    range.setEnd(_document.body, 0);
+                }
+                return range;
+            }
+        };
+        editorManager.prototype._getexactSelectedNode = function (range, parentDoc) {
+            var nodeDetails = [];
+            var _parentNode = [];
+            this._parentDoc = parentDoc;
+            var startNode = $(this._parentDoc.body).find("span#startRange");
+            var that = this;
+            function visit(node) {
+                if (node.nodeType == 3 && (($.trim(node.nodeValue) != "" || node.nodeValue == "\ufeff") || ($.trim(node.nodeValue) == "" && node.nextSibling == startNode[0]))) {
+                    nodeDetails.push(node);
+                }
+                else if (node.nodeValue && node.nodeName != "#comment" && node.nodeValue.trim() == "" && that.range.endContainer.parentNode.nextSibling != that._next) {
+                    if ($.inArray(node.previousElementSibling, _parentNode) < 0)
+                        _parentNode.push(node.previousElementSibling);
+                }
+                else if ((node.nodeName.toLowerCase() == "br" || ($.inArray(node.nodeName.toLowerCase(), that.filterNode) < 0)) && ($.inArray(node.parentNode, nodeDetails) < 0) && node.nodeName.toLowerCase() != "body" && $.inArray(node.nodeName.toLowerCase(), that.advanceFilterNode) < 0 && ((!ej.isNullOrUndefined(nodeDetails[nodeDetails.length - 1])) && nodeDetails[nodeDetails.length - 1].parentNode != node.parentNode) && node.previousSibling && node.previousSibling.parentNode != node.parentNode)
+                    nodeDetails.push(node.parentNode);
+                else if (($.inArray(node.nodeName.toLowerCase(), that.advanceFilterNode) >= 0) && ej.isNullOrUndefined(node.firstChild))
+                    nodeDetails.push(node);
+                else {
+                    node = node.firstChild;
+                    while (node) {
+                        visit(node);
+                        node = node.nextSibling;
+                    }
+                }
+            }
+            this._generateRange(range);
+            this._traverse(visit);
+            return nodeDetails;
+        };
+        editorManager.prototype._getStartEndElement = function (tnode, root) {
+            if (this._isAncestor(root, tnode)) {
+                while (tnode && tnode.parentNode != root) {
+                    tnode = tnode.parentNode;
+                }
+            }
+            return tnode;
+        };
+        editorManager.prototype._generateRange = function (range) {
+            var root = range.commonAncestorContainer;
+            this._next = range.startContainer == root && !this._isTextNode(range.startContainer) ? range.startContainer.childNodes[range.startOffset] : this._getStartEndElement(range.startContainer, root);
+            this._end = range.endContainer == root && !this._isTextNode(range.endContainer) ? range.endContainer.childNodes[range.endOffset] : (this._getStartEndElement(range.endContainer, root).nodeName.toLowerCase() != "body") && this._getStartEndElement(range.endContainer, root).nextSibling;
+        };
+        editorManager.prototype._traverse = function (callback) {
+            var that = this, current;
+            function next() {
+                if (that._next != ((that._isTextNode(that.range.endContainer) ? that.range.endContainer.parentNode.nextSibling : that.range.endContainer.nextElementSibling)) && that.range.endContainer.parentNode.nextSibling != that._next) {
+                    that._current = that._next;
+                    that._next = that._current && that._current.nextSibling != $(that._parentDoc.body).find("span#endRange")[0] && that._current.nextSibling != (ej.isNullOrUndefined(that._end) ? that.range.endContainer.nextSibling : that._end) ? that._current.nextSibling : null;
+                    return that._current;
+                }
+                else {
+                    return null;
+                }
+            }
+            while (current = next()) {
+                if (that._hasSubNodes()) {
+                    that._getSubtree(that._getRangy(that.currentWindow, that.currentDocument));
+                    that._traverse(callback);
+                }
+                else {
+                    var _nextNode = current;
+                    if (that.range.startContainer.nodeName.toLowerCase() != "body") {
+                        if (that._next == null && _nextNode != (that.range.endContainer)) {
+                            while (ej.isNullOrUndefined(that._next) && !ej.isNullOrUndefined(_nextNode)) {
+                                _nextNode = _nextNode.parentNode;
+                                if ((!ej.isNullOrUndefined(_nextNode)) && that._current.nextSibling != $(that._parentDoc.body).find("span#endRange")[0])
+                                    that._next = _nextNode.nextSibling;
+                            }
+                        }
+                    }
+                    callback(current);
+                }
+            }
+            return current;
+        };
+        editorManager.prototype._hasSubNodes = function () {
+            return !this._isTextNode(this._current) && (this._isAncestorItself(this._current, this.range.startContainer) ||
+                this._isAncestorItself(this._current, this.range.endContainer));
+        };
+        editorManager.prototype._isTextNode = function (node) {
+            return node && node.nodeValue !== null && node.data !== null;
+        };
+        editorManager.prototype._isAncestor = function (parent, node) {
+            try {
+                return !this._isTextNode(parent) && ($.contains(parent, (this._isTextNode(node) ? node.parentNode : node)) || node.parentNode == parent);
+            }
+            catch (e) {
+                return false;
+            }
+        };
+        editorManager.prototype._isAncestorItself = function (root, node) {
+            return this._isAncestor(root, node) || root == node;
+        };
+        editorManager.prototype._getSubtree = function (range) {
+            var that = this;
+            var subRange = that.range.cloneRange();
+            subRange.selectNodeContents(that._current);
+            if (that._isAncestorItself(that._current, that.range.startContainer)) {
+                subRange.setStart(that.range.startContainer, that.range.startOffset);
+            }
+            if (that._isAncestorItself(that._current, that.range.endContainer)) {
+                subRange.setEnd(that.range.endContainer, that.range.endOffset);
+            }
+            return this._generateRange(subRange);
+        };
+        editorManager.prototype._getModifedRange = function (range) {
+            if (range.endOffset == 0 && range.startContainer != range.endContainer) {
+                var ele = range.endContainer;
+                do {
+                    ele = ej.isNullOrUndefined(range.endContainer.previousSibling) ? ele.parentNode : ele;
+                } while (ej.isNullOrUndefined(ele.previousSibling));
+                if (this._isTextNode(ele.previousSibling) && $.trim(ele.previousSibling.textContent).length != 0)
+                    range.setEnd(ele.previousSibling, ele.previousSibling.childNodes.length);
+                else {
+                    range.setEnd(ele.previousSibling, ele.previousSibling.childNodes.length);
+                }
+            }
+        };
+        editorManager.prototype._getSelectedParent = function (selNode1) {
+            var _parentNode = [], selNode = selNode1;
+            for (var i = 0; i < selNode.length; i++) {
+                if (this._isTextNode(selNode[i])) {
+                    while (selNode[i] && selNode[i].parentNode && selNode[i].parentNode.nodeName.toLowerCase() != "body" && ($.inArray(selNode[i].parentNode.nodeName.toLowerCase(), this.filterNode)) < 0) {
+                        selNode[i] = selNode[i].parentNode;
+                    }
+                    if (selNode[i].parentNode.nodeName.toLowerCase() == "body")
+                        _parentNode.push(this._updateParent(selNode[i]));
+                }
+                if (selNode[i] && selNode[i].parentNode && selNode[i].parentNode.nodeName.toLowerCase() != "body" && $.inArray(selNode[i].parentNode, _parentNode) < 0) {
+                    if (selNode[i].parentNode.nodeName.toLowerCase() != "body" && selNode[i].nodeName.toLowerCase() != "img" && selNode[i].nodeName.toLowerCase() != "video")
+                        _parentNode.push(selNode[i].parentNode);
+                    else
+                        _parentNode.push(selNode[i]);
+                }
+            }
+            return _parentNode;
+        };
+        editorManager.prototype._updateParent = function (node) {
+            var nodeColl = [node], temp = node, leftBlockNode, rightBlockNode, tempDiv = document.createElement("div");
+            ;
+            while (temp = temp.previousSibling) {
+                if ($.inArray(temp.nodeName.toLowerCase(), this.filterNode) != -1) {
+                    leftBlockNode = temp;
+                    break;
+                }
+                else
+                    nodeColl.push(temp);
+            }
+            nodeColl = nodeColl.reverse();
+            temp = node;
+            while (temp = temp.nextSibling) {
+                if ($.inArray(temp.nodeName.toLowerCase(), this.filterNode) != -1) {
+                    rightBlockNode = temp;
+                    break;
+                }
+                else
+                    nodeColl.push(temp);
+            }
+            $(nodeColl).appendTo(tempDiv);
+            if (leftBlockNode)
+                $(tempDiv).insertAfter(leftBlockNode);
+            else if (rightBlockNode)
+                $(tempDiv).insertBefore(rightBlockNode);
+            else
+                $(tempDiv).appendTo(this.currentDocument.body);
+            return tempDiv;
+        };
+        editorManager.prototype._applyChanges = function (formatBlock, parentDoc, _window) {
+            this.range = this._getRangy(_window, parentDoc);
+            var selNode1 = this._getexactSelectedNode(this.range, parentDoc);
+            var selNode = selNode1.slice();
+            var tag = (document.createElement(formatBlock.substring(formatBlock.indexOf("<") + 1, formatBlock.indexOf(">"))));
+            if (selNode.length == 0 && this.range.startContainer.nodeName.toLowerCase() == "body" && this.range.endContainer.nodeName.toLowerCase() == "body" && this.range.commonAncestorContainer.nodeName.toLowerCase() == "body" && this._parentDoc.body.innerHTML == "") {
+                this.focus();
+                tag.innerHTML = "&nbsp;";
+                this._parentDoc.body.innerHTML = tag.outerHTML;
+            }
+            else {
+                var exatSelNode = this._getSelectedParent(selNode);
+                var nodeArray = [];
+                nodeArray.push(selNode[0]);
+                var _prevParent = this._getSelectedParent(nodeArray)[0];
+                var _childNode = [];
+                var tval = 0;
+                var condi = false;
+                var _tdiv = document.createElement("div");
+                var dummyNode = document.createElement("div");
+                var _newparent = this._getSelectedParent(nodeArray)[0];
+                var _prevParntNode, selVal, tnode, _isListNode, _tobj, _liNode, _liPrevious;
+                for (selVal = 0; selVal < exatSelNode.length; selVal++) {
+                    nodeArray = [];
+                    nodeArray.push(exatSelNode[selVal]);
+                    _prevParent = this._getSelectedParent(nodeArray)[0];
+                    if ($(exatSelNode[selVal]).attr("style"))
+                        $(tag).attr("style", $(exatSelNode[selVal]).attr("style"));
+                    if ($.inArray(_prevParent, _childNode) >= 0) {
+                        var node;
+                    }
+                    else {
+                        _childNode.push(_prevParent);
+                        if (tag.innerHTML.length != 0) {
+                            if (_childNode[tval].nodeName.toLowerCase() != "td" && _childNode[tval].nodeName.toLowerCase() != "tr" && _childNode[tval].nodeName.toLowerCase() != "tbody" && _childNode[tval].nodeName.toLowerCase() != "li" && _childNode[tval].nodeName.toLowerCase() != "body") {
+                                $(_childNode[tval]).replaceWith(tag.outerHTML);
+                            }
+                            else if (_childNode[tval].nodeName.toLowerCase() != "tr" && _childNode[tval].nodeName.toLowerCase() != "tbody") {
+                                $(_childNode[tval]).prepend("<div></div>");
+                                _tdiv.innerHTML = tag.outerHTML;
+                                _childNode[tval].replaceChild(_tdiv.firstChild, _childNode[tval].firstChild);
+                            }
+                            tval++;
+                        }
+                        tag.innerHTML = "";
+                        _tdiv.innerHTML = "";
+                    }
+                    tnode = exatSelNode[selVal];
+                    _tobj = false;
+                    if (!ej.isNullOrUndefined(tnode.parentNode)) {
+                        _isListNode = tnode.nodeName.toLowerCase() == "li";
+                    }
+                    if (!ej.isNullOrUndefined(tnode)) {
+                        _liNode = tnode;
+                        while (_liNode.childNodes.length != 0) {
+                            if ($.inArray(tnode.firstChild.nodeName.toLowerCase(), this.filterNode) < 0) {
+                                while (tnode.firstChild && $.inArray(tnode.firstChild.nodeName.toLowerCase(), this.filterNode) < 0) {
+                                    $(tag).append(_liNode.childNodes[0]);
+                                }
+                            }
+                            else {
+                                break;
+                            }
+                        }
+                        _liPrevious = tnode.previousSibling;
+                    }
+                    _prevParntNode = tnode.parentNode;
+                    if (tag.innerHTML.length != 0) {
+                        if (tnode.nodeName.toLowerCase() != "td" && tnode.nodeName.toLowerCase() != "tr" && tnode.nodeName.toLowerCase() != "tbody" && tnode.nodeName.toLowerCase() != "li" && tnode.nodeName.toLowerCase() != "body") {
+                            $(tnode).replaceWith(tag.outerHTML);
+                        }
+                        else if (tnode.nodeName.toLowerCase() != "tr" && tnode.nodeName.toLowerCase() != "tbody") {
+                            $(tnode).prepend("<div></div>");
+                            _tdiv.innerHTML = tag.outerHTML;
+                            tnode.replaceChild(_tdiv.firstChild, tnode.firstChild);
+                        }
+                        tval++;
+                    }
+                    tag.innerHTML = "";
+                    _tdiv.innerHTML = "";
+                    $(tag).removeAttr("style");
+                }
+            }
+        };
+        editorManager.prototype._validateIndent = function (element) {
+            var _indentStatus = false;
+            do {
+                if ($(element).attr("style") && (parseInt($(element).css("margin-left")) > 0)) {
+                    _indentStatus = true;
+                }
+            } while ((element = element.parentNode) && !$(element).is("body"));
+            return _indentStatus;
+        };
+        editorManager.prototype._validateFontSize = function (element) {
+            var size = parseInt($(((element.nodeType == 3) ? element.parentNode : element)).css("font-size"));
+            return (Math.round(size * (3 / 4))) + "pt";
+        };
+        editorManager.prototype._onApplyIndent = function (parentDoc, _window) {
+            this.range = this._getRangy(_window, parentDoc);
+            var selNode1 = this._getexactSelectedNode(this.range, parentDoc), temp;
+            var selNode = selNode1.slice();
+            var exatSelNode = this._getSelectedParent(selNode);
+            if (selNode.length == 0 && this.range.startContainer.nodeName.toLowerCase() == "body" && this.range.endContainer.nodeName.toLowerCase() == "body" && this.range.commonAncestorContainer.nodeName.toLowerCase() == "body" && this._parentDoc.body.innerHTML == "") {
+            }
+            else {
+                for (var node = 0; node <= exatSelNode.length - 1; node++) {
+                    if (exatSelNode[node].nodeName.toLowerCase() == "td") {
+                        $(exatSelNode[node]).append($(temp = (document.createElement("p"))).append(exatSelNode[node].childNodes));
+                        exatSelNode[node] = temp;
+                    }
+                    if (exatSelNode[node].nodeName.toLowerCase() != "li")
+                        $(exatSelNode[node]).css("margin-left", 40 + parseInt($(exatSelNode[node]).css("margin-left")) + "px");
+                    else {
+                        if ($(exatSelNode[node]).prev().length == 0)
+                            $(exatSelNode[node].parentNode).css("margin-left", parseInt($(exatSelNode[node].parentNode).css("margin-left")) + 40 + "px");
+                        else
+                            $(exatSelNode[node]).css("margin-left", parseInt($(exatSelNode[node]).css("margin-left")) + 40 + "px");
+                    }
+                }
+            }
+        };
+        editorManager.prototype._onApplyDecreaseIndent = function (parentDoc, _window) {
+            this.range = this._getRangy(_window, parentDoc);
+            var selNode1 = this._getexactSelectedNode(this.range, parentDoc);
+            var selNode = selNode1.slice();
+            var exatSelNode = this._getSelectedParent(selNode);
+            for (var node = 0; node <= exatSelNode.length - 1; node++) {
+                if (parseInt($(exatSelNode[node]).css("margin-left")) >= 40 && exatSelNode[node].nodeName.toLowerCase() != "li")
+                    $(exatSelNode[node]).css("margin-left", parseInt($(exatSelNode[node]).css("margin-left")) - 40);
+                else {
+                    if ($(exatSelNode[node]).prev().length == 0 && parseInt($(exatSelNode[node].parentNode).css("margin-left")) >= 40)
+                        $(exatSelNode[node].parentNode).css("margin-left", parseInt($(exatSelNode[node].parentNode).css("margin-left")) - 40);
+                    else if (parseInt($(exatSelNode[node]).css("margin-left")) >= 40)
+                        $(exatSelNode[node]).css("margin-left", parseInt($(exatSelNode[node]).css("margin-left")) - 40);
+                }
+            }
+        };
+        editorManager.prototype._getNodeName = function (node) {
+            if (this._isTextNode(node))
+                return "#text";
+            else
+                return node.nodeName.toLowerCase();
+        };
+        editorManager.prototype._onApplyjustify = function (justify, parentDoc, _window) {
+            this.range = this._getRangy(_window, parentDoc);
+            var selNode = this._getexactSelectedNode(this.range, parentDoc);
+            var _exactparentEle = this._getSelectedParent(selNode);
+            for (var a = 0; a < _exactparentEle.length; a++) {
+                var node = document.createElement("div");
+                if (_exactparentEle[a].nodeName.toLowerCase() == "li") {
+                    var _tnode = $(_exactparentEle[a]).children(), _val = 0;
+                    for (var b = 0; b < _tnode.length; b++) {
+                        if ($.inArray(this._getNodeName(_tnode[b]), this.filterNode) > 0)
+                            _val++;
+                    }
+                    if (_val > 0) {
+                        while (_exactparentEle[a].childNodes.length > 0) {
+                            if (this._isTextNode(_exactparentEle[a].childNodes[0]) || $.inArray(this._getNodeName(_exactparentEle[a].childNodes[0]), this.filterNode) < 0)
+                                node.appendChild(_exactparentEle[a].childNodes[0]);
+                            else
+                                break;
+                        }
+                    }
+                    else
+                        $(_exactparentEle[a]).css("text-align", justify);
+                    if (node.childNodes.length > 0) {
+                        $(node).css("text-align", justify);
+                        _exactparentEle[a].insertBefore(node, _exactparentEle[a].childNodes[0]);
+                        _val = 0;
+                    }
+                }
+                else {
+                    $(_exactparentEle[a]).css("text-align", justify);
+                }
+            }
+        };
+        editorManager.prototype._getParentNodeCollection = function (selNode) {
+            var _backUpSelNode = selNode;
+            var _backUpSelNodeName = _backUpSelNode.parentNode.nodeName.toLowerCase();
+            var _nodeDetails = [];
+            _nodeDetails.push(_backUpSelNode);
+            while (_backUpSelNodeName != "body" && (_backUpSelNodeName == "li" || _backUpSelNodeName == "ol" || _backUpSelNodeName == "ul")) {
+                _backUpSelNode = _backUpSelNode.parentNode;
+                _backUpSelNodeName = _backUpSelNode.parentNode.nodeName.toLowerCase();
+                _nodeDetails.push(_backUpSelNode);
+            }
+            return _nodeDetails;
+        };
+        editorManager.prototype._generateListParentTag = function (list, selNode, listType) {
+            var tag = document.createElement(list);
+            $(tag).css("list-style-type", listType);
+            if (selNode.nodeName.toLowerCase() != "li")
+                $(tag).insertBefore(selNode);
+            else
+                $(tag).insertBefore(selNode.parentNode);
+            return tag;
+        };
+        editorManager.prototype._applyOrderedList = function (list, parentDoc, _window, listType) {
+            this.range = this._getRangy(_window, parentDoc);
+            var nodeArray = this._getexactSelectedNode(this.range, parentDoc);
+            var beforeNode = document.createElement(list);
+            var afterNode = document.createElement(list);
+            var _childNode = new Array();
+            var selNode = this._getSelectedParent(nodeArray);
+            var _parentNode = this._getParentNodeCollection(selNode[0]);
+            var _startNode = document.createElement("p");
+            var replaceEle = new Array();
+            var removeParent, topMostParent, innerTag, tag, elemN, _node, node, _exactParentEle = _parentNode[_parentNode.length - 1];
+            if (listType != "none") {
+                tag = this._generateListParentTag(list, selNode[0], listType);
+            }
+            for (var i = 0; i <= selNode.length - 1; i++) {
+                innerTag = document.createElement("li");
+                if (selNode[i].parentNode.nodeName.toLowerCase() == "li")
+                    selNode[i] = selNode[i].parentNode;
+                if (listType == "none") {
+                    if ($(selNode[i]).closest("ul,ol").length < 1)
+                        continue;
+                    if ($(selNode[i]).find("ol").length != 0 || $(selNode[i]).find("ul").length != 0) {
+                        removeParent = $(selNode[i]).parents(list).first();
+                        var _exactLi = removeParent.parents("li:last");
+                        var _prevNode = removeParent.parents("li:last").prevAll();
+                        var _nexNode = removeParent.parents("li:last").nextAll();
+                        node = $(selNode[i]).parents("li:last")[0];
+                    }
+                    else {
+                        removeParent = $(selNode[i]);
+                        var _exactLi = removeParent;
+                        var _prevNode = removeParent.prevAll();
+                        var _nexNode = removeParent.nextAll();
+                        node = $(selNode[i])[0];
+                    }
+                    topMostParent = $(selNode[i]).parents(list).last();
+                    var _selectionComplete = 0;
+                    if (_prevNode.length != 0) {
+                        $(afterNode).append(_exactLi);
+                        $(afterNode).append(_nexNode);
+                        $(afterNode).insertAfter(topMostParent);
+                    }
+                    var ele = document.createElement("p"), elem = elemN = document.createElement("li");
+                    beforeNode.appendChild(elem);
+                    var backupFirstNode = topMostParent, _removeSibling = new Array(), _inc = false, newNode;
+                    while (node) {
+                        if ($.inArray(node, selNode) >= 0 || $.inArray(node.firstChild, selNode) >= 0 || $.inArray(node.firstChild, nodeArray) >= 0) {
+                            if (_selectionComplete == 0 && elem.firstChild && elem.firstChild.innerHTML != "") {
+                                topMostParent.append(elem);
+                                elem = elemN = document.createElement("li");
+                            }
+                            newNode = document.createElement("p");
+                            while (node.firstChild && $.inArray(node.firstChild.nodeName.toLowerCase(), this.filterNode) < 0) {
+                                newNode.appendChild(node.firstChild);
+                                _inc = true;
+                            }
+                            if (_inc) {
+                                _selectionComplete++;
+                                $(newNode).insertAfter(backupFirstNode);
+                                backupFirstNode = $(newNode);
+                                if ($(node).children().length == 0) {
+                                    _removeSibling.push(node);
+                                }
+                            }
+                            if (_selectionComplete == selNode.length) {
+                                var _nextEle = document.createElement(list);
+                                if ($(node).children().length != 0)
+                                    $(_nextEle).append($(node).parents("li:last").nextAll());
+                                else
+                                    $(_nextEle).append($(node).nextAll());
+                                if (node.nodeName.toLowerCase() == "ol" || node.nodeName.toLowerCase() == "ul")
+                                    $(node).insertAfter(backupFirstNode);
+                                else if (node.nodeName.toLowerCase() == "li") {
+                                    var _tnewNode = document.createElement(list);
+                                    $(_tnewNode).append(node);
+                                    $(_tnewNode).insertAfter(backupFirstNode);
+                                    node = _tnewNode;
+                                }
+                                $(_nextEle).insertAfter(node);
+                                for (var _remove = 0; _remove < _removeSibling.length; _remove++) {
+                                    var _removeNodeparent;
+                                    _node = _removeSibling[_remove];
+                                    while (_node.nodeName.toLowerCase() != "body") {
+                                        _removeNodeparent = _node.parentNode;
+                                        $(_node).remove();
+                                        _node = _removeNodeparent;
+                                    }
+                                }
+                                i = selNode.length;
+                                break;
+                            }
+                        }
+                        if (this._isTextNode(node.firstChild) || (node.firstChild && $.inArray(node.firstChild.nodeName.toLowerCase(), this.filterNode) < 0)) {
+                            elemN.appendChild(node.firstChild);
+                            if (ej.isNullOrUndefined(node.firstChild)) {
+                                node = node.nextSibling;
+                            }
+                        }
+                        else if (this._isTextNode(node)) {
+                            var _tflag = 0;
+                            var appendElement = node;
+                            node = node.nextSibling;
+                            if (ej.isNullOrUndefined(node)) {
+                                node = appendElement;
+                                while ($(node.parentNode).next().length == 0) {
+                                    node = node.parentNode;
+                                    _tflag++;
+                                }
+                                if (_tflag > 0) {
+                                    node = $(node.parentNode).next()[0];
+                                }
+                            }
+                            elemN.appendChild(appendElement);
+                            if (_tflag == 0 && !this._isTextNode(node))
+                                elemN = this._createElement(node.nodeName.toLowerCase(), elemN.parentNode, null);
+                            else
+                                elemN = this._createElement(node.nodeName.toLowerCase(), this._getParentnodeName(_tflag, elemN), "after");
+                            _tflag = 0;
+                        }
+                        else {
+                            if (node.firstChild) {
+                                elemN = this._createElement(node.firstChild.nodeName.toLowerCase(), elemN, null);
+                                node = node.firstChild;
+                            }
+                            else
+                                node = node.nextSibling;
+                        }
+                    }
+                }
+                else if (selNode[i].nodeName.toLowerCase() != "li") {
+                    if ($(selNode[i]).is("h1,h2,h3,h4,h5,h6,p,blockquote")) {
+                        $(innerTag).append(selNode[i]);
+                        tag.appendChild(innerTag);
+                    }
+                    else {
+                        if ($(selNode[i]).attr("style"))
+                            $(innerTag).attr("style", $(selNode[i]).attr("style"));
+                        $(innerTag).append(selNode[i].childNodes);
+                        tag.appendChild(innerTag);
+                        $(selNode[i]).remove();
+                    }
+                }
+                else if (selNode[i] = $(selNode[i]).closest("li")) {
+                    tag = document.createElement(list);
+                    $(tag).css("list-style-type", listType);
+                    $(tag).append(selNode[i].parentNode.childNodes);
+                    $(selNode[i].parentNode).replaceWith(tag);
+                }
+            }
+            if (listType != "none" && _exactParentEle.childNodes.length == 0 && (_exactParentEle.nodeName.toLowerCase() == "ol" || _exactParentEle.nodeName.toLowerCase() == "ul"))
+                $(_exactParentEle).remove();
+        };
+        editorManager.prototype._getParentnodeName = function (_tflag, elemN) {
+            var node = elemN;
+            for (var a = 0; a <= _tflag; a++) {
+                node = node.parentNode;
+            }
+            return node;
+        };
+        editorManager.prototype._createElement = function (element, elem, place) {
+            var newEle = document.createElement(element);
+            if (place != "after")
+                elem.appendChild(newEle);
+            else
+                $(newEle).insertAfter(elem);
+            return newEle;
+        };
+        editorManager.prototype._backUpRange = function (_parentDoc, _window) {
+            var nodeStart = _parentDoc.createElement("span");
+            nodeStart.id = "startRange";
+            var nodeEnd = _parentDoc.createElement("span");
+            nodeEnd.id = "endRange";
+            var rng = this._getRangy(_window, _parentDoc).cloneRange();
+            rng.collapse(false);
+            rng.insertNode(nodeEnd);
+            rng = this._getRangy(_window, _parentDoc).cloneRange();
+            rng.collapse(true);
+            rng.insertNode(nodeStart);
+        };
+        editorManager.prototype._resetRange = function (_parentDoc, _window) {
+            var a = $(_parentDoc.body).find("span#startRange");
+            var b = $(_parentDoc.body).find("span#endRange");
+            var len = ej.isNullOrUndefined(b[0].previousSibling) ? 0 : this._isTextNode(b[0].previousSibling) ? b[0].previousSibling.length : b[0].previousSibling.childNodes.length > 0 ? b[0].previousSibling.childNodes.length : 0;
+            var rng = this._getRangy(_window, _parentDoc);
+            if (a[0].nextSibling != b[0])
+                rng.setStart(a[0].nextSibling, 0);
+            else
+                rng.setStart(a[0].nextSibling.nextSibling, 0);
+            if (b[0].previousSibling != a[0])
+                ej.isNullOrUndefined(b[0].previousSibling) ? rng.setEnd(b[0].parentNode, len) : rng.setEnd(b[0].previousSibling, len);
+            else
+                rng.setEnd(b[0].nextSibling, 0);
+            a.remove();
+            b.remove();
+            this._selectRange(rng, _parentDoc);
+        };
+        editorManager.prototype._selectRange = function (range, _parentDoc) {
+            var select = _parentDoc.getSelection();
+            select.removeAllRanges();
+            select.addRange(range);
+        };
+        editorManager.prototype._validateFormatData = function (target, data) {
+            var nodeData = [], element = target.parentNode, childNode = target, nodeOrder = [], _tagResult, _cssResult;
+            if (element)
+                do {
+                    nodeOrder.push(childNode);
+                    if ((_tagResult = this._tagCheck(element, data)) || (_cssResult = this._styleCheck(element, data)))
+                        nodeData.push(new ValidatedData(element, target, _tagResult, _cssResult));
+                } while (!$(element).is("body") && (childNode = element) && (element = element.parentNode));
+            return nodeData;
+        };
+        editorManager.prototype._tagCheck = function (element, data) {
+            return this.formatInfo.getFormatData(data).Value.tag ? $(element).is(this.formatInfo.getFormatData(data).Value.tag) : false;
+        };
+        editorManager.prototype._styleCheck = function (element, data) {
+            var tempArrayData;
+            if (!$(element).is(this.formatInfo.filterNode) && this.formatInfo.getFormatData(data).Value.css && (element.getAttribute("style"))) {
+                var valStatus = true;
+                tempArrayData = this.formatInfo.getFormatData(data).Value.css.split(";");
+                $(tempArrayData).each(function (index, styledata) {
+                    styledata && (element.getAttribute("style").replace(/\s/g, "").indexOf(styledata) == -1) && (valStatus = false);
+                });
+                return valStatus;
+            }
+            return false;
+        };
+        editorManager.prototype._validateFormat = function (element, format) {
+            var data = [], collection = { Info: null, status: null }, status;
+            format = format.toLowerCase();
+            if ($.inArray(format, this.formatInfo.actionList) != -1) {
+                if ((data = this._validateFormatData(element, format)) && data.length)
+                    collection.Info = data;
+                collection.status = (data.length > 0);
+            }
+            return collection;
+        };
+        editorManager.prototype._CurrentformateStatus = function (selectedNode, format) {
+            var data = { Info: null, status: null }, status = true;
+            for (var index = 0; index < selectedNode.length; index++) {
+                data = this._validateFormat(selectedNode[index], format);
+                (!data.status) && (status = false);
+            }
+            return status;
+        };
+        editorManager.prototype._getSelectNode = function () {
+            return this._rangeExtract.ProcessRange();
+        };
+        editorManager.prototype._getFormatedTagOrder = function (data, index) {
+            data[index].currentNode = this._getNodeOrder(data[index].textNode, data[index].node);
+            return (!index) ? data : data.slice(index, index + 1);
+        };
+        editorManager.prototype._getNodeOrder = function (endNode, targetNode) {
+            var currentNode = endNode, nodeOrder = [];
+            do
+                nodeOrder.push(currentNode);
+            while ((currentNode = currentNode.parentNode) && currentNode != targetNode);
+            return nodeOrder;
+        };
+        editorManager.prototype._splitNode = function (node) {
+            var temp = node, siblingData = { rightSide: [], leftSide: [] };
+            while (temp = temp.nextSibling) {
+                if (this._validateCommentNode(temp))
+                    siblingData.rightSide.push(temp);
+            }
+            temp = node;
+            while (temp = temp.previousSibling) {
+                if (this._validateCommentNode(temp))
+                    siblingData.leftSide.push(temp);
+            }
+            return siblingData;
+        };
+        editorManager.prototype._validateCommentNode = function (node) {
+            return (node.nodeType != 8);
+        };
+        editorManager.prototype._validateTextNode = function (node) {
+            return (node.nodeType == 3);
+        };
+        editorManager.prototype._validateType = function (node) {
+            return (this._validateTextNode(node) && (node.data.length));
+        };
+        editorManager.prototype._formatechildNodes = function (nodeCollection, format, node) {
+            var adjacentNodes = { rightSide: [], leftSide: [] }, cloneNode;
+            for (var index = nodeCollection.length - 1; index >= 0; index--) {
+                adjacentNodes = this._splitNode(nodeCollection[index]);
+                (adjacentNodes.rightSide.length) && ($($(node.cloneNode(false)).append(adjacentNodes.rightSide)).insertAfter(nodeCollection[index]));
+                cloneNode = node;
+                (adjacentNodes.leftSide.length) && ($($(node.cloneNode(false)).append(adjacentNodes.leftSide.reverse())).insertBefore(nodeCollection[index]));
+            }
+        };
+        editorManager.prototype._removeFormat = function (nodeData, format, matches) {
+            var temp = this._getFormatedTagOrder(nodeData.Info, matches), tempcloneNode, currentNode = temp[0].currentNode.slice(temp[0].currentNode.length - 1), tempSpanNode = document.createElement("span");
+            temp[0].currentNode = temp[0].currentNode.slice(0, temp[0].currentNode.length - 1);
+            var adjacentNodes = this._splitNode(currentNode[0]);
+            (adjacentNodes.rightSide.length) &&
+                ($($(temp[0].node.cloneNode(false)).append(adjacentNodes.rightSide)).insertAfter(temp[0].node));
+            if (temp[0].tag) {
+                if (this._rangeExtract.cursorBasedCollection && !temp[0].textNode.data.trim().length) {
+                    $(tempSpanNode).append(currentNode).insertAfter($(temp[0].node));
+                }
+                else
+                    $(currentNode).insertAfter(temp[0].node);
+                tempcloneNode = temp[0].textNode;
+                if (this._rangeExtract.cursorBasedCollection)
+                    this._setCursorOnNode(tempcloneNode, temp[0].textNode);
+            }
+            else {
+                tempcloneNode = $(temp[0].node.cloneNode(false));
+                tempcloneNode.css(this.formatInfo.getFormatData(format).Value.removeCSS);
+                (tempcloneNode[0].getAttribute("style")) ? $(tempcloneNode.append(currentNode)).insertAfter(temp[0].node) : $(currentNode).insertAfter(temp[0].node);
+                tempcloneNode = currentNode;
+            }
+            (temp[0].currentNode.length) && (this._formatechildNodes(temp[0].currentNode, format, temp[0].node));
+            (!adjacentNodes.leftSide.length) && ($(temp[0].node).remove());
+            return tempcloneNode[0] ? tempcloneNode[0] : tempcloneNode;
+        };
+        editorManager.prototype._applyFormat = function (node, format, styleData) {
+            var adjacentNodes = this._splitNode(node), tempcloneNode, currentNode = node, tempSpanNode = document.createElement("span");
+            if (adjacentNodes.leftSide.length && (adjacentNodes.leftSide[0].nodeType != 3) && (this._tagCheck(adjacentNodes.leftSide[0], format) || this._compareCSS(adjacentNodes.leftSide[0], (styleData ? (this.formatInfo.getFormatData(format).Value.css + ":" + styleData + ";") : this.formatInfo.getFormatData(format).Value.css))))
+                $(adjacentNodes.leftSide[0]).append(node);
+            else if (adjacentNodes.rightSide.length && (adjacentNodes.rightSide[0].nodeType != 3) && (this._tagCheck(adjacentNodes.rightSide[0], format) || this._compareCSS(adjacentNodes.rightSide[0], (styleData ? (this.formatInfo.getFormatData(format).Value.css + ":" + styleData + ";") : this.formatInfo.getFormatData(format).Value.css))))
+                $(adjacentNodes.rightSide[0]).prepend(node);
+            else if (!adjacentNodes.leftSide.length && !adjacentNodes.rightSide.length && $(node.parentNode).is(this.formatInfo.getFormatData(format).Value.styleParent)) {
+                if (styleData)
+                    $(node.parentNode).css(this.formatInfo.getFormatData(format).Value.css, styleData);
+                else
+                    $(node.parentNode).css(this._collectStyleData(this.formatInfo.getFormatData(format).Value.css));
+            }
+            else {
+                tempcloneNode = document.createElement(this.formatInfo.getFormatData(format).Value.result);
+                if (this._rangeExtract.cursorBasedCollection) {
+                    if (this._validateTextNode(node)) {
+                        if (!$(tempcloneNode).is("span") && this._rangeExtract._noContent)
+                            $(tempSpanNode).append(tempcloneNode);
+                        else
+                            (tempSpanNode = tempcloneNode);
+                        tempcloneNode.appendChild(currentNode = document.createTextNode(node.data));
+                        if (this._rangeExtract.cursorBasedCollection) {
+                            this._setCursorOnNode(node, currentNode);
+                        }
+                        $(node).replaceWith(tempSpanNode);
+                    }
+                    else {
+                        tempcloneNode.innerHTML = "&#65279;";
+                        $(tempSpanNode).append(tempcloneNode);
+                        if (node.firstChild && $(node.firstChild).is("br"))
+                            $(tempSpanNode).insertBefore(node.firstChild);
+                        else
+                            $(node).append(tempSpanNode);
+                        if (this._rangeExtract.cursorBasedCollection) {
+                            this._setCursorOnNode(node, tempcloneNode.firstChild);
+                        }
+                        currentNode = tempcloneNode;
+                    }
+                }
+                else {
+                    tempcloneNode.appendChild(currentNode = document.createTextNode(node.data));
+                    $(node).replaceWith(tempcloneNode);
+                }
+                styleData && $(tempcloneNode).css(this.formatInfo.getFormatData(format).Value.css, styleData);
+            }
+            return currentNode;
+        };
+        editorManager.prototype._setCursorOnNode = function (node, currentNode) {
+            if (this._rangeExtract._cursorData.node == node)
+                this._rangeExtract._cursorData.node = currentNode;
+        };
+        editorManager.prototype._compareCSS = function (element, css) {
+            return element.getAttribute('style') && element.getAttribute('style').toLowerCase().trim().replace(/\s/g, "") == css.toLowerCase().trim().replace(/\s/g, "");
+        };
+        editorManager.prototype._collectStyleData = function (styledata) {
+            var styleList = styledata.replace(/\s/g, "").split(';'), data = {}, temp;
+            $(styleList).each(function (index) {
+                var style = styleList[index];
+                temp = style.split(':');
+                (temp.length > 1) && (data[temp[0].toLowerCase().trim()] = temp[1].toLowerCase().trim());
+            });
+            return data;
+        };
+        editorManager.prototype._validateStyleData = function (node, style, styleData) {
+            var nodeList = node.getAttribute('style').split(';'), status = false;
+            $(nodeList).each(function (index) {
+                var data = nodeList[index], temp = data.split(':');
+                if (temp[0].toLowerCase().trim() == style.toLowerCase().trim() && temp[1].toLowerCase().trim() == styleData.toLowerCase().trim()) {
+                    status = true;
+                    return false;
+                }
+            });
+            return status;
+        };
+        editorManager.prototype._caseConvert = function (casing) {
+            var selectedNode = this._getSelectNode(), node, startNode, endNode, tempNode;
+            if (!selectedNode.length || (selectedNode.length == 1 && !selectedNode[0].data.length))
+                return;
+            for (var index = 0; index < selectedNode.length; index++) {
+                node = selectedNode[index];
+                tempNode = document.createTextNode(node.data[this.formatInfo.captionConvert[casing]]());
+                if (this._rangeExtract._cursorData.node == node)
+                    this._rangeExtract._cursorData.node = tempNode;
+                node.data && ($(node).replaceWith(tempNode));
+                tempNode && (selectedNode.length == 1) ? ((startNode = tempNode) && (endNode = tempNode)) : (index == 0) ? (startNode = tempNode) : (index == selectedNode.length - 1) ? (endNode = tempNode) : null;
+            }
+            startNode && endNode && this._refreshRange(startNode, endNode);
+        };
+        editorManager.prototype._validateSelectedNode = function (selectedNode) {
+            return (!selectedNode.length || (selectedNode.length == 1 && selectedNode[0].data && !selectedNode[0].data.length));
+        };
+        editorManager.prototype._tagFormatProcess = function (format, remove) {
+            var selectedNode = this._getSelectNode();
+            if (this._validateSelectedNode(selectedNode))
+                return;
+            var status = this._CurrentformateStatus(selectedNode, format), node, nodeData = { Info: null, status: null }, retNode, startNode, endNode;
+            for (var index = 0; index < selectedNode.length; index++) {
+                node = selectedNode[index], nodeData = this._validateFormat(node, format), retNode = null;
+                if (((remove || status) && nodeData.status))
+                    for (var matches = 0; matches < nodeData.Info.length; matches++)
+                        retNode = this._removeFormat(nodeData, format, matches);
+                else if (!nodeData.status && !remove)
+                    retNode = this._applyFormat(node, format, null);
+                else
+                    retNode = node;
+                if (retNode) {
+                    (selectedNode.length == 1) ? ((startNode = retNode) && (endNode = retNode)) : (index == 0) ? (startNode = retNode) : (index == selectedNode.length - 1) ? (endNode = retNode) : null;
+                }
+            }
+            startNode && endNode && this._refreshRange(startNode, endNode);
+            this.focus();
+            return { data: nodeData, nodeStatus: status };
+        };
+        editorManager.prototype._refreshRange = function (startNode, endNode) {
+            var range = this.currentDocument.createRange(), Selection = this.currentDocument.getSelection(), cursorOnNode, cursorOffset;
+            if (this._rangeExtract)
+                (cursorOnNode = this._rangeExtract._cursorData.node) && (cursorOffset = this._rangeExtract._cursorData.offSet);
+            if (this._rangeExtract.cursorBasedCollection && cursorOnNode && cursorOffset > -1) {
+                cursorOffset = this._validateTextNode(cursorOnNode) ?
+                    ((cursorOffset > cursorOnNode.data.length) ? cursorOnNode.data.length : cursorOffset) : 0;
+                if (cursorOnNode.nodeType == 3 && !cursorOnNode.data.trim()) {
+                    cursorOnNode.data = String.fromCharCode(65279) + cursorOnNode.data;
+                    cursorOffset++;
+                }
+                this._updateCursor(cursorOnNode, cursorOffset);
+            }
+            else if (startNode && endNode) {
+                if (startNode.data && !startNode.data.trim() && (startNode.data.indexOf(String.fromCharCode(65279)) == -1))
+                    startNode.data = String.fromCharCode(65279) + startNode.data;
+                if (endNode.data && !endNode.data.trim() && (endNode.data.indexOf(String.fromCharCode(65279)) == -1))
+                    endNode.data = String.fromCharCode(65279);
+                Selection.removeAllRanges();
+                range.setStart(startNode, 0);
+                range.setEnd(endNode, endNode.data ? endNode.data.length : 0);
+                Selection.addRange(range);
+            }
+            $(this.currentWindow).focus();
+        };
+        editorManager.prototype._updateCursor = function (node, offset) {
+            var range = this.currentDocument.createRange(), Selection = this.currentDocument.getSelection();
+            range.setStart(node, offset);
+            range.setEnd(node, offset);
+            Selection.removeAllRanges();
+            Selection.addRange(range);
+        };
+        editorManager.prototype._cssFormatProcess = function (format, styleData, remove) {
+            var selectedNode = this._getSelectNode(), node, nodeData = { Info: null, status: null }, retNode, startNode, endNode;
+            if (this._validateSelectedNode(selectedNode))
+                return;
+            for (var index = 0; index < selectedNode.length; index++) {
+                node = selectedNode[index], nodeData = this._validateFormat(node, format);
+                if (nodeData.status)
+                    for (var matches = 0; matches < nodeData.Info.length; matches++) {
+                        if (!remove && this._validateStyleData(nodeData.Info[matches].node, this.formatInfo.getFormatData(format).Value.css, styleData))
+                            continue;
+                        retNode = this._removeFormat(nodeData, format, matches);
+                    }
+                if (!remove)
+                    retNode = this._applyFormat(node, format, styleData);
+                if (retNode)
+                    (selectedNode.length == 1) ? ((startNode = retNode) && (endNode = retNode)) : (index == 0) ? (startNode = retNode) : (index == selectedNode.length - 1) ? (endNode = retNode) : null;
+            }
+            this._refreshRange(startNode, endNode);
+            this.focus();
+        };
+        editorManager.prototype.execCommand = function (command, value) {
+            try {
+                switch (command) {
+                    case execCommand.bold:
+                        this._tagFormatProcess("bold", false);
+                        break;
+                    case execCommand.italic:
+                        this._tagFormatProcess("italic", false);
+                        break;
+                    case execCommand.underline:
+                        this._tagFormatProcess("underline", false);
+                        break;
+                    case execCommand.strikethrough:
+                        this._tagFormatProcess("strikethrough", false);
+                        break;
+                    case execCommand.superscript:
+                        this._tagFormatProcess("subscript", true);
+                        this._tagFormatProcess("superscript", false);
+                        break;
+                    case execCommand.subscript:
+                        this._tagFormatProcess("superscript", true);
+                        this._tagFormatProcess("subscript", false);
+                        break;
+                    case execCommand.fontsize:
+                        this._cssFormatProcess("fontsize", value, false);
+                        break;
+                    case execCommand.fontname:
+                        this._cssFormatProcess("fontname", value, false);
+                        break;
+                    case execCommand.forecolor:
+                        this._cssFormatProcess("forecolor", value, false);
+                        break;
+                    case execCommand.backcolor:
+                        this._cssFormatProcess("backcolor", value, false);
+                        break;
+                    case execCommand.uppercase:
+                        this._caseConvert("uppercase");
+                        break;
+                    case execCommand.lowercase:
+                        this._caseConvert("lowercase");
+                        break;
+                    case execCommand.indent:
+                        this._applyIndent(true);
+                        break;
+                    case execCommand.outdent:
+                        this._applyIndent(false);
+                        break;
+                    case execCommand.justifyleft:
+                        this._justifyContent("left");
+                        break;
+                    case execCommand.justifycenter:
+                        this._justifyContent("center");
+                        break;
+                    case execCommand.justifyright:
+                        this._justifyContent("right");
+                        break;
+                    case execCommand.justifyfull:
+                        this._justifyContent("justify");
+                        break;
+                    case execCommand.formatblock:
+                        this._applyFormateBlock(value);
+                        break;
+                }
+                this._junkContentStatus = true;
+            }
+            catch (e) {
+            }
+        };
+        return editorManager;
+    }());
+    documentManager.editorManager = editorManager;
+    (function (execCommand) {
+        execCommand[execCommand["bold"] = 0] = "bold";
+        execCommand[execCommand["italic"] = 1] = "italic";
+        execCommand[execCommand["underline"] = 2] = "underline";
+        execCommand[execCommand["strikethrough"] = 3] = "strikethrough";
+        execCommand[execCommand["superscript"] = 4] = "superscript";
+        execCommand[execCommand["subscript"] = 5] = "subscript";
+        execCommand[execCommand["fontsize"] = 6] = "fontsize";
+        execCommand[execCommand["fontname"] = 7] = "fontname";
+        execCommand[execCommand["forecolor"] = 8] = "forecolor";
+        execCommand[execCommand["backcolor"] = 9] = "backcolor";
+        execCommand[execCommand["uppercase"] = 10] = "uppercase";
+        execCommand[execCommand["lowercase"] = 11] = "lowercase";
+        execCommand[execCommand["indent"] = 12] = "indent";
+        execCommand[execCommand["outdent"] = 13] = "outdent";
+        execCommand[execCommand["justifyleft"] = 14] = "justifyleft";
+        execCommand[execCommand["justifycenter"] = 15] = "justifycenter";
+        execCommand[execCommand["justifyright"] = 16] = "justifyright";
+        execCommand[execCommand["justifyfull"] = 17] = "justifyfull";
+        execCommand[execCommand["formatblock"] = 18] = "formatblock";
+    })(documentManager.execCommand || (documentManager.execCommand = {}));
+    var execCommand = documentManager.execCommand;
+    var ValidatedData = (function () {
+        function ValidatedData(node, textNode, tag, css) {
+            this.textNode = textNode;
+            this.node = node;
+            this.css = css;
+            this.tag = tag;
+        }
+        return ValidatedData;
+    }());
+    var actionType = (function () {
+        function actionType(tag, css, result, removeCSS, styleParent) {
+            this.tag = tag;
+            this.css = css;
+            this.result = result;
+            this.removeCSS = removeCSS;
+            this.styleParent = styleParent;
+        }
+        return actionType;
+    }());
+    var captionConvertion = (function () {
+        function captionConvertion() {
+            this.uppercase = "toUpperCase";
+            this.lowercase = "toLowerCase";
+        }
+        return captionConvertion;
+    }());
+    var KeyDictionary = (function () {
+        function KeyDictionary(target, value) {
+            this.Key = target;
+            this.Value = value;
+        }
+        return KeyDictionary;
+    }());
+    var formateDataCollection = (function () {
+        function formateDataCollection() {
+            this.filterNode = ["div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "address", "applet", "blockquote", "button", "center", "dd", "dir", "dl", "dt", "fieldset", "form", "frameset", "hr", "iframe", "isindex", "li", "map", "menu", "noframes", "noscript", "object", "ol", "pre", "script", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul", "header", "article", "nav", "footer", "section", "aside", "main", "figure", "figcaption"];
+            this.actionList = ["bold", "italic", "underline", "strikethrough", "superscript", "subscript", "fontsize", "fontname", "forecolor", "backcolor"];
+            this.captionConvert = new captionConvertion();
+            this._updateData();
+        }
+        formateDataCollection.prototype._updateData = function () {
+            var temp = Array();
+            temp.push(new KeyDictionary("bold", new actionType("b,strong", "font-weight:bold;", "b", { "font-weight": '' }, "span")));
+            temp.push(new KeyDictionary("italic", new actionType("i, cite, em, var, address, dfn", "font-style:italic", "i", { "font-style": '' }, "span")));
+            temp.push(new KeyDictionary("underline", new actionType("u,ins", "text-decoration:underline;", "u", { "text-decoration": '' }, "span")));
+            temp.push(new KeyDictionary("strikethrough", new actionType("s, strike, del", "text-decoration:line-through;", "s", { "text-decoration": '' }, "span")));
+            temp.push(new KeyDictionary("superscript", new actionType("sup", "vertical-align:super;font-size:smaller;", "sup", { "vertical-align": '', "font-size": '' }, "span")));
+            temp.push(new KeyDictionary("subscript", new actionType("sub", "vertical-align:sub;font-size:smaller;", "sub", { "vertical-align": '', "font-size": '' }, "span")));
+            temp.push(new KeyDictionary("fontsize", new actionType(null, "font-size", "span", { "font-size": '' }, "span")));
+            temp.push(new KeyDictionary("fontname", new actionType(null, "font-family", "span", { "font-family": '' }, "span")));
+            temp.push(new KeyDictionary("forecolor", new actionType(null, "color", "span", { "color": '' }, "span")));
+            temp.push(new KeyDictionary("backcolor", new actionType(null, "background-color", "span", { "background-color": '' }, "span")));
+            this.tempCollection = temp;
+        };
+        formateDataCollection.prototype.getFormatData = function (format) {
+            var temp;
+            for (var index = 0; index < this.tempCollection.length; index++) {
+                temp = this.tempCollection[index];
+                if (temp.Key == format)
+                    return this.tempCollection[index];
+            }
+        };
+        return formateDataCollection;
+    }());
+    var RangeExtractor = (function () {
+        function RangeExtractor(target) {
+            this.exp = /\s/g;
+            this._findStatus = { leftSide: null, rightSide: null };
+            this._iterationStatus = false;
+            this._cursorData = { node: null, offSet: null };
+            this._nodeCollection = [];
+            this._traverseData = {
+                leftSide: { childNode: "lastChild", sibling: "previousSibling" },
+                rightSide: { childNode: "firstChild", sibling: "nextSibling" }
+            };
+            this._blockNodes = ["div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "address", "applet", "blockquote", "button", "center", "dd", "dir", "dl", "dt", "fieldset", "form", "frameset", "hr", "iframe", "isindex", "li", "map", "menu", "noframes", "noscript", "object", "ol", "pre", "script", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul", "header", "article", "nav", "footer", "section", "aside", "main", "figure", "figcaption"];
+            this._noContent = false;
+            this.nodeCollection = { leftSide: [], rightSide: [] };
+            this.currentDocument = target;
+        }
+        RangeExtractor.prototype.ProcessRange = function () {
+            var tempRange = this._getRange();
+            if (($(this.currentDocument.body).attr("contenteditable") == "true") && tempRange) {
+                this._nodeCollection = [], this._noContent = false;
+                this._iterationStatus = false;
+                this._cursorData = { node: null, offSet: null };
+                if ((tempRange.startContainer == tempRange.endContainer) && (tempRange.startOffset == tempRange.endOffset)) {
+                    this._collectCursorBasedTextNode(tempRange.startContainer, tempRange.startOffset);
+                    this.cursorBasedCollection = true;
+                }
+                else {
+                    this._collectSelectionBasedTextNode(tempRange);
+                    this.cursorBasedCollection = false;
+                }
+            }
+            return this._nodeCollection;
+        };
+        RangeExtractor.prototype._insertCursor = function (startContainer, startOffset) {
+            var firstNodeData = startContainer.data.substring(0, startOffset), middleNodeData = "", lastNodeData = startContainer.data.substr(startOffset), tempNode;
+            firstNodeData.replace(String.fromCharCode(65279), "") && $(document.createTextNode(firstNodeData)).insertBefore(startContainer);
+            lastNodeData.replace(String.fromCharCode(65279), "") && $(document.createTextNode(lastNodeData)).insertAfter(startContainer);
+            $(startContainer).replaceWith(tempNode = document.createTextNode(middleNodeData));
+            this._cursorData = { node: tempNode, offSet: 0 };
+            this._nodeCollection.push(tempNode);
+            this._noContent = true;
+        };
+        RangeExtractor.prototype._collectCursorBasedTextNode = function (startContainer, startOffset) {
+            var tempLeftIndex, temp, validString, tempNode, tempRightIndex, regx = new RegExp(this.exp);
+            while (temp = regx.exec(startContainer.data)) {
+                if (startContainer.data.substring(temp.index, temp.index + 1).indexOf(" ") != -1) {
+                    if (temp.index < startOffset) {
+                        tempLeftIndex = temp;
+                    }
+                    if (!tempRightIndex && (startOffset <= temp.index)) {
+                        tempRightIndex = temp;
+                    }
+                }
+            }
+            if (tempLeftIndex && tempRightIndex) {
+                if ((startOffset - (tempLeftIndex.index + 1) == 0 || startOffset - (tempLeftIndex.index + 1) == startContainer.data.substring(tempLeftIndex.index + 1, tempRightIndex.index).replace("\n", '').length)) {
+                    this._insertCursor(startContainer, startOffset);
+                }
+                else {
+                    var firstNodeData = startContainer.data.substring(0, tempLeftIndex.index + 1), lastNodeData = startContainer.data.substring(tempRightIndex.index);
+                    $(document.createTextNode(firstNodeData)).insertBefore(startContainer);
+                    $(document.createTextNode(lastNodeData)).insertAfter(startContainer);
+                    $(startContainer).replaceWith(tempNode = document.createTextNode(startContainer.data.substring(tempLeftIndex.index + 1, tempRightIndex.index)));
+                    this._cursorData = { node: tempNode, offSet: startOffset - (tempLeftIndex.index + 1) };
+                    this._nodeCollection.push(tempNode);
+                }
+            }
+            else if (tempLeftIndex) {
+                var rightSideNode;
+                this._collectNodeData(startContainer, false);
+                rightSideNode = this._nodeCollection;
+                this._nodeCollection = [];
+                if ((rightSideNode.length == 0) && (((startOffset - (tempLeftIndex.index + 1)) == 0) || ((startOffset - (tempLeftIndex.index + 1)) == startContainer.data.substring(tempLeftIndex.index + 1).replace("\n", '').length))) {
+                    this._insertCursor(startContainer, startOffset);
+                }
+                else {
+                    var firstNodeData = startContainer.data.substring(0, tempLeftIndex.index + 1);
+                    $(document.createTextNode(firstNodeData)).insertBefore(startContainer);
+                    $(startContainer).replaceWith(tempNode = document.createTextNode(startContainer.data.substring(tempLeftIndex.index + 1)));
+                    this._cursorData = { node: tempNode, offSet: startOffset - (tempLeftIndex.index + 1) };
+                    this._nodeCollection.push(tempNode);
+                    this._nodeCollection.concat(rightSideNode);
+                }
+            }
+            else if (tempRightIndex) {
+                var leftSideNode;
+                this._collectNodeData(startContainer, true);
+                leftSideNode = this._nodeCollection;
+                this._nodeCollection = [];
+                if (leftSideNode.length == 0 && ((startOffset == startContainer.data.substring(0, tempRightIndex.index).replace("\n", '').length) || startOffset == 0)) {
+                    this._insertCursor(startContainer, startOffset);
+                }
+                else {
+                    var lastNodeData = startContainer.data.substring(tempRightIndex.index);
+                    $(document.createTextNode(lastNodeData)).insertAfter(startContainer);
+                    $(startContainer).replaceWith(tempNode = document.createTextNode(startContainer.data.substring(0, tempRightIndex.index)));
+                    this._cursorData = { node: tempNode, offSet: startOffset };
+                    this._nodeCollection = leftSideNode.reverse();
+                    this._nodeCollection.push(tempNode);
+                }
+            }
+            else {
+                if (startContainer.nodeType != 3) {
+                    tempNode = document.createTextNode("");
+                    if (startContainer.firstChild)
+                        $(tempNode).insertBefore(startContainer.firstChild);
+                    else
+                        $(tempNode).appendTo(startContainer);
+                    this._nodeCollection.push(tempNode);
+                    this._cursorData = { node: tempNode, offSet: startOffset };
+                    this._noContent = true;
+                }
+                else {
+                    var rightSideNode, leftSideNode;
+                    this._collectNodeData(tempNode = startContainer, false);
+                    rightSideNode = this._nodeCollection;
+                    this._nodeCollection = [];
+                    this._collectNodeData(tempNode, true);
+                    leftSideNode = this._nodeCollection;
+                    this._nodeCollection = [];
+                    if (tempNode.data == String.fromCharCode(65279) || (leftSideNode.length == 0 && startOffset == 0) || (rightSideNode.length == 0 && tempNode.data.replace(String.fromCharCode(65279), "").replace("\n", '').length == startOffset)) {
+                        this._insertCursor(startContainer, startOffset);
+                    }
+                    else {
+                        this._nodeCollection = leftSideNode.reverse();
+                        this._nodeCollection.push(tempNode);
+                        this._nodeCollection = this._nodeCollection.concat(rightSideNode);
+                        this._cursorData = { node: tempNode, offSet: startOffset };
+                    }
+                }
+            }
+            return this._nodeCollection;
+        };
+        RangeExtractor.prototype._validateContent = function (node, traverse) {
+            var regx = new RegExp(this.exp), temp, _matches = [], tempTxtNode, textIndex;
+            while (temp = regx.exec(node.data)) {
+                _matches.push(temp);
+            }
+            if (_matches.length) {
+                temp = _matches[(traverse == "leftSide") ? _matches.length - 1 : 0], textIndex = (traverse == "leftSide") ? temp.index + 1 : temp.index;
+                $(tempTxtNode = document.createTextNode(node.data.substring(textIndex))).insertAfter(node);
+                node.data = node.data.substring(0, textIndex);
+                if ((traverse == "rightSide") && $.trim(node.data))
+                    this._nodeCollection.push(node);
+                else if ((traverse == "leftSide") && $.trim(tempTxtNode.data))
+                    this._nodeCollection.push(tempTxtNode);
+                this._findStatus[traverse] = true;
+            }
+            else
+                this._nodeCollection.push(node);
+        };
+        RangeExtractor.prototype._iterateNodes = function (element, traverse) {
+            if (!this._findStatus[traverse]) {
+                if (element.nodeType == 3 && element.data)
+                    this._validateContent(element, traverse);
+                else if ((element = element[this._traverseData[traverse]["childNode"]]) && !this._findStatus[traverse])
+                    do {
+                        (element.nodeType == 3 && element.data) ? this._validateContent(element, traverse) : this._iterateNodes(element, traverse);
+                    } while ((element = element[this._traverseData[traverse]["sibling"]]) && !this._findStatus[traverse]);
+            }
+        };
+        RangeExtractor.prototype._collectNodeData = function (node, leftSide) {
+            this._findStatus = { leftSide: undefined, rightSide: undefined };
+            var _proxy = this;
+            var traverse = leftSide ? "leftSide" : "rightSide";
+            do {
+                this.nodeCollection = this._splitSiblingNode(node);
+                $(this.nodeCollection[traverse]).each(function (index, element) { _proxy._iterateNodes(element, traverse); });
+            } while (!this._validateBlockType(node.parentNode) && (node = node.parentNode) && !this._findStatus[traverse]);
+        };
+        RangeExtractor.prototype._validateBlockType = function (node) {
+            return ($.inArray(node.tagName.toLowerCase(), this._blockNodes.concat("body")) != -1);
+        };
+        RangeExtractor.prototype._validateTextNode = function (node) {
+            return (node.nodeType == 3);
+        };
+        RangeExtractor.prototype._splitSiblingNode = function (node) {
+            var temp = node, nodeSiblingData = { leftSide: [], rightSide: [] };
+            while (temp = temp.nextSibling) {
+                if (temp.tagName && this._validateBlockType(temp)) {
+                    continue;
+                }
+                nodeSiblingData.rightSide.push(temp);
+            }
+            temp = node;
+            while (temp = temp.previousSibling) {
+                if (temp.tagName && this._validateBlockType(temp)) {
+                    continue;
+                }
+                nodeSiblingData.leftSide.push(temp);
+            }
+            return nodeSiblingData;
+        };
+        RangeExtractor.prototype._getRange = function () {
+            var selCurrent = this.currentDocument.getSelection(), range = null;
+            (selCurrent.rangeCount) && (range = selCurrent.getRangeAt(0));
+            return range;
+        };
+        RangeExtractor.prototype._collectSelectionBasedTextNode = function (tempRange) {
+            var leftData, rightData, centerData, leftNode, rightNode, centerNode, startNode = tempRange.startContainer, endNode = tempRange.endContainer;
+            this._nodeCollection = [];
+            if (tempRange.startContainer == tempRange.endContainer) {
+                if (this._validateTextNode(tempRange.endContainer)) {
+                    if (tempRange.startOffset)
+                        leftData = tempRange.startContainer.data.substr(0, tempRange.startOffset);
+                    if (tempRange.startContainer.data.length != tempRange.endOffset)
+                        rightData = tempRange.startContainer.data.substr(tempRange.endOffset);
+                    centerData = tempRange.startContainer.data.substr(tempRange.startOffset, (tempRange.endOffset - tempRange.startOffset));
+                    leftData && ($((leftNode = document.createTextNode(leftData))).insertBefore(tempRange.startContainer));
+                    rightData && ($((rightNode = document.createTextNode(rightData))).insertAfter(tempRange.startContainer));
+                    centerData && ($(tempRange.startContainer).replaceWith(centerNode = document.createTextNode(centerData))) && this._nodeCollection.push(centerNode);
+                }
+                else
+                    this._updateNodeCollection((tempRange.startContainer.nodeName.toLowerCase() == 'html') ? $(tempRange.startContainer).find('body')[0] : tempRange.startContainer, startNode, null);
+            }
+            else {
+                if (tempRange.startContainer.nodeType == 3 && tempRange.startOffset) {
+                    leftData = tempRange.startContainer.data.substr(0, tempRange.startOffset);
+                    rightData = tempRange.startContainer.data.substr(tempRange.startOffset);
+                    ($(document.createTextNode(leftData)).insertBefore(tempRange.startContainer));
+                    ($(startNode).replaceWith(startNode = document.createTextNode(rightData)));
+                }
+                if (tempRange.endContainer.nodeType == 3 && tempRange.endContainer.data.length != tempRange.endOffset) {
+                    rightData = tempRange.endContainer.data.substr(tempRange.endOffset);
+                    leftData = tempRange.endContainer.data.substr(0, tempRange.endOffset);
+                    ($(document.createTextNode(rightData)).insertAfter(tempRange.endContainer));
+                    ($(endNode).replaceWith(endNode = document.createTextNode(leftData)));
+                }
+                else if (tempRange.endOffset && tempRange.endContainer.lastChild)
+                    endNode = tempRange.endContainer.lastChild;
+                this._updateNodeCollection(tempRange.commonAncestorContainer, startNode, endNode);
+            }
+        };
+        RangeExtractor.prototype._updateNodeCollection = function (targetNode, startNode, endNode) {
+            this._updateIterationStatus(targetNode, startNode, endNode);
+            if (targetNode = targetNode.firstChild)
+                do
+                    this._updateNodeCollection(targetNode, startNode, endNode);
+                while (targetNode = targetNode.nextSibling);
+        };
+        RangeExtractor.prototype._updateIterationStatus = function (targetNode, startNode, endNode) {
+            (targetNode == startNode && !this._iterationStatus) && (this._iterationStatus = true);
+            if (targetNode.nodeType == 3 && this._iterationStatus)
+                this._nodeCollection.push(targetNode);
+            (targetNode == endNode && this._iterationStatus) && (this._iterationStatus = false);
+        };
+        return RangeExtractor;
+    }());
+})(documentManager || (documentManager = {}));
+$.extend(ej, documentManager);
+window["documentManager"] = null;
+;
 
 });

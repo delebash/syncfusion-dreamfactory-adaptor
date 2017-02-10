@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.rotator.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -28,6 +28,7 @@
         element: null,
         model: null,        
         _setFirst: false,
+        validTags:["ul"],
 
         defaults: {
 
@@ -183,6 +184,7 @@
             this._captionChange = false;
             this._liSize = null;
             this._containerSize = null;
+			this._thumbVal = this.model.showThumbnail;
             this.containerCss = this.model.orientation == ej.Orientation.Horizontal ? "outerWidth" : "outerHeight";
             this.displayCss = this.model.orientation == ej.Orientation.Horizontal ? "left" : "top";
             $.extend(jQuery.easing, {
@@ -235,14 +237,7 @@
             this._setRTL(false);
         },
         _refreshControl: function () {
-            if (this.model.showPager) {
-                if (!ej.isNullOrUndefined(this._bulletWrapper))
-                    this._bulletWrapper.remove();
-                this._createBulletControl();
-            }
-            else if (this.element.parents('.e-in-wrap').siblings().hasClass("e-pager-wrap"))
-                this._bulletWrapper.remove();
-
+            this._setShowPager();
             if (this.model.showCaption) {
                 if (this.element.siblings().hasClass("e-caption"))
                     this._caption.remove();
@@ -250,12 +245,13 @@
             } else if (this.element.siblings().hasClass("e-caption"))
                 this._caption.remove();
 
-            if (this.model.showThumbnail) {
+            if (this.model.showThumbnail || (this._thumbVal && (this.model.displayItemsCount == 1) && (this.model.navigateSteps == 1))) {
                 if (this.element.parents('.e-in-wrap').siblings().hasClass("e-thumb")) {
                     this._thumb.remove();
                     if (!ej.isNullOrUndefined(this._thumbControl)) this._thumbControl.remove();
                 }
                 this._createThumb();
+				this.model.showThumbnail = true;
             }
             else if (this.element.parents('.e-in-wrap').siblings().hasClass("e-thumb")) {
                 this._thumb.remove();
@@ -415,7 +411,7 @@
             }
             this._buttonWrapper.appendTo(this._wrapper);
             this._createAutoPlay();
-            if (this.model.enabled && this.model.showNavigateButton) this._wireBtnEvents();
+            if (this.model.showNavigateButton) this._wireBtnEvents();
         },
 
         _createAutoPlay: function () {
@@ -423,7 +419,7 @@
             if (!this.model.showPlayButton) return false;
             icon = this._interval != null ? 'pause' : 'play';
             this._autoButton = ej.buildTag("span.e-nav-btn e-icon " + icon, "", {}, { role: "button" }).appendTo(this._buttonWrapper);
-            if (this.model.enabled) this._wireAutoPlayEvents();
+            this._wireAutoPlayEvents();
         },
 
         _createBulletControl: function () {
@@ -445,7 +441,7 @@
             this._bullet.appendTo(this._bulletWrapper);
             this._setActiveBullet();
             this._setPagerposition(this.model.pagerPosition);
-            if (this.model.enabled) this._wireBulletEvents();
+            this._wireBulletEvents();
         },
 
         _createCaption: function () {
@@ -485,10 +481,10 @@
 
         _createThumbControl: function () {
             this._thumbControl = ej.buildTag("div.e-thumb-nav").insertAfter(this._thumb);
-            this._previous = ej.buildTag("span.e-thumb-btn e-icon e-previous e-disable", "", {}, { "aria-disabled": true }).appendTo(this._thumbControl);
-            this._next = ej.buildTag("span.e-thumb-btn e-icon e-next e-enable", "", {}, { "aria-disabled": false }).appendTo(this._thumbControl);
+            this._previous = ej.buildTag("span.e-thumb-btn e-icon e-previous " + (this.model.enableRTL ? "e-enable" : "e-disable"), "", {}, { "aria-disabled": this.model.enableRTL ? false : true }).appendTo(this._thumbControl);
+            this._next = ej.buildTag("span.e-thumb-btn e-icon e-next " + (this.model.enableRTL ? "e-disable" : "e-enable"), "", {}, { "aria-disabled": this.model.enableRTL ? true : false }).appendTo(this._thumbControl);
             this._thumbControl.appendTo(this._outerWrapper);
-            if (this.model.enabled) this._wireThumbEvents();
+            this._wireThumbEvents();
         },
 
         _generateThumbnailTagItems: function (list) {
@@ -578,10 +574,10 @@
                         break;
                     case "showPager":
                         this.model.showPager = options[option];
-                        controlChange = true;
+                        this._setShowPager();
                         break;
                     case "showThumbnail":
-                        this.model.showThumbnail = options[option];
+                        this._thumbVal = this.model.showThumbnail = options[option];
                         valueChange = true;
                         controlChange = true;
                         break;
@@ -641,7 +637,7 @@
                         this._setRTL(true, options[option]);
                         break;
                     case "circularMode":
-                        this.model.circularMode = options[option];                      
+                        this.model.circularMode = options[option];
                         this._reRenderControl();
                         this._refresh();
                         break;
@@ -655,6 +651,16 @@
 
             if (valueChange) this._refresh();
             if (controlChange) this._refreshControl();
+        },
+
+        _setShowPager: function () {
+            if (this.model.showPager) {
+                if (!ej.isNullOrUndefined(this._bulletWrapper))
+                    this._bulletWrapper.remove();
+                this._createBulletControl();
+            }
+            else if (this.element.parents('.e-in-wrap').siblings().hasClass("e-pager-wrap"))
+                this._bulletWrapper.remove();
         },
 
         _setDimension: function () {
@@ -718,7 +724,7 @@
         },
 
         _setInitial: function () {
-            this.model.circularMode ? this.element.css(this.displayCss, -(this._liSize * this.model.displayItemsCount) - (this.model.startIndex * this.model.navigateSteps * this._liSize)) : this.element.css(this.displayCss, "0");
+            this.model.circularMode ? this.element.css(this.displayCss, -(this._liSize * this.model.displayItemsCount) - (((this.model.startIndex > 0 && this.element.children('li').length > this.model.startIndex)  ? this.model.startIndex : 0) * this.model.navigateSteps * this._liSize)) : this.element.css(this.displayCss, "0");
         },
         _setBegin: function () {
             this.model.circularMode ? this.element.css(this.displayCss, -(this._liSize * this.model.displayItemsCount)) : this.element.css(this.displayCss, "0");
@@ -812,7 +818,7 @@
                 index = Math.round(-(Math.round(this.element.position()[this.displayCss])) / (this._liSize * this.model.navigateSteps));
 
             index = index < 0 ? -index : index;
-            this._bullet.children().eq(index).addClass('e-active').attr({ 'tabindex': 0, 'aria-selected': "true" });
+            this._bullet.children().eq(Math.round(index)).addClass('e-active').attr({ 'tabindex': 0, 'aria-selected': "true" });
         },
 
         _setActiveThumb: function () {
@@ -1063,8 +1069,8 @@
 
         _wireEvent: function () {
             if (!this.model.enabled) return false;
-            this._wrapper.bind("mouseenter", $.proxy(this._showControl, this));
-            this._wrapper.bind("mouseleave", $.proxy(this._hideControl, this));
+            this._wrapper.on("mouseenter", $.proxy(this._showControl, this));
+            this._wrapper.on("mouseleave", $.proxy(this._hideControl, this));
             this._wireKeyboardEvents();
             this._wireResizeEvents();
             this._wireTouchEvents();
@@ -1078,26 +1084,26 @@
         },
         _wireKeyboardEvents: function () {
             if (this.model.allowKeyboardNavigation) {
-                this._outerWrapper.bind("focusin", $.proxy(this._onFocusIn, this));
-                this._outerWrapper.bind("focusout", $.proxy(this._onFocusOut, this));
+                this._outerWrapper.on("focusin", $.proxy(this._onFocusIn, this));
+                this._outerWrapper.on("focusout", $.proxy(this._onFocusOut, this));
             }
             else {
-                this._outerWrapper.unbind("focusin", $.proxy(this._onFocusIn, this));
-                this._outerWrapper.unbind("focusout", $.proxy(this._onFocusOut, this));
+                this._outerWrapper.off("focusin", $.proxy(this._onFocusIn, this));
+                this._outerWrapper.off("focusout", $.proxy(this._onFocusOut, this));
             }
         },
 
         _wireBtnEvents: function () {
             if (this.model.showNavigateButton) {
-                this._prevButton.bind("click", $.proxy(this.model.enableRTL ? this._nextAction : this._prevAction, this));
-                this._nextButton.bind("click", $.proxy(this.model.enableRTL ? this._prevAction : this._nextAction, this));
+                this._prevButton.on("click", $.proxy(this.model.enableRTL ? this._nextAction : this._prevAction, this));
+                this._nextButton.on("click", $.proxy(this.model.enableRTL ? this._prevAction : this._nextAction, this));
             }
             else
                 this._unwireBtnEvents();
         },
         _unwireBtnEvents: function () {
-            this._prevButton.unbind("click", $.proxy(this.model.enableRTL ? this._nextAction : this._prevAction, this));
-            this._nextButton.unbind("click", $.proxy(this.model.enableRTL ? this._prevAction : this._nextAction, this));
+            this._prevButton.off("click", $.proxy(this.model.enableRTL ? this._nextAction : this._prevAction, this));
+            this._nextButton.off("click", $.proxy(this.model.enableRTL ? this._prevAction : this._nextAction, this));
         },
 
         _wireAutoPlayEvents: function () {
@@ -1109,21 +1115,21 @@
 
         _wireResizeEvents: function () {
             if (this.model.isResponsive)
-                $(window).bind("resize", $.proxy(this._resizeEvent, this));
+                $(window).on("resize", $.proxy(this._resizeEvent, this));
             else
-                $(window).unbind("resize", $.proxy(this._resizeEvent, this));
+                $(window).off("resize", $.proxy(this._resizeEvent, this));
         },
 
         _wireThumbEvents: function () {
             if (this.model.showThumbnail) {
                 this._on(this._thumbItems.children(), "click", this._thumbClick);
-                this._on(this._next, "click", this._thumbNext);
-                this._on(this._previous, "click", this._thumbPrev);
+                this._on(this._next, "click", (this.model.enableRTL ? this._thumbPrev : this._thumbNext));
+                this._on(this._previous, "click", (this.model.enableRTL ? this._thumbNext : this._thumbPrev));
             }
             else {
                 this._off(this._thumbItems.children(), "click", this._thumbClick);
-                this._off(this._next, "click", this._thumbNext);
-                this._off(this._previous, "click", this._thumbPrev);
+                this._off(this._next, "click", (this.model.enableRTL ? this._thumbPrev : this._thumbNext));
+                this._off(this._previous, "click", (this.model.enableRTL ? this._thumbNext : this._thumbPrev));
             }
         },
 
@@ -1137,13 +1143,14 @@
         _thumbNext: function () {
             var proxy = this, rightValue;
             if (!this.model.enabled) return false;
-            if (this._previous.hasClass("e-disable"))
-                this._previous.removeClass("e-disable").addClass("e-enable").attr({ "aria-disabled": false });
+            if (this[this.model.enableRTL ? "_next" : "_previous"].hasClass("e-disable"))
+                this[this.model.enableRTL ? "_next" : "_previous"].removeClass("e-disable").addClass("e-enable").attr({ "aria-disabled": false });
             rightValue = (-Math.round(this._thumbItems.position().left)) + this._thumb.width();
             if (this._thumbItems.width() - rightValue >= this._thumbItems.children('li').outerWidth(true))
                 this._thumbMove(this._thumbItems.children('li').outerWidth(true));
-            if ((this._thumbItems.width() - rightValue) <= this._thumbItems.children('li').outerWidth(true))
-                this._next.removeClass("e-enable").addClass("e-disable").attr({ "aria-disabled": true });
+            if ((this._thumbItems.width() - rightValue) <= this._thumbItems.children('li').outerWidth(true)) {
+                this[this.model.enableRTL ? "_previous" : "_next"].removeClass("e-enable").addClass("e-disable").attr({ "aria-disabled": true });
+            }
         },
 
         _thumbMove: function (move) {
@@ -1156,12 +1163,14 @@
         _thumbPrev: function () {
             var proxy = this, leftValue, itemWidth;
             if (!this.model.enabled) return false;
-            if (this._next.hasClass("e-disable"))
-                this._next.removeClass("e-disable").addClass("e-enable").attr({ "aria-disabled": false });
-            leftValue = Math.round(this._thumbItems.position().left);
-            itemWidth = this._thumbItems.children('li').outerWidth(true);
-            if ((-leftValue) >= itemWidth) this._thumbMove(-itemWidth);
-            if ((-leftValue) <= itemWidth) this._previous.removeClass("e-enable").addClass("e-disable").attr({ "aria-disabled": true });
+                if (this[this.model.enableRTL ? "_previous" : "_next"].hasClass("e-disable"))
+                    this[this.model.enableRTL ? "_previous" : "_next"].removeClass("e-disable").addClass("e-enable").attr({ "aria-disabled": false });
+                leftValue = Math.round(this._thumbItems.position().left);
+                itemWidth = this._thumbItems.children('li').outerWidth(true);
+                if ((-leftValue) >= itemWidth) this._thumbMove(-itemWidth);
+                if ((-leftValue) <= itemWidth)
+                     this[this.model.enableRTL ? "_next" : "_previous"].removeClass("e-enable").addClass("e-disable").attr({ "aria-disabled": true });
+               
         },
         _findLength: function () {
             var proxy = this, len;
@@ -1206,7 +1215,7 @@
             len = proxy._findLength();
             properties[this.displayCss] = proxy.element.position()[proxy.displayCss];
             properties[this.displayCss] -= move;
-            index = action == "next" ? (index < len ? index + 1 : 0) : action == "prev" ? (index > 0 ? index - 1 : len) : 0;
+            index = action == "next" ? (index < len ? index + 1 : 0) : action == "prev" ? (index > 0 ? index - 1 : len) : 0; this._prevIndex = index;
             if (this.model.animationType == "slideshow") { proxy.element.fadeOut(proxy.model.animationSpeed / 2); if (proxy.model.showCaption) proxy._caption.fadeOut(proxy.model.animationSpeed / 2); }
             proxy.element.animate(properties, animationSpeed, animationType, function () { if (action == "end") proxy._setBegin(); proxy._animating = false; proxy._setCaptionText(index); proxy._raiseEvent("change"); });
             if (this.model.animationType == "slideshow") { proxy.element.fadeIn(proxy.model.animationSpeed / 2); if (proxy.model.showCaption) proxy._caption.fadeIn(proxy.model.animationSpeed / 2); }
@@ -1320,7 +1329,7 @@
             if (!this._animating) {
                 this._animating = true;
                 interval = setInterval(next, "");
-            }
+            } this._prevIndex = this.getIndex();
         },
 
         _prevAction: function (isCode) {
@@ -1339,7 +1348,7 @@
             if (!this._animating) {
                 this._animating = true;
                 interval = setInterval(previous, "")
-            }
+            } this._prevIndex = this.getIndex();
         },
 
         _touchOperations: function (e) {
@@ -1453,7 +1462,7 @@
             this.element.removeAttr("style").insertAfter(this._outerWrapper).removeClass();
             this.element.children().removeAttr("style");
             this._outerWrapper.remove();
-            $(window).unbind("resize", $.proxy(this._resizeEvent, this));
+            $(window).off("resize", $.proxy(this._resizeEvent, this));
             this.element.stop();
         },
 
@@ -1499,13 +1508,13 @@
             if (!this.model.enabled) return false;
             this._outerWrapper.addClass("e-Focused");
             this._innerWrapper.addClass("e-shadow");
-            $(this._outerWrapper).bind("keydown", $.proxy(this._focuseHandle, this));
+            $(this._outerWrapper).on("keydown", $.proxy(this._focuseHandle, this));
         },
 
         _onFocusOut: function () {
             this._outerWrapper.removeClass("e-Focused");
             this._innerWrapper.removeClass("e-shadow");
-            $(this._outerWrapper).unbind("keydown", $.proxy(this._focuseHandle, this));
+            $(this._outerWrapper).off("keydown", $.proxy(this._focuseHandle, this));
         },
 
         _focuseHandle: function (e) {

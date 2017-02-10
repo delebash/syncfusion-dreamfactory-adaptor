@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.colorpicker.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core","./ej.button","./ej.slider","./ej.splitbutton","./ej.menu"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./ej.button","./ej.slider","./ej.splitbutton","./ej.menu"], fn) : fn();
 })
 (function () {
 	
@@ -57,6 +57,8 @@
             presetType: "basic",
 
             modelType: "picker",
+
+            locale: "en-US",
 
             showPreview: true,
 
@@ -123,6 +125,7 @@
             presetType: "enum",
             cssClass: "string",
             displayInline: "boolean",
+            locale: "string",
             showSwitcher: "boolean",
             showRecentColors: "boolean",
             enabled: "boolean",
@@ -148,8 +151,8 @@
                     case "opacityValue":
                         if (this.model.enableOpacity) {
                             this._tempOpacity = parseFloat(ej.util.getVal(jsondata[key]));
-                            this._changeOpacity();
                             this._opacity.option('value', this._tempOpacity);
+                            !this._switch && this._changeOpacity();
                             this._updateValue();
                             this.opacityValue(this._tempOpacity);
                             typeof jsondata[key] == "function" ? jsondata[key](this.opacityValue()) : jsondata[key] = this.opacityValue();
@@ -201,6 +204,10 @@
                         break;
                     case "tooltipText":
                         this._toolTipText(jsondata[key]);
+                        break;
+                    case "locale": 
+                        this.model.locale = jsondata[key];
+                        this._localize(jsondata[key]);
                         break;
                     case "showPreview":
                         this.model.showPreview = jsondata[key];
@@ -278,7 +285,7 @@
             this._cellSelect();
             this._switchEvents();
             this._unSwitchEvents();
-            this._splitObj.option('prefixIcon', 'e-color-image e-' + this.model.presetType);
+            this._splitObj.option('prefixIcon', 'e-icon e-color-image e-' + this.model.presetType);
             this.popupList.prepend(this.PaletteWrapper);
             this._showSwitcher();
         },
@@ -296,7 +303,7 @@
                 this.isPopupOpen && this._showBindEvents();
                 this._gradient.addClass('e-hide');
                 this._paletteType();
-                presets || this.model.palette == "custompalette" ? "" : this._splitObj.option('prefixIcon', 'e-color-image e-' + this.model.presetType);
+                presets || this.model.palette == "custompalette" ? "" : this._splitObj.option('prefixIcon', 'e-icon e-color-image e-' + this.model.presetType);
             }
             if (this.model.modelType == "picker") {
                 this._pickerType();
@@ -322,8 +329,8 @@
         },
         _buttonText: function (data) {
             $.extend(this.model.buttonText, data);
-            this._buttonTag.html(this.model.buttonText.apply);
-            this._cancelTag.html(this.model.buttonText.cancel);
+            if (!ej.isNullOrUndefined(this._buttonTag)) this._buttonTag.html(this.model.buttonText.apply);
+            if (!ej.isNullOrUndefined(this._cancelTag)) this._cancelTag.html(this.model.buttonText.cancel);
             this._spnTag.html(this.model.buttonText.swatches);
         },
         _toolTipText: function (data) {
@@ -335,6 +342,18 @@
         },
         _previewSlider: function (slider) {
             slider ? this._opacity.enable() : this._opacity.disable();
+        },
+        _getLocalizedLabels: function () {
+            return ej.getLocalizedConstants(this.sfType, this.model.locale);
+        },
+        _localize: function () {
+            this._localizedLabels = this._getLocalizedLabels();
+            if (!ej.isNullOrUndefined(this._localizedLabels)) {
+                if (!ej.isNullOrUndefined(this._localizedLabels.buttonText))
+                    this._buttonText(this._localizedLabels.buttonText)
+                if (!ej.isNullOrUndefined(this._localizedLabels.tooltipText))
+                    this._toolTipText(this._localizedLabels.tooltipText)
+            }
         },
         _destroy: function () {
             if (this.isPopupOpen) this.hide();
@@ -394,6 +413,7 @@
             this._setDisplayInline(this.model.displayInline);
             this._previewPane(this.model.showPreview);
             this._previewColor(this.model.showRecentColors);
+            this._localize();
             if (this._switch) this._previewSlider(this.model.enableOpacity);
             this._wireEvents();
             this._switchEvents();
@@ -598,7 +618,7 @@
             else if (this._presetsId === "e-presets30") this.model.presetType = "basic";
             else if (this._presetsId === "e-presets31") this.model.presetType = "candycrush";
             else if (this._presetsId === "e-presets32") this.model.presetType = "citrus";
-            this._splitObj.option('prefixIcon', 'e-color-image e-' + this.model.presetType);
+            this._splitObj.option('prefixIcon', 'e-icon e-color-image e-' + this.model.presetType);
             this.PaletteWrapper.remove();
             if (this._modelType == "palette") {
                 this.PaletteWrapper = this._layoutType(this.model.palette);
@@ -636,7 +656,7 @@
             this._splitObj = this._presetTag.ejSplitButton({ size: "normal", showRoundedCorner: true, contentType: "imageonly" }).data('ejSplitButton');
             this._splitObj.option("beforeOpen", function (e) { proxy._bindClickOperation(e); });
             this._presetTag.parents('.e-split.e-widget').css({ "height": "27px" });
-            this.model.custom.length == 0 ? this._splitObj.option('prefixIcon', "e-color-image e-" + this.model.presetType) : "";
+            this.model.custom.length == 0 ? this._splitObj.option('prefixIcon', "e-icon e-color-image e-" + this.model.presetType) : "";
             this._splitObj._getXYpos = function (e) {
                 $("#" + this.model.targetID).ejMenu({ animationType: "none" });
                 btnpos = this.dropbutton.offset();
@@ -817,7 +837,7 @@
             if (this.model.enabled) return false;
             if (this.wrapper && this.wrapper.hasClass("e-disable")) {
                 this.wrapper.removeClass("e-disable");
-                this.element.removeAttr("disabled");
+                this.element.prop("disabled", false);
                 if (this.container.hasClass("e-disable")) this.container.removeClass('e-disable');
                 this.popupList.removeClass('e-disable');
                 this.dropdownbutton.removeClass('e-disable');
@@ -826,13 +846,13 @@
             this._switch = true;
             this._cancelObj.enable();
             this._colorSlider.enable();
-            this._opacity.enable();
+            this.model.enableOpacity ? this._opacity.enable() : this._opacity.disable();
             this._splitObj.enable();
             this._applyObj.enable();
             this._wireEvents();
             this._switchEvents();
             this._switch = temp;
-            $(this._inputTag).removeAttr('readonly');
+            $(this._inputTag).prop('readonly', false);
             (this._buttonElement) && this._on(this._buttonElement, "mousedown", this._iconClick);
             this.model.enabled = true;
         },
@@ -874,19 +894,12 @@
             var value = ej.isNullOrUndefined(value) ? "#000000" : value;
             if (browser.name == "mozilla")
                 this._alphaSlider.attr({ "style": "background:-moz-linear-gradient(center top," + value + ",#fff) repeat scroll 0 0 rgba(0, 0, 0, 0);" });
-            else if ((browser.name == "msie") && (browser.version == "9.0"))
-                this._alphaSlider.attr({ "style": "filter: progid:DXImageTransform.Microsoft.gradient( startColorstr=" + value + ", endColorstr='#ffffff',GradientType=0 );" });
-            else if ((browser.name == "msie") && (browser.version == "8.0"))
-                if (this.model.enableOpacity)
-                    this._alphaSlider.attr({ "style": "filter: progid:DXImageTransform.Microsoft.gradient( startColorstr=" + value + ", endColorstr='#ffffff',GradientType=0 );" });
-                else
-                    this._alphaSlider.attr({ "style": "filter: progid:DXImageTransform.Microsoft.gradient( startColorstr=" + value + ", endColorstr='#ffffff',GradientType=0 ) alpha(opacity=35);" });
-            else if (browser.name == "msie")
+            else if ((browser.name == "msie") || (browser.name == "edge"))
                 this._alphaSlider.attr({ "style": "background:-ms-linear-gradient(top," + value + ",#fff) repeat scroll 0 0 rgba(0, 0, 0, 0);" });
-            else if (browser.name == "chrome" || browser.name == "safari"|| browser.name=="webkit")
-                this._alphaSlider.attr({ "style": "background:-webkit-linear-gradient(top," + value + ",#fff) repeat scroll 0 0 rgba(0, 0, 0, 0);" });
-            else if (browser.name == "opera")
+            else if (browser.name == "opera" && browser.version <= "11.61")
                 this._alphaSlider.attr({ "style": "background:-o-linear-gradient(top," + value + ",#fff) repeat scroll 0 0 rgba(0, 0, 0, 0);" });
+            else if (browser.name == "chrome" || browser.name == "safari" || (browser.name == "opera"))
+                this._alphaSlider.attr({ "style": "background:-webkit-linear-gradient(top," + value + ",#fff) repeat scroll 0 0 rgba(0, 0, 0, 0);" });
             if (browser.name == "msie" && browser.version == "8.0")
                 this._handleTag.css({ "background": this._formRGB(this.rgb), "filter": "alpha(opacity=" + this.rgb.a * 100 + ")" });
         },
@@ -913,7 +926,7 @@
             }
         },
         _selectEvent: function () {
-            if (this._previousColor !== this._tempValue) {
+            if (this._previousColor !== this._tempValue || this._tempOpacity !== this.opacityValue()) {
                 this.value(this._tempValue);
                 if (this.element.is("input")) this._updateValue();
                 this.element.val(this.value());
@@ -936,10 +949,10 @@
             if (this._switch) {
                 this.rgb.a = e.value / 100;
                 this._tempOpacity = parseInt(this.rgb.a * 100);
-                this._changeOpacity();
+                this._changeOpacity(e);
             }
         },
-        _changeOpacity: function () {
+        _changeOpacity: function (e) {
             this.rgb.a = this._tempOpacity / 100;
             if (this._browser.name = "msie" && this._browser.version == "8.0") {
                 this._currentTag.css({ "background-color": this._formRGB(this.rgb), "filter": "alpha(opacity=" + this.rgb.a * 100 + ")" });
@@ -950,6 +963,11 @@
                 this._alphaSlider.children(".e-handle").css({ "background": this._formRGBA(this.rgb) });
             }
             this._inputTagValue(this._selectedButton);
+            if (this.model.displayInline) {
+                this._trigger("change", { value: this._tempValue, changeFrom: "slider", isInteraction: !ej.isNullOrUndefined(e) ? e.isInteraction : false });
+                (this._trigger("select", { value: this.value() }));
+            }
+        else this._trigger("change", { value: this._tempValue, changeFrom: "slider", isInteraction: !ej.isNullOrUndefined(e) ? e.isInteraction: false });
         },
         _updateValue: function () {
             if (this.value()) {
@@ -1069,8 +1087,8 @@
                 this._isFocused = true;
             this._handleArea.css("visibility", "visible");
             this.mouseDownPos = this._handlePos;
-            $(document).bind("mousemove touchmove", $.proxy(this._handleMovement, this));
-            $(document).bind("mouseup touchend", $.proxy(this._handleUp, this));
+            $(document).on("mousemove touchmove", $.proxy(this._handleMovement, this));
+            $(document).on("mouseup touchend", $.proxy(this._handleUp, this));
         },
         _handleMove: function (e) {
             this._handleArea.css("visibility", "visible");
@@ -1093,8 +1111,8 @@
             this._changeEvent(false);
         },
         _handleUp: function (e) {
-            $(document).unbind('mouseup touchend', this._handleUp);
-            $(document).unbind('mousemove touchmove', this._handleMovement);
+            $(document).off('mouseup touchend', this._handleUp);
+            $(document).off('mousemove touchmove', this._handleMovement);
             this._focusWrapper(e);
             return false;
         },
@@ -1150,12 +1168,12 @@
             var newValue = "", codeValue = this._inputTag.val(), value, code, count;
             value = $.trim(codeValue);
             value.length == 5 ? this._inputTag.removeClass('e-error') : "";
-            if ((e.shiftKey && e.keyCode >= 35 && e.keyCode <= 40) ||(e.keyCode==51) || (e.ctrlKey && (e.keyCode == 88 || e.keyCode == 86)) || e.keyCode == 190)
+            if ((e.shiftKey && e.keyCode >= 35 && e.keyCode <= 40 || (e.keyCode >= 65 && e.keyCode < 71) ) || (e.keyCode == 51) || (e.ctrlKey && (e.keyCode == 88 || e.keyCode == 86)) || e.keyCode == 190)
                 this._keyPressFlag = 1;
             else if ((!e.crtlKey && !e.shiftKey) && ((e.keyCode >= 65 && e.keyCode < 71) || (e.keyCode >= 35 && e.keyCode <= 40) || (e.keyCode >= 96 && e.keyCode <= 105) || (e.keyCode >= 48 && e.keyCode <= 57) || e.keyCode == 13 || e.keyCode == 8 || e.keyCode == 46 || e.type === "blur"))
                 this._keyPressFlag = 1;
             else this._keyPressFlag = 0;
-            if (this.model.enableOpacity && (e.keyCode == 188 || e.keyCode == 71 || e.keyCode == 82) || (e.shiftKey && (e.keyCode == 57 || e.keyCode == 48)))
+            if (this.model.enableOpacity && (e.keyCode == 188 || e.keyCode == 71 || e.keyCode == 72 || e.keyCode == 82 || e.keyCode == 83 || e.keyCode == 86) || (e.shiftKey && (e.keyCode == 57 || e.keyCode == 48)))
                 this._keyPressFlag = 1;
             if (this._keyPressFlag == 1) {
                 this._inputTag.removeClass('e-error');
@@ -1288,7 +1306,7 @@
                 this.wrapper.removeClass("e-active");
             }
             this._width = this._gradientArea.width(); this._height = this._gradientArea.height();
-            this.popupContainer.slideUp(200, "easeOutQuad", function () {
+            this.popupContainer.slideUp(200, function () {
                 if (proxy.model) {
                     proxy._tempOpacity = proxy.opacityValue();
                     proxy.rgb.a = proxy._tempOpacity / 100;
@@ -1306,7 +1324,7 @@
             this._off(this._inputTag, "blur", this._colorCodeValue);
             this._modelType == "palette" ? this._off($(document), "keydown", this._keyDown) : this._off($(document), "keydown", this._onKeyDown);
             this._off(ej.getScrollableParents(this.wrapper), "scroll", this.hide);
-            $(window).unbind("resize", $.proxy(this._OnWindowResize, this));
+            $(window).off("resize", $.proxy(this._OnWindowResize, this));
         },
         _hidePopup: function () {
             !this.model.displayInline && this.hide();
@@ -1328,7 +1346,7 @@
             this.popupContainer.children().find('.e-focus').removeClass('e-focus');
             if (!this.model.displayInline) this._setPopupPosition();
             var proxy = this;
-            this.popupContainer.slideDown(200, "easeOutQuad", function () {
+            this.popupContainer.slideDown(200, function () {
                 proxy.isFocused = true;
                 proxy._on($(document), "mousedown", proxy._onDocumentClick);
                 proxy._trigger("open");
@@ -1338,7 +1356,7 @@
             this._on(this._inputTag, "keydown", this._colorCodeValue);
             this._on(this._inputTag, "blur", this._colorCodeValue);
             this._dataBind = true;
-            $(window).bind("resize", $.proxy(this._OnWindowResize, this));
+            $(window).on("resize", $.proxy(this._OnWindowResize, this));
             if (!this.model.displayInline) this._on(ej.getScrollableParents(this.wrapper), "scroll", this.hide);
             if (this._prevSize !== $(window).width()) this.refresh();
         },
@@ -1346,7 +1364,6 @@
             this._modelType == "palette" ? this._on($(document), "keydown", this._keyDown) : this._on($(document), "keydown", this._onKeyDown);
         },
         _hideUnBindEvents: function () {
-            this._off($(document), "keydown");
             this._modelType == "palette" ? this._off($(document), "keydown", this._onKeyDown) : this._off($(document), "keydown", this._keyDown);
         },
         _switchEvents: function () {
@@ -1842,6 +1859,34 @@
         },
     })
 
+    ej.ColorPicker.Locale = ej.ColorPicker.Locale || {};
+
+    ej.ColorPicker.Locale["default"] = ej.ColorPicker.Locale["en-US"] = {
+        buttonText: {
+                apply: "Apply",
+                cancel: "Cancel",
+                swatches: "Swatches"
+            },
+
+            tooltipText: {
+                switcher: "Switcher",
+                addbutton: "Add Color",
+                basic: "Basic",
+                monochrome: "Mono Chrome",
+                flatcolors: "Flat Colors",
+                seawolf: "Sea Wolf",
+                webcolors: "Web Colors",
+                sandy: "Sandy",
+                pinkshades: "Pink Shades",
+                misty: "Misty",
+                citrus: "Citrus",
+                vintage: "Vintage",
+                moonlight: "Moon Light",
+                candycrush: "Candy Crush",
+                currentcolor: "Current Color",
+                selectedcolor: "Selected Color",
+            }
+    }
     ej.ColorPicker.Palette = {
         /**  Represents the basic Palette. This is default Type*/
         BasicPalette: "basicpalette",

@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.core.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -12,12 +12,14 @@
 })
 (function () {
 	
+
 window.ej = window.Syncfusion = window.Syncfusion || {};
+
 
 (function ($, ej, undefined) {
     'use strict';
 
-    ej.version = "14.2.0.26";
+    ej.version = "14.4.0.20";
 
     ej.consts = {
         NamespaceJoin: '-'
@@ -153,8 +155,8 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             var $div = ej.buildTag('div')
             var elementClone = element.clone();
             $div.append(elementClone);
-			if(!printWin)
-				var printWin = window.open('', 'print', "height=452,width=1024,tabbar=no");
+            if (!printWin)
+                var printWin = window.open('', 'print', "height=452,width=1024,tabbar=no");
             printWin.document.write('<!DOCTYPE html>');
             var links = $('head').find('link').add("style");
             if (ej.browserInfo().name === "msie") {
@@ -177,7 +179,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 printWin.document.writeln(a + '</head><body>')
                 printWin.document.writeln($div[0].innerHTML + '</body></html>')
             }
-			printWin.document.close(); 
+            printWin.document.close();
             printWin.focus();
             setTimeout(function () {
                 if (!ej.isNullOrUndefined(printWin.window)) {
@@ -348,12 +350,29 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             else
                 return this._device();
         },
+        //To check whether its portrait or landscape mode
+        isPortrait: function () {
+            var elem = document.documentElement;
+            return (elem) && ((elem.clientWidth / elem.clientHeight) < 1.1);
+        },
+        //To check whether its in lower resolution
+        isLowerResolution: function () {
+            return ((window.innerWidth <= 640 && ej.isPortrait() && ej.isDevice()) || (window.innerWidth <= 800 && !ej.isDevice()) || (window.innerWidth <= 800 && !ej.isPortrait() && ej.isWindows() && ej.isDevice()) || ej.isMobile());
+        },
+        //To check whether its iOS web view
+        isIOSWebView: function () {
+            return (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent));
+        },
+        //To check whether its Android web view
+        isAndroidWebView: function () {
+            return (!(typeof (Android) === "undefined"));
+        },
         //To check whether its windows web view
         isWindowsWebView: function () {
             return location.href.indexOf("x-wmapp") != -1;
         },
         _device: function () {
-            return (/mobile|tablet|android|kindle/i.test(navigator.userAgent.toLowerCase()));
+            return (/Android|BlackBerry|iPhone|iPad|iPod|IEMobile|kindle|windows\sce|palm|smartphone|iemobile|mobile|pad|xoom|sch-i800|playbook/i.test(navigator.userAgent.toLowerCase()));
         },
         //To check whether its Mobile
         isMobile: function () {
@@ -415,6 +434,20 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
         //Removes the added Skew class on the element
         _removeSkewClass: function (element) {
             $(element).removeClass("e-m-skew-top e-m-skew-bottom e-m-skew-left e-m-skew-right e-m-skew-topleft e-m-skew-topright e-m-skew-bottomleft e-m-skew-bottomright e-m-skew-center e-skew-top e-skew-bottom e-skew-left e-skew-right e-skew-topleft e-skew-topright e-skew-bottomleft e-skew-bottomright e-skew-center");
+        },
+        //Object.keys  method to support all the browser including IE8.
+        _getObjectKeys: function (obj) {
+            var i, keys = [];
+            obj = Object.prototype.toString.call(obj) === Object.prototype.toString() ? obj : {};
+            if (!Object.keys) {
+                for (i in obj) {
+                    if (obj.hasOwnProperty(i))
+                        keys.push(i);
+                }
+                return keys;
+            }
+            if (Object.keys)
+                return Object.keys(obj);
         },
         _touchStartPoints: function (evt, object) {
             if (evt) {
@@ -550,7 +583,9 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
         // Get the offset value of element
         getOffset: function (ele) {
-            var pos = ele.offset() || { left: 0, top:0 };
+            var pos = {};
+            var offsetObj = ele.offset() || { left: 0, top: 0 };
+            $.extend(true, pos, offsetObj);
             if ($("body").css("position") != "static") {
                 var bodyPos = $("body").offset();
                 pos.left -= bodyPos.left;
@@ -576,6 +611,22 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 return maxZ;
             }
         },
+
+        isValidAttr: function (element, attribute) {
+            var element = $(element)[0];
+            if (typeof element[attribute] != "undefined")
+                return true;
+            else {
+                var _isValid = false;
+                $.each(element, function (key) {
+                    if (key.toLowerCase() == attribute.toLowerCase()) {
+                        _isValid = true;
+                        return false;
+                    }
+                });
+            }
+            return _isValid;
+        }
 
     };
 
@@ -673,9 +724,10 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 handlerObject = selector;
                 selector = temp;
             }
+            var t = (eventName.match(/\S+/g) || [""]);
             for (var i = 0; i < e.length; i++) {
                 var arg = e[i],
-                r = arg[0].length && (!handlerObject || arg[2] === handlerObject) && arg[1][0] === eventName && (!selector || arg[1][1] === selector) && $.inArray(element[0], arg[0]) > -1;
+                r = arg[0].length && (!handlerObject || arg[2] === handlerObject) && (arg[1][0] === eventName || t[0]) && (!selector || arg[1][1] === selector) && $.inArray(element[0], arg[0]) > -1;
                 if (r) {
                     $.fn.off.apply(element, handlerObject ? [eventName, selector, arg[3]] : [eventName, selector]);
                     e.splice(i, 1);
@@ -703,8 +755,12 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
                     args = ej.event(eventName, this.model, eventProp);
 
+                    var scopeFn = this.model["_applyScope"];
+
                     returnValue = fn.call(this, args);
 
+                    scopeFn && scopeFn.call();
+                        
                     // sending changes back - deep copy option should not be enabled for this $.extend 
                     if (eventProp) $.extend(eventProp, args);
 
@@ -720,7 +776,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
             args = $.Event(eventProp.type, ej.event(eventProp.type, this.model, eventProp));
 
-            this.element.trigger(args);
+            this.element && this.element.trigger(args);
 
             // sending changes back - deep copy option should not be enabled for this $.extend 
             if (isPropDefined) $.extend(eventProp, args);
@@ -772,7 +828,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
             if (this._setFirst) {
                 var ds = options.dataSource;
-                if (ds) delete options.dataSource
+                if (ds) delete options.dataSource;
 
                 $.extend(true, this.model, options);
                 if (ds) {
@@ -788,19 +844,18 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 this._setState(options.enablePersistence);
             }
         },
-
         option: function (prop, value, forceSet) {
             if (!prop)
                 return this.model;
 
             if ($.isPlainObject(prop))
-                return this.setModel(prop);
+                return this.setModel(prop, forceSet);
 
             if (typeof prop === "string") {
                 prop = prop.replace(/^model\./, "");
                 var oldValue = ej.getObject(prop, this.model);
 
-                if (value === undefined)
+                if (value === undefined && !forceSet)
                     return oldValue;
 
                 if (prop === "enablePersistence")
@@ -960,14 +1015,14 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 }
 
                 if (ej.isNullOrUndefined(model) === false)
-                    if(!ej.isNullOrUndefined(model.ignoreOnPersist)) {
+                    if (!ej.isNullOrUndefined(model.ignoreOnPersist)) {
                         this._ignoreOnPersist = model.ignoreOnPersist;
                         delete model.ignoreOnPersist;
-                    } else if(!ej.isNullOrUndefined(model.addToPersist)) {
+                    } else if (!ej.isNullOrUndefined(model.addToPersist)) {
                         this._addToPersist = model.addToPersist;
                         delete model.addToPersist;
                     }
-                }
+            }
             if (!ej.isNullOrUndefined(model) && !ej.isNullOrUndefined(this._ignoreOnPersist)) {
                 for (var i in this._ignoreOnPersist) {
                     if (this._ignoreOnPersist[i].indexOf('.') !== -1)
@@ -975,7 +1030,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                     else
                         model[this._ignoreOnPersist[i]] = this.model[this._ignoreOnPersist[i]];
                 }
-                this.model = model;                
+                this.model = model;
             }
             else
                 this.model = $.extend(true, this.model, model);
@@ -991,7 +1046,7 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 collection = properties;
             else if (typeof (properties) == 'string')
                 collection.push(properties);
-            if(this._addToPersist === undefined) {
+            if (this._addToPersist === undefined) {
                 this._ignoreOnPersist = this._ignoreOnPersist || [];
                 for (var i = 0; i < collection.length; i++) {
                     this._ignoreOnPersist.push(collection[i]);
@@ -1065,10 +1120,10 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             }
         },
     };
-  
+
     ej.WidgetBase = function () {
     }
-   
+
     var iterateAndRemoveProps = function (source, target) {
         for (var prop in source) {
             if (source[prop] === target[prop])
@@ -1221,10 +1276,16 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
                 // ----- plug-in creation/init
                 if (!isAlreadyExists) {
-                    if (proto.prototype._requiresID === true && !this[i].id) {
+                    if (proto.prototype._requiresID === true && !$(this[i]).attr("id")) {
                         $this.attr("id", getUid("ejControl_"));
                     }
                     if (!options || typeof options === "object") {
+                        if (proto.prototype.defaults && !ej.isNullOrUndefined(ej.setCulture) && "locale" in proto.prototype.defaults && pluginName != "ejChart") {
+							 if (options && !("locale" in options)) options.locale = ej.setCulture().name;
+                            else if (ej.isNullOrUndefined(options)) {
+							 options = {}; options.locale = ej.setCulture().name;
+                    }
+						 }
                         new proto($this, options);
                     }
                     else {
@@ -1349,10 +1410,10 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 if (keys === "focus") continue;
 
                 var key = keyFn.getKeyObject(keyConfigs[keys]);
-                for(var i=0; i < key.length; i++){
-					if (keyCode === key[i].code && isCtrl == key[i].isCtrl && isShift == key[i].isShift && isAlt == key[i].isAlt)
-						return keys;
-				}
+                for (var i = 0; i < key.length; i++) {
+                    if (keyCode === key[i].code && isCtrl == key[i].isCtrl && isShift == key[i].isShift && isAlt == key[i].isAlt)
+                        return keys;
+                }
             }
             return null;
         },
@@ -1362,33 +1423,33 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 isShift: false,
                 isAlt: false
             };
-			var tempRes = $.extend(true, {}, res);
-			var $key = key.split(","), $res = [];
-			for(var i=0; i < $key.length; i++){
-				var rslt = null;
-				if($key[i].indexOf("+") != -1){
-					var k = $key[i].split("+");
-					for(var j=0;j< k.length; j++){
-						rslt = keyFn.getResult($.trim(k[j]), res);						
-					}					
-				}
-				else{
-					rslt = keyFn.getResult($.trim($key[i]), $.extend(true, {}, tempRes));										
-				}	
-				$res.push(rslt);				
-			}            
+            var tempRes = $.extend(true, {}, res);
+            var $key = key.split(","), $res = [];
+            for (var i = 0; i < $key.length; i++) {
+                var rslt = null;
+                if ($key[i].indexOf("+") != -1) {
+                    var k = $key[i].split("+");
+                    for (var j = 0; j < k.length; j++) {
+                        rslt = keyFn.getResult($.trim(k[j]), res);
+                    }
+                }
+                else {
+                    rslt = keyFn.getResult($.trim($key[i]), $.extend(true, {}, tempRes));
+                }
+                $res.push(rslt);
+            }
             return $res;
         },
-		getResult: function(key, res){
-			if (key === "ctrl")
+        getResult: function (key, res) {
+            if (key === "ctrl")
                 res.isCtrl = true;
             else if (key === "shift")
                 res.isShift = true;
             else if (key === "alt")
                 res.isAlt = true;
             else res.code = parseInt(key, 10);
-			return res;
-		}
+            return res;
+        }
     };
 
     ej.getScrollableParents = function (element) {
@@ -1455,8 +1516,8 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
         if (!fn || typeof fn !== "function")
             return null;
 
-        if ('bind' in fn && context)
-            return arg ? fn.bind(context, arg) : fn.bind(context);
+        if ('on' in fn && context)
+            return arg ? fn.on(context, arg) : fn.on(context);
 
         return function () {
             var args = arg ? [arg] : []; args.push.apply(args, arguments);
@@ -1496,15 +1557,15 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
     String.prototype.startsWith = String.prototype.startsWith || function (key) {
         return this.slice(0, key.length) === key;
     };
-    var copyObject = ej.copyObject = function (isFirstDefault, target) {
+    var copyObject = ej.copyObject = function (isDeepCopy, target) {
         var start = 2, current, source;
-        if (typeof isFirstDefault !== "boolean") {
+        if (typeof isDeepCopy !== "boolean") {
             start = 1;
         }
         var objects = [].slice.call(arguments, start);
         if (start === 1) {
-            target = isFirstDefault;
-            isFirstDefault = undefined;
+            target = isDeepCopy;
+            isDeepCopy = undefined;
         }
 
         for (var i = 0; i < objects.length; i++) {
@@ -1514,14 +1575,19 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
                 if (source === undefined || current === source || objects[i] === source || target === source)
                     continue;
                 if (source instanceof Array) {
-                    if (i === 0 && isFirstDefault)
-                        target[prop] = source.slice();
+                    if (i === 0 && isDeepCopy) {
+                        target[prop] = new Array();
+                        for (var j = 0; j < source.length; j++) {
+                            copyObject(true, target[prop], source);
+                        }
+                    }
                     else
                         target[prop] = source.slice();
-                } else if (ej.isPlainObject(source)) {
+                }
+                else if (ej.isPlainObject(source)) {
                     target[prop] = current || {};
-                    if (isFirstDefault)
-                        copyObject(isFirstDefault, target[prop], source);
+                    if (isDeepCopy)
+                        copyObject(isDeepCopy, target[prop], source);
                     else
                         copyObject(target[prop], source);
                 } else
@@ -1550,11 +1616,8 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
 
     ej.isPlainObject = function (obj) {
         if (!obj) return false;
-
-        if (typeof obj !== "object" || obj.nodeType || jQuery.isWindow(obj)) {
-            return false;
-        }
-
+        if (ej.DataManager !== undefined && obj instanceof ej.DataManager) return false;
+        if (typeof obj !== "object" || obj.nodeType || jQuery.isWindow(obj)) return false;
         try {
             if (obj.constructor &&
                 !obj.constructor.prototype.hasOwnProperty("isPrototypeOf")) {
@@ -1621,16 +1684,16 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
         }
     };
 
-    ej.getRandomValue = function(min, max) {
+    ej.getRandomValue = function (min, max) {
         if (min === undefined || max === undefined)
             return ej.throwError("Min and Max values are required for generating a random number");
 
         var rand;
-        if ("crypto" in window && "getRandomValues" in crypto){
-			var arr =  new Uint16Array(1);
-			window.crypto.getRandomValues(arr);
-			rand = arr[0] %(max - min) + min;
-		}
+        if ("crypto" in window && "getRandomValues" in crypto) {
+            var arr = new Uint16Array(1);
+            window.crypto.getRandomValues(arr);
+            rand = arr[0] % (max - min) + min;
+        }
         else rand = Math.random() * (max - min) + min;
         return rand | 0;
     }
@@ -1708,8 +1771,13 @@ window.ej = window.Syncfusion = window.Syncfusion || {};
             }
             return true;
         }
-    });    
-
-})();;;
+    });
+    //addBack() is supported from Jquery >1.8 and andSelf() supports later version< 1.8. support for both the method is provided by extending the JQuery function.
+    var oldSelf = $.fn.andSelf || $.fn.addBack;
+    $.fn.andSelf = $.fn.addBack = function () {
+        return oldSelf.apply(this, arguments);
+    };
+})();;
+;
 
 });

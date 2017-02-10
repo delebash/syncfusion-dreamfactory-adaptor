@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.dialog.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -12,6 +12,7 @@
 })
 (function () {
 	
+
 /**
 * @fileOverview Plugin to style the Dialog control
 * @copyright Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
@@ -28,7 +29,7 @@
         _rootCSS: "e-dialog",
 
         element: null,
-        _ignoreOnPersist: ["drag", "dragStart", "dragStop", "resizeStop", "resizeStart", "resize", "beforeClose", "beforeOpen", "collapse", "expand", "close", "open", "destroy", "create", "ajaxSuccess", "ajaxError", "contentLoad", "actionButtonClick"],
+        _ignoreOnPersist: ["drag", "dragStart", "dragStop", "resizeStop", "resizeStart", "resize", "beforeClose", "beforeOpen", "collapse", "expand", "close", "open", "destroy", "create", "ajaxSuccess", "ajaxError", "contentLoad", "actionButtonClick", "enableResize"],
 
         model: null,
         validTags: ["div", "span"],
@@ -216,7 +217,6 @@
             htmlAttributes: "data",
             ajaxSettings: "data",
             actionButtons: "array",
-            actionButtonClick: "string",
 			footerTemplateId: "string"
         },
 
@@ -302,11 +302,11 @@
                             this._iconsRender(this.model.actionButtons);
                             if (this.model.faviconCSS) { this._dialogFavIcon = false; this._favIcon(); }
                             this._enableDrag();
-                            this._updateScroller(this._ejDialog.outerHeight(true) - (this._dialogTitlebar.outerHeight(true)), this._ejDialog.width() - 2);
+                            if(!this._maximize) this._updateScroller(this._ejDialog.outerHeight(true) - (this._dialogTitlebar.outerHeight(true)), this._ejDialog.width() - 2);
                         }
                         else {
                             this._ejDialog.find(".e-titlebar").remove();
-                            this._updateScroller(this._ejDialog.outerHeight(true), this._ejDialog.width() - 2);
+                           this._maximize ? this.refresh() : this._updateScroller(this._ejDialog.outerHeight(true), this._ejDialog.width() - 2);
                         }
                         this._roundedCorner(this.model.showRoundedCorner);
                         if (this.model.showFooter) this._setContainerSize()._resetScroller();
@@ -320,9 +320,9 @@
                         }
                         else 
                             this._ejDialog.find(".e-footerbar").remove();
-                        this._setContainerSize()._resetScroller();
-                        this._enableResize()._enableDrag()._setSize()._sizeInPercent();
+                        this._enableResize()._enableDrag()._sizeInPercent();
                         this._reRenderScroller();
+                        this._setContainerSize()._resetScroller();
                         this._roundedCorner(this.model.showRoundedCorner);
                         break;
                     }
@@ -385,6 +385,7 @@
         keyConfigs: [37, 38, 39, 40],
 
         _init: function () {
+			 this._init=true;
             this._widthPercent = null;
             this._heightPercent = null;
             this._windowSize = { outerWidth: $(window).outerWidth(), outerHeight: $(window).outerHeight() };
@@ -402,6 +403,7 @@
             scrObj= this._ejDialog.closest(".e-dialog.e-js").data("ejDialog")
             if(scrObj) scrObj._resetScroller(); 
 			this.hidden=false;			
+            this._init=false;			
         },
 		
 		_responsive: function () {
@@ -410,7 +412,7 @@
 
             this.height = this.model.height;
             $(this.element).height(this.height);
-            $(window).bind("resize", $.proxy(this._resizeHandler, this));
+            $(window).on("resize", $.proxy(this._resizeHandler, this));
         },
         
         _resizeHandler: function () {
@@ -423,8 +425,8 @@
                 this._ejDialog.css({ height: this.height });
                 this.contentDiv.height(this._ejDialog.height() - $(this._dialogTitlebar).outerHeight() - $(this._dialogFooterbar).outerHeight());
                 this.element.height(this.contentDiv.height());
-                this._resetScroller();
             }
+			if(!ej.isNullOrUndefined(this.element)) this._resetScroller();
         },
        
         _setLocaleCulture:function(localizedLabels){
@@ -482,7 +484,7 @@
         _renderControl: function () {
             this._cloneElement = this.element.clone();
             this.element.attr("tabindex", 0).attr({ "role": "dialog", "aria-labelledby": this.element.prop("id") + "_title" });
-            this._ejDialog = ej.buildTag("div.e-dialog e-widget e-box " + this.model.cssClass + " e-dialog-wrap e-shadow#" + this.element.prop("id") + "_wrapper", "", { display: "none", zIndex: this.model.zIndex }, { tabindex: 0 });
+            this._ejDialog = ej.buildTag("div.e-dialog e-widget e-box " + this.model.cssClass + " e-dialog-wrap e-shadow#" + (this.element.prop("id") == "" ? "" : this.element.prop("id") + "_wrapper"), "", { display: "none", zIndex: this.model.zIndex }, { tabindex: 0 });
             if(this.model.isResponsive) this._ejDialog.addClass("e-dialog-resize");
             this.wrapper = this._ejDialog;
             this._addAttr(this.model.htmlAttributes);
@@ -515,7 +517,7 @@
 
         _setContainerSize: function () {
             if (this.model.height != "auto") {
-                var cntHeight = this._ejDialog.outerHeight + $(this._ejDialog.find("div.e-footerbar")).outerHeight() - $(this._ejDialog.find("div.e-titlebar")).outerHeight() - 1;
+                var cntHeight = this._ejDialog.outerHeight() - ((this.model.showHeader)? $(this._ejDialog.find("div.e-titlebar")).outerHeight(true) : 0)  + ((this.model.showFooter)? $(this._ejDialog.find("div.e-footerbar")).outerHeight(true) : 0) - 1;
                 this.contentDiv.height(cntHeight);
                 this.element.outerHeight(cntHeight);
             }
@@ -602,7 +604,7 @@
         },
         _iconsRender: function (iconArray) {
             for (var icon = 0; icon < iconArray.length; icon++) {
-                switch (iconArray[icon]) {
+                switch ((ej.browserInfo().name == "msie" && ej.browserInfo().version <= 8) ? $.trim(iconArray[icon]) : iconArray[icon].trim()) {
                     case "close": {
                         this._closeIcon();
                         break;
@@ -671,7 +673,7 @@
                         this.iframe.attr('src', this.model.contentUrl);
                     }
                     else {
-                        this.iframe = ej.buildTag("iframe.e-iframe", "", { width: "100%", height:"100%" }, { scrolling: "no", frameborder: 0, src: this.model.contentUrl });
+                        this.iframe = ej.buildTag("iframe.e-iframe", "", { width: "100%", height:"100%" }, { scrolling: "auto", frameborder: 0, src: this.model.contentUrl });
                         this.element.appendTo(this.contentDiv).append(this.iframe).show();
                     }
                     if (this.model.enableRTL) {
@@ -684,7 +686,7 @@
                 else if (contentType == "image") {
                     var img = ej.buildTag("img.e-images", "", "", { src: this.model.contentUrl });
                     this.element.append(img).show().appendTo(this.contentDiv);
-                    $(img).load(function () {
+                    $(img).on("load", function () {
                         proxy._dialogPosition();
                     });
                     this._trigger("contentLoad", { contentType: contentType, url: this.model.contentUrl });
@@ -692,9 +694,30 @@
                 else
                     this.element.show().appendTo(this.contentDiv);
             }
-            else 
-                this.element.show().appendTo(this.contentDiv);
-            this._ejDialog.find("div.e-resize-handle").length > 0 ? this.contentDiv.insertBefore(this._ejDialog.find("div.e-resize-handle")) : this.contentDiv.appendTo(this._ejDialog);
+            else {
+				this.dialogIframeContent = this.element.children().find('iframe').contents()[0];
+				if (!ej.isNullOrUndefined(this.dialogIframeContent)) {
+				   this.element.show().appendTo(this.contentDiv).find('iframe').append(this.dialogIframeContent.lastChild);
+				}
+				else
+					this.element.show().appendTo(this.contentDiv);
+			}
+            if (this._ejDialog.find("div.e-resize-handle").length > 0) {
+				this.contentDiv.insertBefore(this._ejDialog.find("div.e-resize-handle"));
+			}
+			else {
+				var dialogIframeContent = this.element.children().find('iframe').contents()[0];
+				if (!ej.isNullOrUndefined(dialogIframeContent)) {
+                    this.contentDiv.appendTo(this._ejDialog);
+					var getid = $("#"+this.contentDiv.find('iframe').attr('id'));
+					setTimeout(function () {
+						$(getid[0].contentDocument.lastChild).remove();
+				        getid[0].contentDocument.appendChild(dialogIframeContent);
+                    },500);
+				}
+				else 
+					this.contentDiv.appendTo(this._ejDialog);
+			}
             if (this.model.showFooter) {
                 this._renderFooterBar();
                 if (this.model.footerTemplateId != null) {
@@ -721,7 +744,7 @@
                             var height = this.scroller._vScrollbar.element.find('> div.e-vscroll').height(), padngSpace = 0, resizeHandleSize = 0;
                         else
                             var height = this.scroller._vScrollbar.element.find('> div.e-vscroll').height(), padngSpace = 2, resizeHandleSize = this._ejDialog.find('div.e-resize-handle').outerHeight();
-	                    if (this.contentDiv.outerHeight() === (this.scroller._vScrollbar.model.height + 1)) {
+	                    if (Math.floor(this.contentDiv.outerHeight()) === Math.floor(this.scroller._vScrollbar.model.height + 1)) {
                             this.scroller._vScrollbar.model.height -= resizeHandleSize + padngSpace;
                             this.scroller._vScrollbar._scrollData.handle -= resizeHandleSize;
                             this.scroller._vScrollbar._scrollData.handleSpace -= resizeHandleSize + padngSpace;
@@ -943,9 +966,9 @@
         },
 
         _resetScroller: function () {		
-            var scrHeight = this._ejDialog.outerHeight(true) - $(this._ejDialog.find("div.e-titlebar")).outerHeight(true) - $(this._ejDialog.find("div.e-footerbar")).outerHeight(true), eleHeight;
+			this.element.css({ "height": "auto", "max-width": "", "max-height": "", "width": "" });
+            var scrHeight = this._ejDialog.outerHeight(true) - ((this.model.showHeader)? $(this._ejDialog.find("div.e-titlebar")).outerHeight(true) : 0)-((this.model.showFooter)? $(this._ejDialog.find("div.e-footerbar")).outerHeight(true) : 0), eleHeight;
             var scrModel = { width: this._ejDialog.width() - 2, enableRTL: this.model.enableRTL, height: scrHeight, enableTouchScroll: false }; // 2px border width
-            this.element.css({ "height": "auto", "max-width": "", "max-height": "", "width": "" });
             if ((this.model.height == "auto") && (this.element.height() < this.model.maxHeight || !this.model.maxHeight) && !this._maximize)
                 scrModel.height = "auto";
             if (this.model.width == "auto" && !this._maximize)
@@ -972,7 +995,7 @@
                 else
                     this.element.css("height", this.model.height);
                 if ((this.model.height == "auto" || this.model.height == "100%") && !this.scroller._vScrollbar)
-                    this.element.css({ "min-height": this.model.minHeight - $(this._ejDialog.find("div.e-titlebar")).outerHeight(true)});
+                    this.element.css({ "min-height": this.model.minHeight -((this.model.showHeader)? $(this._ejDialog.find("div.e-titlebar")).outerHeight(true) : 0)});
                 if (!this.scroller._vScrollbar && (this.model.width != "auto" && this.model.width != "100%"))
                     this.element.outerWidth(this._ejDialog.width() - 2);
                 else if (!this.scroller._vScrollbar)
@@ -1207,16 +1230,23 @@
 			this._resetScroller();
         },
         _actionMaximize: function () {
-            this._ejDialog.css("top", "0px").css("left", "0px").css("position", (this.model.containment ? "absolute" : this.model.target ? "absolute" : "fixed"));
+            this._ejDialog.css("top", "0px").css("left", "0px").css("overflow", "hidden").css("position", (this.model.containment ? "absolute" : this.model.target ? "absolute" : "fixed"));
             this._ejDialog.css({ width: "100%", height: "100%" });
             this.element.css({ width: "100%", height: "100%" });
             this.contentDiv.css({ width: "100%", height: "100%" });
             this._maximize = true;
             this._minimize = false;
+            var proxy=this;
             if (this._dialogCollapsible && !ej.isNullOrUndefined(this._dialogCollapsible.hasClass("e-arrowhead-down"))) {
                 this._dialogCollapsible.removeClass("e-arrowhead-down").addClass("e-arrowhead-up");
                 this._dialogCollapsible.attr('title', this.model.tooltip.collapse);
-                this._ejDialog.find(".e-widget-content").parent().slideDown("fast");
+                this._collapseValue = true
+            }
+            if(this._collapseValue == true) {
+                this._ejDialog.find(".e-widget-content").parent().slideDown("fast",function(){
+					proxy.refresh();
+                    proxy._reRenderScroller();
+                });
             }
             this._resetScroller();
         },
@@ -1321,10 +1351,11 @@
         },
 
         _mouseClick: function (e) {
-            if ($(e.target).hasClass("e-dialog") || $(e.target).hasClass("e-icon e-resize-handle")) {
-                this._setZindex();
-                $(e.target).closest(".e-dialog.e-widget").focus();
-            }
+			if(e.currentTarget==this._id)
+				if ($(e.target).hasClass("e-dialog") || $(e.target).hasClass("e-icon e-resize-handle")) {
+					this._setZindex();
+					$(e.target).closest(".e-dialog.e-widget").focus();
+				}
         },
 
         _keyDown: function (e) {
@@ -1380,10 +1411,16 @@
                     ctrlKey ? this._resizing("width", (this._ejDialog.outerWidth() + 3)) : this.option("position", { X: (this._ejDialog.position().left + 3), Y: this._ejDialog.position().top });
                     break;
                 case 38:
-                    ctrlKey ? this._resizing("height", (this._ejDialog.outerHeight() - 3)) : this.option("position", { X: this._ejDialog.position().left, Y: (this._ejDialog.position().top - 3) });
+                    ctrlKey ? this._resizing("height", (this._ejDialog.outerHeight() - 3)) : this.option("position", { 
+						X: (this._ejDialog.position().left == 0 ? 0 : this._ejDialog.position().left),
+						Y: (this._ejDialog.position().top > 3 ? this._ejDialog.position().top - 3 : 0) 
+					});
                     break;
                 case 37:
-                    ctrlKey ? this._resizing("width", (this._ejDialog.outerWidth() - 3)) : this.option("position", { X: (this._ejDialog.position().left - 3), Y: this._ejDialog.position().top });
+                    ctrlKey ? this._resizing("width", (this._ejDialog.outerWidth() - 3)) : this.option("position", { 
+						X: (this._ejDialog.position().left > 3 ? this._ejDialog.position().left - 3 : 0), 
+						Y: (this._ejDialog.position().top == 0 ? 0 : this._ejDialog.position().top)
+					});
                     break;
             }
         },
@@ -1488,8 +1525,8 @@
         _resizeContainer: function (parentObj) {
             this.contentDiv.width(this._ejDialog.width());
             this.element.outerWidth(this.contentDiv.width());
-            this.contentDiv.height(this._ejDialog.height() - $(this._ejDialog.find("div.e-titlebar")).outerHeight() -1 );
-            this.element.outerHeight(this._ejDialog.height() - $(this._ejDialog.find("div.e-titlebar")).outerHeight() -1 );
+            this.contentDiv.height(this._ejDialog.height() - ((this.model.showHeader)? $(this._ejDialog.find("div.e-titlebar")).outerHeight(true) : 0) -1 );
+            this.element.outerHeight(this._ejDialog.height() - ((this.model.showHeader)? $(this._ejDialog.find("div.e-titlebar")).outerHeight(true) : 0) -1 );
             this.scroller = this.contentDiv.ejScroller({ width: this._ejDialog.width() - 2, height: this.element.outerHeight(), rtl: this.model.rtl, enableTouchScroll: false });
             this.scroller = this.contentDiv.data("ejScroller");
             this._reRenderScroller();
@@ -1507,7 +1544,7 @@
         },
 
         _wireResizing: function () {             
-            $(window)[(this._enableWindowResize() ? "bind" : "unbind")]('resize', $.proxy(this._reSizeHandler, this));                        
+            $(window)[(this._enableWindowResize() ? "on" : "off")]('resize', $.proxy(this._reSizeHandler, this));                        
         },
 
         _wireEvents: function () {
@@ -1525,7 +1562,7 @@
             if (true == this._trigger("beforeOpen")) return false;
             this.element.css("display", "block");
             this._setZindex();
-            if (!this._minimize && !this._maximize) this._dialogPosition();
+            if (!this._minimize && !this._maximize && !this._init) this._dialogPosition();
             var proxy = this, effect = {}, height;
             this._ejDialog.show();
             if (this.model.enableAnimation) {
@@ -1541,6 +1578,7 @@
             }
             this._ejDialog.animate(effect, (this.model.enableAnimation ? Number(this.model.animation.show.duration) : 0), function () {
                 if (proxy.model) {
+					  if (proxy._ejDialog.css("display") == "none") proxy._ejDialog.show();
                     proxy._ejDialog.eq(0).focus();
                     proxy._ejDialog.css({ "opacity": "" });
                     proxy.contentDiv.find("a:visible:enabled, button:visible:enabled, :input:visible:enabled, select:visible:enabled, .e-input").first().focus();
@@ -1606,12 +1644,15 @@
         },
 
         minimize: function () {
+			if(this.model.showHeader){
             this._actionMinimize();
             $(this.wrapper.find(".e-minus")[0]).parent().hide();
             return this;
+			}
         },
 
         maximize: function () {
+			if(this.model.showHeader){
             this._actionMaximize();
             $(this.wrapper.find(".e-maximize")[0]).removeClass("e-maximize").addClass("e-restore");
             $(this.wrapper.find(".e-restore")[1]).removeClass("e-restore").addClass("e-minus");
@@ -1620,45 +1661,57 @@
             this._dialogTitlebar && this._dialogTitlebar.find(".e-minus").parent().show();
             this._hideIcon(true);
             return this;
+			}
         },
 
         restore: function () {
+			if(this.model.showHeader){
             var action = this._minimize;
             this._actionRestore();
             $(this.wrapper.find(".e-restore")[0]).removeClass("e-restore").addClass(action ? "e-minus" : "e-maximize");
             this._dialogMaximize && this._dialogMaximize.attr('title', this.model.tooltip.maximize);
             this._hideIcon(true);
             return this;
+			}
         },
 
         pin: function () {
+			if(this.model.showHeader){
             this.dialogPin = true;
             $(this.wrapper.find(".e-unpin")[0]).removeClass("e-unpin").addClass("e-pin");
             this._dialogPin && this._dialogPin.attr('title', this.model.tooltip.unPin);
             return this;
+			}
         },
 
         unpin: function () {
-            this.dialogPin = false;
+            if(this.model.showHeader){
+			this.dialogPin = false;
             $(this.wrapper.find(".e-pin")[0]).removeClass("e-pin").addClass("e-unpin");
             this._dialogPin && this._dialogPin.attr('title', this.model.tooltip.pin);
             return this;
+			}
         },
 
         collapse: function () {
+			if(this.model.showHeader){
             this._actionCollapse();
+            this._collapseValue=true;
             return this;
+			}
         },
 
         expand: function () {
+			if(this.model.showHeader){
             this._actionExpand();
             return this;
+			}
         }
     });
     
 ej.Dialog.Locale = ej.Dialog.Locale || {} ;
     
-ej.Dialog.Locale["en-US"] = {
+ej.Dialog.Locale["default"] = ej.Dialog.Locale["en-US"] = {
     tooltip:{
                 close: "Close",
                 collapse: "Collapse",

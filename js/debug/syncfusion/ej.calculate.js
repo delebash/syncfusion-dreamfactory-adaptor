@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.calculate.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -60,6 +60,7 @@
         this._uniqueStringMarker = String.fromCharCode(127);
         this._isParseArgumentSeparator = false;
         this._isParseDecimalSeparatorChanged = false;
+        this._enableFormulaErrorValidation = false;
         this._validPrecedingChars = " (+-*/^&<>=";
         this._validFunctionNameChars = "_";
         this.bMARKER = String.fromCharCode(146);
@@ -782,6 +783,7 @@
                     var cells = this.getCellsFromArgs(ranges[r]);
                     for (var s = 0; s < cells.length; s++) {
                         s1 = this.getValueFromArg(cells[s]);
+                        s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
 
                         if (s1.length > 0) {
                             d = this._parseDouble(s1);
@@ -794,6 +796,7 @@
                     }
                 } else {
                     s1 = this.getValueFromArg(ranges[r]);
+                    s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                     d = this._parseDouble(s1);
                     if (!isNaN(Number(d))) {
                         x.push(d);
@@ -823,8 +826,8 @@
                         s1 = this.getValueFromArg(cells[s]);
 
                         if (s1.length > 0) {
-                            if (s1 == this.trueValueStr || s1== this.falseValueStr) {
-                                d = 0.0;
+                            if (s1 == this.trueValueStr){
+                                d = 1.0;
                             } else {
                                 d = this._parseDouble(s1);
                                 if (isNaN(Number(d))) {
@@ -836,12 +839,12 @@
                     }
                 } else {
                     s1 = this.getValueFromArg(ranges[r]);
-                    if (s1 == this.trueValueStr || s1 == this.falseValueStr) {
-                        d = 0.0;
+                    if (s1 == this.trueValueStr){
+                        d = 1.0;
                     } else {
                         d = this._parseDouble(s1.toString());
                         if (isNaN(d)) {
-                            d == 0.0;
+                            d = 0.0;
                         }
                     }
                     x.push(d);
@@ -862,9 +865,9 @@
             if (formula != null)
                 formulaText = formula.getFormulaText();
             else if (this.parentObject.getValueRowCol == undefined)
-                formulaText = this.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex, currentColIndex).toString();
+                formulaText = this.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex, currentColIndex);
             else
-                formulaText = this.parentObject.getValueRowCol(this.getSheetID(this.grid)+1, currentRowIndex, currentColIndex).toString();
+                formulaText = this.parentObject.getValueRowCol(this.getSheetID(this.grid)+1, currentRowIndex, currentColIndex);
             var startRowIndex = 1, startColIndex = 1;
             for (var x = 1; x <= arrayHeight; x++) {
                 if ((currentColIndex - x) > 0) {
@@ -874,9 +877,9 @@
                     if (formula1 != null)
                         tempFormulaText = formula1.getFormulaText();
                     else if (this.parentObject.getValueRowCol == undefined)
-                        tempFormulaText = this.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex, currentColIndex - x).toString();
+                        tempFormulaText = this.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex, currentColIndex - x);
                     else
-                        tempFormulaText = this.parentObject.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex, currentColIndex - x).toString();
+                        tempFormulaText = this.parentObject.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex, currentColIndex - x);
                     startColIndex = currentColIndex - x;
                     if (formulaText != null && tempFormulaText != formulaText) {
                         startColIndex++;
@@ -892,9 +895,9 @@
                     if (formula1 != null)
                         tempFormulaText = formula1.getFormulaText();
                     else if (this.parentObject.getValueRowCol == undefined)
-                        tempFormulaText = this.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex - y, startColIndex).toString();
+                        tempFormulaText = this.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex - y, startColIndex);
                     else
-                        tempFormulaText = this.parentObject.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex - y, startColIndex).toString();
+                        tempFormulaText = this.parentObject.getValueRowCol(this.getSheetID(this.grid) + 1, currentRowIndex - y, startColIndex);
                     startRowIndex = currentRowIndex - y;
                     if (formulaText != null && tempFormulaText != formulaText) {
                         startRowIndex++;
@@ -908,7 +911,208 @@
             this._getFormulaArrayBoundslastRowIndex = startRowIndex + arrayHeight;
             this._getFormulaArrayBoundslastColIndex = startColIndex + arrayWidth;
             return true;
-        };
+		};
+
+		var FormulaArgumentType = {
+		    None: {},
+		    Range: {},
+		    CellReference: {},
+		    TwoTextWithNumber: {},
+		    TextWithNumber: {},
+		    Numbers: {},
+		    Text: {},
+		    Date: {},
+		};
+
+		this.formulaErrorStringCheck = function (args, argumentType) {
+		    var arguments = this.splitArgsPreservingQuotedCommas(args);
+		    switch (argumentType) {
+		        case FormulaArgumentType.None: {
+		            if (args != "") {
+		                if (this.getRethrowLibraryComputationExceptions())
+		                    throw this.getLibraryComputationException();
+		                return this.formulaErrorStrings[this._invalid_arguments];
+		            }
+		            break;
+		        }
+
+		        case FormulaArgumentType.Range: {
+		            var s2 = "";
+		            var argumentsArray = arguments;
+		            if (argumentsArray != null) {
+		                for (var i = 0; i < argumentsArray.length; i++) {
+		                    var argument = argumentsArray[i];
+		                    if (argument.indexOf(':') > -1) {
+		                        if (argument[0] == this.tic) {
+		                            if (this.getRethrowLibraryComputationExceptions())
+		                                throw this.getLibraryComputationException();
+		                            return this._errorStrings[1].toString();
+		                        }
+		                        var cellValues = this.getCellsFromArgs(argument);
+		                        for (var j = 0; j < cellValues.length; j++) {
+		                            try {
+		                                s2 = this.getValueFromArg(j);
+		                            }
+		                            catch (ex) {
+		                            }
+		                            if (s2.length > 0) {
+		                                if (this.getErrorStrings().indexOf(s2) > -1) {
+		                                    if (this.getRethrowLibraryComputationExceptions())
+		                                        throw this.getLibraryComputationException();
+		                                    return s2;
+		                                }
+		                            }
+		                        }
+
+		                    }
+		                    else {
+		                        try {
+		                            s2 = this.getValueFromArg(argument);
+		                        }
+		                        catch (ex) {
+		                        }
+		                        if (s2.length > 0) {
+		                            var checkString = this.formulaErrorStringCheck(s2, FormulaArgumentType.Numbers);
+		                            if (this.getErrorStrings().indexOf(checkString) > -1) {
+		                                return checkString;
+		                            }
+		                        }
+		                    }
+
+		                }
+		            }
+		            break;
+		        }
+
+		        case FormulaArgumentType.CellReference: {
+		            var argumentsArray = arguments;
+		            if (argumentsArray != null) {
+		                for (var i = 0; i < argumentsArray.length; i++) {
+		                    var argument = argumentsArray[i];
+		                    if (!this._isCellReference(argument) && argument[0] == this.tic) {
+		                        return this.getErrorStrings()[1].toString();
+		                    }
+		                    else if (!this._isCellReference(argument)) {
+		                        return this.getErrorStrings()[5].toString();
+		                    }
+		                }
+		            }
+		            break;
+		        }
+
+		        case FormulaArgumentType.TwoTextWithNumber: {
+		            var argument1 = this.formulaErrorStringCheck(arguments[0], FormulaArgumentType.Text);
+		            if (this.getErrorStrings().indexOf(argument1) > -1) {
+		                return argument1;
+		            }
+		            var argument2 = this.formulaErrorStringCheck(arguments[1], FormulaArgumentType.Text);
+		            if (this.getErrorStrings().indexOf(argument2) > -1) {
+		                return argument2;
+		            }
+		            //Third argument is not mandatory. So argument length is checked to avoid Index out of range exception
+		            if (arguments.length == 3) {
+		                var argument3 = this.formulaErrorStringCheck(arguments[2], FormulaArgumentType.Text);
+		                if (this.getErrorStrings().indexOf(argument3) > -1) {
+		                    return argument3;
+		                }
+		            }
+		            break;
+		        }
+
+		        case FormulaArgumentType.TextWithNumber: {
+		            var d1 = 0; d2 = 0;
+		            var s = this.getValueFromArg(arguments[0].split(this.tic).join(""));
+		            var trueFalseString1 = Boolean(s);
+		            var trueFalseString2 = (arguments.length == 2 && isNaN(typeof this.getValueFromArg(arguments[1]) == "boolean"));
+		            var d1 = isNaN(this._parseDouble(arguments[0].split(this.tic).join("")));
+		            if (d1) {
+		                var argumentValue = this.getValueFromArg(arguments[0]);
+		                if (this.getErrorStrings().indexOf(argumentValue) > -1) {
+		                    if (this.getRethrowLibraryComputationExceptions())
+		                        throw this.getLibraryComputationException();
+		                    return argumentValue;
+		                }
+		            }
+		            var d2 = isNaN(this._parseDouble(arguments[1].split(this.tic).join("")));
+		            if ((arguments.length == 2) && d2) {
+		                var checkString = this.formulaErrorStringCheck(arguments[1], FormulaArgumentType.Numbers);
+		                if (this.getErrorStrings().indexOf(checkString) > -1) {
+		                    return checkString;
+		                }
+		            }
+		            break;
+		        }
+
+		        case FormulaArgumentType.Text: {
+		            var d1;
+		            var argumentArray = arguments;
+		            for (var i = 0; i < argumentArray.length; i++) {
+		                var s = this.getValueFromArg(argumentArray[i].split(this.tic).join(""));
+		                var trueFalseString1 = Boolean(s);
+		                var d1 = isNaN(this._parseDouble(argumentArray[i].split(this.tic).join("")));
+		                if (d1) {
+		                    var argumentValue = this.getValueFromArg(argumentArray[i]);
+		                    if (this.getErrorStrings().indexOf(argumentValue) > -1) {
+		                        if (this.getRethrowLibraryComputationExceptions())
+		                            throw this.getLibraryComputationException();
+		                        return argumentValue;
+		                    }
+		                }
+		            }
+		            break;
+		        }
+
+		        case FormulaArgumentType.Numbers: {
+		            var d1;
+		            var numberArrays = arguments;
+		            for (var i = 0; i < numberArrays.length; i++) {
+		                var flag;
+		                var s = this.getValueFromArg(numberArrays[i].split(this.tic).join(""));
+		                var trueFalseString1 = Boolean(s);
+		                var d1 = this._parseDouble(numberArrays[i].split(this.tic).join(""));
+		                if (isNaN(d1)) {
+		                    var argumentValue = this.getValueFromArg(numberArrays[i]);
+		                    if (this.getErrorStrings().indexOf(argumentValue) > -1) {
+		                        if (this.getRethrowLibraryComputationExceptions())
+		                            throw this.getLibraryComputationException();
+		                        return argumentValue;
+		                    }
+		                    if (!trueFalseString1 && (isNaN(this._parseDouble(argumentValue)) && argumentValue != "") || (numberArrays[i].includes(":") && this._isCellReference(numberArrays[i])) || argumentValue.startsWith(this.tic)) {
+		                        if (this.getRethrowLibraryComputationExceptions())
+		                            throw this.getLibraryComputationException();
+		                        return this._errorStrings[1].toString();
+		                    }
+		                }
+		            }
+		            break;
+
+		        }
+
+		        case FormulaArgumentType.Date: {
+		            var tempDate;
+		            var number = 0;
+		            var argumentArray = arguments;
+		            for (var i = 0; i < argumentArray.length; i++) {
+		                var s = this.getValueFromArg(argumentArray[i].split(this.tic).join(""));
+		                var trueFalseString = Boolean(s);
+		                var argumentValue = this.getValueFromArg(argumentArray[i]);
+		                if (this.getErrorStrings().indexOf(argumentValue) > -1) {
+		                    if (this.getRethrowLibraryComputationExceptions())
+		                        throw this.getLibraryComputationException();
+		                    return argumentValue;
+		                }
+		                if (!trueFalseString && isNaN(Date.parse(this._stripTics0(argumentValue))) && isNaN(this._parseDouble(this._stripTics0(argumentValue))) && argumentValue != "") {
+		                    if (this.getRethrowLibraryComputationExceptions())
+		                        throw this.getLibraryComputationException();
+		                    return this._errorStrings[1].toString();
+		                }
+		            }
+		        }
+
+		    }
+            return args;
+		}
+		
         /**
          * 
 		 * @private
@@ -995,7 +1199,7 @@
             else
                 o = this.parentObject.getValueRowCol(this.getSheetID(grd) + 1, row, col);
 
-            var val = (o != null && !(o.Length === 0)) ? o.toString() : "";
+            var val = (o != null && !(o.Length === 0)) ? o : "";
 
             if (val[val.length - 1] == ("}") && val[0] == ("{")) {
                 val = this._substring(val, 1, val.length - 2);
@@ -1058,9 +1262,6 @@
                         formula.setFormulaValue(val);
                         formula.calcID = this._calcID;
                     }
-                }
-                if (this.getTreatStringsAsZero() && val == "") {
-                    return "0";
                 }
             }
 
@@ -1242,6 +1443,11 @@
             this._addFunction("DEC2OCT", "computeDec2Oct");
             this._addFunction("HEX2BIN", "computeHex2Bin");
             this._addFunction("HEX2OCT", "computeHex2Oct");
+            this._addFunction("BITAND", "computeBitAnd");
+            this._addFunction("BITOR", "computeBitOr");
+            this._addFunction("BITLSHIFT", "computeBitLShift");
+            this._addFunction("BITRSHIFT", "computeBitRShift");
+            this._addFunction("BITXOR", "computeBitXor");
 
             // DATE and TIME
             this._addFunction("DATE", "computeDate");
@@ -1295,6 +1501,7 @@
             this._addFunction("PERMUTATIONA", "computePermutationA");
             this._addFunction("STANDARDIZE", "computeStandardize");
             this._addFunction("BINOM.DIST", "computeBinomOdist");
+            this._addFunction("BINOM.INV", "computeBinomOInv");
             this._addFunction("CHISQ.INV.RT", "computeChisqOinvOrt");
             this._addFunction("CHISQ.INV", "computeChisqOinv");
             this._addFunction("CHISQ.DIST.RT", "computeChisqOdistOrt");
@@ -1347,6 +1554,7 @@
             this._addFunction("TRIMMEAN", "computeTrimmean");
             this._addFunction("RSQ", "computeRsq");
             this._addFunction("PEARSON", "computePearson");
+            this._addFunction("CHIDIST","computeChidist");
             //60 statics function
             
 
@@ -1392,6 +1600,7 @@
             this._addFunction("TRUNC", "computeTrunc");
             this._addFunction("TAN", "computeTan");
             this._addFunction("LOG10", "computeLogTen");
+            this._addFunction("COTH", "computeCoth");
 
             //Logic Function
 
@@ -1429,8 +1638,11 @@
             this._addFunction("TYPE", "computeType");
             this._addFunction("ROW", "computeRow");
             this._addFunction("ROWS", "computeRows");
+            this._addFunction("MATCH", "computeMatch");
 
-        };
+		    //Financial Function
+            this._addFunction("PMT", "computePmt");
+		};
         /**
          * 
 		 * @private
@@ -2151,10 +2363,10 @@
             var dist = 1;
             var dist1 = 1;
             do {
-                half = half / 2 + 1;
+                half = Math.floor(half / 2) + 1;
                 if (dist >= alpha) {
                     dist1 = this._binomdist(nTrials, checkval - 1, p);
-                    if (!isNaN(dist1)) {
+                    if (isNaN(dist1)) {
                         return this.maxValue;
                     }
 
@@ -2707,12 +2919,18 @@
 		 * @private
         */
 		this._isDate = function (dateString) {
-            var date = new Date(Date.parse(dateString));
-            if (date >= this._dateTime1900) {
-                return date;
-            } else
-                return "NaN";
-        };
+		    //JS-32710 - To parse the date object properly.
+		    if (typeof dateString == "object" || ej.parseDate(dateString) != null) {
+		        var date = new Date(Date.parse(dateString));
+		        if (date >= this._dateTime1900) {
+		            return date;
+		        } else
+		            return "NaN";
+		    }
+		    else {
+		        return "NaN";
+		    }
+		};
         /**
          * 
 		 * @private
@@ -3452,7 +3670,7 @@
 		 * @private
         */
 		this._parseDouble = function (value) {
-            return !isNaN(parseInt(value)) ? Number(value.replace(/[^0-9\.]-+/g,"")) * 1 : NaN;
+            return !isNaN(parseInt(value)) ? Number(value.toString().replace(/[^0-9\.]-+/g,"")) * 1 : NaN;
         };
         /**
          * 
@@ -3996,7 +4214,7 @@
                             }
                         } else {
                             ////if(!checkLetter && char.IsUpper(text, k))
-                            if (!checkLetter && this._isLetter(text, k)) {
+                            if (!checkLetter && this._isLetter(text[k])) {
                                 ok = false;
                                 break;
                             }
@@ -5003,10 +5221,11 @@
                                 {
                                     var s1 = this._popString(_stack);
                                     var s2 = this._popString(_stack);
-                                    if (s1 == "" && this.getTreatStringsAsZero()) {
-                                        s1 = "0";
-                                    }
-                                    if (s2 == "" && this.getTreatStringsAsZero()) {
+                                    //JS-30899-Return 0 when compare string.Empty value with a cell referenced value only if this cell reference value also string.Empty.
+                                    //if (s1 == "" && this.getTreatStringsAsZero()) {
+                                    //    s1 = "0";
+                                    //}
+                                    if (s2 == "" && this.getTreatStringsAsZero() && s1 != "") {
                                         s2 = "0";
                                     }
                                     var d = this._parseDouble(s1);
@@ -5029,14 +5248,15 @@
                                 {
                                     var s1 = this._popString(_stack);
                                     var s2 = this._popString(_stack);
-                                    if (s1 == "") {
-                                        if (this.getTreatStringsAsZero())
-                                            s1 = "0";
-                                        else
-                                            s1 = s2 + 1;
-                                    }
+                                    //JS-30899-Return 0 when compare string.Empty value with a cell referenced value only if this cell reference value also string.Empty.
+                                    //if (s1 == "") {
+                                    //    if (this.getTreatStringsAsZero())
+                                    //        s1 = "0";
+                                    //    else
+                                    //        s1 = s2 + 1;
+                                    //}
 
-                                    if (s2 == "") {
+                                    if (s2 == "" && s1 != "") {
                                         if (this.getTreatStringsAsZero())
                                             s2 = "0";
                                         else
@@ -5062,10 +5282,11 @@
                                 {
                                     var s1 = this._popString(_stack);
                                     var s2 = this._popString(_stack);
-                                    if (s1 == "" && this.getTreatStringsAsZero()) {
-                                        s1 = "0";
-                                    }
-                                    if (s2 == "" && this.getTreatStringsAsZero()) {
+                                    //JS-30899-Return 0 when compare string.Empty value with a cell referenced value only if this cell reference value also string.Empty.
+                                    //if (s1 == "" && this.getTreatStringsAsZero()) {
+                                    //    s1 = "0";
+                                    //}
+                                    if (s2 == "" && this.getTreatStringsAsZero() && s1 != "") {
                                         s2 = "0";
                                     }
                                     var d = this._parseDouble(s1);
@@ -5087,10 +5308,11 @@
                                 {
                                     var s1 = this._popString(_stack);
                                     var s2 = this._popString(_stack);
-                                    if (s1 == "" && this.getTreatStringsAsZero()) {
-                                        s1 = "0";
-                                    }
-                                    if (s2 == "" && this.getTreatStringsAsZero()) {
+                                    //JS-30899-Return 0 when compare string.Empty value with a cell referenced value only if this cell reference value also string.Empty.
+                                    //if (s1 == "" && this.getTreatStringsAsZero()) {
+                                    //    s1 = "0";
+                                    //}
+                                    if (s2 == "" && this.getTreatStringsAsZero() && s2 != "") {
                                         s2 = "0";
                                     }
                                     var d = this._parseDouble(s1);
@@ -5113,10 +5335,11 @@
                                 {
                                     var s1 = this._popString(_stack);
                                     var s2 = this._popString(_stack);
-                                    if (s1 == "" && this.getTreatStringsAsZero()) {
-                                        s1 = "0";
-                                    }
-                                    if (s2 == "" && this.getTreatStringsAsZero()) {
+                                    //JS-30899-Return 0 when compare string.Empty value with a cell referenced value only if this cell reference value also string.Empty.
+                                    //if (s1 == "" && this.getTreatStringsAsZero()) {
+                                    //    s1 = "0";
+                                    //}
+                                    if (s2 == "" && this.getTreatStringsAsZero() && s1 != "") {
                                         s2 = "0";
                                     }
                                     var d = this._parseDouble(s1);
@@ -5138,10 +5361,11 @@
                                 {
                                     var s1 = this._popString(_stack);
                                     var s2 = this._popString(_stack);
-                                    if (s1 == "" && this.getTreatStringsAsZero()) {
-                                        s1 = "0";
-                                    }
-                                    if (s2 == "" && this.getTreatStringsAsZero()) {
+                                    //JS-30899-Return 0 when compare string.Empty value with a cell referenced value only if this cell reference value also string.Empty.
+                                    //if (s1 == "" && this.getTreatStringsAsZero()) {
+                                    //    s1 = "0";
+                                    //}
+                                    if (s2 == "" && this.getTreatStringsAsZero() && s1 != "") {
                                         s2 = "0";
                                     }
                                     var d = this._parseDouble(s1);
@@ -5296,6 +5520,9 @@
                     var cc = _stack.length;
                     do {
                         s = _stack.pop().toString() + s;
+                        //JS-30899-Below code has been returns "0" when the formula value is CellReference and S value is String.Empty
+                        if (s == "" && !this.getUseNoAmpersandQuotes() && this._isCellReference(formula) && this.getTreatStringsAsZero())
+                            return "0";
                         return s;
                         cc--;
                     } while(cc > 0 && !(s.indexOf(this.FALSEVALUESTR) > -1 || s.indexOf(this.tRUEVALUESTR) > 1));
@@ -5717,6 +5944,8 @@
                 }
 
                 var s1 = this.getValueFromParentObjectCell(arg);
+                tempDate = this._isDate(s1);
+                s1 = s1.toString();
                 if (arg != this.trueValueStr && arg != this.falseValueStr) {
                     d = this._parseDouble(s1.split(this.tic).join(""));
                     if (!this._preserveLeadingZeros && s1.length > 0 && !isNaN(d)) {
@@ -5729,7 +5958,6 @@
                     return "NaN";
                 }
                 var doubleValue;
-                tempDate = this._isDate(s1);
                 if (this.getExcelLikeComputations() && this.getUseDatesInCalculations() && !isNaN(tempDate) && isNaN(this._parseDouble(s1)) && !isNaN(tempDate.getDate()) && this._dateTime1900 <= tempDate) {
                     s1 = this._toOADate(tempDate).toString();
                 }
@@ -6594,12 +6822,6 @@
                     this.setValueRowCol(this.getSheetID(grd) + 1, formula.getFormulaValue(), e.getRowIndex(), e.getColIndex());
                 else
                     this.parentObject.setValueRowCol(this.getSheetID(grd) + 1, formula.getFormulaValue(), e.getRowIndex(), e.getColIndex());
-                if (formula != null && formula.getFormulaValue() == "" && e.getValue().startsWith(this.getFormulaCharacter()) && this.getTreatStringsAsZero()) {
-                    if (this.parentObject.setValueRowCol == undefined)
-                        this.setValueRowCol(this.getSheetID(this.grid) + 1, "0", e.getRowIndex(), e.getColIndex());
-                    else
-                        this.parentObject.setValueRowCol(this.getSheetID(this.grid) + 1, "0", e.getRowIndex(), e.getColIndex());
-                }
                 this.ignoreValueChanged = saveIVC;
             } else if (!this._inRecalculateRange && this.getFormulaInfoTable().containsKey(s)) {
                 this.getFormulaInfoTable().remove(s);
@@ -7000,6 +7222,12 @@
         this.setValidPrecedingChars = function (value) {
             this._validPrecedingChars = value;
         };
+        this.getEnableFormulaErrorValidation = function () {
+            return this._enableFormulaErrorValidation;
+        };
+        this.setEnableFormulaErrorValidation = function (value) {
+            this._enableFormulaErrorValidation = value;
+        }
         this.getWeekEndType = function () {
             return ["", "6,0", "0,1", "1,2", "2,3", "3,4", "4,5", "5,6", "", "", "", "0", "1", "2", "3", "4", "5", "6"];
         };
@@ -7010,6 +7238,12 @@
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             for (var key = 0; key < ranges.length; key++) {
                 adjustRange = ranges[key];
@@ -7104,14 +7338,23 @@
         this.computeDate = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
             }
 
+            args[0] = (args[0].split(this.tic).join("") == "TRUE") ? "1" : (args[0].split(this.tic).join("") == "FALSE") ? "0" : args[0];
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
+            args[2] = (args[2].split(this.tic).join("") == "TRUE") ? "1" : (args[2].split(this.tic).join("") == "FALSE") ? "0" : args[2];
             var year = this._parseDouble(args[0]);
             var month = this._parseDouble(args[1]);
             var day = this._parseDouble(args[2]);
@@ -7130,6 +7373,11 @@
 
                 days = this._getSerialDateFromDate(year, month, day);
             }
+            if (days == 0) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.getErrorStrings()[4].toString();
+                return this.getErrorStrings()[4].toString();
+            }
             if (this._excelLikeComputations) {
                 var date = this._fromOADate(days);
                 if (date.toString() != "Invalid Date") {
@@ -7141,8 +7389,21 @@
         this.computeDatevalue = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            if (this._isCellReference(argList)) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_Math_argument];
+                return this.getErrorStrings()[1].toString();
             }
             var dt = new Date(Date.parse(args[0]));
             var dtNum = this._parseDouble(args[0]);
@@ -7184,6 +7445,18 @@
             return Math.round(days).toString();
         };
         this.computeDay = function (argList) {
+            var args = this.splitArgsPreservingQuotedCommas(argList);
+            if (args.length > 1 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var day = 1;
             var s = this.getValueFromArg(argList).split(this.tic).join("");
             var serialdate = this._parseDouble(s);
@@ -7211,15 +7484,25 @@
         this.computeDays = function (argList) {
             var argument = argList;
             var args = this.splitArgsPreservingQuotedCommas(argList);
-            if (args.length != 2) {
+            if (args.length != 2 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
-                    throw this.getFormulaErrorStrings()[this._wrong_number_arguments];
-                return this.getFormulaErrorStrings()[this._wrong_number_arguments];
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
-            var startDateValue = this.getValueFromArg(args[1]);
-            var endDateValue = this.getValueFromArg(args[0]);
+            var startDateValue = this.getValueFromArg(args[0]);
+            startDateValue = (startDateValue.split(this.tic).join("") == "TRUE") ? "1" : (startDateValue.split(this.tic).join("") == "FALSE") ? "0" : startDateValue;
+            var endDateValue = this.getValueFromArg(args[1]);
+            endDateValue = (endDateValue.split(this.tic).join("") == "TRUE") ? "1" : (endDateValue.split(this.tic).join("") == "FALSE") ? "0" : endDateValue;
 
+            startDateValue = (startDateValue == "" || startDateValue == null) ? new Date(Date.parse("1899-12-31")).toDateString() : startDateValue;
+            endDateValue = (endDateValue == "" || endDateValue == null) ? new Date(Date.parse("1899-12-31")).toDateString() : endDateValue;
             var startDateTime, endDateTime;
 
             var startDateSerial = this._parseDouble(startDateValue.split(this.tic).join(""));
@@ -7243,16 +7526,26 @@
         this.computeDays360 = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2 && argCount != 3) {
+            if ((argCount != 2 && argCount != 3) || argList == "") {
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var method = false;
             var days = 0;
             var dt1 = new Date(Date.parse(this.getValueFromArg(args[0]).split(this.tic).join("")));
             var dt2 = new Date(Date.parse(this.getValueFromArg(args[1]).split(this.tic).join("")));
-            var serialdate1 = this._parseDouble(this.getValueFromArg(args[0]).split(this.tic).join(""));
-            var serialdate2 = this._parseDouble(this.getValueFromArg(args[1]).split(this.tic).join(""));
+            var date1 = this.getValueFromArg(args[0]);
+            var date2 = this.getValueFromArg(args[1]);
+            var serialdate1 = (date1.split(this.tic).join("") == "TRUE") ? "1" : (date1.split(this.tic).join("") == "FALSE") ? "0" : date1;
+            var serialdate2 = (date2.split(this.tic).join("") == "TRUE") ? "1" : (date2.split(this.tic).join("") == "FALSE") ? "0" : date2;
+            serialdate1 = this._parseDouble(serialdate1.split(this.tic).join(""));
+            serialdate2 = this._parseDouble(serialdate2.split(this.tic).join(""));
 
             if ((!isNaN(serialdate1) || !isNaN(this._isDate(dt1))) && (!isNaN(serialdate2) || !isNaN(this._isDate(dt2)))) {
                 dt1 = (serialdate1 > 0) ? this._getDateFromSerialDate(serialdate1) : dt1;
@@ -7301,6 +7594,21 @@
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (args[0] == "" || args[1] == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[0].toString();
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var startDate = this.getValueFromArg(args[0]).split(this.tic).join("");
             var StartDateValue = parseInt(startDate);
             var startDateTime = (isNaN(startDate)) ? new Date(Date.parse(startDate)) : this._fromOADate(parseInt(startDate));
@@ -7343,10 +7651,25 @@
             var argument = argList;
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (args[0] == "" || args[1] == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[0].toString();
+                return this.getErrorStrings()[0].toString();
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var startDate = this.getValueFromArg(args[0]).split(this.tic).join("");
             var startDateTime = new Date(startDate);
@@ -7388,9 +7711,22 @@
         };
         this.computeHour = function (argList) {
             var time;
+            var args = this.splitArgsPreservingQuotedCommas(argList);
+            if (args.length != 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             var dt = new Date(Date.now());
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }   
             argList = this.getValueFromArg(argList);
             argList = argList.split(this.tic).join("");
+            argList = (argList == "TRUE") ? "1" : (argList == "FALSE") ? "0" : argList;
             dt = new Date(Date.parse(argList));
             var hourValue = parseInt(argList);
             if (hourValue < 0)
@@ -7416,10 +7752,16 @@
         this.computeISOWeeknum = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var value = this.getValueFromArg(args[0]);
             if (value[0] == (this.tic) && this._isTextEmpty(value.split(this.tic).join(""))) {
@@ -7435,6 +7777,7 @@
                 argList = "0";
             }
             var weekDate = this.getValueFromArg(args[0]).split(this.tic).join("");
+            weekDate = (weekDate.split(this.tic).join("") == "TRUE") ? "1" : (weekDate.split(this.tic).join("") == "FALSE") ? "0" : weekDate;
             var date = new Date(weekDate);
             var weekDateOnly = this.DateFormatter(weekDate);
     
@@ -7451,7 +7794,7 @@
                     return this.getErrorStrings()[1].toString();
                 }
             }
-            var isoarg = argList + this.getParseArgumentSeparator() + "21";
+            var isoarg = weekDate + this.getParseArgumentSeparator() + "21";
             var weekno = parseInt(this.computeWeeknum(isoarg));
             return weekno.toString();
         };
@@ -7473,10 +7816,23 @@
         }; 
 
         this.computeMinute = function (argList) {
+           var argument = this.splitArgsPreservingQuotedCommas(argList);
+           if (argument.length > 1 || argList == "") {
+               if (this.getRethrowLibraryComputationExceptions())
+                   throw this.formulaErrorStrings[this._wrong_number_arguments];
+               return this.formulaErrorStrings[this._wrong_number_arguments];
+           }
+           if (this.getEnableFormulaErrorValidation()) {
+               var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+               if (this.getErrorStrings().indexOf(checkString) > -1) {
+                   return checkString;
+               }
+           }
             var time;
             var dt = new Date(Date.now());
             argList = this.getValueFromArg(argList);
             argList = argList.split(this.tic).join("");
+            argList = (argList.split(this.tic).join("") == "TRUE") ? "1" : (argList.split(this.tic).join("") == "FALSE") ? "0" : argList;
             dt = new Date(Date.parse(argList));
             if (argList < 0) {
                 if (this.getRethrowLibraryComputationExceptions())
@@ -7499,7 +7855,20 @@
         };
         this.computeMonth = function (argList) {
             var month = 1;
+            var args = this.splitArgsPreservingQuotedCommas(argList);
+            if (args.length != 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }   
             var s = this.getValueFromArg(argList);
+            s = (s.split(this.tic).join("") == "TRUE") ? "1" : (s.split(this.tic).join("") == "FALSE") ? "0" : s;
             var date = new Date(Date.parse(s.split(this.tic).join("")));
 
             var dateValue = parseInt(s);
@@ -7545,12 +7914,25 @@
             var date;
             var holidays = [];
 
-            if (argCount != 2 && argCount != 3) {
+            if (argCount != 2 && argCount != 3 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var startDate = this.getValueFromArg(args[0]).split(this.tic).join("");
             var endDate = this.getValueFromArg(args[1]).split(this.tic).join("");
+            if (startDate == "" || endDate == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.getErrorStrings()[0].toString();
+                return this.getErrorStrings()[0].toString();
+            }
             var startDateTime = new Date(Date.parse(startDate));
             var endDateTime = new Date(Date.parse(endDate));
             var dval = this._parseDouble(startDate);
@@ -7604,7 +7986,7 @@
                     var dateArray = this.splitArgsPreservingQuotedCommas(adjustRange.split(this.tic).join(""));
                     for (var i = 0; i < dateArray.length; i++) {
                         try {
-                            s1 = this.getValueFromArg(dataArray[i]);
+                            s1 = this.getValueFromArg(dateArray[i]);
                         } catch (ex) {
                             if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                                 throw this.getLibraryComputationException();
@@ -7645,14 +8027,37 @@
             var date;
             var holidays = [];
 
-            if (argCount != 2 && argCount  > 4) {
+            if (argCount != 2 && argCount > 4 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                for (var i = 0; i < argCount; i++) {
+                    if (i != 2) {
+                        var checkString = this.formulaErrorStringCheck(args[i], FormulaArgumentType.Date);
+                        if (this.getErrorStrings().indexOf(checkString) > -1) {
+                            return checkString;
+                        }
+                    }
+                }
+                if (argCount >= 3) {
+                    checkString = this.formulaErrorStringCheck(args[2], FormulaArgumentType.Text);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
             }
 
             var startDate = this.getValueFromArg(args[0]).split(this.tic).join("");
             var endDate = this.getValueFromArg(args[1]).split(this.tic).join("");
+            if (startDate == "" || endDate == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.getErrorStrings()[0].toString();
+                return this.getErrorStrings()[0].toString();
+            }
             var startDateTime = new Date(Date.parse(this._fromOADate(startDate)));
-            var endDateTime = new Date(Date.parse(this._fromOADate(endDate)))
+            var endDateTime = new Date(Date.parse(this._fromOADate(endDate)));
             if (startDateTime.toString() == "Invalid Date") {
                 var dval = this._parseDouble(startDate);
                 if (!isNaN(dval)) {
@@ -7719,7 +8124,7 @@
             }
 
             var weekend = parseInt(args[2]);
-            if ((argCount <=2 && !isNaN(weekend))) {
+            if (!(argCount > 2 && !isNaN(weekend))) {
                 weekend = 1;
             } else if(!isNaN(args[2])) {
                 weekend = parseInt(args[2]);
@@ -7750,7 +8155,9 @@
         this.computeNow = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argList != "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
             return new Date(Date.now()).toString();
@@ -7758,13 +8165,22 @@
         this.computeSecond = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var time;
             var dt = new Date(Date.now());
             argList = this.getValueFromArg(argList);
             argList = argList.split(this.tic).join("");
+            argList = (argList.split(this.tic).join("") == "TRUE") ? "1" : (argList.split(this.tic).join("") == "FALSE") ? "0" : argList;
             dt = new Date(Date.parse(argList));
             if (argList < 0) {
                 if (this.getRethrowLibraryComputationExceptions())
@@ -7788,13 +8204,32 @@
         this.computeTime = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
-            var hour = this._parseDouble(this.getValueFromArg(args[0]));
-            var minute = this._parseDouble(this.getValueFromArg(args[1]));
-            var second = this._parseDouble(this.getValueFromArg(args[2]));
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            args[0] = this.getValueFromArg(args[0]);
+            args[1] = this.getValueFromArg(args[1]);
+            args[2] = this.getValueFromArg(args[2]);
+
+            args[0] = (args[0] == "") ? "0" : args[0];
+            args[0] = (args[0].split(this.tic).join("") == "TRUE") ? "1" : (args[0].split(this.tic).join("") == "FALSE") ? "0" : args[0];
+            args[1] = (args[1] == "") ? "0" : args[1];
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
+            args[2] = (args[2] == "") ? "0" : args[2];
+            args[2] = (args[2].split(this.tic).join("") == "TRUE") ? "1" : (args[2].split(this.tic).join("") == "FALSE") ? "0" : args[2];
+
+            var hour = this._parseDouble(args[0]);
+            var minute = this._parseDouble(args[1]);
+            var second = this._parseDouble(args[2]);
             var time = 0;
             if (!isNaN(hour) && !isNaN(minute) && !isNaN(second)) {
                 time = (3600 * hour + 60 * minute + second) / 86400;
@@ -7816,8 +8251,16 @@
         this.computeTimevalue = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var argValue = this.getValueFromArg(args[0]).split(this.tic).join("");
 
@@ -7840,6 +8283,11 @@
             return time.toString();
         };
         this.computeToday = function (argList) {
+            if (argList != "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             var dt = new Date(Date.now());
 
             if (this.getExcelLikeComputations()) {
@@ -7851,12 +8299,29 @@
         this.computeWeekday = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1 && argCount != 2) {
+            if ((argCount != 1 && argCount != 2) || argList == "") {
+                 if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            if (args.length == 2) {
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString1 = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                        return checkString1;
+                    }
+                }
+            }
             var dateString = this.getValueFromArg(args[0]);
 
+            dateString = (dateString.split(this.tic).join("") == "TRUE") ? "1" : (dateString.split(this.tic).join("") == "FALSE") ? "0" : dateString;
             var dt = new Date(Date.parse(dateString.split(this.tic).join("")));
             var dateValue = parseInt(dateString);
             if (!isNaN(dateValue) && dt.getFullYear() > 9999) {
@@ -7884,8 +8349,27 @@
         this.computeWeeknum = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount > 3) {
+            if (argCount > 3 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                if (argCount == 2) {
+                    checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
+            if (args[0] == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[0].toString();
+                return this.getErrorStrings()[0].toString();
             }
             var weekDate;
             if (this._fromOADate(this.DateFormatter(this.getValueFromArg(args[0]).split(this.tic).join(""))) == "Invalid Date")
@@ -7910,9 +8394,16 @@
             if (argCount != 2) {
                 weektype = 1;
             }
-            else
+            else {
                 weektype = this.getValueFromArg(args[1]);
-            
+                if (weektype == "")
+                    weektype = 1;
+            }
+            if (Boolean(weektype == "TRUE" || weektype == "FALSE")) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[1].toString();
+                return this.getErrorStrings()[1].toString();
+            }
             if (!isNaN(weektype)) {
             }
             var weehStartValue = parseInt(weekStart[weektype]);
@@ -7928,10 +8419,30 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
 
-            if (argCount != 2 && argCount > 3) {
+            if (argCount != 2 && argCount > 3 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                for (var i = 0; i < argCount; i++) {
+                    if (i != 1) {
+                        var checkString = this.formulaErrorStringCheck(args[i], FormulaArgumentType.Date);
+                        if (this.getErrorStrings().indexOf(checkString) > -1) {
+                            return checkString;
+                        }
+                    }
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+
+            if (args[0] == "" || args[1] == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[0].toString();
             }
             var argString = "";
             var dateValue = 0;
@@ -7959,10 +8470,37 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
 
-            if (argCount > 4 || argCount < 2) {
+            if (argCount > 4 || argCount < 2 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (args[0] == "" || args[1] == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[0].toString();
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                if (argCount >= 3) {
+                    checkString = this.formulaErrorStringCheck(args[2], FormulaArgumentType.Text);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                if (argCount == 4) {
+                    checkString = this.formulaErrorStringCheck(args[3], FormulaArgumentType.Date);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
             }
             var adjustRange, s1;
             var date;
@@ -8077,12 +8615,19 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
 
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Date);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var startDate = this.getValueFromArg(args[0]).split(this.tic).join("");
+            startDate = (startDate.split(this.tic).join("") == "TRUE") ? "1" : (startDate.split(this.tic).join("") == "FALSE") ? "0" : startDate;
             var startDateTime = new Date(Date.parse(startDate));
             var dateValue = parseInt(startDate);
             if (!isNaN(dateValue) && startDateTime.getFullYear() > 9999) {
@@ -8113,30 +8658,48 @@
         this.computeChar = function (arg) {
             var ranges = this.splitArgsPreservingQuotedCommas(arg);
             var argCount = ranges.length;
-            if (argCount != 1) {
+            if (argCount != 1 || arg == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var s = this.getValueFromArg(ranges[0]).split(this.tic).join("");
+            s = (s.split(this.tic).join("") == "TRUE") ? "1" : (s.split(this.tic).join("") == "FALSE") ? "0" : s;
             var i = this._parseDouble(s);
             if (!isNaN(i) && i > 0 && i < 256) {
                 return String.fromCharCode(s);
+            }
+            else {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.getLibraryComputationException();
+                return this._errorStrings[1].toString();
             }
             if (this.getErrorStrings().indexOf(s) > -1) {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return s;
             }
-            return (s[0] == this.tic) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+            return s;
         };
         this.computeCode = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var text = this.getValueFromArg(args[0]).split(this.tic).join("");
             var num =  parseInt(text);
@@ -8149,11 +8712,6 @@
                     throw this.getLibraryComputationException();
                 return (args[0].length > 4) ? this.getErrorStrings()[5].toString() : this.getErrorStrings()[1].toString();
             }
-            if (!this._isCellReference(args[0]) && args[0].indexOf(this.tic) == -1) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
-            }
             var code = text;
 
             return code.charCodeAt(0).toString();
@@ -8161,10 +8719,16 @@
         this.computeUniCode = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var text = this.getValueFromArg(args[0]);
             if (this._isCellReference(args[0])) {
@@ -8173,7 +8737,7 @@
                 return this.getErrorStrings()[5].toString();
             }
             var str = this._parseDouble(text);
-            if (text == "invalid expression" || text == null || text == "" || !isNaN(str)) {
+            if (text == "invalid expression" || text == null || text == ""){
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.getErrorStrings()[1].toString();
@@ -8183,20 +8747,33 @@
         };
         this.computeUpper = function (args) {
 
-            if (!this._isCellReference(args) && args[0].indexOf(this.tic) == -1)
-            {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
+            var argList = this.splitArgsPreservingQuotedCommas(args);
+            if (argList.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             return this._stripTics0(this.getValueFromArg(args)).toUpperCase();
         };
         this.computeLower = function (args) {
 
-            if (!this._isCellReference(args) && args[0].indexOf(this.tic) == -1) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
+            var argList = this.splitArgsPreservingQuotedCommas(args);
+            if (argList.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             return this._stripTics0(this.getValueFromArg(args)).toLowerCase();
         };
@@ -8204,9 +8781,17 @@
 
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }            
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var s1 = this._stripTics0(this.getValueFromArg(args[0]));
 
             if(isNaN(parseInt(s1))){
@@ -8221,23 +8806,38 @@
         this.computeMid = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[2], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var s1 = args[0];
             s1 = this.getValueFromArg(s1);
-            if (!this._isCellReference(args[0]) && args[0][0] != this.tic)
-            {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
-            }
             var hasTics = s1[0] == this.tic && s1[s1.length - 1] == this.tic;
             var s2 = this.getValueFromArg(args[1]);
             var len = this._parseDouble(args[2]);
             s2 = this.getValueFromArg(args[1]);
             var start = Number(s2) + Number(hasTics ? 0 : -1);
 
+            if (s2 == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
+            }
             if (args[1].indexOf("#VALUE!") > -1) {
                 return "#VALUE!";
             }
@@ -8262,8 +8862,16 @@
         this.computeLeft = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 1 && argCount != 2) {
+            if ((argCount != 1 && argCount != 2) || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.TextWithNumber);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var s1 = this._stripTics0(this.getValueFromArg(args[0]));
@@ -8275,15 +8883,21 @@
             var hasTics = s1[0] == this.tic && s1[s1.length - 1] == this.tic;
             var s2 = (argCount == 2) ? args[1] : "1";
             s2 = this.computedValue(s2);
+            s2 = (s2.split(this.tic).join("") == "TRUE") ? "1" : (s2.split(this.tic).join("") == "FALSE") ? "0" : s2;
             var len = Number(s2) + Number(hasTics ? 1 : 0);
             len = (s1.length >= len) ? len : s1.length;
             len = (s1.length >= len) ? len : s1.length;
-            if (len < 1) {
+            if (len < 0) {
                 return this.getErrorStrings()[1].toString();
             }
-            s1 = s1.substring(0, len);
-            if (hasTics && s1[s1.length - 1] != this.tic) {
-                s1 = s1 + this.tic;
+            if (len == 0) {
+                s1 = "";
+            }
+            else {
+                s1 = s1.substring(0, len);
+                if (hasTics && s1[s1.length - 1] != this.tic) {
+                    s1 = s1 + this.tic;
+                }
             }
             if (this.getUseNoAmpersandQuotes() && s1.length > 1 && s1[0] == this.tic[0] && s1[s1.length - 1] == this.tic[0]) {
                 s1 = this._substring(s1,1, s1.length - 2);
@@ -8293,9 +8907,17 @@
         this.computeRight = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 1 && argCount != 2) {
+            if ((argCount != 1 && argCount != 2) || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
-            }           
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.TextWithNumber);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             s1 = this._stripTics0(this.getValueFromArg(args[0]));
             if (!this._isCellReference(args[0]) && args[0].indexOf(this.tic) == -1) {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
@@ -8304,6 +8926,7 @@
             }
             var hasTics = s1[0] == this.tic && s1[s1.length - 1] == this.tic;
             var s2 = (argCount == 2) ? this.getValueFromArg(args[1]) : "1";
+            s2 = (s2.split(this.tic).join("") == "TRUE") ? "1" : (s2.split(this.tic).join("") == "FALSE") ? "0" : s2;
             var len = parseInt(s2);
             if (isNaN(len) || len <0 || s2.indexOf("#VALUE!") > -1) {
                 return "#VALUE!";
@@ -8322,14 +8945,31 @@
         this.computeReplace = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 4) {
+            if (argCount != 4 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+
+                var checkString1 = this.formulaErrorStringCheck(args[3], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                    return checkString1;
+                }
             }
             var firstText = this._stripTics0(this.getValueFromArg(args[0]));
             var newText = this._stripTics0(this.getValueFromArg(args[3]));
             var resultText = "";
-            var startIndex = this._parseDouble(this.getValueFromArg(args[1]));
-            var noOfChar = this._parseDouble(this.getValueFromArg(args[2]));
+            var startIndex = this.getValueFromArg(args[1]);
+            startIndex = (startIndex == "TRUE") ? "1" : (startIndex == "FALSE") ? "0" : startIndex;
+            startIndex = this._parseDouble(startIndex);
+            var noOfChar = this.getValueFromArg(args[2]);
+            noOfChar = (noOfChar == "TRUE") ? "1" : (noOfChar == "FALSE") ? "0" : noOfChar;
+            noOfChar = this._parseDouble(noOfChar);
             if ((!this._isCellReference(args[0]) && args[0][0] != this.tic) || (!this._isCellReference(args[3]) && args[3][0] != this.tic)) {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
@@ -8377,10 +9017,18 @@
         this.computeExact = function (range) {
             //this.AdjustRangeArg(ref range);
             var args = this.splitArgsPreservingQuotedCommas(range);
-            if (args.length != 2) {
-                return this.formulaErrorStrings[this._requires_2_args];
+            if (args.length != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var s1, s2, d;
 
             s1 = this.getValueFromArg(args[0]);
@@ -8388,11 +9036,6 @@
             var str1 = this._parseDouble(s1);
             var str2 = this._parseDouble(s2);
 
-            if ((!this._isCellReference(args[0]) && args[0].indexOf(this.tic) == -1) || (!this._isCellReference(args[1]) && args[1].indexOf(this.tic) == -1)) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
-            }
             if (!isNaN(str1)) {
                 s1 = str1.toString();
             }
@@ -8405,13 +9048,16 @@
         };
         this.computeFind = function (arg) {
             var args = this.splitArgsPreservingQuotedCommas(arg);
-            if (args.length != 2 && args.length != 3) {
+            if ((args.length != 2 && args.length != 3) || arg == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            if ((!this._isCellReference(args[0]) && args[0].indexOf(this.tic) == -1) || (!this._isCellReference(args[1]) && args[1].indexOf(this.tic) == -1) || (!this._isCellReference(args[0]) && args[0].indexOf(this.tic) == -1)) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.TwoTextWithNumber);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             ////strip off outside tics (if any) on the evaluated arguments
             var lookFor = this._stripTics0(this.getValueFromArg(args[0]));
@@ -8442,8 +9088,16 @@
             var argCount = args.length;
             var index;
             var startNum = 1;
-            if (argCount != 2 && argCount != 3) {
+            if ((argCount != 2 && argCount != 3) || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.TwoTextWithNumber);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var firstStr = this._stripTics0(this.getValueFromArg(args[0])).toUpperCase();
             var secondStr = this._stripTics0(this.getValueFromArg(args[1])).toUpperCase();
@@ -8501,19 +9155,31 @@
         this.computeSubstitute = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             if (args.length != 3 && args.length != 4) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                for (var i = 0; i < 3; i++) {
+                    var checkString = this.formulaErrorStringCheck(args[i], FormulaArgumentType.Text);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
+            if (args.length == 4) {
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(args[3], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
 
+            }
             ////strip off outside tics (if any) on the evaluated arguments
             var s1 = this._stripTics0(this.getValueFromArg(args[0]));
             var s2 = this._stripTics0(this.getValueFromArg(args[1]));
             var s3 = this._stripTics0(this.getValueFromArg(args[2]));
-            if ((!this._isCellReference(args[0]) && args[0][0] != this.tic) || (!this._isCellReference(args[1]) && args[1][0] != this.tic)
-                || (!this._isCellReference(args[2]) && args[2][0] != this.tic)) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
-            }
             if (args.length == 3) {
                 if(s2=="" || s2==null)
                 {
@@ -8545,12 +9211,19 @@
         this.computeUniChar = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var text = this.getValueFromArg(args[0]);
+            text = (text.split(this.tic).join("") == "TRUE") ? "1" : (text.split(this.tic).join("") == "FALSE") ? "0" : text;
             var code = this._parseDouble(this._stripTics0(text));
             if (isNaN(code) || code <=0) {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
@@ -8563,16 +9236,19 @@
         this.computeClean = function (arg) {
             var args = this.splitArgsPreservingQuotedCommas(arg);
             var result;
-            if (args.length != 1) {
+            if (args.length != 1 || arg == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments].toString();
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var cleanedArg = this.getValueFromArg(args[0]);
             var isLogic = true;
-            if (!this._isCellReference(args[0]) && args[0][0] != this.tic) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
-            }
             var boolFlag = (cleanedArg == "TRUE" || cleanedArg == "FALSE") ? true : false;
             if (this.getErrorStrings().indexOf(cleanedArg) > -1)
             {
@@ -8592,15 +9268,22 @@
             return cleanedArg;
         };
         this.computeTrim = function (args) {
+            var argList = this.splitArgsPreservingQuotedCommas(args);
+            if (argList.length != 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var s = this._stripTics0(this.getValueFromArg(args));
             var arr = [this.tic, ''];
             s = s.split(this.tic).join("");
             var len = 0;
-            if (!this._isCellReference(args) && args[0] != this.tic) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
-            }
             while (s.length != len) {
                 len = s.length;
                 s = s.split("  ").join(" ");
@@ -8611,22 +9294,25 @@
         this.computeRept = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            var text = this._stripTics0(this.getValueFromArg(args[0]));
-            if (!this._isCellReference(args[0]) && args[0][0] != this.tic) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[5].toString();
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.TextWithNumber);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
+            var text = this._stripTics0(this.getValueFromArg(args[0]));
             var repeatTime = 1;
-            var value = parseInt(this.getValueFromArg(args[1].split(this.tic).join("")));
-            if (value == null || value == "") {
+            args[1] = this.getValueFromArg(args[1].split(this.tic).join(""));
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
+            if (text == null || text == "" || args[1] == null || args[1] == "") {
                 return "";
             }
+            var value = parseInt(args[1].split(this.tic).join(""));
             if (value < 0 || isNaN(value)) {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._bad_index];
@@ -8702,7 +9388,7 @@
             if (arg.length > 1) {
                 for (var r = 0; r < arg.length; r++) {
                     elements++;
-                    if (r.indexOf(':') > -1) {
+                    if (arg[r].indexOf(':') > -1) {
                         --elements;
                         var cells1 = this.getCellsFromArgs(r);
                         for (var s1 = 0; s1 < cells1.length; s1++) {
@@ -8711,8 +9397,16 @@
                     }
                 }
             }
-            if (elements > 1) {
+            if (elements > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var s = this.getValueFromArg(args);
             var d;
@@ -8733,10 +9427,16 @@
             var argCount = args.length;
             var decimalseparator = this._parseDecimalSeparator;
             var groupseparator = this._parseArgumentSeparator;
-            if (argCount > 3) {
+            if (argCount > 3 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var text = this._stripTics0(this.getValueFromArg(args[0]));
             if (argCount > 1) {
@@ -8787,13 +9487,14 @@
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            for (var r = 0; r < ar.length; r++) {
-                if ((!this._isCellReference(ar[r]) && ar[r].indexOf(this.tic) == -1)) {
-                    if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                        throw this.getLibraryComputationException();
-                    return this.getErrorStrings()[5].toString();
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
                 }
-                else if ((this._isCellReference(ar[r]) && ar[r].indexOf(":") != -1)) {
+            }
+            for (var r = 0; r < ar.length; r++) {
+                if ((this._isCellReference(ar[r]) && ar[r].indexOf(":") != -1)) {
                     if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                         throw this.getLibraryComputationException();
                     return this.getErrorStrings()[1].toString();
@@ -8811,64 +9512,68 @@
             try {
                 var args = this.splitArgsPreservingQuotedCommas(range);
                 var argCount = args.length;
-                if (argCount == 1) {
-                    var s1 = args[0];
-                    var ticContains = false;
-                    var quotation = false;
-                    if (s1.indexOf(this.tic) > -1)
-                        ticContains = true;
-                    s1 = this._stripTics0(this.getValueFromArg(s1));
-                    if ((s1 != null || s1 != "") && !this._isCellReference(s1) && ticContains && isNaN(this._parseDouble(s1.split(",").join("").split("$").join("")))) {
-                        s1 = s1.split(this.tic).join("");
-                        quotation = true;
-                    }
-                    if (!this._isCellReference(args[0]) && args[0].indexOf(this.tic) == -1 && isNaN(this._parseDouble(s1))) {
-                        if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                            throw this.getLibraryComputationException();
-                        return this.getErrorStrings()[5].toString();
-                    }
-                    if ((s1 == null || s1 == "") && ticContains) {
-                        if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                            throw this.getLibraryComputationException();
-                        return this.getErrorStrings()[1].toString();
-                    } else if ((s1 == null || s1 == "") && !ticContains) {
-                        if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                            throw this.getLibraryComputationException();
-                        return this.formulaErrorStrings[this._invalid_arguments];
-                    }
-                    if (s1.indexOf(":") > -1)
-                    {
-                        val = this.computeTimevalue(s1);
-                        return val.toString();
-                    }
-                    if (s1[0] == "$") {
-                        s1 = s1.split("$").join("");
-                    }
-                    if (s1.indexOf(",") > -1) {
-                        s1 = s1.split(",").join("");
-                    }
-                    if (s1[0] == "%" || s1[s1.length - 1] == "%") {
-                        s1 = s1.split("%").join("");
-                        var per = this._parseDouble(s1);
-                        if (!isNaN(per)) {
-                            s1 = (per / 100).toString();
-                        }
-                    }
-                    var dt = new Date(Date.parse(s1));
-                    var dous = this._parseDouble(s1);
-                    if (!isNaN(dous)) {
-                        val = dous.toString();
-                    } else if (dt.toString() != "Invalid Date") {
-                        val = this._toOADate(dt);
-                    } else {
-                        if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                            throw this.getLibraryComputationException();
-                        return this.getErrorStrings()[1].toString();
-                    }
-                } else {
+                if (argCount != 1 || range == "") {
                     if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                         throw this.getLibraryComputationException();
                     return this.formulaErrorStrings[this._wrong_number_arguments];
+                }
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Text);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                var s1 = args[0];
+                var ticContains = false;
+                var quotation = false;
+                if (s1.indexOf(this.tic) > -1)
+                    ticContains = true;
+                s1 = this._stripTics0(this.getValueFromArg(s1));
+                if ((s1 != null || s1 != "") && !this._isCellReference(s1) && ticContains && isNaN(this._parseDouble(s1.split(",").join("").split("$").join("")))) {
+                    s1 = s1.split(this.tic).join("");
+                    quotation = true;
+                }
+                if (!this._isCellReference(args[0]) && args[0].indexOf(this.tic) == -1 && isNaN(this._parseDouble(s1))) {
+                    if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
+                        throw this.getLibraryComputationException();
+                    return this.getErrorStrings()[5].toString();
+                }
+                if ((s1 == null || s1 == "") && ticContains) {
+                    if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
+                        throw this.getLibraryComputationException();
+                    return this.getErrorStrings()[1].toString();
+                } else if ((s1 == null || s1 == "") && !ticContains) {
+                    if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
+                        throw this.getLibraryComputationException();
+                    return this.formulaErrorStrings[this._invalid_arguments];
+                }
+                if (s1.indexOf(":") > -1) {
+                    val = this.computeTimevalue(s1);
+                    return val.toString();
+                }
+                if (s1[0] == "$") {
+                    s1 = s1.split("$").join("");
+                }
+                if (s1.indexOf(",") > -1) {
+                    s1 = s1.split(",").join("");
+                }
+                if (s1[0] == "%" || s1[s1.length - 1] == "%") {
+                    s1 = s1.split("%").join("");
+                    var per = this._parseDouble(s1);
+                    if (!isNaN(per)) {
+                        s1 = (per / 100).toString();
+                    }
+                }
+                var dt = new Date(Date.parse(s1));
+                var dous = this._parseDouble(s1);
+                if (!isNaN(dous)) {
+                    val = dous.toString();
+                } else if (dt.toString() != "Invalid Date") {
+                    val = this._toOADate(dt);
+                } else {
+                    if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
+                        throw this.getLibraryComputationException();
+                    return this.getErrorStrings()[1].toString();
                 }
             } catch (ex) {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
@@ -8885,13 +9590,23 @@
             if (argsArray.length == 2) {
                 s2 = argsArray[1];
             }
-            if (argsArray.length > 2) {
+            if (argsArray.length > 2 || args == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
-            }           
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             s1 = this.getValueFromArg(s1);
+            s1 = (s1 == "" || s1 == null) ? "0" : s1;
+            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
             s2 = this.getValueFromArg(s2);
+            s2 = (s2 == "" || s2 == null) ? "0" : s2;
+            s2 = (s2.split(this.tic).join("") == "TRUE") ? "1" : (s2.split(this.tic).join("") == "FALSE") ? "0" : s2;
             var number = this._parseDouble(s1);
             var emptyCell = false;
             if ( isNaN(this._parseDouble(s2))) {
@@ -8929,6 +9644,17 @@
             var s2 = "2";
             var s3 = "FALSE";
 
+            if (argsArray.length > 3 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argCount = argsArray.length;
             if (argCount > 1) {
                 s2 = argsArray[1];
@@ -8941,17 +9667,15 @@
             s1 = this.getValueFromArg(s1);
             s2 = this.getValueFromArg(s2);
             s3 = this.getValueFromArg(s3);
+            s1 = (s1 == "" || s1 == null) ? "0" : s1;
+            s2 = (s2 == "" || s2 == null) ? "0" : s2;
+            s3 = (s3 == "" || s3 == null) ? "0" : s3;
 
             var numbers, decimals;
             numbers = this._parseDouble(s1);
-            if (isNaN(numbers)) {
-                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
-                    throw this.getLibraryComputationException();
-                return this.getErrorStrings()[1].toString();
-            }
             decimals = this._parseDouble(s2);
             if (isNaN(decimals)) {
-                decimals = (s2 == "") ? 0 : 2;
+                decimals = 2;
             }
             var no_commas_flag;
             var no_commas;
@@ -8987,11 +9711,17 @@
         };
         this.computeBin2Dec = function (argList) {
             var ranges = this.splitArgsPreservingQuotedCommas(argList);
-            if (ranges.length > 1) {
+            if (ranges.length > 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 else
                     return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var value = this.getValueFromArg(ranges[0]).replace(this.tic, "");
             if (!/^[01]{1,10}$/.test(value))
@@ -9024,13 +9754,20 @@
             if (!/^[01]{1,10}$/.test(number))
                 return this.getErrorStrings()[4].toString();
 
-            if (ranges.length > 2) {
+            if (ranges.length > 2 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 else
                     return this.formulaErrorStrings[this._wrong_number_arguments];
             } else if (ranges.length > 1) {
                 places = parseInt(this.getValueFromArg(ranges[1]).replace(this.tic, ""));
+            }
+
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             // Ignore places and return a 10-character octal number if number is negative
@@ -9116,13 +9853,19 @@
             var value = this.getValueFromArg(ranges[0]).replace(this.tic, "");
             var result = "";
 
-            if (ranges.length > 2) {
+            if (ranges.length > 2 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 else
                     return this.formulaErrorStrings[this._wrong_number_arguments];
             } else if (ranges.length > 1) {
                 charCount = this._parseDouble(ranges[1]);
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             if (value == "1111111111") {
@@ -9142,6 +9885,9 @@
                         return this.getErrorStrings()[4].toString();
                 } else {
                     result = parseInt(value, 2).toString(16);
+                    if (result == "NaN") {
+                        result = this.getErrorStrings()[4].toString();
+                    }
                     if (ranges.length > 1) {
                         if (charCount >= result.length && charCount <= 10) {
                             result = this._padLeft('0', charCount, result);
@@ -9179,6 +9925,12 @@
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
 
             // double d1, d2;
             if (isNaN(this._parseDouble(value)) && isNaN(this._parseDouble(range1))) {
@@ -9204,6 +9956,11 @@
                     charCount = this._parseDouble(value1);
                 }
 
+                if (isNaN(value1)) {
+                    if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
+                        throw this.getLibraryComputationException();
+                    return this.getErrorStrings()[1].toString();
+                }
                 if ((this._parseDouble(value) < -512 || this._parseDouble(value) > 511)) {
                     if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                         throw this.getLibraryComputationException();
@@ -9242,7 +9999,13 @@
                     throw this.getLibraryComputationException();
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            if (isNaN(this._parseDouble(value)) && isNaN(this._parseDouble(range1))) {
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            if (!(!isNaN(this._parseDouble(value)) && !isNaN(this._parseDouble(range1)))) {
                 if (((value != null || value != "") && (this.computeIsText(value) == this.trueValueStr)) || ((range1 != null || range1 != "") && (this.computeIsText(range1) == this.trueValueStr))) {
                     if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                         throw this.getLibraryComputationException();
@@ -9262,7 +10025,7 @@
                 if ((value == null && value == "") || (range1 == null || range1 == "")) {
                     if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                         throw this.getLibraryComputationException();
-                    return this.getErrorStrings()[1].toString();
+                    return this.getErrorStrings()[0].toString();
                 }
             }
             try {
@@ -9306,15 +10069,46 @@
         this.computeHex2Bin = function (argList) {
             var charCount = 0;
             var ranges = this.splitArgsPreservingQuotedCommas(argList);
+            if (ranges.length > 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             if (argList == this._parseArgumentSeparator.toString()) {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 else
                     return this.getErrorStrings()[0].toString();
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(ranges[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            if (ranges.length == 2) {
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString1 = this.formulaErrorStringCheck(ranges[1], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                        return checkString1;
+                    }
+                }
+            }
             var value = this.getValueFromArg(ranges[0]);
             var chars = (ranges.length == 2) ? this.getValueFromArg(ranges[1]) : "0";
 
+            var dChars = 0;
+            dChars = this._parseDouble(chars);
+            if (!isNaN(dChars) && (dChars < 0 || dChars > 10)) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
+            }
+            if (Boolean(value == "TRUE" || value == "FALSE") || (ranges.length == 2 && (Boolean(chars == "TRUE" || chars == "FALSE")))) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
+            }
             if (value != "") {
                 if (value[0] != this.tic && !this._isCellReference(value) && isNaN(this._parseDouble(value))) {
                     if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
@@ -9393,15 +10187,46 @@
         this.computeHex2Oct = function (argList) {
             var charCount = 0;
             var ranges = this.splitArgsPreservingQuotedCommas(argList);
+            if (ranges.length > 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             if (argList == this._parseArgumentSeparator.toString()) {
                 if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
                     throw this.getLibraryComputationException();
                 else
                     return this.getErrorStrings()[0].toString();
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(ranges[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            if (ranges.length == 2) {
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString1 = this.formulaErrorStringCheck(ranges[1], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                        return checkString1;
+                    }
+                }
+            }
             var value = this.getValueFromArg(ranges[0]);
             ranges[0] = ranges[0].split(this.TIC).join("");
             var chars = (ranges.length == 2) ? this.getValueFromArg(ranges[1]) : "0";
+            if (value != "") {
+                if (value[0] != this.tic && !this._isCellReference(value) && isNaN(this._parseDouble(value))) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[5].toString();
+                }
+            }
+            if (Boolean(value == "TRUE" || value == "FALSE") || (ranges.length == 2 && (Boolean(chars == "TRUE" || chars == "FALSE")))) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
+            }
             if ((value[0] == this.tic) && (value.split(this.tic).join("") == null || value.split(this.tic).join("") == "")) {
                 return "0";
             } else if (value.indexOf(this._parseArgumentSeparator.toString()) > -1) {
@@ -9480,9 +10305,35 @@
         this.computeAddress = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
+            if (argCount > 5 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                for (var i = 0; i < argCount - 1; i++) {
+                    var checkString = this.formulaErrorStringCheck(args[i], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                if (argCount == 5) {
+                    checkString = this.formulaErrorStringCheck(args[4], FormulaArgumentType.Text);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
             var ans = this._string_empty;
             var arg0 = this.getValueFromArg(args[0].split(this.tic).join(this._string_empty));
+            arg0 = (arg0.split(this.tic).join("") == "TRUE") ? "1" : (arg0.split(this.tic).join("") == "FALSE") ? "0" : arg0;
             var arg1 = this.getValueFromArg(args[1].split(this.tic).join(this._string_empty));
+            arg1 = (arg1.split(this.tic).join("") == "TRUE") ? "1" : (arg1.split(this.tic).join("") == "FALSE") ? "0" : arg1;
+            if (arg0 == "" || arg1 == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[1].toString();
+                return this.getErrorStrings()[1].toString();
+            }
             var row = this._parseDouble(arg0);
             var col = this._parseDouble(arg1);
             if (row < 1 || col < 1) {
@@ -9551,6 +10402,12 @@
                     throw this.formulaErrorStrings[this._invalid_arguments];
                 return this.formulaErrorStrings[this._invalid_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var args1;
             args1 = this._splitArguments(arg, ')');
             if (args1.length > 2) {
@@ -9566,7 +10423,7 @@
                 if (!this._isCellReference(args[i])) {
                     if (this._rethrowLibraryComputationExceptions)
                         throw this.formulaErrorStrings[this._invalid_arguments];
-                    return this.getErrorStrings()[1].toString();
+                    return this.getErrorStrings()[5].toString();
                 }
             }
             return args.length.toString();
@@ -9574,10 +10431,19 @@
         this.computeChoose = function (arg) {
             var args;
             args = this.splitArgsPreservingQuotedCommas(arg);
-            if (args.length < 2) {
+            if (args.length < 2 || arg == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var s3 = this.getValueFromArg(args[0]).split(this.tic).join("");
+            s3 = (s3.split(this.tic).join("") == "TRUE") ? "1" : (s3.split(this.tic).join("") == "FALSE") ? "0" : s3;
             var indexArgs = this.splitArgsPreservingQuotedCommas(s3);
             s3 = indexArgs[0];
             var loc = parseInt(s3);
@@ -9589,6 +10455,12 @@
                 this._isInteriorFunction = !this._isInteriorFunction;
                 return args[loc];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[loc], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var value = this.getValueFromArg(args[loc]);
             if (value == "")
             {
@@ -9599,6 +10471,18 @@
             return value;
         };
         this.computeColumn = function (arg) {
+            var args = this.splitArgsPreservingQuotedCommas(arg);
+            if (args.length != 1) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var rowInd, colInd;
             if (arg == null || arg == this._string_empty) {
                 colInd = this.colIndex(this.cell).toString();
@@ -9608,7 +10492,7 @@
 
             colInd =  this.colIndex(arg).toString();
             rowInd = this.rowIndex(arg).toString();
-            if (rowInd <= 0)
+            if (rowInd <= 0 || !isNaN(this._parseDouble(arg)))
             {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._invalid_Math_argument];
@@ -9619,10 +10503,16 @@
         this.computeColumns = function (arg) {
             var args;
             args = this.splitArgsPreservingQuotedCommas(arg);
-            if (args.length != 1) {
+            if (args.length != 1 || arg == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var val = -1;
             if (this._parseDouble(args[0], val)) {
@@ -9663,12 +10553,13 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
             var value = this._string_empty;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
             value = this.getValueFromArg(args[0]);
+            value = (value.split(this.tic).join("") == "TRUE") ? "1" : (value.split(this.tic).join("") == "FALSE") ? "0" : value;
             if (this.getNamedRanges().containsValue(value)) {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._bad_index];
@@ -9694,10 +10585,16 @@
         this.computeHyperlink = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount > 2) {
+            if (argCount > 2 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var firstStr = this._stripTics0(this.getValueFromArg(args[0]));
             if (argCount == 2) {
@@ -9707,7 +10604,7 @@
                     return "0";
                 }
                 if (displayText == this._string_empty) {
-                    return this._string_empty;
+                    return "0";
                 }
                 return displayText;
             }
@@ -9716,10 +10613,16 @@
         this.computeAbs = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var argValue = this.getValueFromArg(args[0]);
             argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
@@ -9734,12 +10637,19 @@
         this.computeAcos = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argValue = this.getValueFromArg(args[0]);
+            argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
             var dVal = this._parseDouble(argValue);
             if (isNaN(dVal)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -9756,12 +10666,19 @@
         this.computeAcosh = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argValue = this.getValueFromArg(args[0]);
+            argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
             var dVal = this._parseDouble(argValue);
             if (isNaN(dVal)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -9779,44 +10696,52 @@
         this.computeAcot = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            var argValue = this.getValueFromArg(args[0]);
-            var dVal = this._parseDouble(argValue);
-            if (isNaN(dVal)) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._bad_formula];
-                return (argValue[0] == this.tic || this._isCellReference(args[0])) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
-            if (dVal < 1 && dVal > -1) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._bad_formula];
-                return this.getErrorStrings()[4].toString();
-            }
+            var argValue = this.getValueFromArg(argList);
+            argList = (argList.split(this.tic).join("") == "TRUE") ? "1" : (argList.split(this.tic).join("") == "FALSE") ? "0" : argList;
             var d1 = this._parseDouble(argList), d2 = 0;
 
             if (!isNaN(d1)) {
-                d2 = Math.PI / 2 - Math.atan(d1);
+                if (d1 <= 0) {
+                    d2 = Math.PI / 2 - Math.atan(d1);
+                }
+                else {
+                    d2 = Math.atan(1 / d1);
+                }
             }
             return d2.toString();
         };
         this.computeAcoth = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argValue = this.getValueFromArg(args[0]);
+            argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
             var dVal = this._parseDouble(argValue);
             if (isNaN(dVal)) {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._bad_formula];
-                return (argValue[0] == this.tic || this._isCellReference(args[0])) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+                return this.getErrorStrings()[5].toString();
             }
             if (dVal < 1 && dVal > -1) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -9834,12 +10759,15 @@
         };
         this.computeArabic = function (arg) {
             var args = this.splitArgsPreservingQuotedCommas(arg);
-            if (args.length != 1) {
+            if (args.length != 1 || arg == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
             var text = this.getValueFromArg(args[0]);
+            if (this.getErrorStrings().indexOf(text) != -1) {
+                return text;
+            }
             var dvalue = parseInt(text.split(this.tic).join("").toUpperCase());
             if (!isNaN(dvalue) || (!this._isCellReference(args[0]) && args[0][0] != this.tic)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -9910,12 +10838,19 @@
         this.computeAsin = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argValue = this.getValueFromArg(args[0]);
+            argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
             var dVal = this._parseDouble(argValue);
             if (isNaN(dVal)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -9935,15 +10870,37 @@
             return d2.toString();
         };
         this.computeAtan = function (args) {
+            var argument = this.splitArgsPreservingQuotedCommas(args);
+            if (argument.length > 1 || args == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            args = this.getValueFromArg(args);
+            args = (args.split(this.tic).join("") == "TRUE") ? "1" : (args.split(this.tic).join("") == "FALSE") ? "0" : args;
             return this._computeMath(args, Math.atan).toString();
         };
         this.computeAtan2 = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
-                return this.formulaErrorStrings[this.requires_2_args];
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var x;
             var y = 0;
             var atan2 = 0;
@@ -9951,6 +10908,8 @@
             var flag1, flag2;
             param1 = this.getValueFromArg(args[0]);
             param2 = this.getValueFromArg(args[1]);
+            param1 = (param1.split(this.tic).join("") == "TRUE") ? "1" : (param1.split(this.tic).join("") == "FALSE") ? "0" : param1;
+            param2 = (param2.split(this.tic).join("") == "TRUE") ? "1" : (param2.split(this.tic).join("") == "FALSE") ? "0" : param2;
 
             flag1 = (param1 == "true") ? true : false;
             flag2 = (param2 == "true") ? true : false;
@@ -9993,9 +10952,18 @@
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var range0 = this.getValueFromArg(range[0]);
+            range0 = (range0.split(this.tic).join("") == "TRUE") ? "1" : (range0.split(this.tic).join("") == "FALSE") ? "0" : range0;
             var range1 = (argCount > 1 && range[1].length != 0) ? this.getValueFromArg(range[1]) : "1";
+            range1 = (range1.split(this.tic).join("") == "TRUE") ? "1" : (range1.split(this.tic).join("") == "FALSE") ? "0" : range1;
             var range2 = (argCount == 3 && range[2].length != 0) ? this.getValueFromArg(range[2]) : "1";
+            range2 = (range2.split(this.tic).join("") == "TRUE") ? "1" : (range2.split(this.tic).join("") == "FALSE") ? "0" : range2;
 
             var d1, d2 = -1, d3 = -1, result;
             var numberresult = false, signresult = false, moderesult = false;
@@ -10080,13 +11048,26 @@
         this.computeCeiling = function (args) {
             var range = this.splitArgsPreservingQuotedCommas(args);
             var argCount = range.length;
-            if (argCount != 2) {
+            if (argCount != 2 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
 
-            var range0 = (argCount > 1) ? this.getValueFromArg(range[0]) : "1";
-            var range1 = (argCount > 1 && range[1].length != 0) ? this.getValueFromArg(range[1]) : "0";
+            range[0] = this.getValueFromArg(range[0]);
+            var range0 = (argCount > 1) ? range[0] : "1";
+            range0 = (range0 == null || range0 == "") ? "0" : range0;
+            range0 = (range0.split(this.tic).join("") == "TRUE") ? "1" : (range0.split(this.tic).join("") == "FALSE") ? "0" : range0;
+            range[1] = this.getValueFromArg(range[1]);
+            var range1 = (argCount > 1 && range[1].length != 0) ? range[1] : "0";
             range1 = (range1 == "" || range1 == null) ? "0" : range1;
+            range1 = (range1.split(this.tic).join("") == "TRUE") ? "1" : (range1.split(this.tic).join("") == "FALSE") ? "0" : range1;
             var numberresult = false, signresult = false;
 
             numberresult = (range0.split(this.tic).join(this._string_empty) == "true") ? true : false;
@@ -10207,29 +11188,41 @@
         this.computeCombin = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._this.requires_2_args];
-                else
-                    return this.formulaErrorStrings[this.requires_2_args];
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             ////N things taken k at the time.
             var nd;
             var kd;
             var combin = 0;
-            if (args[0].split(this.tic).join("") == (this._string_empty) || args[1].split(this.tic).join("") == (this._string_empty)) {
+
+            var argument1 = this.getValueFromArg(args[0]).split(this.tic).join("");
+            argument1 = (argument1 == null || argument1 == "") ? "0" : argument1;
+            argument1 = (argument1.split(this.tic).join("") == "TRUE") ? "1" : (argument1.split(this.tic).join("") == "FALSE") ? "0" : argument1;
+            var argument2 = this.getValueFromArg(args[1]).split(this.tic).join("");
+            argument2 = (argument2 == null || argument2 == "") ? "0" : argument2;
+            argument2 = (argument2.split(this.tic).join("") == "TRUE") ? "1" : (argument2.split(this.tic).join("") == "FALSE") ? "0" : argument2;
+            if (argument1.split(this.tic).join("") == (this._string_empty) || argument2.split(this.tic).join("") == (this._string_empty)) {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.getErrorStrings()[1].toString();
                 else
                     return this.getErrorStrings()[1].toString();
             }
-            nd = this._parseDouble(this.getValueFromArg(args[0]).split(this.tic).join(""));
-            kd = this._parseDouble(this.getValueFromArg(args[1]).split(this.tic).join(""));
+            nd = this._parseDouble(argument1);
+            kd = this._parseDouble(argument2);
             if (!isNaN(nd) && !isNaN(kd)) {
                 var k = parseInt((kd + 0.1).toString());
                 var n = parseInt((nd + 0.1).toString());
-                if (n < k || n < 1) {
+                if (n < k || k < 0 || n < 0 || kd < 0) {
                     if (this._rethrowLibraryComputationExceptions)
                         throw this.getErrorStrings()[1].toString();
                     else
@@ -10253,11 +11246,17 @@
                 }
                 return this.getErrorStrings()[4].toString();
             }
-            if (argCount != 2) {
+            if (argCount != 2 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions) {
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 }
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             if (argList.length > 15) {
                 if (this._rethrowLibraryComputationExceptions) {
@@ -10265,8 +11264,14 @@
                 }
                 return this.getErrorStrings()[4].toString();
             }
-            var number1 = parseInt(this.getValueFromArg(args[0]).split(this.tic).join(""));
-            var choosedNumber = parseInt(this.getValueFromArg(args[1]).split(this.tic).join(""));
+            var number1 = this.getValueFromArg(args[0]).split(this.tic).join("");
+            number1 = (number1.split(this.tic).join("") == "TRUE") ? "1" : (number1.split(this.tic).join("") == "FALSE") ? "0" : number1;
+            number1 = (number1 == "" || number1 == 0) ? "0" : number1;
+            number1 = parseInt(number1.split(this.tic).join(""));
+            var choosedNumber = this.getValueFromArg(args[1]).split(this.tic).join("");
+            choosedNumber = (choosedNumber.split(this.tic).join("") == "TRUE") ? "1" : (choosedNumber.split(this.tic).join("") == "FALSE") ? "0" : choosedNumber;
+            choosedNumber = (choosedNumber == "" || choosedNumber == 0) ? "0" : choosedNumber;
+            choosedNumber = parseInt(choosedNumber.split(this.tic).join(""));
             var result;
             if (number1 == 0 && choosedNumber == 0) {
                 result = "1";
@@ -10278,16 +11283,39 @@
             return result;
         };
         this.computeCos = function (args) {
+            var argument = this.splitArgsPreservingQuotedCommas(args);
+            if (argument.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            args = this.getValueFromArg(args);
+            args = (args.split(this.tic).join("") == "TRUE") ? "1" : (args.split(this.tic).join("") == "FALSE") ? "0" : args;
             return this._computeMath(args, Math.cos).toString();
         };
        
         this.computeCosh = function (args) {
             var arg = this._splitArguments(args, this.getParseArgumentSeparator().toString());
             var argCount = arg.length;
-            if (argCount > 1) {
+            if (argCount > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argVal = this.getValueFromArg(arg[0]);
+            argVal = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
             var value = this._parseDouble(argVal.split(this.tic).join(""));
             if (isNaN(value)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -10301,11 +11329,19 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            argList = this.getValueFromArg(argList);
+            argList = (argList.split(this.tic).join("") == "TRUE") ? "1" : (argList.split(this.tic).join("") == "FALSE") ? "0" : argList;
             if (argList[0] == (this.tic) && argList[length - 1] == (this.tic))
                 argList = argList.split(this.tic).join("");
             if (argList == this._string_empty) {
@@ -10342,12 +11378,19 @@
         this.computeCsc = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argValue = this.getValueFromArg(args[0]);
+            argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
             var dVal = this._parseDouble(argValue);
             if (isNaN(dVal)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -10367,12 +11410,19 @@
         this.computeCsch = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argValue = this.getValueFromArg(args[0]);
+            argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
             var dVal = this._parseDouble(argValue);
             var isNumber = this.computeIsNumber(argList);
             if (isNaN(dVal)) {
@@ -10395,17 +11445,23 @@
         this.computeDecimal = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount > 3) {
+            if (argCount > 3 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            var Base64 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
-            if (this.getValueFromArg(args[0]).indexOf(this.tic) != -1 && !this._isCellReference(args[0])) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._invalid_Math_argument];
-                return this.getErrorStrings()[1].toString();
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.TextWithNumber);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
+            if (args[1] == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
+            }
+            var Base64 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
             var strValue;
             var radix = 0;
             try {
@@ -10449,12 +11505,19 @@
         this.computeDegrees = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argValue = this.getValueFromArg(args[0]);
+            argValue = (argValue.split(this.tic).join("") == "TRUE") ? "1" : (argValue.split(this.tic).join("") == "FALSE") ? "0" : argValue;
             var radians = this._parseDouble(argValue);
             if (isNaN(radians)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -10469,10 +11532,19 @@
         this.computeExp = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount > 1) {
-                return this.formulaErrorStrings[this.invalid_arguments];
+            if (argCount > 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var argVal = this.getValueFromArg(args[0]);
+            argVal = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
             if (argVal == "")
                 argList = "0";
             var x = this._parseDouble(argVal);
@@ -10488,13 +11560,22 @@
             var even = 0;
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount > 1) {
-                return this.formulaErrorStrings[this.invalid_arguments];
+            if (argCount > 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var argVal = this.getValueFromArg(args[0]);
-            var number = this._parseDouble(argVal);
+            var number = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
+            number = this._parseDouble(number.split(this.tic).join(""));
             if (!isNaN(number)) {
-                var sgn = number > 0 ? 1 : (number === 0 || isNaN(number)) ? x : -1;
+                var sgn = Math.sign(number);
                 number = Math.abs(number);
                 number = Math.ceil(number);
                 if ((number % 2) == 1) {
@@ -10516,10 +11597,20 @@
         this.computeFact = function (args) {
             var fact = 0;
             var numList = this.splitArgsPreservingQuotedCommas(args);
-            if (numList.length > 1) {
-                return this.formulaErrorStrings[this.invalid_arguments];
+            if (numList.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            number = parseInt(this.getValueFromArg(args));
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            var argVal = this.getValueFromArg(args);
+            var number = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
+            number = this._parseDouble(number.split(this.tic).join(""));
             if (isNaN(number)) {
                 return this.getErrorStrings()[1].toString();
             } else if (number < 0) {
@@ -10541,8 +11632,16 @@
             var number;
             var fact = 1;
             var numList = this.splitArgsPreservingQuotedCommas(args);
-            if (numList.length > 1) {
-                return this.formulaErrorStrings[this.invalid_arguments];
+            if (numList.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             number = parseInt(this.getValueFromArg(args));
             if (isNaN(number)) {
@@ -10567,10 +11666,18 @@
         this.computeFloor = function (args) {
             var range = this.splitArgsPreservingQuotedCommas(args);
             var argCount = range.length;
-            if (argCount != 2) {
+            if (argCount != 2 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var d1 = this._parseDouble(this.getValueFromArg(range[0]));
             var d2 = this._parseDouble(this.getValueFromArg(range[1])), d3 = 0;
             if (!isNaN(d1) && !isNaN(d2)) {
@@ -10599,12 +11706,21 @@
         this.computeInt = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount > 1) {
-                return this.formulaErrorStrings[this.invalid_arguments];
+            if (argCount > 1 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
             var argVal = this.getValueFromArg(args[0]);
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var x;
            
+            argVal = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
             x = Math.floor(argVal).toString();
           
             if (!isNaN(x)) {
@@ -10641,12 +11757,26 @@
         this.computeLog = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount > 2) {
-                return this.formulaErrorStrings[this.invalid_arguments];
+            if (argCount > 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var argVal = this.getValueFromArg(args[0]);
-            var x = this._parseDouble(argVal);
             var baseVal = (argCount == 2) ? this.getValueFromArg(args[1]) : "10";
+            if ((argVal == "" || argVal == null) || (baseVal == "" || baseVal == null)) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
+            }
+            argVal = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
+            var x = this._parseDouble(argVal);
             var b =  this._parseDouble(baseVal);
             if (x <= 0 || b <= 0) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -10665,10 +11795,19 @@
         this.computeLogTen = function (args) {
             var arg = this._splitArguments(args, this.getParseArgumentSeparator().toString());
             var argCount = arg.length;
-            if (argCount > 1) {
+            if (argCount > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argVal = this.getValueFromArg(arg[0]);
+            argVal = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
             var value = this._parseDouble(argVal.split(this.tic).join(""));
             if (isNaN(value)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -10680,10 +11819,19 @@
                     throw this.formulaErrorStrings[this._bad_formula];
                 return this.getErrorStrings()[4].toString();
             }
-            return (this._computeMath(args, Math.log)/Math.LN10).toString();
+            return (this._computeMath(argVal, Math.log) / Math.LN10).toString();
         };
         
         this.computePI = function (args) {
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.None);
+                if (this.formulaErrorStrings[this._invalid_arguments] == checkString) {
+                    return checkString;
+                }
+                else {
+                    return Math.PI.toString();
+                }
+            }
             return Math.PI.toString();
         };
         this.computeProduct = function (range) {
@@ -10693,6 +11841,17 @@
             var nohits = true;
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             for (var r = 0; r < ranges.length; r++) {
                 var adjustRange = ranges[r];
 
@@ -10702,6 +11861,7 @@
                     for (var s = 0; s < cellCollection.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cellCollection[s]);
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                         } catch (ex) {
                             return ex;
                         }
@@ -10724,6 +11884,7 @@
                 } else {
                     try {
                         s1 = this.getValueFromArg(ranges[r]);
+                        s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                     } catch (ex) {
                         return ex;
                     }
@@ -10784,10 +11945,24 @@
         };
         this.computeSeriessum = function (arg) {
             var args = this.splitArgsPreservingQuotedCommas(arg);
-            if (args.length != 4) {
+            if (args.length != 4 || arg == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            for (var index = 0; index <= 2; index++) {
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(args[index], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString1 = this.formulaErrorStringCheck(args[3], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                    return checkString1;
+                }
             }
             var xValue = 0, nValue = 0, mValue = 0, coeff = 0, result = 0;
             var arrayArg;
@@ -10804,12 +11979,6 @@
             xValue = this._parseDouble(this.getValueFromArg(args[0]));
             nValue = this._parseDouble(this.getValueFromArg(args[1]));
             mValue = this._parseDouble(this.getValueFromArg(args[2]));
-            if (isNaN(xValue) || isNaN(nValue) || isNaN(mValue)) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._bad_formula];
-                return (argVal[0] == this.tic || this._isCellReference(arg[0])) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
-            }
-            arrayArg = this.getCellsFromArgs(args[3].split(this.tic).join(""));
             for (var i = 0; i < arrayArg.length; i++) {
                 coeff = this._parseDouble(this.getValueFromArg(arrayArg[i]));
                 if (!isNaN(coeff)) {
@@ -10828,15 +11997,38 @@
             return result.toString();
         };
         this.computeSin = function (args) {
+            var argument = this.splitArgsPreservingQuotedCommas(args);
+            if (argument.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            args = this.getValueFromArg(args);
+            args = (args.split(this.tic).join("") == "TRUE") ? "1" : (args.split(this.tic).join("") == "FALSE") ? "0" : args;
             return this._computeMath(args, Math.sin).toString();
         };
         this.computeSinh = function (args) {
             var arg = this._splitArguments(args, this.getParseArgumentSeparator().toString());
             var argCount = arg.length;
-            if (argCount > 1) {
+            if (argCount > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var argVal = this.getValueFromArg(arg[0]);
+            argVal = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
             var value = this._parseDouble(argVal.split(this.tic).join(""));
             if (isNaN(value)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -10850,21 +12042,19 @@
         this.computeSqrt = function (args) {
             var arg = this._splitArguments(args, this.getParseArgumentSeparator().toString());
             var argCount = arg.length;
-            if (argCount > 1) {
+            if (argCount > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            var argVal = this.getValueFromArg(arg[0]);
-            var value = parseInt(argVal.split(this.tic).join(""));
-            if (isNaN(value)) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._bad_formula];
-                return (argVal[0] == this.tic) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
-            if (value < 0) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._bad_formula];
-                return this.getErrorStrings()[4].toString();
-            }
+            args = this.getValueFromArg(args);
+            args = (args.split(this.tic).join("") == "TRUE") ? "1" : (args.split(this.tic).join("") == "FALSE") ? "0" : args;
             return this._computeMath(args, Math.sqrt).toString();
         };
         this.computeSubTotal = function (args) {
@@ -10874,8 +12064,16 @@
             var index = 0;
             var arg = this._splitArguments(args, this.getParseArgumentSeparator().toString());
             var argCount = arg.length;
-            if (argCount < 2) {
+            if (argCount < 2 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg[0], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             if (this._isCellReference(arg[0])) {
                 cellReference = this.getValueFromArg(arg[0]);
@@ -10956,8 +12154,22 @@
         this.computeSumif = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2 && argCount != 3) {
+            if (argCount != 2 && argCount != 3 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                if (argCount == 3) {
+                    checkString = this.formulaErrorStringCheck(args[2], FormulaArgumentType.CellReference);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
             }
 
             var criteriaRange = args[0];
@@ -11006,7 +12218,7 @@
                     var startRow = this.rowIndex(this._substring(sumRange, 0, i));
                     var startCol = this.colIndex(this._substring(sumRange, 0, i));
                     var row = this.rowIndex(this._substring(sumRange, i + 1));
-                    var col = this.CclIndex(this._substring(sumRange, i + 1));
+                    var col = this.colIndex(this._substring(sumRange, i + 1));
                     if (startRow != row) {
                         row += count - s2.length;
                     } else if (startCol != col) {
@@ -11129,11 +12341,25 @@
             var argCount = args.length;
             var digits = 0;
 
+            if (argCount > 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             if (argCount == 2) {
+                digits = this.getValueFromArg(args[1]);
+                digits = (digits.split(this.tic).join("") == "TRUE") ? "1" : (digits.split(this.tic).join("") == "FALSE") ? "0" : digits;
                 ////ignore return value...
-                digits = this._parseDouble(this.getValueFromArg(args[1]));
+                digits = this._parseDouble(digits);
             }
             var argVal = this.getValueFromArg(args[0]);
+            argVal = (argVal.split(this.tic).join("") == "TRUE") ? "1" : (argVal.split(this.tic).join("") == "FALSE") ? "0" : argVal;
             var value = this._parseDouble(argVal.split(this.tic).join(""));
             if (isNaN(value)) {
                 if (this._rethrowLibraryComputationExceptions)
@@ -11147,17 +12373,26 @@
         this.computeLognormOdist = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 4) {
+            if (argCount != 4 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var x;
             var u;
             var s;
             var dist = 0;
 
             for (var i = 0; i < argCount; ++i) {
-                args[i] = this.getValueFromArg(args[i]).split(this.trueValueStr).join(this._string_empty);
+                args[i] = this.getValueFromArg(args[i]).split(this.tic).join(this._string_empty);
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             x = this._parseDouble(args[0]);
             u = this._parseDouble(args[1]);
@@ -11190,8 +12425,16 @@
         this.computeLognormOinv = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var p;
@@ -11201,11 +12444,18 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             p = this._parseDouble(args[0]);
             u = this._parseDouble(args[1]);
             s = this._parseDouble(args[2]);
             if (!isNaN(p) && !isNaN(u) && !isNaN(s)) {
+                if (p <= 0 || p >= 1 || s <= 0) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
+                }
                 dist = Math.exp(this._normalinv(p, u, s));
             }
             return dist.toString();
@@ -11213,10 +12463,16 @@
         this.computeNormOinv = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var p;
@@ -11224,8 +12480,11 @@
             var s;
             var invdist = 0;
 
-            for (var i = 0; i < argCount; ++i)
+            for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]).split(this.tic).join(this._string_empty);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
+            }
 
             p = this._parseDouble(args[0]);
             u = this._parseDouble(args[1]);
@@ -11248,11 +12507,17 @@
         this.computeNormOdist = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 4) {
+            if (argCount != 4 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions) {
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 }
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -11263,11 +12528,18 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             x = this._parseDouble(args[0]);
             u = this._parseDouble(args[1]);
             s = this._parseDouble(args[2]);
             if (!isNaN(x) && !isNaN(u) && !isNaN(s)) {
+                if (s <= 0) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
+                }
                 if (argCount != 3) {
                     cum = (args[3] == this.trueValueStr) ? 1 : 0;
                     var check = 0;
@@ -11360,14 +12632,28 @@
         this.computePermut = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
-                return this.formulaErrorStrings[this.requires_2_args];
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
+                    throw this.getLibraryComputationException();
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             ////N things taken k at the time.
             var nd;
             var kd;
             var combin = 0;
+            args[0] = this.getValueFromArg(args[0]);
+            args[0] = (args[0] == "" || args[0] == null) ? "0" : args[0];
+            args[0] = (args[0].split(this.tic).join("") == "TRUE") ? "1" : (args[0].split(this.tic).join("") == "FALSE") ? "0" : args[0];
+            args[1] = this.getValueFromArg(args[1]);
+            args[1] = (args[1] == "" || args[1] == null) ? "0" : args[1];
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
             nd = this._parseDouble(this.getValueFromArg(args[0]));
             kd = this._parseDouble(this.getValueFromArg(args[1]));
             if (!isNaN(nd) && !isNaN(kd)) {
@@ -11388,13 +12674,27 @@
         this.computePermutationA = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
-                return this.formulaErrorStrings[this.requires_2_args];
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions() && this.getLibraryComputationException() != null)
+                    throw this.getLibraryComputationException();
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var nd;
             var kd;
             var combin = 0;
+            args[0] = this.getValueFromArg(args[0]);
+            args[0] = (args[0] == "" || args[0] == null) ? "0" : args[0];
+            args[0] = (args[0].split(this.tic).join("") == "TRUE") ? "1" : (args[0].split(this.tic).join("") == "FALSE") ? "0" : args[0];
+            args[1] = this.getValueFromArg(args[1]);
+            args[1] = (args[1] == "" || args[1] == null) ? "0" : args[1];
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
             nd = this._parseDouble(args[0]);
             kd = this._parseDouble(args[1]);
             if (!isNaN(nd) && !isNaN(kd)) {
@@ -11408,8 +12708,14 @@
         this.computeStandardize = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -11419,11 +12725,18 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == "" || args[i] == null) ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             x = this._parseDouble(args[0]);
             u = this._parseDouble(args[1]);
             sd = this._parseDouble(args[2]);
             if (!isNaN(x) && !isNaN(u) && !isNaN(sd)) {
+                if (sd <= 0) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
+                }
                 dist = (x - u) / sd;
             }
             return dist.toString();
@@ -11431,10 +12744,18 @@
         this.computeBinomOdist = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 4) {
+            if (argCount != 4 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var successes;
             var trials;
             var p;
@@ -11443,6 +12764,8 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]).split(this.tic).join(this._string_empty);
+                args[i] = (args[i] == null || args[i] == "") ? "0" :args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             successes = this._parseDouble(args[0]);
             trials = this._parseDouble(args[1]);
@@ -11471,8 +12794,16 @@
         this.computeChisqOinvOrt = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var p;
@@ -11481,10 +12812,20 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             p = this._parseDouble(args[0]);
             v = this._parseDouble(args[1]);
             if (!isNaN(p) && !isNaN(v)) {
+                if (p <= 0 || p > 1 || v < 1) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
+                }
+                if (p == 1) {
+                    return "0";
+                }
                 dist = this._chiinv(p, v);
             }
             return dist.toString();
@@ -11492,8 +12833,16 @@
         this.computeChisqOdistOrt = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -11502,16 +12851,23 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             x = this._parseDouble(args[0]);
             v = this._parseDouble(args[1]);
             if (!isNaN(x) && !isNaN(v)) {
+                if (x < 0 || v < 1) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
+                }
+                if (x == 0) {
+                    return v.toString();
+
+                }
                 if (v == 1 && this._excelLikeComputations) {
                     //continue;
-                } else if (v < 1) {
-                    if (this._excelLikeComputations)
-                        return "#NUM!";
-                    return this.formulaErrorStrings[this._invalid_arguments];
                 }
 
                 dist = 1 - this._chidist(x, v);
@@ -11524,8 +12880,16 @@
         this.computeFOdist = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 4) {
+            if (argCount != 4 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -11535,6 +12899,7 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]).split(this.tic).join(this._string_empty);
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             x = this._parseDouble(args[0]);
             df1 = this._parseDouble(args[1]);
@@ -11547,9 +12912,9 @@
                     return this.getErrorStrings()[4].toString();
                 }
 
-                if (args[3] == this.trueValueStr) {
+                if (args[3] == 1){
                     dist = this._fCumulativeDensity(x, df1, df2);
-                } else if (args[3] == this.falseValueStr) {
+                } else if (args[3] == 0){
                     dist = this._fProbabilityDensity(x, df1, df2);
                 }
             } else {
@@ -11561,25 +12926,51 @@
             return dist.toString();
         };
         this.computeGammaln = function (argList) {
+            var argument = this.splitArgsPreservingQuotedCommas(argList);
+            if (argument.length > 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            argList = this.getValueFromArg(argList);
+            argList = (argList.split(this.tic).join("") == "TRUE") ? "1" : (argList.split(this.tic).join("") == "FALSE") ? "0" : argList;
             var x = 0;
             x = this._parseDouble(argList);
-            if (!isNaN(x) && x > 0) {
+            if (!isNaN(x) && x > 1) {
                 x = this._gammaln(x);
-            } else {
-                return this.formulaErrorStrings[this._invalid_arguments];
+            }
+            else if(x == 1){
+                return "0";
+            }
+            else {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
             }
             return x.toString();
         };
         this.computeConfidenceOnorm = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions) {
                     throw "Wrong number of arguments";
                 }
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var alpha;
             var s;
             var sz;
@@ -11587,6 +12978,8 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]).split(this.tic).join(this._string_empty);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
 
             alpha = this._parseDouble(args[0]);
@@ -11614,10 +13007,18 @@
         this.computeExponOdist = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var x;
             var lambda;
             var cum = 0;
@@ -11625,6 +13026,8 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == null || args[i] == null) ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             x = this._parseDouble(args[0]);
             lambda = this._parseDouble(args[1]);
@@ -11653,32 +13056,55 @@
         this.computeFisher = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var x;
             var z = 0;
 
             var s = this.getValueFromArg(args[0]);
+            s = (s.split(this.tic).join("") == "TRUE") ? "1" : (s.split(this.tic).join("") == "FALSE") ? "0" : s;
 
             x = this._parseDouble(s);
             if (!isNaN(x) && (x > -1 && x < 1)) {
                 z = 0.5 * Math.log((1 + x) / (1 - x));
+            }
+            else {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
             }
             return z.toString();
         };
         this.computeFisherInv = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var y;
             var x = 0;
 
             var s = this.getValueFromArg(args[0]);
+            s = (s.split(this.tic).join("") == "TRUE") ? "1" : (s.split(this.tic).join("") == "FALSE") ? "0" : s;
 
             y = this._parseDouble(s);
             if (!isNaN(y)) {
@@ -11690,31 +13116,33 @@
         this.computeGammalnOPrecise = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (args[0] == this.tic + this.tic) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw "Passed Argument is empty";
-                return this.getErrorStrings()[1].toString();
-            }
-
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            argList = this.getValueFromArg(argList);
+            argList = (argList.split(this.tic).join("") == "TRUE") ? "1" : (argList.split(this.tic).join("") == "FALSE") ? "0" : argList;
             var x = 0;
-            x = this._parseDouble(args.toString());
-            if (!isNaN(x) && x > 0)
+            x = this._parseDouble(argList.toString());
+            if (!isNaN(x) && x > 1)
                 x = this._gammaln(x);
+            else if (x == 1) {
+                return "0";
+            }
             else {
                 if (x <= 0) {
                     if (this._rethrowLibraryComputationExceptions)
                         throw "Passed Argument value is less than or equal to minimum value 0";
                     return this.getErrorStrings()[4].toString();
                 }
-                if (this._rethrowLibraryComputationExceptions)
-                    throw "Passed Argument is non numerical";
-                return this.getErrorStrings()[1].toString();
             }
             return x.toString();
         };
@@ -11722,12 +13150,25 @@
         this.computeLarge = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString1 = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                    return checkString1;
+                }
+                var checkString2 = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString2) > -1) {
+                    return checkString2;
+                }
             }
 
             var x0;
             var s1 = this.getValueFromArg(args[1]);
+            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
             x0 = this._parseDouble(s1);
             if (isNaN(x0)) {
                 return this.formulaErrorStrings[this._invalid_arguments];
@@ -11752,11 +13193,24 @@
         this.computeSmall = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                var checkString1 = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                    return checkString1;
+                }
+            }
             var s1 = this.getValueFromArg(args[1]);
+            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
             var x0 = this._parseDouble(s1);
             if (isNaN(x0)) {
                 return this.formulaErrorStrings[this._invalid_arguments];
@@ -11784,11 +13238,10 @@
             var ranges = this.splitArgsPreservingQuotedCommas(range);
             var argsRange;
 
-            if (this._isTextEmpty(range)) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this.invalid_arguments];
-                else
-                    return this.formulaErrorStrings[this.invalid_arguments];
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             }
             for (var r = 0; r < ranges.length; r++) {
                 argsRange = ranges[r];
@@ -11843,11 +13296,16 @@
         this.computeAverage = function (range) {
             var sum = 0, count = 0, d, s1, adjustRange = [];
             var ranges = this.splitArgsPreservingQuotedCommas(range);
-            if (ranges.length < 1) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this.invalid_arguments];
-                else
-                    return this.formulaErrorStrings[this.invalid_arguments];
+            if (ranges.length < 1 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             for (var r = 0; r < ranges.length; r++) {
                 adjustRange = ranges[r];
@@ -11856,6 +13314,7 @@
                     for (var s = 0; s < cellCollection.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cellCollection[s]).split(this.tic).join("");
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                         } catch (ex) {
                             if (this._rethrowLibraryComputationExceptions)
                                 throw this.getErrorStrings()[4].toString();
@@ -11883,7 +13342,9 @@
                 } else {
                     try {
                         s1 = this.getValueFromArg(adjustRange).split(this.tic).join(this._string_empty);
+                        s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                         var s2 = this.getValueFromArg(adjustRange);
+                        s2 = (s2.split(this.tic).join("") == "TRUE") ? "1" : (s2.split(this.tic).join("") == "FALSE") ? "0" : s2;
                     } catch (ex) {
                         if (this._rethrowLibraryComputationExceptions)
                             throw this.getErrorStrings()[4].toString();
@@ -11919,6 +13380,17 @@
         };
         this.computeAverageA = function (range) {
             var ranges = this.splitArgsPreservingQuotedCommas(range);
+            if (ranges.length < 1 || range == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var newargs = this._string_empty;
             var d = 0;
             if (ranges == this.trueValueStr || ranges == this.falseValueStr) {
@@ -11960,6 +13432,11 @@
             var argslist;
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
+            if (ranges == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             for (var r = 0; r < ranges.length; r++) {
                 argslist = ranges[r];
 
@@ -11981,14 +13458,21 @@
                             d = this._parseDouble(s1);
                             if (!isNaN(d)) {
                                 max = Math.max(max, d);
-                            } else if (this.getErrorStrings().indexOf(s1)) {
-                                return max;
+                            } else if (this.getErrorStrings().indexOf(s1) != -1) {
+                                return s1;
                             }
                         }
                     }
                 } else {
                     try {
+                        //To check the error string #VALUE! for invalid argument
+                        if (!this._isCellReference(argslist) && argslist[0] == this.tic) {
+                            if (this._rethrowLibraryComputationExceptions)
+                                throw this.getErrorStrings()[1].toString();
+                            return this.getErrorStrings()[1].toString();
+                        }
                         s1 = (argslist == this._string_empty) ? "0" : this.getValueFromArg(argslist);
+                        s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                     } catch (ex) {
                         if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                             throw this.getLibraryComputationException();
@@ -12001,7 +13485,7 @@
                         d = this._parseDouble(s1);
                         if (!isNaN(d)) {
                             max = Math.max(max, d);
-                        } else if (this.getErrorStrings().indexOf(s1)) {
+                        } else if (this.getErrorStrings().indexOf(s1) != -1) {
                             return s1;
                         }
                     }
@@ -12020,6 +13504,17 @@
 
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             for (var r = 0; r < ranges.length; r++) {
                 ////cell range
                 if (ranges[r].indexOf(':') > -1) {
@@ -12027,6 +13522,7 @@
                     for (var s = 0; s < cell.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cell[s]);
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                         } catch (ex) {
                             if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                                 throw this.getLibraryComputationException();
@@ -12050,7 +13546,21 @@
                     }
                 } else {
                     try {
-                        s1 = this.getValueFromArg(ranges[r]);
+                        if ((!ranges[r].startsWith(this.tic)) && ranges[r] == "") {
+                            s1 = "0";
+                        }
+                        else {
+                            s1 = this.getValueFromArg(ranges[r]);
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
+                            if (this.getErrorStrings().indexOf(s1) > -1) {
+                                if (this.getRethrowLibraryComputationExceptions())
+                                    throw this.formulaErrorStrings[this._invalid_arguments];
+                                return s1;
+                            }
+                            if (s1 == "") {
+                                s1 = "0";
+                            }
+                        }
                     } catch (ex) {
                         if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                             throw this.getLibraryComputationException();
@@ -12079,6 +13589,17 @@
             return this._string_empty;
         };
         this.computeMedian = function (range) {
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var dd = this._getDoubleArray(range);
             dd.sort(function (a, b) {
                 if (isNaN(a) || isNaN(b)) {
@@ -12103,12 +13624,18 @@
 
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             var rang = range.split(';');
             if (rang.length > 1) {
                 for (var r = 0; r < rang.length; r++) {
                     var valRange = this.splitArgsPreservingQuotedCommas(rang[r]);
                     for (var s = 0; s < valRange.length; s++) {
                         var tempval = this.getValueFromArg(valRange[s]);
+                        tempval = (tempval.split(this.tic).join("") == "TRUE") ? "1" : (tempval.split(this.tic).join("") == "FALSE") ? "0" : tempval;
                         if (tempval.length > 0) {
                             d = this._parseDouble(tempval);
                             if (!isNaN(d)) {
@@ -12142,14 +13669,24 @@
                             d = this._parseDouble(s1);
                             if (!isNaN(d)) {
                                 min = Math.min(min, d);
-                            } else if (this.getErrorStrings().indexOf(s1) == -1) {
-                                return min;
+                            } else if (this.getErrorStrings().indexOf(s1) != -1) {
+                                return s1;
                             }
                         }
                     }
                 } else {
                     try {
+                        //To check the error string #VALUE! for invalid argument
+                        if (!this._isCellReference(ranges[r]) && ranges[r][0] == this.tic) {
+                            if (this._rethrowLibraryComputationExceptions)
+                                throw this.getErrorStrings()[1].toString();
+                            return this.getErrorStrings()[1].toString();
+                        }
                         s1 = (ranges[r] == this._string_empty) ? "0" : this.getValueFromArg(ranges[r]);
+                        s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
+                        if (s1 == "" && this._isCellReference(ranges[r])) {
+                            s1 = "0";
+                        }
                     } catch (ex) {
                         if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                             throw this.getLibraryComputationException();
@@ -12162,7 +13699,7 @@
                         d = this._parseDouble(s1);
                         if (!isNaN(d)) {
                             min = Math.min(min, d);
-                        } else if (this.getErrorStrings().indexOf(s1) == -1) {
+                        } else if (this.getErrorStrings().indexOf(s1) != -1) {
                             return s1;
                         }
                     }
@@ -12182,6 +13719,17 @@
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
             var rang = range.split(';');
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             if (rang.length > 1) {
                 for (var r = 0; r < rang.length; r++) {
                     var valRange = this.splitArgsPreservingQuotedCommas(rang[r]);
@@ -12194,6 +13742,7 @@
                             } else if (this.getErrorStrings().indexOf(tempval) == -1) {
                                 return tempval;
                             } else {
+                                tempval = (tempval.split(this.tic).join("") == "TRUE") ? "1" : (tempval.split(this.tic).join("") == "FALSE") ? "0" : tempval;
                                 d = this._parseDouble(tempval);
                             }
 
@@ -12212,6 +13761,7 @@
                     for (var s = 0; s < cell.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cell[s]);
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                         } catch (ex) {
                             if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                                 throw this.getLibraryComputationException();
@@ -12237,7 +13787,16 @@
                     }
                 } else {
                     try {
-                        s1 = this.getValueFromArg(ranges[r]);
+                        if ((!ranges[r].startsWith(this.tic)) && ranges[r] == "") {
+                            s1 = "0";
+                        }
+                        else {
+                            s1 = this.getValueFromArg(ranges[r]);
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
+                            if (s1 == "") {
+                                s1 = "0";
+                            }
+                        }
                     } catch (ex) {
                         if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                             throw this.getLibraryComputationException();
@@ -12250,7 +13809,7 @@
                         d = 0;
                         if (s1.toUpperCase() == (this.trueValueStr)) {
                             d = 1;
-                        } else if (this.getErrorStrings().indexOf(s1) == -1) {
+                        } else if (this.getErrorStrings().indexOf(s1) > -1) {
                             return s1;
                         } else {
                             d = this._parseDouble(s1);
@@ -12270,16 +13829,36 @@
         this.computePercentrankInc = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2 && argCount != 3) {
+            if (argCount != 2 && argCount != 3 || range == "") {
                 if (this._rethrowLibraryComputationExceptions) {
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 }
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if ((args[0] != "" && args[1] == "") || (args[1] != "" && args[0] == "")) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[0].toString(); 
+                return this.getErrorStrings()[0].toString();
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                for (var i = 1; i < argCount; i++) {
+                    checkString = this.formulaErrorStringCheck(args[i], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
             var x;
             var signif = 3;
             var s1 = this.getValueFromArg(args[1]);
+            if (s1 == "") {
+                s1 = "0";
+            }
             x = this._parseDouble(s1);
             if (isNaN(x)) {
                 if (this._rethrowLibraryComputationExceptions) {
@@ -12290,13 +13869,14 @@
             }
 
             if (argCount == 3) {
+                args[2] = (args[2].split(this.tic).join("") == "TRUE") ? "1" : (args[2].split(this.tic).join("") == "FALSE") ? "0" : args[2];
                 s1 = this.getValueFromArg(args[2]);
                 signif = this._parseDouble(s1);
-                if (isNaN(signif) && signif < 1) {
+                if (isNaN(signif) || signif < 1) {
                     if (this._rethrowLibraryComputationExceptions) {
                         throw this.formulaErrorStrings[this._invalid_arguments];
                     }
-                    return this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
                 }
             }
             var dd = this._getDoubleArray(args[0]);
@@ -12329,8 +13909,18 @@
         this.computeRankOEq = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2 && argCount != 3) {
+            if ((argCount != 2 && argCount != 3) || range == "") {
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var rank = 0;
@@ -12342,7 +13932,14 @@
             if (!isNaN(x)) {
                 var order = 0;
                 if (argCount == 3) {
+                    if (this.getEnableFormulaErrorValidation()) {
+                        var checkString2 = this.formulaErrorStringCheck(args[2], FormulaArgumentType.Numbers);
+                        if (this.getErrorStrings().indexOf(checkString2) > -1) {
+                            return checkString2;
+                        }
+                    }
                     s1 = this.getValueFromArg(args[2]);
+                    s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                     if (s1 == this._string_empty)
                         s1 = "0";
                     else if (this._parseDouble(s1) > 1)
@@ -12396,10 +13993,22 @@
         this.computePercentile = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var k;
             var s1 = this.getValueFromArg(args[1]);
             k = this._parseDouble(s1);
@@ -12474,10 +14083,16 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
 
-            if (argCount != 4) {
+            if (argCount != 4 || argList == "") {
                 if (this._rethrowLibraryComputationExceptions)
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -12528,6 +14143,12 @@
                 }
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
 
             var p;
             var df1;
@@ -12536,28 +14157,42 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             p = this._parseDouble(args[0]);
             df1 = this._parseDouble(args[1]);
             df2 = this._parseDouble(args[2]);
 
             if (!isNaN(p) && (p > 0 && p < 1) && !isNaN(df1) && !isNaN(df2)) {
+                if ((p < 0 || p > 1) || (df1 < 1 || df2 < 1)) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw "#NUM! Passed Argument value is less than or equal to minimum value";
+                    }
                 invdist = this._finv(p, df1, df2);
             }
 
             if (invdist <= 0) {
                 if (this._rethrowLibraryComputationExceptions) {
-                    throw this.formulaErrorStrings[this._iterations_dont_converge];
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 }
-                return this.formulaErrorStrings[this._iterations_dont_converge];
+                return this.getErrorStrings()[4].toString();
             }
             return invdist.toString();
         };
         this.computeTOdist = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -12567,6 +14202,10 @@
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]).split(this.tic).join(this._string_empty);
             }
+            args[0] = (args[0] == null || args[0] == "") ? "0" : args[0];
+            args[0] = (args[0].split(this.tic).join("") == "TRUE") ? "1" : (args[0].split(this.tic).join("") == "FALSE") ? "0" : args[0];
+            args[1] = (args[1] == null || args[1] == "") ? "0" : args[1];
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
             x = this._parseDouble(args[0]);
             df1 = this._parseDouble(args[1]);
             if (!isNaN(x) && !isNaN(df1)) {
@@ -12596,6 +14235,11 @@
             var sum = 0, s1, d, ranges;
             var x = [];
             ranges = this.splitArgsPreservingQuotedCommas(range);
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             var adjustRange;
             for (var r = 0; r < ranges.length; r++) {
                 adjustRange = ranges[r];
@@ -12606,6 +14250,7 @@
                     for (var s = 0; s < cellCollection.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cellCollection[s]).split(this.tic).join(this._string_empty);
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                         } catch (ex) {
                             if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                                 throw this.getLibraryComputationException();
@@ -12626,6 +14271,13 @@
                 } else {
                     try {
                         s1 = this.getValueFromArg(adjustRange).split(this.tic).join(this._string_empty);
+                        s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
+                        if (this.getEnableFormulaErrorValidation()) {
+                            var checkString = this.formulaErrorStringCheck(s1, FormulaArgumentType.Numbers);
+                            if (this.getErrorStrings().indexOf(checkString) > -1) {
+                                return checkString;
+                            }
+                        }
                     } catch (ex) {
                         if (this._rethrowLibraryComputationExceptions && this.getLibraryComputationException() != null) {
                             throw this.getLibraryComputationException();
@@ -12659,8 +14311,16 @@
         this.computeTOinv = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -12670,6 +14330,10 @@
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]).split(this.tic).join(this._string_empty);
             }
+            args[0] = (args[0] == "" || args[0] == null) ? "0" : args[0];
+            args[0] = (args[0].split(this.tic).join("") == "TRUE") ? "1" : (args[0].split(this.tic).join("") == "FALSE") ? "0" : args[0];
+            args[1] = (args[1] == "" || args[1] == null) ? "0" : args[1];
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
             x = this._parseDouble(args[0]);
             df1 = this._parseDouble(args[1]);
             if (!isNaN(x) && !isNaN(df1)) {
@@ -12692,8 +14356,16 @@
         this.computeChisqOinv = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var p;
@@ -12702,11 +14374,21 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]);
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
 
             p = this._parseDouble(args[0]);
             v = this._parseDouble(args[1]);
             if (!isNaN(p) && !isNaN(v)) {
+                if (p < 0 || p >= 1 || v <= 0) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
+                }
+                if (p == 0) {
+                    return "0";
+                }
                 dist = this._chiinv(p, v);
                 return dist.toString();
             }
@@ -12716,6 +14398,11 @@
             var s1;
             var d;
             var dt = new Date;
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
 
             var ranges = this.splitArgsPreservingQuotedCommas(range);
             for (var r = 0; r < ranges.length; r++) {
@@ -12725,6 +14412,7 @@
                     for (var s = 0; s < cell.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cell[s]);
+                            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                         } catch (Exception) {
                             if (this._rethrowLibraryComputationExceptions)
                                 throw this.getLibraryComputationException();
@@ -12748,7 +14436,8 @@
                     try {
                         if (ranges[r] == this._string_empty && !(ranges[r][0] == (this.tic)))
                             count++;
-                        s1 = this.getValueFromArg(r.split(this.tic).join(""));
+                        s1 = this.getValueFromArg(ranges[r].split(this.tic).join(""));
+                        s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
                     } catch (Exception) {
                         if (this.getLibraryComputationException() != null)
                             throw this.getLibraryComputationException();
@@ -12774,8 +14463,16 @@
         this.computeFOdistORt = function (argList) {
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
 
             var x;
@@ -12785,11 +14482,18 @@
 
             for (var i = 0; i < argCount; ++i) {
                 args[i] = this.getValueFromArg(args[i]).split(this.tic).join("");
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
             }
             x = this._parseDouble(args[0]);
             df1 = this._parseDouble(args[1]);
             df2 = this._parseDouble(args[2]);
             if (!isNaN(x) && !isNaN(df1) && !isNaN(df2)) {
+                if (x < 0 || df1 < 1 || df2 < 1) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._wrong_number_arguments];
+                    return this._errorStrings[4].toString();
+                }
                 var mult = Math.exp(this._gammaln((df1 + df2) / 2) - this._gammaln(df1 / 2) - this._gammaln(df2 / 2) + (df1 / 2) * Math.log(df1 / df2));
 
                 dist = 1 - mult * this._fdist(x, parseInt(df1.toString()), parseInt(df2.toString()));
@@ -12806,11 +14510,21 @@
             var d;
             var count = 0;
 
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
             for (var r = 0; r < ranges.length; r++) {
                 ////is a cellrange
                 if (ranges[r].indexOf(':') > -1) {
+                    if (r[0] == this.tic) {
+                        if (this.getRethrowLibraryComputationExceptions())
+                            throw this.formulaErrorStrings[this._invalid_arguments];
+                        return this.getErrorStrings()[1].toString();
+                    }
                     var cell = this.getCellsFromArgs(ranges[r]);
                     for (var s = 0; s < cell.length; s++) {
                         try {
@@ -12845,6 +14559,12 @@
                     }
 
                     if (s1.length > 0) {
+                        if (this.getEnableFormulaErrorValidation()) {
+                            var checkString = this.formulaErrorStringCheck(s1, FormulaArgumentType.Numbers);
+                            if (this.getErrorStrings().indexOf(checkString) > -1) {
+                                return checkString;
+                            }
+                        }
                         d = this._parseDouble(s1);
                         if (!isNaN(d)) {
                             count++;
@@ -12867,11 +14587,21 @@
             var d;
             var count = 0;
 
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
             for (var r = 0; r < ranges.length; r++) {
                 ////is a cellrange
                 if (ranges[r].indexOf(':') > -1) {
+                    if (r[0] == this.tic) {
+                        if (this.getRethrowLibraryComputationExceptions())
+                            throw this.formulaErrorStrings[this._invalid_arguments];
+                        return this.getErrorStrings()[1].toString();
+                    }
                     var cell = this.getCellsFromArgs(ranges[r]);
                     for (var s = 0; s < cell.length; s++) {
                         try {
@@ -12906,6 +14636,12 @@
                     }
 
                     if (s1.length > 0) {
+                        if (this.getEnableFormulaErrorValidation()) {
+                            var checkString = this.formulaErrorStringCheck(s1, FormulaArgumentType.Numbers);
+                            if (this.getErrorStrings().indexOf(checkString) > -1) {
+                                return checkString;
+                            }
+                        }
                         d = this._parseDouble(s1);
                         if (!isNaN(d) && d != 0) {
                             count++;
@@ -12925,10 +14661,25 @@
         this.computeIntercept = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
 
+            value1 = this.getValueFromArg(args[0]);
+            value2 = this.getValueFromArg(args[1]);
+            if (Boolean(value1) || Boolean(value2)) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                 return this.getErrorStrings()[1].toString();
+            }
             var y = this._getDoubleArray(args[0]);
             var x = this._getDoubleArray(args[1]);
             var n = x.length;
@@ -12964,11 +14715,16 @@
             this.adjustRangeArg(range);
             var ranges = this.splitArgsPreservingQuotedCommas(range);
             var arglist;
-            if (this._isTextEmpty(range)) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this.invalid_arguments];
-                else
-                    return this.formulaErrorStrings[this.invalid_arguments];
+            if (range == "" || ranges.length > 1) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             for (var r = 0; r < ranges.length; r++) {
                 arglist = ranges[r];
@@ -13005,9 +14761,9 @@
 
                         if (!isNaN(temp) || this.getErrorStrings.indexOf(s1)) {
                             if (this._rethrowLibraryComputationExceptions)
-                                throw this.formulaErrorStrings[this.invalid_arguments].toString();
+                                throw this.formulaErrorStrings[this._invalid_arguments].toString();
                             else
-                                return this.formulaErrorStrings[this.invalid_arguments].toString();
+                                return this.formulaErrorStrings[this._invalid_arguments].toString();
                         }
                         if (!(s1.split(this.tic).join(this._string_empty) == (this._string_empty))) {
                             if (this._rethrowLibraryComputationExceptions)
@@ -13016,9 +14772,9 @@
                                 return this.getErrorStrings()[5].toString();
                         } else {
                             if (this._rethrowLibraryComputationExceptions)
-                                throw this.formulaErrorStrings[this.invalid_arguments].toString();
+                                throw this.formulaErrorStrings[this._invalid_arguments].toString();
                             else
-                                return this.formulaErrorStrings[this.invalid_arguments].toString();
+                                return this.formulaErrorStrings[this._invalid_arguments].toString();
                         }
                     }
                     if (s1 == this._string_empty) {
@@ -13033,8 +14789,14 @@
             var ranges = this.splitArgsPreservingQuotedCommas(range);
             var x = this._getDoubleArray(range);
             var n = x.length;
-            if (ranges.length != 1 || range == "") {
+            if (range == "") {
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             if (x.length <= 0)
             {
@@ -13059,15 +14821,34 @@
         this.computeForecast = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 3) {
+            if (argCount != 3 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            for (var i = 1; i <= 2; i++) {
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString1 = this.formulaErrorStringCheck(args[i], FormulaArgumentType.Text);
+                    if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                        return checkString1;
+                    }
+                }
 
+            }
             var x0, d;
             var s1 = this.getValueFromArg(args[0]);
+            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
             x0 = this._parseDouble(s1);
             if (isNaN(x0)) {
-                return this.formulaErrorStrings[this._invalid_arguments];
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
             }
             var y, x;
             y = this._getDoubleArray(args[1]);
@@ -13102,6 +14883,17 @@
         };
         
         this.computeStdevOp = function (range) {
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var dd = this._getDoubleArrayA(range);
             var n = dd.length;
 
@@ -13114,6 +14906,17 @@
             return this._stdevdotP(dd).toString();
         };
         this.computeStdevOS = function (range) {
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var dd = this._getDoubleArrayA(range);
             var n = dd.length;
 
@@ -13127,6 +14930,17 @@
             return this._sd(dd, xbar).toString();
         };
         this.computeStdeva = function (range) {
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var dd = this._getDoubleArrayA(range);
             var n = dd.length;
             if (n < 2) {
@@ -13137,6 +14951,17 @@
             return this._sd(dd, xbar).toString();
         };
         this.computeStdevpa = function (range) {
+            if (range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var dd = this._getDoubleArrayA(range);
             var n = dd.length;
             if (n < 2) {
@@ -13164,15 +14989,32 @@
         this.computeCorrel = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            var arg1 = this.getValueFromArg(args[0]);
+            var arg2 = this.getValueFromArg(args[1]);
+            if ((arg1 == null || arg1 == "") || (arg2 == null || arg2 == "")) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this._errorStrings[1].toString();
             }
             var y, x;
             y = this._getDoubleArray(args[0]);
             x = this._getDoubleArray(args[1]);
             var n = x.length;
             if (n <= 0 || n != y.length) {
-                return this.formulaErrorStrings[this._wrong_number_arguments];
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this._errorStrings[0].toString();
             }
 
             var sumx = 0;
@@ -13199,6 +15041,12 @@
                 sumyb2 = sumyb2 + yb * yb;
             }
 
+            var result = (sumxy / Math.sqrt(sumxb2 * sumyb2)).toString();
+            if (this.computeIsError(result) == this.trueValueStr) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this._errorStrings[3].toString();
+            }
             //  var v = (sumxy / Math.Sqrt(sumxb2 * sumyb2)).toString();
             //        return v;
             return (sumxy / Math.sqrt(sumxb2 * sumyb2)).toString();
@@ -13231,15 +15079,31 @@
         this.computePercentileExc = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
                 if (this._rethrowLibraryComputationExceptions) {
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 }
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                var checkString1 = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                    return checkString1;
+                }
+            }
             var k;
             var s1 = this.getValueFromArg(args[1]);
+            var s2 = this.getValueFromArg(args[0]);
+            if ((s1 == null || s1 == "") || (s2 == "" || s2 == null) || Boolean(s1 == "TRUE" || s1 == "FALSE") || Boolean(s2 == "TRUE" || s2 == "FALSE")) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
+            }
             k = this._parseDouble(s1);
             if (isNaN(k) && (k < 0 || k > 1)) {
                 return this.formulaErrorStrings[this._invalid_arguments];
@@ -13276,15 +15140,31 @@
         this.computePercentileOInc = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
                 if (this._rethrowLibraryComputationExceptions) {
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 }
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
 
             var k;
             var s1 = this.getValueFromArg(args[1]);
+            var s2 = this.getValueFromArg(args[0]);
+            if ((s1 == null || s1 == "") || (s2 == null || s2 == "") || Boolean(s1 == "TRUE" || s1 == "FALSE") || Boolean(s2 == "TRUE" || s2         == "FALSE")) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
+            }
             k = this._parseDouble(s1);
             if (isNaN(k) && (k < 0 || k > 1)) {
                 return this.formulaErrorStrings[this._invalid_arguments];
@@ -13316,24 +15196,39 @@
         this.computeTrimmean = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                var checkString1 = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                    return checkString1;
+                }
+            }
             var percent;
             var s1 = this.getValueFromArg(args[1]);
+            s1 = (s1.split(this.tic).join("") == "TRUE") ? "1" : (s1.split(this.tic).join("") == "FALSE") ? "0" : s1;
             percent = this._parseDouble(s1);
             if (isNaN(percent)) {
-                return this.formulaErrorStrings[this._invalid_arguments];
+                percent = "1";
             }
 
+            if (percent > 1 || percent == 0 || percent < 0) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[4].toString();
+            }
             var dd = this._getDoubleArray(args[0]);
             var n = dd.length;
             var k = parseInt((percent * n).toString());
             k = parseInt(k / 2);
-            if (k < 1 || 2 * k >= n) {
-                return this.formulaErrorStrings[this._invalid_arguments];
-            }
             dd.sort(function (a, b) {
                 if (isNaN(a) || isNaN(b)) {
                     if (a > b) return 1;
@@ -13352,10 +15247,23 @@
         this.computePearson = function (range) {
             var args = this.splitArgsPreservingQuotedCommas(range);
             var argCount = args.length;
-            if (argCount != 2) {
+            if (argCount != 2 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
 
+            if ((args[0] == null || args[0] == "") || (args[1] == null || args[1] == "") || Boolean(args[0] == "TRUE" || args[0] == "FALSE") || Boolean(args[1] == "TRUE" || args[1] == "FALSE")) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
+            }
             var y = this._getDoubleArray(args[0]);
             var x = this._getDoubleArray(args[1]);
             var n = y.length;
@@ -13375,13 +15283,25 @@
         };
 
         this.computeRsq = function (range) {
+            var args = this.splitArgsPreservingQuotedCommas(range);
+            if (args.length != 2) {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(range, FormulaArgumentType.Range);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
 
             var s = this.computePearson(range).toString();
                 var d = 0;
                 d = this._parseDouble(s);
                 if (!isNaN(d)) {
                     d = d * d;
-                } else if (this.getErrorStrings().indexOf(s) == -1) {
+                } else if (this.getErrorStrings().indexOf(s) != -1) {
                     return s;
                 }
                 return d.toString();
@@ -13401,6 +15321,28 @@
                 this.lookupTables = new HashTable();
 
             var s = this.splitArgsPreservingQuotedCommas(range);
+            if (s.length > 4 || range == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(s[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(s[1], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                for (var i = 2; i < s.length; i++) {
+                    checkString = this.formulaErrorStringCheck(s[i], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
+
             var lookUp = this.getValueFromArg(s[0]);
             lookUp = lookUp.split(this.tic).join("").toUpperCase();
             var r = s[1].split("\"").join("");
@@ -13540,10 +15482,26 @@
             var args = this.splitArgsPreservingQuotedCommas(arg);
             var argCount = args.length;
 
-            if (argCount < 2) {
+            if (argCount < 2 || arg == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                if (argCount == 3) {
+                    checkString = this.formulaErrorStringCheck(args[2], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
             }
             var r = args[0];
             r = r.split(this.tic).join("");
@@ -13599,9 +15557,13 @@
             var sheet = this._getSheetTokenFromReference(r);
             args[1] = (argCount == 1 || args[1] == "") ? "1" : args[1];
             args[2] = (argCount <= 2 || args[2] == "") ? "1" : args[2];
-            var d = parseInt(this.getValueFromArg(args[1]));
-            var row = !isNaN(d) ? d: -1;
-            d = parseInt(this.getValueFromArg(args[2]));
+            args[1] = this.getValueFromArg(args[1]);
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
+            var d = parseInt(args[1]);
+            var row = !isNaN(d) ? d : -1;
+            args[2] = this.getValueFromArg(args[2]);
+            args[2] = (args[2].split(this.tic).join("") == "TRUE") ? "1" : (args[2].split(this.tic).join("") == "FALSE") ? "0" : args[2];
+            d = parseInt(args[2]);
             var col = !isNaN(d) ? d : -1;
             if (row == -1 || col == -1) {
                 return "#REF";
@@ -13634,12 +15596,24 @@
             var arg = this.splitArgsPreservingQuotedCommas(args);
             var argCount = arg.length;
 
-            if (argCount > 2 || argCount == 0) {
+            if (argCount > 2 || argCount == 0 || args == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                if (argCount == 2) {
+                    checkString = this.formulaErrorStringCheck(arg[1], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
             arg[0] = arg[0].toUpperCase();
             arg[0] = this.setTokensForSheets(arg[0]);
             var sheetToken1 = this._sheetToken(arg[0].split(this.tic).join(""));
@@ -13757,6 +15731,23 @@
                 this.lookupTables = new HashTable();
 
             var s = this.splitArgsPreservingQuotedCommas(range);
+            if (s.length > 3 || range == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(s[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                for (var i = 1; i < s.length; i++) {
+                    checkString = this.formulaErrorStringCheck(s[i], FormulaArgumentType.CellReference);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+            }
             var lookUp = this.getValueFromArg(s[0]);
             lookUp = lookUp.split(this.tic).join("").toUpperCase();
 
@@ -13917,10 +15908,24 @@
             var args = this.splitArgsPreservingQuotedCommas(arg);
             var argCount = args.length;
 
-            if (argCount < 3 || argCount > 5) {
+            if (argCount < 3 || argCount > 5 || arg == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                for (var index = 1; index < argCount; index++) {
+                    if (index <= argCount) {
+                         checkString = this.formulaErrorStringCheck(args[index], FormulaArgumentType.Numbers);
+                         if (this.getErrorStrings().indexOf(checkString) > -1) {
+                             return checkString;
+                         }
+                    }
+                }
             }
             var r = args[0];
             var result;
@@ -13972,6 +15977,12 @@
             return result;
         };
         this.computeTranspose = function (arg) {
+            var args = this.splitArgsPreservingQuotedCommas(arg);
+            if (args.length !=1 || arg == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             if (!this._isCellReference(arg) && !this.getNamedRanges().containsKey(arg) && arg.indexOf(";") == -1) {
                 var arrayArg = this._splitArguments(arg.split(this.tic).join(""), ';');
                 if (arrayArg.length == 1) {
@@ -13982,10 +15993,16 @@
                     return this.formulaErrorStrings[this._invalid_arguments];
                 }
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             var args = this.splitArgsPreservingQuotedCommas(arg);
             var argCount = args.length;
 
-            if (argCount != 1) {
+            if (argCount != 1 || arg == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
@@ -14050,12 +16067,19 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
 
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            if (!this._isCellReference(args[0]) && !this.getNamedRanges().containsKey(args[0]) && args[0].indexOf(";") == -1) {
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+
+            if (!this._isCellReference(args[0]) && !this.getNamedRanges().containsKey(args[0]) && args[0].indexOf(this.tic) == -1 && isNaN(this._parseDouble(args[0])) && !Boolean(args[0] == "TRUE" || args[0] == "FALSE")) {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._invalid_arguments];
                 return this.getErrorStrings()[5];
@@ -14084,16 +16108,16 @@
                 if (ranges[r].indexOf(':') > -1) {
                     cells = this.getCellsFromArgs(ranges[r]);
                     for (var s = 0; s < cells.length; s++) {
-                        if (this.getErrorStrings().indexOf(s) > -1) {
-                            return s;
-                        } else if (s.startsWith(this.tic)) {
+                        if (this.getErrorStrings().indexOf(cells[s]) > -1) {
+                            return cells[s];
+                        } else if (cells[s][0] == this.tic) {
                             if (this.getRethrowLibraryComputationExceptions)
                                 throw new this.getErrorStrings()[5].toString();
                             else
                                 return this.getErrorStrings()[5].toString();
                         }
                         try {
-                            s1 = this.getValueFromArg(s);
+                            s1 = this.getValueFromArg(cells[s]);
                             if (this.getErrorStrings().indexOf(s1) > -1) {
                                 return s1;
                             }
@@ -14109,6 +16133,9 @@
                 } else {
                     try {
                         s1 = this.getValueFromArg(ranges[r]);
+                        if (this.getErrorStrings().indexOf(s1) > -1) {
+                            return s1;
+                        }
                         var tempdate = Date.parse(s1.split(this.tic).join(""));
                         d = this._parseDouble(s1.split(this.tic).join(""))
                         if (!isNaN(tempdate)) {
@@ -14134,26 +16161,46 @@
             return sum ? this.trueValueStr : this.falseValueStr;
         };
         this.computeFalse = function (empty) {
+            var args = this.splitArgsPreservingQuotedCommas(empty);
+            if (args.length > 0 && args != "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             return this.falseValueStr;
         };
         this.computeIf = function (args) {
             var s1 = this._string_empty;
-            var array1 = [this.getParseArgumentSeparator(), ':'];
+            var array1 = this.splitArgsPreservingQuotedCommas(args);
 
             ////parsed formula
-            if (args.length > 0 && this._indexOfAny(args, array1) == -1) {
-                return this.getFormulaErrorStrings();
+            if (array1.length != 3 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             } else {
                 var s = this.getCellsFromArgs(args);
 
                 if (s.length >= 2) {
                     try {
                         s1 = this.getValueFromArg(s[0]);
+                        if (this.getErrorStrings().indexOf(s1) != -1) {
+                            return s1;
+                        }
                         var d;
                         if (s1.split(this.tic).join("") == this.trueValueStr || (d = this._parseDouble(s1)) && d != 0) {
+                            if (this.getEnableFormulaErrorValidation()) {
+                                var checkString = this.formulaErrorStringCheck(s[1], FormulaArgumentType.Text);
+                                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                                    return checkString;
+                                }
+                            }
                             s1 = this.getValueFromArg(s[1]);
                         } else if (s1 == this.falseValueStr || (s1 == "") || (d = this._parseDouble(s1)) && d == 0) {
                             s1 = s.length == 3 ? this.getValueFromArg(s[2]) : false;
+                            if (this.getErrorStrings().indexOf(s1) != -1) {
+                                return s1;
+                            }
                         } else {
                             //  if (this.tic().indexOf(s[0]) == -1)
                             if (s.indexOf(this.tic) > -1) {
@@ -14185,10 +16232,16 @@
             var range = argsArray[0];
 
             //    var arrgsArray = [this.getParseArgumentSeparator, ];
-            if (argsArray.length != 2) {
+            if (argsArray.length != 2 || args == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argsArray[1], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             if (range[0] == this.tic)
                 return this.getValueFromArg(argsArray[0]);
@@ -14241,26 +16294,36 @@
         this.computeNot = function (args) {
             var s = args;
             var d1;
-            var array1 = [this.getParseArgumentSeparator, ':'];
+            var array1 = [this.getParseArgumentSeparator(), ':'];
 
             //var array1 = [this.getParseArgumentSeparator()];
             ////parsed formula
-            if ((args.length > 0) && this._indexOfAny(args, array1) > -1) {
-                return this.getFormulaErrorStrings();
+            if ((args.length > 0) && this._indexOfAny(args, array1) > -1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
             } else {
                 try {
                     s = this.getValueFromArg(s);
+                    if (this.getErrorStrings().indexOf(s) != -1) {
+                        return s;
+                    }
                     if (s == this.trueValueStr) {
                         s = this.falseValueStr;
                     } else if (s == this.falseValueStr) {
                         s = this.trueValueStr;
-                    } else if (d1 = this._parseDouble(s)) {
+                    }
+                    else if (!isNaN(d1 = this._parseDouble(s))) {
                         ////Flip the value.
                         if (Math.abs(d1) > 1e-10) {
                             s = this.falseValueStr;
                         } else {
                             s = this.trueValueStr;
                         }
+                    } else {
+                        if (this.getRethrowLibraryComputationExceptions())
+                            throw this.formulaErrorStrings[this._invalid_arguments];
+                        return this.getErrorStrings()[1].toString();
                     }
                 } catch (ex) {
                     if (this.rethrowLibraryComputationExceptions && this.getLibraryComputationException != null) {
@@ -14280,6 +16343,11 @@
 
             // args = this.adjustRangeArg(args);
             var ranges = this.splitArgsPreservingQuotedCommas(args);
+            if (args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             for (var r = 0; r < ranges.length; r++) {
                 ////is a cellrange
                 if (ranges[r].indexOf(':') > -1 && this._isCellReference(r)) {
@@ -14287,6 +16355,9 @@
                     for (var s = 0; s < cells.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cells[s]);
+                            if (this.getErrorStrings().indexOf(s1) != -1) {
+                                return s1;
+                            }
                         } catch (ex) {
                             if (this.rethrowLibraryComputationExceptions && this.getLibraryComputationException != null) {
                                 throw this.getLibraryComputationException;
@@ -14299,6 +16370,16 @@
                 } else {
                     try {
                         s1 = this.getValueFromArg(ranges[r]);
+                        if (this.getErrorStrings().indexOf(s1) != -1) {
+                            return s1;
+                        }
+                        d = this._parseDouble(s1.split(this.tic).join(""))
+                        if (isNaN(d) && !(s1 == this._string_empty) && !(s1.split(this.tic).join("").toUpperCase() == this.trueValueStr || s1.split(this.tic).join("").toUpperCase() == this.falseValueStr)) {
+                            if (this.getRethrowLibraryComputationExceptions())
+                                throw this.getErrorStrings()[1].toString();
+                            else
+                                return (this._isCellReference(ranges[r]) || s1[0] == this.tic) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+                        }
                     } catch (ex) {
                         if (this.rethrowLibraryComputationExceptions && this.getLibraryComputationException != null) {
                             throw this.getLibraryComputationException;
@@ -14316,10 +16397,15 @@
             return this.trueValueStr;
         };
         this.computeXor = function (arg) {
-            var sum = false, s1, d;
+            var sum = false, s1, numberResult;
 
             // range = this.adjustRangeArg;
             var ranges = this.splitArgsPreservingQuotedCommas(arg);
+            if (arg == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             for (var r = 0; r < ranges.length; r++) {
                 ////is a cellrange
                 if (ranges[r].indexOf(':') > -1 && this._isCellReference(r)) {
@@ -14327,6 +16413,9 @@
                     for (var s = 0; s < cells.length; s++) {
                         try {
                             s1 = this.getValueFromArg(cells[s]);
+                            if (this.getErrorStrings().indexOf(s1) != -1) {
+                                return s1;
+                            }
                         } catch (ex) {
                             if (this.rethrowLibraryComputationExceptions && this.getLibraryComputationException != null) {
                                 throw this.getLibraryComputationException;
@@ -14334,12 +16423,23 @@
 
                             return ex;
                         }
-
-                        sum = (s1 == this.trueValueStr) || (d == this._parseDouble(s1) && (d != 0));
+                        //JS-31580 - For proper number parsing and checking.
+                        numberResult = this._parseDouble(s1);
+                        sum ^= (s1 == this.trueValueStr) ^ (!isNaN(numberResult) && numberResult != 0);
                     }
                 } else {
                     try {
                         s1 = this.getValueFromArg(ranges[r]);
+                        if (this.getErrorStrings().indexOf(s1) != -1) {
+                            return s1;
+                        }
+                        d = this._parseDouble(s1.split(this.tic).join(""))
+                        if (isNaN(d) && !(s1 == this._string_empty) && !(s1.split(this.tic).join("").toUpperCase() == this.trueValueStr || s1.split(this.tic).join("").toUpperCase() == this.falseValueStr)) {
+                            if (this.getRethrowLibraryComputationExceptions())
+                                throw this.getErrorStrings()[1].toString();
+                            else
+                                return (this._isCellReference(ranges[r]) || s1[0] == this.tic) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+                        }
                     } catch (ex) {
                         if (this.rethrowLibraryComputationExceptions && this.getLibraryComputationException != null) {
                             throw this.getLibraryComputationException;
@@ -14347,8 +16447,9 @@
 
                         return ex;
                     }
-
-                    sum = (s1 == this.trueValueStr) || (d == this._parseDouble(s1)) && (d != 0);
+                    //JS-31580 - For proper number parsing and checking.
+                    numberResult = this._parseDouble(s1);
+                    sum ^= (s1 == this.trueValueStr) ^ (!isNaN(numberResult) && numberResult != 0);
                 }
             }
             return sum ? this.trueValueStr : this.falseValueStr;
@@ -14356,10 +16457,22 @@
 
         this.computeCell = function (arg) {
             var args = this.splitArgsPreservingQuotedCommas(arg);
-            if (args.length > 2) {
+            if (args.length > 2 || arg == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                if (args.length == 2) {
+                    checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.CellReference);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
             }
             var reference = "";
             if (args.length == 2) {
@@ -14413,16 +16526,27 @@
                 default:
                     break;
             }
+            if (result == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
+            }
             return result.toString();
         };
         this.computeErrorType = function (args) {
             var cellReference = this._string_empty;
             var arg = this._splitArguments(args, this.getParseArgumentSeparator());
             var argCount = arg.length;
-            if (argCount != 1) {
+            if (argCount != 1 || args == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             if (this._isCellReference(args)) {
                 cellReference = this.getValueFromArg(args);
@@ -14457,6 +16581,12 @@
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var firstStr = this._stripTics0(this.getValueFromArg(args[0])).toLowerCase();
             var result = this._string_empty;
@@ -14532,7 +16662,7 @@
             if (range.count > 1) {
 
             }
-            if ((range == ("NAN") || range == ("-NAN") || range == ("INFINITY") || range == ("-INFINITY") || range == ("#") || range == ("n#")) && !(range == ("#N/A"))) {
+            if ((range.startsWith("NAN") || range.startsWith("-NAN") || range.startsWith("INFINITY") || range.startsWith("-INFINITY") || range.startsWith("#") || range.startsWith("n#")) && !(range.startsWith("#N/A"))) {
                 return this.trueValueStr;
             } else {
                 return this.falseValueStr;
@@ -14573,18 +16703,28 @@
             }
             var argVal = this.getValueFromArg(arg[0]);
             var value = parseInt(argVal.split(this.tic).join(""));
-            if (isNaN(value)) {
-                if (this._rethrowLibraryComputationExceptions)
-                    throw this.formulaErrorStrings[this._bad_formula];
-                return (argVal[0] == this.tic || this._isCellReference(arg[0])) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var dt = new Date(Date.parse(argVal));
             if (isNaN(value) && dt.toString() != "invalid Date") {
                 value = this._toOADate(dt);
             }
             var result = value;
-            if (result % 2 == 0) {
-                return this.trueValueStr;
+            if (!isNaN(value)) {
+                if (result % 2 == 0) {
+                    return this.trueValueStr;
+                }
+                return this.falseValueStr;
+            }
+            else {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
             }
             return this.falseValueStr;
         };
@@ -14592,22 +16732,23 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
             var value = this._string_empty;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+
             value = this.getValueFromArg(args[0]);
             if (this.namedRanges.containsValue(value)) {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._bad_formula];
                 return this.getErrorStrings()[1].toString();
-            }
-            var intVal = parseInt(value.split(this.tic).join(""));
-            if (isNaN(intVal) || !this._isCellReference(args[0])) {
-                if (this.getRethrowLibraryComputationExceptions())
-                    throw this.formulaErrorStrings[this._bad_formula];
-                return this.getErrorStrings()[5].toString();
             }
             var family = CalcEngine.getSheetFamilyItem(this.grid);
             if (this.isSheetMember() && family.parentObjectToToken != null) {
@@ -14621,6 +16762,12 @@
         };
         this.computeIsLogical = function (args) {
 
+            var argList = this.splitArgsPreservingQuotedCommas(args);
+            if (argList.length != 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             args = this.getValueFromArg(args);
             if (args == this.falseValueStr || args == this.trueValueStr) {
                 return this.trueValueStr;
@@ -14628,6 +16775,13 @@
             return this.falseValueStr;
         };
         this.computeIsNA = function (args) {
+            var argList = this.splitArgsPreservingQuotedCommas(args);
+            if (argList.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            args = this.getValueFromArg(args);
             if (this.getErrorStrings().indexOf(args.toUpperCase()) != -1) {
                 if (args.toUpperCase() == ("#N/A")) {
                     return this.trueValueStr;
@@ -14646,6 +16800,12 @@
             return this.falseValueStr;
         };
         this.computeIsNonText = function (args) {
+            var argList = this.splitArgsPreservingQuotedCommas(args);
+            if (argList.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             if (this.computeIsText(args) == this.trueValueStr) {
                 return this.falseValueStr;
             } else {
@@ -14653,6 +16813,12 @@
             }
         };
         this.computeIsNumber = function (range) {
+            var args = this.splitArgsPreservingQuotedCommas(range);
+            if (args.length > 1 || range == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             var d;
             range = this.getValueFromArg(range);
             if (!isNaN(this._parseDouble(range))) {
@@ -14663,6 +16829,11 @@
         };
         this.computeIsRef = function (args) {
             var arg = this.splitArgsPreservingQuotedCommas(args);
+            if (arg.length > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             if (arg.length != 1) {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
@@ -14676,10 +16847,16 @@
             var arg = this._splitArguments(args, this.getParseArgumentSeparator());
             var argCount = arg.length;
             var array1 = [this.getParseArgumentSeparator(), ':'];
-            if (argCount != 1) {
+            if (argCount != 1 || args == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             if (args != this._string_empty) {
                 if (this._indexOfAny(args, array1) != -1) {
@@ -14688,9 +16865,9 @@
                 cellReference = this.getValueFromArg(arg[0]);
                 val = parseInt(cellReference.split(this.tic).join(this._string_empty))
                 if (isNaN(val)) {
-                    if (this._rethrowLibraryComputationExceptions)
-                        throw this.formulaErrorStrings[this._bad_formula];
-                    return (cellReference[0] == this.tic || this._isCellReference(arg[0])) ? this.getErrorStrings()[1].toString() : this.getErrorStrings()[5].toString();
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[1].toString();
                 }
                 if (val % 2 != 0) {
                     return this.trueValueStr;
@@ -14700,6 +16877,12 @@
             return this.trueValueStr;
         };
         this.computeIsText = function (args) {
+            var argList = this.splitArgsPreservingQuotedCommas(args);
+            if (argList > 1 || args == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             var isCell = this._isCellReference(args);
             var s = (isCell) ? this.getValueFromArg(args) : args;
             if ((isCell || s[0] == this.tic) && s.length > 0 && isNaN(this._parseDouble(s))) {
@@ -14714,12 +16897,18 @@
             var date;
             var arg = this._splitArguments(args, this.getParseArgumentSeparator());
             var argCount = arg.length;
-            if (argCount != 1) {
+            if (argCount != 1 || args == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
             
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             cellReference = this.getValueFromArg(args);
             date = new Date(Date.parse(cellReference));
             if (this._parseDouble(cellReference))
@@ -14749,7 +16938,13 @@
 
             return val.toString();
         };
-        this.computeNA = function () {
+        this.computeNA = function (range) {
+            var args = this.splitArgsPreservingQuotedCommas(range);
+            if (args.length > 0 && args != "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
             return "#N/A";
         };
         this.computeSheet = function (argList) {
@@ -14760,6 +16955,12 @@
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var cellReference = args[0].toUpperCase();
             cellReference = (cellReference == null || cellReference == this._string_empty) ? this.cell : cellReference;
@@ -14774,19 +16975,19 @@
                     throw this.formulaErrorStrings[this._bad_formula];
                 return this.getErrorStrings()[0].toString();
             }
-            var family = this.getSheetFamilyItem(this.grid);
+            var family = CalcEngine.getSheetFamilyItem(this.grid);
             var sheet1 = this._getSheetTokenFromReference(cellReference);
             var sheetNumber = 0;
             if ((sheet1 == null || sheet1 == this._string_empty) && this.getSortedSheetNames().indexOf(cellReference) == -1 && !cellReference.indexOf(this.sheetToken.toString())) {
                 sheetNumber = this.getSheetID(this.grid) + 1;
             } else if (sheet1.length > 0) {
-                sheetNumber = parseInt(sheet1.Replace(this.sheetToken.split(this.tic).join(this._string_empty))) + 1;
+                sheetNumber = parseInt(sheet1.split(this.sheetToken).join(this._string_empty)) + 1;
             } else {
                 try {
 
-                    for (var s = 0; s < family.tokenToParentObject().length; s++){
-                        if (family.sheetNameToParentObject[cellReference].Equals(family.tokenToParentObject()[s].Value)) {
-                            var gg = griddata.Value;
+                    for (var s = 0; s < family.tokenToParentObject.length; s++){
+                        if (family.sheetNameToParentObject.getItem(cellReference.split(this.tic).join(this._string_empty)) == family.tokenToParentObject.values()[s]) {
+                            var gg = family.tokenToParentObject.values()[s];
                             sheetNumber = this.getSheetID(gg) + 1;
                             break;
                         }
@@ -14816,6 +17017,12 @@
             if (cellReference == null || cellReference == this._string_empty) {
                 return this.getSortedSheetNames().length.toString();
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             else if (cellReference.split(this.tic).join(this._string_empty) == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._bad_formula];
@@ -14823,16 +17030,11 @@
             } else if (!this._isCellReference(cellReference) && !this.namedRanges.containsKey(cellReference) && this.getSortedSheetNames().indexOf(cellReference) == -1) {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._bad_formula];
-                return this.getErrorStrings()[5].toString();
+                return this.getErrorStrings()[0].toString();
             }
             try {
                 var sheetsCount = this._splitArguments(cellReference, '!');
                 sheetNumber = (sheetsCount.length - 1) / 2;
-                if (sheetNumber == 0) {
-                    if (this.getRethrowLibraryComputationExceptions())
-                        throw this.formulaErrorStrings[this._bad_formula];
-                    return this.getErrorStrings()[5].toString();
-                }
             } catch (ex) {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.getErrorStrings()[2].toString();
@@ -14844,7 +17046,7 @@
             var args = this.splitArgsPreservingQuotedCommas(argList);
             var argCount = args.length;
             var result = 0;
-            if (argCount != 1) {
+            if (argCount != 1 || argList == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
@@ -14876,6 +17078,12 @@
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
             if (args[0] == this._string_empty) {
                 return this.rowIndex(this.cell).toString();
             }
@@ -14891,15 +17099,16 @@
         };
         this.computeRows = function (arg) {
             var args = this.splitArgsPreservingQuotedCommas(arg);
-            if (args.length != 1) {
+            if (args.length != 1 || arg == "") {
                 if (this.getRethrowLibraryComputationExceptions())
                     throw this.formulaErrorStrings[this._wrong_number_arguments];
                 return this.formulaErrorStrings[this._wrong_number_arguments];
             }
-            if (!this._isCellReference(args[0]) && arg.indexOf(';') == -1) {
-                if (this.getRethrowLibraryComputationExceptions())
-                    throw this.getErrorStrings()[4].toString();
-                return this.getErrorStrings()[4].toString();
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(arg, FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
             }
             var firstRow, LastRow, totalRows = 1;
             if (args[0].indexOf(':') > -1) {
@@ -14922,7 +17131,622 @@
             return totalRows.toString();
         };
 
+        /**
+        * Computes the payment for a loan.
+        * @return payment amount
+        * @param {String} Delimited string containing the rate as percentage per period,
+        /// number of periods, present value, future value, and payment type (0 = end of period, 1 = start of period).
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computePmt = function (argList) {
+            var args = this.splitArgsPreservingQuotedCommas(argList);
+            var argCount = args.length;
+            if (argCount < 3 || argCount > 5 || argList == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
 
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            var rate, nper = 0, pv = 0, fv = 0, type = 0, val = 0;
+            for (var i = 0; i < argCount; i++) {
+                args[i] = this.getValueFromArg(args[i].split(this.tic).join(this._string_empty));
+                args[i] = (args[i] == null || args[i] == "") ? "0" : args[i];
+                args[i] = (args[i].split(this.tic).join("") == "TRUE") ? "1" : (args[i].split(this.tic).join("") == "FALSE") ? "0" : args[i];
+            }
+            rate = this._parseDouble(args[0]);
+            nper = this._parseDouble(args[1]);
+            pv = this._parseDouble(args[2]);
+            if (argCount == 4)
+                fv = this._parseDouble(args[3]);
+            if (argCount == 5)
+                type = this._parseDouble(args[4]);
+            if (!(isNaN(rate) && isNaN(nper) && isNaN(pv) && isNaN(fv) && isNaN(type))) {
+                if (nper == 0) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[4].toString();
+                }
+                if (Math.abs(type) > 0.5) {
+                    type = 1;
+                }
+                else {
+                    type = 0;
+                }
+                if (rate == 0) {
+                    val = (1 * (fv + pv)) / ((1 + rate * type) * (1 - (nper + 1)));
+                }
+                else {
+                    var pow = Math.pow(1 + rate, nper);
+                    val = (rate * (fv + pv * pow)) / ((1 + rate * type) * (1 - pow));
+                }
+            }
+            else {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._invalid_arguments];
+                return this.getErrorStrings()[1].toString();
+            }
+            return this.computeDollar(val.toString());
+        }
+
+        /**
+        * Finds the index a specified value in a lookup_range.
+        * @return The relative index of the lookup_value in the lookup_range.
+        * @param {String} look_value, lookup_range, match_type
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeMatch = function (arg) {
+            var args = this.splitArgsPreservingQuotedCommas(arg);
+            var argCount = args.length;
+            if (argCount > 3 || arg == "") {
+                if (this.getRethrowLibraryComputationExceptions())
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(args[0], FormulaArgumentType.Text);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+                checkString = this.formulaErrorStringCheck(args[1], FormulaArgumentType.CellReference);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+
+            var r = args[1].split(this.tic).join(this._string_empty);
+            var i = r.indexOf(":");
+            var m = 1;
+            if (argCount == 3) {
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString1 = this.formulaErrorStringCheck(args[2], FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString1) > -1) {
+                        return checkString1;
+                    }
+                }
+                var d;
+                var thirdArg = this.getValueFromArg(args[2]);
+                thirdArg = thirdArg.split(this.tic).join(this._string_empty);
+                d = this._parseDouble(thirdArg);
+                m = isNaN(d) ? 1 : d;
+                if (thirdArg == this.falseValueStr)
+                    m = 0;
+                else if (thirdArg == this.trueValueStr)
+                    m = 1;
+                else if (thirdArg.includes(this.tic) && this.computeIsText(thirdArg) == this.trueValueStr) {
+                    if (this.getRethrowLibraryComputationExceptions())
+                        throw this.formulaErrorStrings[this._invalid_arguments];
+                    return this.getErrorStrings()[1].toString();
+                }
+            }
+            var searchItem = this.getValueFromArg(args[0].split(this.tic).join(this._string_empty)).toUpperCase();
+            var cells = this.getCellsFromArgs(this._stripTics0(r));
+            var index = 1;
+            var oldValue = "";
+            var newValue;
+            for (var j = 0; j < cells.length; j++) {
+                var s = cells[j];
+                var newValue = this.getValueFromArg(s).split(this.tic).join(this._string_empty).toUpperCase();
+                if (oldValue != "") {
+                    if (m == 1) {
+                        if (this._matchCompare(newValue, oldValue) < 0 && newValue == searchItem) {
+                            index--;
+                            break;
+                        }
+                    }
+                    else if (m == -1) {
+                        if (this._matchCompare(newValue, oldValue) > 0) {
+                            index = -1;
+                            break;
+                        }
+                    }
+                }
+                if ((m == 0 || m == 1) && newValue == searchItem) {
+                    break;
+                }
+                else if (m == 1 && this._matchCompare(searchItem, newValue) < 0) {
+                    index--;
+                    break;
+                }
+                else if (m == -1 && this._matchCompare(searchItem, newValue) > 0) {
+                    index--;
+                    break;
+                }
+                index++;
+                oldValue == newValue;
+            }
+            if (m != 0 && index == cells.length + 1) {
+                index = cells.length;
+            }
+            if (index > 0 && index <= cells.length) {
+                return index.toString();
+            }
+            else {
+                return this.getErrorStrings()[0].toString();;
+            }
+        }
+
+        /**
+        * Computes the Bit AND of the given two numbers.
+        * @return Bit AND value of the given two numbers.
+        * @param {String} Input Numbersfor which the AND operations has to be performed.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeBitAnd = function (argList) {
+            var ranges = this.splitArgsPreservingQuotedCommas(argList);
+            var number1 = null, number2 = null;
+            var value1, value2;
+            try {
+                if (ranges.length != 2 || argList == "") {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.formulaErrorStrings[this._wrong_number_arguments];
+                    return this.formulaErrorStrings[this._wrong_number_arguments];
+                }
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                number1 = this.getValueFromArg(ranges[0]);
+                number1 = (number1 == null || number1 == "") ? "0" : number1;
+                number1 = (number1.split(this.tic).join("") == "TRUE") ? "1" : (number1.split(this.tic).join("") == "FALSE") ? "0" : number1;
+                number1 = number1.split(this.tic).join(this._string_empty);
+                number2 = this.getValueFromArg(ranges[1]);
+                number2 = (number2 == null || number2 == "") ? "0" : number2;
+                number2 = (number2.split(this.tic).join("") == "TRUE") ? "1" : (number2.split(this.tic).join("") == "FALSE") ? "0" : number2;
+                number2 = number2.split(this.tic).join(this._string_empty);
+                if (number1 < 0 || number2 < 0) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.getErrorStrings()[4].toString();
+                    return this.getErrorStrings()[4].toString();
+                }
+                value1 = this._parseDouble(number1);
+                value2 = this._parseDouble(number2);
+
+                return (value1 & value2).toString();
+            }
+            catch (ex) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw "The parameters are not correct";
+                else {
+                    if (this.computeIsText(number1) == this.trueValueStr || this.computeIsText(number2) == this.trueValueStr)
+                        return this.getErrorStrings()[5].toString();
+                    else if (number1 == "" || number2 == "")
+                        return this.getErrorStrings()[1].toString();
+                    else
+                        return this.getErrorStrings()[1].toString();
+                }
+            }
+        }
+
+        /**
+        * Computes the Bit OR of the given two numbers.
+        * @return Bit OR value of the given two numbers.
+        * @param {String} Input Numbersfor which the OR operations has to be performed.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeBitOr = function (argList) {
+            var ranges = this.splitArgsPreservingQuotedCommas(argList);
+            var number1 = null, number2 = null;
+            var value1, value2;
+            try {
+                if (ranges.length != 2 || argList == "") {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.formulaErrorStrings[this._wrong_number_arguments];
+                    return this.formulaErrorStrings[this._wrong_number_arguments];
+                }
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                number1 = this.getValueFromArg(ranges[0]);
+                number1 = (number1 == null || number1 == "") ? "0" : number1;
+                number1 = (number1.split(this.tic).join("") == "TRUE") ? "1" : (number1.split(this.tic).join("") == "FALSE") ? "0" : number1;
+                number1 = number1.split(this.tic).join(this._string_empty);
+                number2 = this.getValueFromArg(ranges[1]);
+                number2 = (number2 == null || number2 == "") ? "0" : number2;
+                number2 = (number2.split(this.tic).join("") == "TRUE") ? "1" : (number2.split(this.tic).join("") == "FALSE") ? "0" : number2;
+                number2 = number2.split(this.tic).join(this._string_empty);
+                if (number1 < 0 || number2 < 0) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.getErrorStrings()[4].toString();
+                    return this.getErrorStrings()[4].toString();
+                }
+                value1 = this._parseDouble(number1);
+                value2 = this._parseDouble(number2);
+
+                return (value1 | value2).toString();
+            }
+            catch (ex) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw "The parameters are not correct";
+                else {
+                    if (this.computeIsText(number1) == this.trueValueStr || this.computeIsText(number2) == this.trueValueStr)
+                        return this.getErrorStrings()[5].toString();
+                    else if (number1 == "" || number2 == "")
+                        return this.getErrorStrings()[1].toString();
+                    else
+                        return this.getErrorStrings()[1].toString();
+                }
+            }
+        }
+
+        /**
+        * Computes the Bit Left Shift of the given number.
+        * @return Bit Left Shift value of the given number.
+        * @param {String} Input Numbersfor which the Bit left shift operations has to be performed.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeBitLShift = function (argList) {
+            var ranges = this.splitArgsPreservingQuotedCommas(argList);
+            var number = null, shift = null;
+            var value, shift_val;
+            try {
+                if (ranges.length != 2 || argList == "") {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.formulaErrorStrings[this._wrong_number_arguments];
+                    return this.formulaErrorStrings[this._wrong_number_arguments];
+                }
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                number = this.getValueFromArg(ranges[0]);
+                number = (number == null || number == "") ? "0" : number;
+                number = (number.split(this.tic).join("") == "TRUE") ? "1" : (number.split(this.tic).join("") == "FALSE") ? "0" : number;
+                number = number.split(this.tic).join(this._string_empty);
+                shift = this.getValueFromArg(ranges[1]);
+                shift = (shift == null || shift == "") ? "0" : shift;
+                shift = (shift.split(this.tic).join("") == "TRUE") ? "1" : (shift.split(this.tic).join("") == "FALSE") ? "0" : shift;
+                shift = shift.split(this.tic).join(this._string_empty);
+                value = this._parseDouble(number);
+                shift_val = this._parseDouble(shift);
+
+                if (value > 281474976710655 || Math.abs(shift_val) > 53 || value < 0) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.getErrorStrings()[4].toString();
+                    return this.getErrorStrings()[4].toString();
+                }
+                else {
+                    return ((shift_val >= 0) ? value << shift_val : value >> -shift_val).toString();
+                }
+            }
+            catch (ex) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw "The parameters are not correct";
+                else {
+                    if (this.computeIsText(number) == this.trueValueStr || this.computeIsText(shift) == this.trueValueStr)
+                        return this.getErrorStrings()[5].toString();
+                    else if (number == "" || shift == "")
+                        return this.getErrorStrings()[1].toString();
+                    else if (this._parseDouble(number) < 0 || this._parseDouble(shift) < 0)
+                        return this.getErrorStrings()[4].toString();
+                    else
+                        return this.getErrorStrings()[1].toString();
+                }
+            }
+        }
+
+        /**
+        * Computes the Bit Right Shift of the given number.
+        * @return Bit Right Shift value of the given number.
+        * @param {String} Input Numbersfor which the Bit Right Shift operations has to be performed.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeBitRShift = function (argList) {
+            var ranges = this.splitArgsPreservingQuotedCommas(argList);
+            var number = null, shift = null;
+            var value, shift_val;
+            try {
+                if (ranges.length != 2 || argList == "") {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.formulaErrorStrings[this._wrong_number_arguments];
+                    return this.formulaErrorStrings[this._wrong_number_arguments];
+                }
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                number = this.getValueFromArg(ranges[0]);
+                number = (number == null || number == "") ? "0" : number;
+                number = (number.split(this.tic).join("") == "TRUE") ? "1" : (number.split(this.tic).join("") == "FALSE") ? "0" : number;
+                number = number.split(this.tic).join(this._string_empty);
+                shift = this.getValueFromArg(ranges[1]);
+                shift = (shift == null || shift == "") ? "0" : shift;
+                shift = (shift.split(this.tic).join("") == "TRUE") ? "1" : (shift.split(this.tic).join("") == "FALSE") ? "0" : shift;
+                shift = shift.split(this.tic).join(this._string_empty);
+                value = this._parseDouble(number);
+                shift_val = this._parseDouble(shift);
+
+                if (value > 281474976710655 || Math.abs(shift_val) > 53 || value < 0) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.getErrorStrings()[4].toString();
+                    return this.getErrorStrings()[4].toString();
+                }
+                else {
+                    return ((shift_val >= 0) ? value >> shift_val : value << -shift_val).toString();
+                }
+            }
+            catch (ex) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw "The parameters are not correct";
+                else {
+                    if (this.computeIsText(number) == this.trueValueStr || this.computeIsText(shift) == this.trueValueStr)
+                        return this.getErrorStrings()[5].toString();
+                    else if (number == "" || shift == "")
+                        return this.getErrorStrings()[1].toString();
+                    else if (this._parseDouble(number) < 0 || this._parseDouble(shift) < 0)
+                        return this.getErrorStrings()[4].toString();
+                    else
+                        return this.getErrorStrings()[1].toString();
+                }
+            }
+        }
+
+        /**
+        * Computes the Bit Xor of the given two numbers.
+        * @return Bit Xor value of the given two numbers.
+        * @param {String} Input Numbersfor which the Xor operations has to be performed.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeBitXor = function (argList) {
+            var ranges = this.splitArgsPreservingQuotedCommas(argList);
+            var number1 = null, number2 = null;
+            var value1, value2;
+            try {
+                if (ranges.length != 2 || argList == "") {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.formulaErrorStrings[this._wrong_number_arguments];
+                    return this.formulaErrorStrings[this._wrong_number_arguments];
+                }
+                if (this.getEnableFormulaErrorValidation()) {
+                    var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                    if (this.getErrorStrings().indexOf(checkString) > -1) {
+                        return checkString;
+                    }
+                }
+                number1 = this.getValueFromArg(ranges[0]);
+                number1 = (number1 == null || number1 == "") ? "0" : number1;
+                number1 = (number1.split(this.tic).join("") == "TRUE") ? "1" : (number1.split(this.tic).join("") == "FALSE") ? "0" : number1;
+                number1 = number1.split(this.tic).join(this._string_empty);
+                number2 = this.getValueFromArg(ranges[1]);
+                number2 = (number2 == null || number2 == "") ? "0" : number2;
+                number2 = (number2.split(this.tic).join("") == "TRUE") ? "1" : (number2.split(this.tic).join("") == "FALSE") ? "0" : number2;
+                number2 = number2.split(this.tic).join(this._string_empty);
+                value1 = this._parseDouble(number1);
+                value2 = this._parseDouble(number2);
+                if ((value1 > 281474976710655 || value2 > 281474976710655) || (value1 < 0 || value2 < 0)) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.getErrorStrings()[4].toString();
+                    return this.getErrorStrings()[4].toString();
+                }
+                else
+                    return (value1 ^ value2).toString();
+            }
+            catch (ex) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw "The parameters are not correct";
+                else {
+                    if (this.computeIsText(number1) == this.trueValueStr || this.computeIsText(number2) == this.trueValueStr)
+                        return this.getErrorStrings()[1].toString();
+                    else if (number1 == "" || number2 == "")
+                        return this.getErrorStrings()[1].toString();
+                    else
+                        return this.getErrorStrings()[1].toString();
+                }
+            }
+        }
+
+        /**
+        * Returns the smallest value for which the cumulative binomial distribution is greater than or equal to a criterion value.
+        * @return Returns the critical value.
+        * @param {String} Number of trials, probability, alpha.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeBinomOInv = function (argList) {
+            var args = this.splitArgsPreservingQuotedCommas(argList);
+            var argCount = args.length;
+            if (argCount != 3 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            var trials, p, alpha = 0, dist = 0;
+            var trial = this.getValueFromArg(args[0]);
+            var probability = this.getValueFromArg(args[1]);
+            var alphaStr = this.getValueFromArg(args[2]);
+
+            if (trial == "") {
+                args[0] = trial = "0";
+            }
+            if (probability == "" || alphaStr == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[4].toString();
+                return this.getErrorStrings()[4].toString();
+            }
+            trials = this._parseDouble(trial.split(this.tic).join(""));
+            p = this._parseDouble(probability.split(this.tic).join(""));
+            alpha = this._parseDouble(alphaStr.split(this.tic).join(""));
+            if (trials == 0) {
+                return "0";
+            }
+            if (trials < 0 || p <= 0 || p >= 1 || alpha <= 0 || alpha >= 1) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[4].toString();
+                return this.getErrorStrings()[4].toString();
+            }
+            if (p > 0 && p < 1 && alpha >= 0 && alpha < 1) {
+                dist = this._critbinom(trials, p, alpha);
+                if (dist == this.maxValue) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.formulaErrorStrings[this._calculation_overflow];
+                    return this.formulaErrorStrings[this._calculation_overflow];
+                }
+            }
+            else if (trials <= 0 || p <= 0 || p >= 1 || alpha < 0 || alpha > 1) {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[4].toString(); 
+                return this.getErrorStrings()[4].toString();
+            }
+            else {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[1].toString();
+                return this.getErrorStrings()[1].toString();
+            }
+            return dist.toString();
+        }
+
+        /**
+        * Returns the chi-squared distribution.
+        * @return The chi-squared distribution.
+        * @param {String} x, degrees of freedom.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeChidist = function (argList) {
+            var args = this.splitArgsPreservingQuotedCommas(argList);
+            var argCount = args.length;
+            if (argCount != 2 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            var x, v, dist = 0;
+            for (var i = 0; i < argCount; ++i) {
+                args[i] = this.getValueFromArg(args[i]);
+                args[i] = this._stripTics0(args[i]);
+            }
+            args[0] = (args[0] == null || args[0] == "") ? "0" : args[0];
+            args[1] = (args[1] == null || args[1] == "") ? "0" : args[1];
+            args[0] = (args[0].split(this.tic).join("") == "TRUE") ? "1" : (args[0].split(this.tic).join("") == "FALSE") ? "0" : args[0];
+            args[1] = (args[1].split(this.tic).join("") == "TRUE") ? "1" : (args[1].split(this.tic).join("") == "FALSE") ? "0" : args[1];
+            var x = this._parseDouble(args[0]);
+            var v = this._parseDouble(args[1]);
+            if (!isNaN(x) && !isNaN(v)) {
+                if (x < 0 || v < 1) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.getErrorStrings()[4].toString();
+                    return this.getErrorStrings()[4].toString();
+                }
+                if (x == 0) {
+                    return "1";
+                }
+                else if (v < 1) {
+                    if (this._excelLikeComputations)
+                        return this.getErrorStrings()[4].toString();
+                    return this.formulaErrorStrings[this._invalid_arguments];
+                }
+                dist = 1 - this._chidist(x, v);
+            }
+            return dist.toString();
+        }
+
+        /**
+        * Returns the cotangent of an angle.
+        * @return A string containing the cotangent of an angle
+        * @param {String} A cell reference or a number.
+        * @memberof ejCalculate
+        * @instance
+        */
+        this.computeCoth = function (argList) {
+            var args = this.splitArgsPreservingQuotedCommas(argList);
+            var argCount = args.length;
+            if (argCount != 1 || argList == "") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.formulaErrorStrings[this._wrong_number_arguments];
+                return this.formulaErrorStrings[this._wrong_number_arguments];
+            }
+            if (this.getEnableFormulaErrorValidation()) {
+                var checkString = this.formulaErrorStringCheck(argList, FormulaArgumentType.Numbers);
+                if (this.getErrorStrings().indexOf(checkString) > -1) {
+                    return checkString;
+                }
+            }
+            argList = this.getValueFromArg(argList);
+            var isNegative = false;
+            argList = (argList.split(this.tic).join("") == "TRUE") ? "1" : (argList.split(this.tic).join("") == "FALSE") ? "0" : argList;
+
+            var isNumber = this.computeIsNumber(argList);
+            if (isNumber == this.trueValueStr) {
+                var tempList = argList;
+                if (tempList.includes("-")) 
+                    isNegative = true;
+                tempList = tempList.includes("u") ? tempList.replace("u", "") : tempList;
+                var number = this._parseDouble(tempList);
+                if (number >= 134217728) {
+                    if (this._rethrowLibraryComputationExceptions)
+                        throw this.getErrorStrings()[4].toString(); 
+                    return this.getErrorStrings()[4].toString();
+                }
+            }
+            if (argList == "0") {
+                if (this._rethrowLibraryComputationExceptions)
+                    throw this.getErrorStrings()[3].toString(); 
+                return this.getErrorStrings()[3].toString();
+            }
+            argList = argList.includes("-") ? argList.replace("-",""):argList;
+            var cothVal =this._computeMath(argList,Math.tanh);
+            if (cothVal != "#NUM!" || cothVal != "#VALUE!") {
+                cothVal = (1 / parseFloat(cothVal)).toString();
+            }
+            if (isNegative) {
+                cothVal = "-" + cothVal;
+            }
+            return cothVal;
+        }
         //this.grid.wireParentObject();
         this._initLibraryFunctions();
         //var _rangeInfo = new RangeInfo();

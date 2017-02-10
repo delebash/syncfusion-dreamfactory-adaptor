@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.radialslider.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -42,7 +42,6 @@
             destroy: null
         },
         dataTypes: {
-            ticks: "array",
             radius: "number",
             enableRoundOff: "boolean",
             enableAnimation: "boolean",
@@ -155,8 +154,7 @@
                 }
                 else
                     selectValue = this.ticks()[select.toFixed()];
-                if (this.model.change)
-                    this._trigger("change", { value: selectValue, oldValue: this.value() });
+                this._trigger("change", { value: selectValue, oldValue: this.value() });
                 if (this._needleStop && this.model.stop)
                     this._trigger("stop", { value: selectValue });
                 this.value(selectValue);
@@ -265,15 +263,19 @@
             if (this.model.enableAnimation) {
                 this.element.removeClass(this._prefix + "slider-show").addClass(this._prefix + "slider-hide");
                 this._radialSVG.attr("class", "").attr("class", this._prefix + "radialslider-svg-hide " + this._prefix + "rs-svg");
+               (this.model.autoOpen) ?
                 setTimeout(function () {
                     proxy.element.css("display", "none");
                 }, this._isMobile ? 150 : 400)
+                : proxy.element.css("display", "none");
             }
             else
                 proxy.element.css("display", "none");
             this.model.autoOpen = false;
         },
         _setModel: function (options) {
+            if (!ej.isNullOrUndefined(options["inline"]) && !options["inline"]) this.model.radius += 50;
+            if (options.ticks) this.model.ticks = options.ticks;
             this._refresh();
         },
         _clearElement: function () {
@@ -439,6 +441,9 @@
             }
         },
         _needleMoveHandler: function (e) {
+             ej.blockDefaultActions(e);
+            if (ej.isTouchDevice())
+                e = e.touches ? e.touches[0] : e;
             var baseRect = $("#" + this._prefix + this._elementID + "-radial-slider-svg").offset();
             var y2 = e.clientY, x2 = e.clientX, y1 = (baseRect.top + (this._radialWidth / 2)) - $(window).scrollTop(), x1 = baseRect.left + (this._radialWidth / 2);
             this._dynamicAngleCalculation(x1, x2, y1, y2);
@@ -574,7 +579,7 @@
         },
         _refresh: function () {
             this._destroy();
-            this.element.addClass("e-radialslider e-js");
+            this.element.addClass("e-radialslider e-js");			
             this._renderEJControl();
         },
         //events part
@@ -587,17 +592,17 @@
             this._enterMouseDelegates = $.proxy(this._entermouse, this);
         },
         _wireEvents: function (remove) {
-            var eventType = remove ? "unbind" : "bind";
+            var eventType = remove ? "off" : "on";
             this._createDelegates();
             ej.listenEvents([this._radialSVG, this._radialSVG, this._radialSVG, this._radialSVG], [ej.endEvent(), ej.startEvent(), "mouseenter", "mouseleave"], [this._touchEndDelegate, this._touchStartDelegate, this._enterMouseDelegates, this._mouseOutDelegate], false);
         },
         _entermouse: function (e) {
-            ej.listenEvents([this._radialSVG], ["mousemove"], [this._overNeedleMoveDelegate], false);
+            ej.listenEvents([this._radialSVG], [ej.moveEvent()], [this._overNeedleMoveDelegate], false);
         },
         _mouseOutHandler: function (e) {
             e.preventDefault();
             if (this._radialSVG.has(e.target).length == 0 && this._needleMove) {
-                ej.listenEvents([this._radialSVG], ["mousemove"], [this._needleMoveDelegate], true);
+                ej.listenEvents([this._radialSVG], [ej.moveEvent()], [this._needleMoveDelegate], true);
                 var lastAngle = this._previousAngle != undefined ? this._previousAngle : this._startValueAngle;
                 this._pathAfterAddLength = this._directionLine.toString().replace(/[^M]/g, "").length;
                 this._directionLine.remove(this._pathAfterAddLength - 1, 1);
@@ -608,15 +613,18 @@
             $(this._overLine).remove();
         },
         _touchEndHandler: function (e) {
-            ej.listenEvents([this._radialSVG], ["mousemove"], [this._needleMoveDelegate], true);
+            e = e.touches ? e.changedTouches[0] : e;
+            ej.listenEvents([this._radialSVG], [ej.moveEvent()], [this._needleMoveDelegate], true);
             this._tapHandlerEvent(e);
         },
         _touchStartHandler: function (e) {
+            ej.blockDefaultActions(e);
+            if (ej.isTouchDevice())
+                e = e.touches ? e.touches[0] : e;
             this._needleStop = false;
-            e.preventDefault();
             if (this.model.start)
                 this._trigger("start", { value: this.value() });
-            ej.listenEvents([this._radialSVG], ["mousemove"], [this._needleMoveDelegate], false);
+            ej.listenEvents([this._radialSVG], [ej.moveEvent()], [this._needleMoveDelegate], false);
         }
 
     })

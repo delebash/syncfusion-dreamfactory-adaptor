@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.splitbutton.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -8,7 +8,7 @@
 *  applicable laws. 
 */
 (function (fn) {
-    typeof define === 'function' && define.amd ? define(["jquery-easing","./../common/ej.core","./ej.menu"], fn) : fn();
+    typeof define === 'function' && define.amd ? define(["./../common/ej.core","./ej.menu"], fn) : fn();
 })
 (function () {
 	
@@ -79,10 +79,10 @@
             itemMouseOut: null,
 
             itemSelected: null,
-			
-			open: null,
-			
-		    close: null,
+
+            open: null,
+
+            close: null,
 
             destroy: null
         },
@@ -146,6 +146,7 @@
             this._cloneElement = this.element.clone();
             this._initialize();
             this._controlStatus(this.model.enabled);
+            this._documentClickHandler = $.proxy(this._documentClick, this);
             this._wireEvents();
         },
 
@@ -324,7 +325,13 @@
         },
 
         _roundedCorner: function (value) {
-            value == true ? this.element.addClass('e-corner') : this.element.removeClass('e-corner');
+            if (value) {
+                this.element.addClass('e-corner');
+                if($("#" + this.model.targetID).length > 0) $("#" + this.model.targetID).addClass('e-corner');
+            } else {
+                this.element.removeClass('e-corner');
+                if ($("#" + this.model.targetID).length > 0) $("#" + this.model.targetID).removeClass('e-corner');
+            }
         },
 
         _controlStatus: function (value) {
@@ -364,7 +371,7 @@
 
 
         _render: function () {
-            this.element.addClass(this.model.cssClass + " e-btn e-select e-split-btn").attr("role", "button");
+            this.element.addClass(this.model.cssClass + " e-btn e-select e-split-btn " + (!ej.isTouchDevice() ? "e-ntouch" : "")).attr("role", "button");
             if ((this.model.text == null) || (this.model.text == "")) {
                 this.model.text = this.element.text();
             }
@@ -387,7 +394,7 @@
             this.btnimgwrap.append(this.dropdownimg);
             /*Split Button*/
             if (this.model.buttonMode == ej.ButtonMode.Split) {
-                this.dropbutton = ej.buildTag('button.e-split-btn e-btn e-select ' + this.model.cssClass + ' e-drp-btn' , "", {}, { type: "button", "data-role": "none" , "id": this.element[0].id + 'drpbtn'});
+                this.dropbutton = ej.buildTag('button.e-split-btn e-btn e-select ' + this.model.cssClass + ' e-drp-btn' + (!ej.isTouchDevice() ? " e-ntouch" : ""), "", {}, { type: "button", "data-role": "none", "id": this.element[0].id + 'drpbtn' });
                 this.dropbutton.append(this.btnimgwrap);
                 this.dropbutton.insertAfter(this.element);
                 if (this.model.contentType == ej.ContentType.TextOnly)
@@ -412,8 +419,8 @@
         _renderButtonContent: function () {
             /*Image and Text*/
             this.textspan = ej.buildTag('span.e-btntxt', this.model.text);
-            this.majorimgtag = ej.buildTag('span.e-icon ' + this.model.prefixIcon);
-            this.minorimgtag = ej.buildTag('span.e-icon ' + this.model.suffixIcon);
+            this.majorimgtag = ej.buildTag('span').addClass(this.model.prefixIcon);
+            this.minorimgtag = ej.buildTag('span').addClass(this.model.suffixIcon);
             this.imgtxtwrap = ej.buildTag('div');
             /*Rendering Option*/
             if (this.model.contentType == ej.ContentType.TextAndImage) {
@@ -539,7 +546,7 @@
             }).on("ejMenuclose", $.proxy(this._onKeyDown, this));
         },
         _onKeyDown: function (e) {
-            e.keyCode==27 && this._hide();
+            e.keyCode == 27 && this._hide();
         },
         _itemClick: function (args) {
             args = { status: this.model.enabled, ID: args.ID, text: args.text };
@@ -569,6 +576,7 @@
 
         _btnMouseClick: function (e) {
             var args;
+            if(!this.model.enabled) return false;
             if (!$(e.currentTarget).hasClass("e-disable")) {
                 if (e.currentTarget.id != this.element[0].id + "drpbtn" && this.model.buttonMode == ej.ButtonMode.Split) {
                     args = { status: this.model.enabled };
@@ -580,25 +588,23 @@
                         this._hidecontext(e);
                     } else {
                         this._contextPosition(e);
-						this._trigger("open");
-                        this._on($(window),"resize",this._OnWindowResize);
+                        this._trigger("open");
+                        this._on($(window), "resize", this._OnWindowResize);
                         this.contstatus = true;
-                        this.element.bind("click", $.proxy(this._hidecontext, this));
-                        this._on($(document), "mousedown", this._documentClick);
+                        this.element.on("click", $.proxy(this._hidecontext, this));
+                        ej.listenTouchEvent($(document), ej.startEvent(), this._documentClickHandler, false, this);
                         this._on(ej.getScrollableParents(this.wrapper), "scroll", this._hidePopup);
                     }
                 }
             }
         },
 
-        _OnWindowResize:function(e)
-        {
+        _OnWindowResize: function (e) {
             this._contextPosition(e);
         },
 
-        _contextPosition:function(e)
-        {
-            var position = this._getXYpos(e),posleft,targetElement;
+        _contextPosition: function (e) {
+            var position = this._getXYpos(e), posleft, targetElement;
             targetElement = (this.model.buttonMode == ej.ButtonMode.Split ? this.dropbutton : this.element);
             var contextObj = $("#" + this.model.targetID).ejMenu("instance");
             posleft = position.x - ($("#" + this.model.targetID).outerWidth() - (this.model.buttonMode == ej.ButtonMode.Split ? this.dropbutton.outerWidth() : this.element.outerWidth()));
@@ -642,14 +648,14 @@
         _hidePopup: function (e) {
             $("#" + this.model.targetID).ejMenu('hide', e);
             this._hide();
-            this._off(ej.getScrollableParents(this.wrapper), "scroll", this._hidePopup);            
+            this._off(ej.getScrollableParents(this.wrapper), "scroll", this._hidePopup);
         },
         _hide: function () {
             this.contstatus = false;
             this.wrapper.removeClass('e-active');
-            this.element.unbind("click", $.proxy(this._hidecontext, this));
-            this._off($(document), "mousedown", this._documentClick);
-            this._off($(window),"resize", this._OnWindowResize);
+            this.element.off("click", $.proxy(this._hidecontext, this));
+            ej.listenTouchEvent($(document), ej.startEvent(), this._documentClickHandler, true, this);
+            this._off($(window), "resize", this._OnWindowResize);
             this._off(ej.getScrollableParents(this.wrapper), "scroll", this._hide);
             this._closeEvent();
         },

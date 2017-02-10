@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.listbox.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -27,7 +27,7 @@
     ej.widget("ejListBox", "ej.ListBox", {
 
         element: null,
-        ignoreOnPersist: ["dataSource", "query", "itemRequestCount", "fields", "create", "change", "select", "unselect", "itemDragStart", "itemDrag", "itemDragStop", "itemDrop", "checkChange", "destroy", "actionComplete", "actionFailure", "actionSuccess", "actionBegin", "itemDropped", "selected"],
+        _ignoreOnPersist: ["dataSource", "query", "itemRequestCount", "fields", "create", "change", "select", "unselect", "itemDragStart", "itemDrag", "itemDragStop", "itemDrop", "checkChange", "destroy", "actionComplete", "actionFailure", "actionSuccess", "actionBegin", "itemDropped", "selected"],
         model: null,
         validTags: ["ul"],
         _setFirst: false,
@@ -38,6 +38,7 @@
             dataSource: null,
             query: ej.Query(),
             itemRequestCount: 5,
+            itemHeight:null,
             fields: {
                 id: null,
                 text: null,
@@ -79,6 +80,7 @@
             allowDrag: false,
             allowDrop: false,
             enableIncrementalSearch: false,
+            enableWordWrap:true,
             caseSensitiveSearch: false,
             loadDataOnInit: true,
             create: null,
@@ -98,6 +100,7 @@
             focusOut:null,
             actionFailure: null,
             actionBegin: null,
+
             //Deprecated Members
             enableVirtualScrolling: false,
             checkAll: false,
@@ -124,11 +127,11 @@
             itemRequestCount: "number",
             allowDrag: "boolean",
             allowDrop: "boolean",
+            enableWordWrap:"boolean",
             enableIncrementalSearch: "boolean",
             caseSensitiveSearch: "boolean",
             template: "string",
             targetID: "string",
-            selectedIndex: "number",
             cascadeTo: "string",
             showRoundedCorner: "boolean",
             enableRTL: "boolean",
@@ -143,8 +146,9 @@
             loadDataOnInit: "boolean",
             showCheckbox: "boolean"
         },
-        observables: ["value"],
+        observables: ["value", "dataSource"],
         value: ej.util.valueFunction("value"),
+        dataSource: ej.util.valueFunction("dataSource"),
         enable: function () {
             if (this.listContainer.hasClass("e-disable")) {
                 this.target.disabled = false;
@@ -172,14 +176,11 @@
             }
         },
         selectItemByIndex: function (index) {            
-            index = parseInt(index);            
+            var prevSelectedItem = this.model.selectedIndex, index = parseInt(index);            
             if (index != null && !this.model.showCheckbox) {
-                this._activeItem = index;                
-                if (this._activeItem == this._listSize - 1) {
-                    this._activeItem = this._listSize - 1;
-                }
-                var activeitem = $(this.element.children("li")[this._activeItem]);
-                if (!activeitem.hasClass("e-select") && !activeitem.hasClass("e-disable")) {
+                var activeitem = $(this.element.children("li")[index]);
+                if (!activeitem.hasClass("e-select")) {
+                    this._activeItem = index;
                     this.element.children("li").removeClass("e-select");
                     this._selectedItems = [];
                     this.model.selectedIndices = [];
@@ -196,7 +197,7 @@
                 this._activeItem = index;
                 this._cascadeAction();
             }
-            this._setSelectionValues();
+            this._setSelectionValues()._OnListSelect(prevSelectedItem, this._activeItem);;
         },
         checkItemByIndex: function (index) {
             if (typeof (index) == "number")
@@ -220,11 +221,11 @@
                                 $(activeitem).find('.listcheckbox').ejCheckBox('option', 'checked', true);
                                 this.checkedStatus = true;
                                 if (!($.inArray(this._activeItem, this._checkedItems) > -1)) this._checkedItems.push(this._activeItem);
-                                if (!($.inArray(activeitem[0], this.model.checkedIndices) > -1)) this.model.checkedIndices.push(activeitem[0]);
+                                if (!($.inArray(activeitem[0], this.model.checkedIndices) > -1)) this.model.checkedIndices.push(this._activeItem);
                                 var checkData = this._getItemObject(activeitem, null);
                                 checkData["isInteraction"] = false;
-                                if (this.model.change)
-                                    this._trigger('change', checkData);
+                                if (this.model.checkChange)
+                                    this._trigger('checkChange', checkData);
                             }
                         }
                     }
@@ -288,10 +289,11 @@
             this.selectItemsByIndices(value);
         },
         selectItemsByIndices: function (value) {
+            if (ej.isNullOrUndefined(value)) return false;
             var selectitems = value.toString().split(',');
             if (!this.model.showCheckbox && this.model.allowMultiSelection) {
                 for (var i = 0; i < selectitems.length; i++) {
-                    if (selectitems[i] != null) {
+                    if (selectitems[i] != null && !isNaN(parseInt(selectitems[i])) && selectitems[i] < this.element.children('li').length) {
                         var index = parseInt(selectitems[i]);
                         this._activeItem = index;
                         if (this._activeItem < 0) {
@@ -327,9 +329,11 @@
                     var activeitem = $(this.element.children("li")[index]);
                     this._activeItem = index;
                     activeitem.removeClass('e-active e-select');
+                    if (this.model.selectedIndex == index) this.model.selectedIndex = this._activeItem = null;
                     var itemIndex = this._selectedItems.indexOf(activeitem[0]);
                     this._selectedItems.splice(this.model.selectedIndices.indexOf(itemIndex), 1);
                     this.model.selectedIndices.splice(this.model.selectedIndices.indexOf(itemIndex), 1);
+
                     var unselectData = this._getItemObject(activeitem, null);
                     unselectData["isInteraction"] = false;
                     if (this.model.unselect)
@@ -344,6 +348,7 @@
             var unselectitem = $(this.element.children("li")[index]);
             if (unselectitem.hasClass('e-select')) {
                 unselectitem.removeClass('e-active e-select');
+                if (this.model.selectedIndex == index) this.model.selectedIndex = this._activeItem = null;
                 var itemIndex = this._selectedItems.indexOf(unselectitem[0]);
                 this._selectedItems.splice(this.model.selectedIndices.indexOf(itemIndex), 1);
                 this.model.selectedIndices.splice(this.model.selectedIndices.indexOf(itemIndex), 1);
@@ -385,6 +390,7 @@
             return this.removeSelectedItems();
         },
         removeItemByText: function (text) {
+            if (ej.isNullOrUndefined(this.getItemByText(text))) return false;
             return this.removeItemByIndex(this.getItemByText(text).index);
         },
         hideSelectedItems: function () {
@@ -509,7 +515,7 @@
             }
         },
         removeAll: function () {
-            if (ej.isNullOrUndefined(this.model.dataSource)) {
+            if (ej.isNullOrUndefined(this.dataSource())) {
                 var text = [];
                 $(this.element.find("li")).each(function (i, e) {
                     text.push($(this).text());
@@ -518,7 +524,7 @@
                 this._refreshItems();
                 return text;
             }
-            else if (!(this.model.dataSource instanceof ej.DataManager)) {
+            else if (!(this.dataSource() instanceof ej.DataManager)) {
                 var elements = [], count = $(this.element.find("li")).length;
                 for (var i = 0; i < count; i++) {
                     elements.push(this._getRemovedItems([parseInt(0)]));
@@ -527,17 +533,17 @@
             }
         },
         removeItemByIndex: function (index) {
-            if (ej.isNullOrUndefined(this.model.dataSource)) {
+            if (ej.isNullOrUndefined(this.dataSource())) {
                 var text = $(this.element.find("li")[index]).remove().text();
                 this._refreshItems();
                 return text;
             }
-            else if (!(this.model.dataSource instanceof ej.DataManager))
+            else if (!(this.dataSource() instanceof ej.DataManager))
                 return this._getRemovedItems([parseInt(index)]);
         },
         removeSelectedItems: function () {
             if (this.model.showCheckbox) return false;
-            if (ej.isNullOrUndefined(this.model.dataSource)) {
+            if (ej.isNullOrUndefined(this.dataSource())) {
                 var text = this.value();
                 $(this.getSelectedItems()).each(function (i, e) {
                     e.item.remove()
@@ -545,7 +551,7 @@
                 this._refreshItems();
                 return text;
             }
-            else if (!(this.model.dataSource instanceof ej.DataManager))
+            else if (!(this.dataSource() instanceof ej.DataManager))
                 return this._getRemovedItems(this.model.selectedIndices);
         },
         _getRemovedItems: function (index) {
@@ -553,12 +559,13 @@
             this._stateMaintained(index);
             this.value(null);
             this.model.selectedIndices = [];
-            this.model.dataSource = this.model.dataSource.filter(function (e, i) {
+			this.model.selectedIndex = this._activeItem = null;
+            this.dataSource(this.dataSource().filter(function (e, i) {
                 if (index.indexOf(i) != -1)
                     removedItems.push(e);
                 else
                     return true;
-            });
+            }));
             this.refresh(true);
             return removedItems;
         },
@@ -611,10 +618,10 @@
             return this._getItemObject($(this.element.find("li")[index]));
         },
         getListData: function () {
-            if (ej.DataManager && this.model.dataSource instanceof ej.DataManager)
+            if (ej.DataManager && this.dataSource() instanceof ej.DataManager)
                 return this.listitems;
-            else if (this.model.dataSource)
-                return this.model.dataSource;
+            else if (this.dataSource())
+                return this.dataSource();
             else
                 return;
         },
@@ -623,7 +630,7 @@
             this.element.find("li").each(function () {
                 if ($(this).text() == text) {
                     $(this).removeClass("e-disable");
-                    if (this.model.showCheckbox) $(this).find(".listcheckbox").ejCheckBox("enable");
+                    if (proxy.model.showCheckbox) $(this).find(".listcheckbox").ejCheckBox("enable");
                     proxy._disabledItems.splice($(this).index().toString());
                     return false;
                 }
@@ -634,19 +641,23 @@
             this.element.find("li").each(function () {
                 if ($(this).text() == text) {
                     $(this).addClass("e-disable");
-                    if (this.model.showCheckbox) $(this).find(".listcheckbox").ejCheckBox("disable");
+                    if (proxy.model.showCheckbox) $(this).find(".listcheckbox").ejCheckBox("disable");
                     proxy._disabledItems.push($(this).index().toString());
                     return false;
                 }
             });
         },
         moveUp: function () {
-            var previousItem = this._getItem(this.model.selectedIndex).prev();
-            this._moveItem(previousItem, "up");
+            if (!ej.isNullOrUndefined(this.model.selectedIndex)) {
+                var previousItem = this._getItem(this.model.selectedIndex).prev();
+                this._moveItem(previousItem, "up");
+            }
         },
         moveDown: function () {
-            var nextItem = this._getItem(this.model.selectedIndex).next();
-            this._moveItem(nextItem, "down");
+            if (!ej.isNullOrUndefined(this.model.selectedIndex)) {
+                var nextItem = this._getItem(this.model.selectedIndex).next();
+                this._moveItem(nextItem, "down");
+            }
         },
         _moveItem: function (item, direction) {
             var selectedItem = this._getItem(this.model.selectedIndex), length = this.element.children().length, moveup = (direction == "up") && 0 < this.model.selectedIndex, movedown = (direction == "down") && length - 1 > this.model.selectedIndex;
@@ -672,12 +683,13 @@
             if (!this.model.showCheckbox) return false;
             var items = this.element.find("li");
             for (i = 0; i < items.length; i++) {
-                if (!($(items[i].firstChild).find('.listcheckbox').ejCheckBox('isChecked')) && !($(items[i].firstChild).hasClass("e-disable"))) {
+                if (!($(items[i].firstChild).find('.listcheckbox').ejCheckBox('isChecked'))) {
                     $(items[i].firstChild).find('.listcheckbox').ejCheckBox('option', 'checked', true);
                     this._checkedItems.push(items[i]);
                     this.model.checkedIndices.push(i);
                 }
             }
+			this._setSelectionValues();
             this.model.uncheckAll = false;
         },
         //Deprecated Method
@@ -690,12 +702,13 @@
                     $(items[i].firstChild).find('.listcheckbox').ejCheckBox('option', 'checked', false);
             this._checkedItems = [];
             this.model.checkedIndices = [];
+			this._setSelectionValues();
             this.model.checkAll = false;
         },
         addItem: function (val, index) {
             var index = (!ej.isNullOrUndefined(index) && index <= this.element.find('li').length) ? index : this.element.find('li').length;
             var proxy = this, num = index;
-            if (ej.isNullOrUndefined(this.model.dataSource)) {
+            if (ej.isNullOrUndefined(this.dataSource())) {
                 if (!(val instanceof Array)) {
                     this.listitem = (this.element.find('li').length ?
                                         ((index - 1 < 0) ? $(this.element.find('li')[0]).before('<li role="option">' + val + '</li>') : $(this.element.find('li')[index - 1]).after('<li role="option">' + val + '</li>'))
@@ -723,10 +736,17 @@
                     })
                 }
             }
-            else if (!(this.model.dataSource instanceof ej.DataManager)) {
-                if (!(val instanceof Array)) val = [val];
+            else if (!(this.dataSource() instanceof ej.DataManager)) {
+                if (proxy.dataSource() instanceof Object) {
+					dup = new Object();
+                    if (!(val instanceof Object)) {
+                        dup[proxy.model.fields.text] = val;
+                        val = dup;
+                    }
+                }
+                else if (!(val instanceof Array)) val = [val];
                 $(val).each(function (i, e) {
-                    proxy.model.dataSource.splice(index, 0, e);
+                    proxy.dataSource().splice(index, 0, e);
                     index = index + 1;
                 })
                 this.model.disableItemsByIndex = [];
@@ -828,7 +848,9 @@
                         this._setText(ej.util.getVal(options[option]));
                         break;
                     case "dataSource":
-                        this.model.selectedIndex = null;
+                        if (!ej.isNullOrUndefined(this._isCasCadeTarget))
+                            this.model.selectedIndex = null;
+                        options[option] = ej.util.getVal(options[option])
                         this._checkModelDataBinding(options[option]);
                         break;
                     case "query":
@@ -836,7 +858,7 @@
                         break;
                     case "fields":
                         this.model.fields = options[option];
-                        this._checkModelDataBinding(this.model.dataSource);
+                        this._checkModelDataBinding(this.dataSource());
                         break;
                     case "template":
                         this.model.template = options[option];
@@ -844,7 +866,7 @@
                         break;
                     case "loadDataOnInit":
                         this._loadContent = options[option];
-                        this._checkModelDataBinding(this.model.dataSource);
+                        this._checkModelDataBinding(this.dataSource());
                         break;
                     case "enableRTL":
                         this.model.enableRTL = options[option];
@@ -854,6 +876,10 @@
                         this.model.enabled = options[option];
                         this._enabled(options[option]);
                         break;
+				    case "enableWordWrap":
+					      this.model.enableWordWrap=options[option];
+					      this._wordWrapItems(options[option]);
+						  break;
                     case "height":
                     case "width":
                         this.model[option] = options[option];
@@ -871,10 +897,10 @@
                         break;
                     case "selectedItemIndex":
                     case "selectedIndex":
-                        if (!$(this.listitem[this.model.selectedIndex]).hasClass('e-disable')) {
+                         if (this.listitem[options[option]] || options[option] == null || this.listitems[options[option]]) {
                             this.selectItemByIndex(options[option]);
                             this.model.selectedIndex = this.model.selectedItemIndex = options[option];
-                        }
+                        } else options[option] = this.model.selectedIndex;
                         break;
                     case "checkItemsByIndex":
                     case "checkedItemlist":
@@ -923,8 +949,20 @@
                         this._addAttr(options[option]);
                         break;
                     case "itemsCount":
-                        this.model.itemsCount = options[option];
-                        this._setItemsCount()._setDimensions();
+                        var items = this.model.itemsCount;
+                        if (this.model.height == "auto") {
+                            this.model.itemsCount = options[option];
+                            this._setItemsCount()._setDimensions();
+                        } else options[option] = items;
+                        break;
+                    case "itemHeight":
+                        var $liElements = this.element.find("li")
+                        var optionHeight = ej.isNullOrUndefined(options[option]) ? options[option] : options[option].toString().replace("px", "");
+                        var modelHeight= ej.isNullOrUndefined(this.model.itemHeight) ? this.model.itemHeight :this.model.itemHeight.toString().replace("px", "");
+                        for (var z = 0; z < $liElements.length; z++) {
+                            var style = ej.isNullOrUndefined(options[option]) ? { "min-height": ej.isNullOrUndefined(this.model.itemHeight)? "20px":modelHeight } : { "min-height": optionHeight + "px", "height": optionHeight + "px" };
+                            $liElements.eq(z).css(style);
+                        } this.refresh();
                         break;
                     case "allowMultiSelection":
                         this.model.allowMultiSelection = options[option];
@@ -935,7 +973,7 @@
                         };
                         break;
                     case "totalItemsCount":
-                        if (!ej.isNullOrUndefined(this.model.dataSource)) {
+                        if (!ej.isNullOrUndefined(this.dataSource())) {
                             this.model.totalItemsCount = options[option];
                             if (this.model.query)
                                 this._queryCheck(this.model.query);
@@ -951,15 +989,15 @@
             this.element.find(".e-chkbox-wrap").remove();
             this.listContainer.remove();
             if (!this._isList) this.element.empty();
-            $(window).unbind("resize", $.proxy(this._OnWindowResize, this));
+            $(window).off("resize", $.proxy(this._OnWindowResize, this));
 			this._ListEventUnbind(this.element.children("li"));
             return this;
         },
 		_ListEventUnbind: function (_ListItemsContainer) {
-			_ListItemsContainer.unbind("contextmenu", $.proxy(this._OnMouseContext, this));
-            _ListItemsContainer.unbind("click", $.proxy(this._OnMouseClick, this));
-            _ListItemsContainer.unbind("touchstart mouseenter", $.proxy(this._OnMouseEnter, this));
-            _ListItemsContainer.unbind("touchend mouseleave", $.proxy(this._OnMouseLeave, this));
+			_ListItemsContainer.off("contextmenu", $.proxy(this._OnMouseContext, this));
+            _ListItemsContainer.off("click", $.proxy(this._OnMouseClick, this));
+            _ListItemsContainer.off("touchstart mouseenter", $.proxy(this._OnMouseEnter, this));
+            _ListItemsContainer.off("touchend mouseleave", $.proxy(this._OnMouseLeave, this));
 		},
         _refresh: function () {
             this._destroy()._init();
@@ -999,15 +1037,15 @@
             if (this.model.totalItemsCount)
                 this._savedQueries.take(this.model.totalItemsCount);
             this._renderContainer()._addAttr(this.model.htmlAttributes);
-            if (ej.DataManager && this.model.dataSource instanceof ej.DataManager) {
+            if (ej.DataManager && this.dataSource() instanceof ej.DataManager) {
                 if (this.model.actionBegin)
                     this._trigger("actionBegin", {});
                 if (this._loadInitialRemoteData)
-                    this._initDataSource(this.model.dataSource);
+                    this._initDataSource(this.dataSource());
             }
             else
                 this._showFullList();
-            if (!this.model.dataSource) this._finalize();
+            if (!this.dataSource()) this._finalize();
             if (this.model.showRoundedCorner)
                 this._roundedCorner(true);
             return this;
@@ -1015,12 +1053,12 @@
         _queryCheck: function (value) {
             this._savedQueries = value.clone();
             this.element.empty();
-            if (this.model.dataSource)
-                this._checkModelDataBinding(this.model.dataSource);
+            if (this.dataSource())
+                this._checkModelDataBinding(this.dataSource());
         },
         _checkModelDataBinding: function (source) {
             this.mergeValue = null;
-            this.model.dataSource = source;
+            this.dataSource(source);
             if (source != null) {
                 if (source.length != 0) {
                     if (ej.DataManager && source instanceof ej.DataManager) this._initDataSource(source);
@@ -1030,7 +1068,7 @@
         },
         _initDataSource: function (source) {
             var proxy = this;
-            proxy.listitems = proxy.model.dataSource;
+            proxy.listitems = proxy.dataSource();
             proxy._updateLoadingClass(true);
             var queryPromise = source.executeQuery(this._getQuery());
             queryPromise.done(function (e) {
@@ -1038,7 +1076,7 @@
                 proxy._updateLoadingClass()._showFullList()._trigger("actionSuccess", e);
                 proxy._finalize();
             }).fail(function (e) {
-                proxy.model.dataSource = null;
+                proxy.dataSource(null);
                 proxy._updateLoadingClass(true)._trigger("actionFailure", e);
             }).always(function (e) {
                 if (proxy.model.checkAll)
@@ -1057,7 +1095,7 @@
                 for (var col in mapper)
                     if (col !== "tableName") column.push(mapper[col]);
                 if (column.length > 0) queryManager.select(column);
-                if (!this.model.dataSource.dataSource.url.match(mapper.tableName + "$")) !ej.isNullOrUndefined(mapper.tableName) && queryManager.from(mapper.tableName);
+                if (!this.dataSource().dataSource.url.match(mapper.tableName + "$")) !ej.isNullOrUndefined(mapper.tableName) && queryManager.from(mapper.tableName);
             } else queryManager = this._savedQueries;
             return queryManager;
         },
@@ -1131,13 +1169,30 @@
             this.mapFld._tooltipText = (mapper && mapper.tooltipText) ? mapper["tooltipText"] : "tooltipText";
             this.mapFld._imageAttributes = (mapper && mapper.imageAttributes) ? mapper["imageAttributes"] : "imageAttributes";
             this.mapFld._spriteCSS = (mapper && mapper.spriteCssClass) ? mapper["spriteCssClass"] : "spriteCssClass";
-            this.mapFld._text = (mapper && mapper.text) ? mapper["text"] : this.listitems[0].text ? "text" : Object.keys(this.listitems[0])[0];
+            this.mapFld._text = (mapper && mapper.text) ? mapper["text"] : this.listitems[0].text ? "text" : this._getObjectKey(this.listitems[0])[0];
             this.mapFld._value = (mapper && mapper.value) ? mapper["value"] : "value";
             this.mapFld._htmlAttributes = (mapper && mapper.htmlAttributes) ? mapper["htmlAttributes"] : "htmlAttributes";
             this.mapFld._checkBy = (mapper && mapper.checkBy) ? mapper["checkBy"] : "checkBy";
             this.mapFld._selectBy = (mapper && mapper.selectBy) ? mapper["selectBy"] : "selectBy";
             this.mapCateg = (mapper && mapper.groupBy) ? mapper["groupBy"] : ""
         },
+        _getObjectKey: function (obj) {
+            if (!Object.keys) {
+                var keys = [];
+                for (var i in obj) {
+                    if (obj.hasOwnProperty(i)) {
+                        keys.push(i);
+                    }
+                }
+                return keys;
+            }
+            else return Object.keys(obj)
+        },
+        _itemStyle:function(){
+            var height = ej.isNullOrUndefined(this.model.itemHeight) ? this.model.itemHeight : this.model.itemHeight.toString().replace("px", "");
+            var itemHeight = ej.isNullOrUndefined(this.model.itemHeight) ? "min-height:20px;" : "min-height:" + height + "px;height:" + height + "px";
+            return { style: itemHeight }
+        },    
         _renderlistContainer: function () {
             this.hold = this.touchhold = false;
             this.item = "";
@@ -1149,7 +1204,8 @@
             this.lastScrollTop = -1;
             this.dummyUl = $();
             if (this.model.enableRTL) this.listContainer.addClass("e-rtl");
-            if (this.model.dataSource == null || this.model.dataSource.length < 1) {
+            this._wordWrapItems();
+            if (this.dataSource() == null || this.dataSource().length < 1) {
                 predecessor = this.element.parents().last();
                 if (this.model.targetID) this.docbdy = predecessor.find("#" + this.model.targetID);
                 else this.docbdy = predecessor.find("#" + this._id);
@@ -1158,25 +1214,27 @@
                 this.items = this.itemsContainer.children('li');
                 this.items.children("img").addClass("e-align");
                 this.items.children("div").addClass("e-align");
+                var iHeight = parseInt(this.model.itemHeight) + "px";
+                if (this.model.itemHeight) $('li').css({ "min-height": iHeight, "height": iHeight });
                 this.itemsContainer.children("span").addClass("e-ghead");
                 this.element.append(this.itemsContainer.children());
             }
-            else if (this.model.dataSource != null && typeof list[0] != "object") {
+            else if (this.dataSource() != null && typeof list[0] != "object") {
                 if (this._loadInitialRemoteData && this.mergeValue && this.model.virtualScrollMode == "continuous" && this.model.totalItemsCount)
                     this._loadlist(this.mergeValue);
                 else if (this._loadInitialRemoteData && this.mergeValue && this.model.virtualScrollMode == "normal" && this.model.totalItemsCount) {
                     this.realUllength = 0;
                     this.mergeUl = [];
                     for (i = 0; i < this.mergeValue.length; i++)
-                        this.mergeUl.push(ej.buildTag('li', this.mergeValue[i][this.model.fields.text], null, { style: "min-height:20px;" })[0]);
+                         this.mergeUl.push(ej.buildTag('li', this.mergeValue[i][this.model.fields.text], null, this._itemStyle())[0]);
                     this.element.append(this.mergeUl);
                     for (i = 0; i < this.model.totalItemsCount - this.mergeValue.length; i++)
-                        this.dummyUl.push(ej.buildTag('li', null, null, { style: "min-height:20px;" })[0]);
+                        this.dummyUl.push(ej.buildTag('li', null, null, this._itemStyle())[0]);
                     this.element.append(this.dummyUl);
                     this._refreshScroller();
                 }
                 else if (this._loadInitialRemoteData && this.mergeValue && !this.model.totalItemsCount)
-                    this._initDataSource(this.model.dataSource);
+                    this._initDataSource(this.dataSource());
             }
             else {
                 this._setMapFields();
@@ -1187,12 +1245,12 @@
                 if (this.model.allowVirtualScrolling) {
                     if (this.model.virtualScrollMode == "normal") {
                         this.realUllength = 0;
-                        if (this.model.dataSource.length < 0) {
+                        if (this.dataSource().length < 0) {
                             query = this._savedQueries.take(parseInt(this.listContainer.height() / this.listitemheight));
                             var proxy = this;
-                            if (ej.DataManager && this.model.dataSource instanceof ej.DataManager) {
-                                proxy.listitems = proxy.model.dataSource;
-                                var queryPromise = this.model.dataSource.executeQuery(query);
+                            if (ej.DataManager && this.dataSource() instanceof ej.DataManager) {
+                                proxy.listitems = proxy.dataSource();
+                                var queryPromise = this.dataSource().executeQuery(query);
                                 queryPromise.done(function (e) {
 								    proxy._trigger("actionBeforeSuccess", e);
                                     proxy.listitems = e.result;
@@ -1203,16 +1261,21 @@
                         }
                         if (this.mergeValue && this.mergeValue != groupedList && this.mergeValue != undefined) {
                             this.mergeUl = [];
-                            for (i = 0; i < this.mergeValue.length; i++)
-                                this.mergeUl.push(ej.buildTag('li', this.mergeValue[i][this.model.fields.text], null, { style: "min-height:20px;" })[0]);
+                            for (i = 0; i < this.mergeValue.length; i++) {
+                                var $liEle = ej.buildTag('li', this.model.template ? "" : this.mergeValue[i][this.model.fields.text], null,  this._itemStyle())[0]
+                                if (this.model.template) $liEle.append(this._getTemplatedString(list[i]));
+                                this.mergeUl.push($liEle[0]);
+                            }
                             this.element.append(this.mergeUl);
                         }
                         if (!this.model.totalItemsCount)
                             var originalliLength = this.listitems.length;
                         else
                             var originalliLength = (this.mergeValue) ? this.model.totalItemsCount - this.mergeValue.length : this.model.totalItemsCount;
-                        for (i = 0; i < originalliLength; i++)
-                            this.dummyUl.push(ej.buildTag('li', null, null, { style: "min-height:20px;" })[0]);
+                        for (var i = 0; i < originalliLength; i++) {
+                            var $listEle = ej.buildTag('li', null, null,  this._itemStyle());
+                            this.dummyUl.push($listEle[0]);
+                        }
                         this.element.append(this.dummyUl);
                     }
                     this._loadInitialData(_query, list);
@@ -1220,11 +1283,11 @@
                     if (this.mapCateg && this.mapCateg != "") {
                         _query = ej.Query().group(this.mapCateg);
                         groupedList = ej.DataManager(list).executeLocal(_query);
-                        this.model.dataSource = [];
+                        this.dataSource([]);
                         for (i = 0; i < groupedList.length; i++) {
                             this.dummyUl.push(ej.buildTag('span.e-ghead', groupedList[i].key)[0]);
                             this._loadlist(groupedList[i].items);
-                            this.model.dataSource = this.model.dataSource.concat(groupedList[i].items);
+                            this.dataSource(this.dataSource().concat(groupedList[i].items));
                         }
                     }
                     else {
@@ -1233,7 +1296,7 @@
                             if (this.mergeValue && this.mergeValue != groupedList && this.mergeValue != undefined) {
                                 this.mergeUl = [];
                                 for (i = 0; i < this.mergeValue.length; i++) {
-                                    this.mergeUl.push(ej.buildTag('li', this.mergeValue[i][this.model.fields.text], null, { style: "min-height:20px;" })[0]);
+                                    this.mergeUl.push(ej.buildTag('li', this.mergeValue[i][this.model.fields.text], null,  this._itemStyle())[0]);
                                     groupedList.push(this.mergeValue[i]);
                                 }
                             }
@@ -1258,6 +1321,7 @@
                 }
             }
             var proxy = this;
+            if (groupedList) this.listitems = groupedList;
             this._setDimensions();
             this.listContainer.css({ "position": "relative", "height": "" });
             this.listBoxScroller.css({ "height": "", "width": "" });
@@ -1285,10 +1349,14 @@
             if (this.model.totalItemsCount)
                 this._setTotalItemsCount();
         },
+		  _wordWrapItems:function(){
+			   this.model.enableWordWrap?this.listContainer.addClass("e-wrap").removeClass("e-nowrap"):this.listContainer.addClass("e-nowrap").removeClass("e-wrap");
+			},
+	
         _loadInitialData: function (query, list) {
             var _query = query.clone();
             this.realUllength = 0;
-            if ((ej.DataManager && this.model.dataSource instanceof ej.DataManager))
+            if ((ej.DataManager && this.dataSource() instanceof ej.DataManager))
                 _query = _query.range(0, parseInt(this.listContainer.height() / this.listitemheight));
             else
                 _query = _query.range(0, this.listitems.length);
@@ -1296,7 +1364,7 @@
             if (this.mergeValue && this.mergeValue != groupedList && this.mergeValue != undefined && this.model.virtualScrollMode == "continuous") {
                 this.mergeUl = [];
                 for (i = 0; i < this.mergeValue.length; i++)
-                    this.mergeUl.push(ej.buildTag('li', this.mergeValue[i][this.model.fields.text], null, { style: "min-height:20px;" })[0]);
+                    this.mergeUl.push(ej.buildTag('li', this.mergeValue[i][this.model.fields.text], null,  this._itemStyle())[0]);
                 this.element.append(this.mergeUl);
             }
             if (!this.mergeValue || (this.mergeValue && this._loadInitialRemoteData))
@@ -1317,10 +1385,8 @@
                     var _dcheckBy = this._getField(sublist[j], this.mapFld._checkBy);
                     var _dtooltipText = this._getField(sublist[j], this.mapFld._tooltipText);
                     var k = (this.model.virtualScrollMode == "continuous" && this.mergeValue) ? this.realUllength + this.mergeValue.length : this.realUllength;
-                    if ((_dvalue) && (_dvalue != "")) litag = ej.buildTag('li', "", "", {
-                        value: _dvalue, style: "min-height:20px;"
-                    });
-                    else litag = ej.buildTag('li', null, null, { style: "min-height:20px;" }); if (_did) litag.attr('id', _did);
+                    if ((_dvalue) && (_dvalue != "")) litag = ej.buildTag('li', "", "", $.extend( this._itemStyle(), {value: _dvalue}));
+                    else litag = ej.buildTag('li', null, null,  this._itemStyle()); if (_did) litag.attr('id', _did);
                     if ((_dimageUrl) && (_dimageUrl != "")) {
                         imgtag = ej.buildTag('img.e-align', '', {}, {
                             'src': _dimageUrl,
@@ -1333,15 +1399,22 @@
                         divtag = ej.buildTag('div.e-align ' + _dspriteCss + ' sprite-image');
                         litag.append(divtag);
                     }
-                    if ((_dtext) && (_dtext != "")) litag.append(_dtext);
+                    if ((_dtext) && (_dtext != "")){
+                    if(this.model.template) litag.append(this._getTemplatedString(sublist[j]))
+                    else litag.append(_dtext);
+                    }
                     if ((_dhtmlAttributes) && (_dhtmlAttributes != "")) litag.attr(_dhtmlAttributes);
-                    if ((_dtooltipText) && (_dtooltipText != "")) litag.attr('title', _dtooltipText);
+                    if ((_dtooltipText) && (_dtooltipText != "")) litag.attr('data-content', _dtooltipText).addClass("e-tooltip");
                     if (_dcheckBy || this.model.checkAll) litag.addClass("checkItem");
                     if (_dselectBy || this.model.selectAll) litag.addClass("selectItem");
                     if (this.element.children()[k] != null && this.model.allowVirtualScrolling && $(this.element.children()[k]).text() == "") {
                         $(this.element.children()[k]).replaceWith(litag[0]);
-                    } else if (this.model.allowVirtualScrolling && this.model.virtualScrollMode == "normal")
+                    } else if (this.model.allowVirtualScrolling && this.model.virtualScrollMode == "normal") {
+                        if (this.model.template)
+                            ($(this.dummyUl[k])).replaceWith(litag[0]);
+                        else
                         ($(this.dummyUl[k])).text($(litag[0]).text());
+                    }
                     else
                         this.dummyUl.push(litag[0]);
                     this.realUllength += 1;
@@ -1368,7 +1441,7 @@
                 if (!proxy.model.showCheckbox)
                     proxy._selectListItems();
                 this.element.find('.checkItem').each(function (i, e) {
-                    proxy.model.checkedIndices.push($(e).index());
+                    proxy.model.checkedIndices.push(proxy._elementIndex(e));
                 });
                 if (selectionArray.length)
                     this.model.allowMultiSelection ? this.model.selectedIndices = selectionArray : this.model.selectedIndex = selectionArray[0];
@@ -1379,6 +1452,7 @@
                 this._loadContent = true;
             }
             return this;
+            
         },
         _applySelection: function () {
             if (!(this.model.fields.checkBy || this.model.fields.selectBy)) return false;
@@ -1417,7 +1491,7 @@
         },
         _createCheckbox: function () {
             var i, _extchk, chklist, me = this;
-            this._listitems = this.listContainer.find("ol,ul").children("li");
+            this._listitems = this.listContainer.find("ol,ul").length > 0 ? this.listContainer.find("ol,ul").children("li") : this.element.children("li");
             chklist = this._listitems.find('input[type=checkbox]');
             for (i = 0; i < this._listitems.length; i++) {
                 if ($(this._listitems[i]).text() != "") {
@@ -1530,6 +1604,7 @@
                 dragArea: dragContainment,
                 clone: true,
                 dragStart: function (args) {
+                  if( proxy.model.allowDrag || proxy.model.allowDragAndDrop ) {
                     if (!$(args.element.closest('.e-ddl-popup.e-js')).hasClass('e-disable') && !args.element.hasClass('e-disable')) {
                         var draggedobj = $("#" + this.element.parent()[0].id).data("ejListBox");
                         draggedobj._refreshItems();
@@ -1543,6 +1618,8 @@
                         _clonedElement && _clonedElement.remove();
                         return false;
                     }
+                  }
+                  else return false;
                 },
                 drag: function (args) {
                     var target = args.target;
@@ -1569,14 +1646,16 @@
                         proxy = $("#" + args.element.parent()[0].id).data($(args.element.parent()[0]).data().ejWidgets[0]);
                         if (dragEle.length > 1 ? proxy._onDropped(dragEle, target) : proxy._onDropped([proxy._getItemObject(args.element), args], args.target)) return false;
                     }
+                    if( !proxy.model.allowDrag && !proxy.model.allowDragAndDrop ) proxy.element.children().removeClass("e-draggable");
                 },
                 helper: function (event, ui) {
                     if (!ej.isNullOrUndefined(event.element) && !$(event.element.closest('.e-ddl-popup.e-js')).hasClass('e-disable') && $(event.element).hasClass('e-draggable')) {
                         proxy = $(event.element).closest('.e-listbox.e-js').data('ejListBox');
                         proxy._tempTarget = $(event.element).text();
-                        if (proxy) {
+                        if ((proxy.model.allowDrag || proxy.model.allowDragAndDrop) && proxy) {
                             _clonedElement = $(event.sender.target).clone().addClass("dragClone dragClonelist");
-                            _clonedElement.css({ "width": proxy.element.width(), "padding": "5px 5px 5px 0.857em", "list-style": "none", "text-align": "left", "opacity": "1" });
+                            _clonedElement.addClass(proxy.model.cssClass + (proxy.model.enableRTL ? ' e-rtl' : ''));
+                            _clonedElement.css({ "width": proxy.element.width(), "padding": "5px 5px 5px 0.857em", "list-style": "none", "text-align": (proxy.model.enableRTL ? "right" : "left"), "opacity": "1" });
                             return _clonedElement.appendTo($("body"));
                         }
                     }
@@ -1595,7 +1674,7 @@
             dataObj = data.dataObj;
             pre ? $(li).insertBefore(target) : $(li).insertAfter(target);
             this._refreshItems();
-            if (dataObj && this.model.dataSource)
+            if (dataObj && this.dataSource())
                 this._dropDataSource(droppedobj, dataIndex, dataObj, li.index());
             droppedobj._refreshItems();
         },
@@ -1612,29 +1691,29 @@
             li.insertAfter($($(target).find('li')).last());
             $(target).find('ul').append(li);
             this._refreshItems();
-            if (dataObj && this.model.dataSource)
-                this._dropDataSource(droppedobj, dataIndex, dataObj, droppedobj.model.dataSource ? droppedobj.model.dataSource.length : 0);
+            if (dataObj && this.dataSource())
+                this._dropDataSource(droppedobj, dataIndex, dataObj, droppedobj.dataSource() ? droppedobj.dataSource().length : 0);
             if (!droppedobj.model.allowDrag)
                 $(li).ejDraggable("instance")._destroy();
             droppedobj._refreshItems();
         },
         _dropDataSource: function (droppedobj, dataIndex, dataObj, droppedIndex) {
-            var preventDropData = ej.DataManager && this.model.dataSource instanceof ej.DataManager;
+            var preventDropData = ej.DataManager && this.dataSource() instanceof ej.DataManager;
             if (preventDropData) return;
             if (dataIndex instanceof Array) {
                 var proxy = this;
                 $.each(dataObj, function (index) {
-                    indx = proxy.model.dataSource.indexOf(dataObj[index]);
-                    proxy.model.dataSource.splice(indx, 1);
+                    indx = proxy.dataSource().indexOf(dataObj[index]);
+                    proxy.dataSource().splice(indx, 1);
                 });
             }
             else
-                this.model.dataSource.splice(dataIndex, 1);
-            if (droppedobj.model.dataSource instanceof Array) {
-                droppedobj.model.dataSource.splice.apply(droppedobj.model.dataSource, [droppedIndex, 0].concat(dataObj));
+                this.dataSource().splice(dataIndex, 1);
+            if (droppedobj.dataSource() instanceof Array) {
+                droppedobj.dataSource().splice.apply(droppedobj.dataSource(), [droppedIndex, 0].concat(dataObj));
             }
             else {
-                droppedobj.model.dataSource = dataObj;
+                droppedobj.dataSource(dataObj);
             }
         },
         _getDropObject: function (target, element, event) {
@@ -1651,12 +1730,12 @@
                 proxy = this;
                 $.each(li, function (ele) {
                     dataIndex.push($(this).index());
-                    dataObj.push((proxy.model.dataSource) ? proxy.model.dataSource[$(this).index()] : null);
+                    dataObj.push((proxy.dataSource()) ? proxy.dataSource()[$(this).index()] : null);
                 });
             }
             else {
                 dataIndex = li.index();
-                dataObj = (this.model.dataSource) ? this.model.dataSource[dataIndex] : null;
+                dataObj = (this.dataSource()) ? this.dataSource()[dataIndex] : null;
             }
             return { "dataIndex": dataIndex, "dataObj": dataObj };
         },
@@ -1667,12 +1746,12 @@
                 "aria-expanded": true
             });
             var _ListItemsContainer = this.element.children("li");
-            this._listSize = _ListItemsContainer.size();
+            this._listSize = _ListItemsContainer.length;
 			this._ListEventUnbind(_ListItemsContainer);
-            _ListItemsContainer.bind("touchstart mouseenter", $.proxy(this._OnMouseEnter, this));
-            _ListItemsContainer.bind("touchend mouseleave", $.proxy(this._OnMouseLeave, this));
-            _ListItemsContainer.bind("click", $.proxy(this._OnMouseClick, this));
-            _ListItemsContainer.bind("contextmenu", $.proxy(this._OnMouseContext, this));            
+            _ListItemsContainer.on("touchstart mouseenter", $.proxy(this._OnMouseEnter, this));
+            _ListItemsContainer.on("touchend mouseleave", $.proxy(this._OnMouseLeave, this));
+            _ListItemsContainer.on("click", $.proxy(this._OnMouseClick, this));
+            _ListItemsContainer.on("contextmenu", $.proxy(this._OnMouseContext, this));            
             if (proxy.model.showCheckbox) proxy.element.find(".listcheckbox").ejCheckBox({ enabled: proxy.model.enabled });
             return this;
         },
@@ -1682,10 +1761,10 @@
         },
         refresh: function (value) {
 		    if (!ej.isNullOrUndefined(this.model.query)) this._savedQueries = this.model.query; 
-            if (value || ej.isNullOrUndefined(value)) {
+            if (this.model.dataSource) {
                 if (this.model.template)
                     this.element.empty();
-                this._checkModelDataBinding(this.model.dataSource);
+                this._checkModelDataBinding(this.dataSource());
             }
             else {
                 this.listContainer.css({ "height": this.model.height, "width": this.model.width });
@@ -1750,15 +1829,16 @@
             return $(this.element.children("li")[val])
         },
         _getItemObject: function (item, evt) {
+            var index = this._elementIndex(item);
             return {
                 item: item,
-                index: item.index(),
+                index: index,
                 text: item.text(),
                 value: item.attr("value") ? item.attr("value") : item.text(),
                 isEnabled: !item.hasClass("e-disable"),
                 isSelected: item.hasClass("e-select"),
                 isChecked: item.find('.e-chk-image').hasClass('e-checkmark'),
-                data: this.model.dataSource ? this.getListData()[item.index()] : null,
+                data: this.dataSource() ? this.getListData()[index] : null,
                 event: evt ? evt : null
             };
         },
@@ -1771,28 +1851,42 @@
             return this;
         },
         _showFullList: function () {
-            if (this.model.dataSource != null) {
-                if (!(ej.DataManager && this.model.dataSource instanceof ej.DataManager))
-                    this.listitems = this.model.dataSource;
-                if (this._savedQueries.queries.length && !(ej.DataManager && this.model.dataSource instanceof ej.DataManager))
-                    this.listitems = ej.DataManager(this.model.dataSource).executeLocal(this._savedQueries);
+            if (this.dataSource() != null) {
+                if (!(ej.DataManager && this.dataSource() instanceof ej.DataManager))
+                    this.listitems = this.dataSource();
+                if (this._savedQueries.queries.length && !(ej.DataManager && this.dataSource() instanceof ej.DataManager))
+                    this.listitems = ej.DataManager(this.dataSource()).executeLocal(this._savedQueries);
             }
             this._renderlistContainer();
-            if (!(this.model.dataSource instanceof ej.DataManager)) this._trigger("actionComplete");
+            if (!(this.dataSource() instanceof ej.DataManager)) this._trigger("actionComplete");
             this._addDragableClass()._enableDragDrop();
             this._disabledItems = [];
             this.disableItemsByIndices(this.model.disableItemsByIndex);
             this.model.selectedIndex && this.selectItemByIndex(this.model.selectedIndex);
             this.selectItemsByIndices(this.model.selectedIndices);
             this.checkItemsByIndices(this.model.checkedIndices);
+            this._tooltipList();
             return this;
         },
+        _tooltipList: function(){
+             if (this.listContainer.find('li').hasClass('e-tooltip')){
+                $(this.listContainer).ejTooltip({
+                    target: ".e-tooltip",
+                    isBalloon: false,
+                    position: {
+                        target: { horizontal: "center", vertical: "bottom" },
+                        stem: { horizontal: "left", vertical: "top" }
+                    }
+                });
+            }
+       },
         _cascadeAction: function () {
             if (this.model.cascadeTo) {
                 this._currentValue = this._getField(this.listitems[this._activeItem], this.mapFld._value);
                 this.selectDropObj = $('#' + this.model.cascadeTo).ejListBox('instance');
+                 $.extend(true, this.selectDropObj, { _isCasCadeTarget: true });
                 if (ej.isNullOrUndefined(this._dSource))
-                    this._dSource = this.selectDropObj.model.dataSource;
+                    this._dSource = this.selectDropObj.dataSource();
                 this._performJsonDataInit();
             }
         },
@@ -1832,7 +1926,7 @@
                         return false
                     }
                 });
-                this._activeItem = activeItem
+                this._hoverItem = activeItem
             }
         },
         _OnMouseLeave: function (e) {
@@ -1842,16 +1936,25 @@
                 if ((this.item == $(e.target).text())) this.hold = (((this.endtime - this.startime) / 200) > 2) ? !this.hold : false;
         },
         _OnMouseClick: function (e) {
+            if($(e.currentTarget).hasClass("e-disable")) return false;
             if (e.which == 3)
                 this.hold = true;
             this.endtime = new Date().getTime();
             if ((((this.endtime - this.startime) / 200) > 2))
                 if ((!this.model.template && this.item == $(e.target).text()) && (!this.hold))
                     this.hold = (((this.endtime - this.startime) / 200) > 2);
+            if (e.shiftKey && this._shiftkey) {
+                this._shiftkey = false;
+                this.prevselectedItem = this._activeItem;
+            }
+            if (!ej.isNullOrUndefined(this._hoverItem)) this._activeItem = this._hoverItem;
             if (this.model.enabled && this._activeItem != undefined) {
-				if(this.model.allowMultiSelection && (!e.shiftKey || isNaN(this.prevselectedItem))) this.prevselectedItem = this._activeItem;
+                if (!e.shiftKey || isNaN(this.prevselectedItem)) {
+                    this._shiftkey = true;
+                    this.prevselectedItem = this._lastEleSelect ? this._lastEleSelect : this._activeItem;
+                }
                 if (!this.model.showCheckbox) {
-                    var activeitem = $(this.element.children("li")[this._activeItem]);
+                    var activeitem = $(this.element.children("li")[this._hoverItem]);
                     if (!this.model.allowMultiSelection || (!(e.ctrlKey || this.touchhold || this.hold) && !e.shiftKey))
                         this._removeListHover();
                     this.element.children("li").removeClass('e-hover');
@@ -1904,7 +2007,7 @@
                         } else {
                             $(e.currentTarget.firstChild).find('.listcheckbox').ejCheckBox('option', 'checked', true);
                             this._checkedItems.push(this._activeItem);
-                            this.model.checkedIndices.push($(e.currentTarget).index());
+                            this.model.checkedIndices.push(this._elementIndex(e.currentTarget));
                             this.checkedStatus = true;
                         }
                     }
@@ -1936,10 +2039,16 @@
                     }
                     this._lastEleSelect = $(e.currentTarget).index();
                 }
+                if (e.ctrlKey || e.shiftKey) e.shiftKey ? (this._shiftSelectItem = this._activeItem, this._ctrlSelectItem = null)  : (this._ctrlSelectItem = this._activeItem, this._shiftSelectItem = null);
+                else {
+                    this._shiftSelectItem = null;
+                    this._ctrlSelectItem = null;
+                }
                 this._setSelectionValues()._OnListSelect(this.prevselectedItem, this._activeItem);
             }
             if (e.target.nodeName != "INPUT")
                 this.listContainer.focus();
+			this._pageUpStep = this._pageDownStep = null;
         },
 		_activeItemLoop: function (initial , last) {
 			if(this.model.showCheckbox){
@@ -1955,14 +2064,13 @@
                     this.checkedStatus = true;
                 }
 				else {
-					activeitem = $(this.element.children("li")[i]);
-                if (!activeitem.hasClass('e-disable')) {
-                if (!activeitem.hasClass('e-select'))
-                    activeitem.addClass('e-select');
-                this._selectedItems.push(activeitem);
-                this.model.selectedIndices.push(this._activeItem);
-				}
-				}
+                    activeitem = $(this.element.children("li")[i]);
+                    if (!activeitem.hasClass('e-disable')) {
+                        if (!activeitem.hasClass('e-select')) activeitem.addClass('e-select');
+                        this._selectedItems.push(activeitem);
+                        this.model.selectedIndices.push(i);
+                    }
+                }
             }
 		},
         _setSelectionValues: function () {
@@ -1973,20 +2081,20 @@
             this.model.checkedIndices = [];
             var proxy = this;
             if (!this.model.showCheckbox) {
-                if (this._activeItem) this.model.selectedIndex = this._activeItem;
+                if (!ej.isNullOrUndefined(this._activeItem) && this._activeItem >= 0) this.model.selectedIndex = this._activeItem;
                 var liItem = this.element.children("li");
                 this.element.children("li.e-select").each(function (index, ele) {
-                    selectionArray.push($(ele).attr("value") ? $(ele).attr("value") : $(ele).text());
+                    selectionArray.push($(ele).attr("value") ? $(ele).attr("value") : !ej.isNullOrUndefined(proxy.model.fields.text) && proxy.dataSource() ? proxy.getListData()[proxy._elementIndex(ele)][proxy.model.fields.text] : $(ele).text());
                     proxy.model.selectedIndices.push(liItem.index(ele));
                 });
             }
             else {
                 this.element.find("li .listcheckbox:checked").closest('li').each(function (index, ele) {
-                    selectionArray.push($(ele).attr("value") ? $(ele).attr("value") : $(ele).text());
-                    proxy.model.checkedIndices.push($(ele).index());
+                    selectionArray.push($(ele).attr("value") ? $(ele).attr("value") : !ej.isNullOrUndefined(proxy.model.fields.text) && proxy.dataSource() ? proxy.getListData()[proxy._elementIndex(ele)][proxy.model.fields.text] : $(ele).text());
+                    proxy.model.checkedIndices.push(proxy._elementIndex(ele));
                 });
             }
-            if (ej.DataManager && ej.DataManager && this.model.dataSource instanceof ej.DataManager && this.model.allowVirtualScrolling) {
+            if (ej.DataManager && ej.DataManager && this.dataSource() instanceof ej.DataManager && this.model.allowVirtualScrolling) {
                 if (this.model.showCheckbox) {
                     for (var i = 0; i < oldCheckedIndices.length; i++) {
                         if (this.model.checkedIndices.indexOf(oldCheckedIndices[i]) == -1)
@@ -2028,6 +2136,9 @@
                 }
             }
         },
+		_elementIndex: function (args) {
+			return $(args).parent().children("li").index(args);
+		},
         _disableItemSelectCommon: function () {
             this.listitems = this.element.find('li');
             this._activeItem = this.listitems.index(this.element.find(".e-select"));
@@ -2097,14 +2208,15 @@
                 var _ListItemsContainer = this.element.children("li"), proxy = this,liH, popupH, activeitem;
                 popupH = this.listContainer.height();
                 liH = _ListItemsContainer.outerHeight();
-                activeitem = Math.round(popupH / liH) != 0 ? Math.round(popupH / liH) : 5;
-                this._listSize = this.element.children("li").size();
+                activeitem = Math.round(popupH / liH) != 0 ? Math.floor(popupH / liH) : 7;
+                this._listSize = this.element.children("li").length;
                 if (!e.shiftKey) this._up = this._down;
+				if(e.keyCode != 33 && e.keyCode != 34) this._pageUpStep = this._pageDownStep = null;
                 switch (e.keyCode) {
                     case 37:
                     case 38:
                         var liItems = this.element.find("li");
-                        var selectedIndex = (this.model.showCheckbox) ? (this._lastEleSelect || 0) : liItems.index(this.element.find("li.e-select"));
+                        var selectedIndex = this._shiftSelectItem ? this._shiftSelectItem : this._ctrlSelectItem ? this._ctrlSelectItem : (this.model.showCheckbox) ? (this._lastEleSelect || 0) : liItems.index(this.element.find("li.e-select"));
                         if (e.shiftKey && this.model.allowMultiSelection && !this.model.showCheckbox) {
                             if (this._lastEleSelect == 0) return false;
                             this._lastEleSelect = (this._ctrlClick) ? this._lastEleSelect - 1 : this._lastEleSelect;
@@ -2139,17 +2251,19 @@
                             $(_ListItemsContainer[this._selectedItem]).addClass(addClass);
                             this.scrollerObj.setModel({ "scrollTop": this._calcScrollTop(this._selectedItem) });
                         }
+						this._activeItem = this.prevselectedItem = this._selectedItem;
                         this._OnListSelect(this._selectedItem + 1, this._selectedItem, e);
                         this._lastEleSelect = this._selectedItem;
                         this._keyCascade(_ListItemsContainer[this._selectedItem]);
                         this._setSelectionValues();
+                        this._shiftSelectItem = this._ctrlSelectItem = null;
                         e.preventDefault();
                         return false;
                         break;
                     case 39:
                     case 40:
                         var liItems = this.element.find("li");
-                        var selectedIndex = (this.model.showCheckbox) ? (this._lastEleSelect || 0) : liItems.index(this.element.find("li.e-select"));
+                        var selectedIndex = this._shiftSelectItem ? this._shiftSelectItem : this._ctrlSelectItem ? this._ctrlSelectItem : (this.model.showCheckbox) ? (this._lastEleSelect || 0) : liItems.index(this.element.find("li.e-select"));
                         if (e.shiftKey && this.model.allowMultiSelection && !this.model.showCheckbox) {
                             if (this._lastEleSelect == this._listSize - 1) return false;
                             this._lastEleSelect = (this._ctrlClick) ? this._lastEleSelect + 1 : this._lastEleSelect;
@@ -2186,10 +2300,12 @@
 							this.model.selectedIndices.length = 0;
 							this.model.selectedIndices.push(this._selectedItem);
                         }
+						this._activeItem = this.prevselectedItem = this._selectedItem;
                         this._OnListSelect(this._selectedItem - 1, this._selectedItem);
                         this._lastEleSelect = this._selectedItem;
                         this._keyCascade(_ListItemsContainer[this._selectedItem]);
                         this._setSelectionValues();
+                        this._shiftSelectItem = this._ctrlSelectItem = null;
                         return false;
                         break;
                     case 8:
@@ -2205,23 +2321,61 @@
                     case 18:
                     case 33: /* page up */
                         var step = e.keyCode == 33 ? activeitem : 1;
-                        this._moveUp(this._activeItem, step);
+						if (e.shiftKey && this.model.allowMultiSelection) { 
+							if(this._pageUpStep == null) this._pageUpStep = this.prevselectedItem;
+							if(this._pageDownStep == null) this._pageDownStep = this.prevselectedItem;
+							if(this._pageDownStep <= this.prevselectedItem) {
+								start = this._pageUpStep - step > 0  ? this._pageUpStep - step : 0;
+								end = this._pageDownStep;
+							}
+							else {
+								start = this.prevselectedItem;
+								end = this._pageDownStep - step > this.prevselectedItem  ? this._pageDownStep - step : this.prevselectedItem;
+							}
+							this._shiftHomeAndEndKeyProcess( start,end, end > this.prevselectedItem ? end:start);
+							this._pageUpStep = start;
+							this._pageDownStep =end;
+						}
+                        else this._moveUp(this._activeItem, step);
                         this._preventDefaultAction(e);
                         break;
                     case 34: /* page down */
                         var step = e.keyCode == 34 ? activeitem : 1;
-                        this._moveDown(this._activeItem, step);
+                        if (e.shiftKey && this.model.allowMultiSelection){
+                            if(this._pageUpStep == null) this._pageUpStep = this.prevselectedItem;
+                            if(this._pageDownStep == null) this._pageDownStep = this.prevselectedItem;
+                            if( this._pageUpStep == 0 && this.prevselectedItem != 0) { 
+								if( this._pageUpStep + step >= this.prevselectedItem) start = end = this.prevselectedItem;
+								else {
+									start = this._pageUpStep + step ;
+									end = this._pageDownStep + step < this.element.children("li").length ?  this._pageDownStep + step : this.element.children("li").length-1;
+                               }
+                            }
+                            else if(this._pageUpStep != this.prevselectedItem && this._pageUpStep + step >= this.prevselectedItem) start = end = this.prevselectedItem;
+                            else {
+                                start = this._pageUpStep;
+                                end = this._pageDownStep + step < this.element.children("li").length ?  this._pageDownStep + step : this.element.children("li").length-1;
+                            }
+                            if(start < this.prevselectedItem && end > this.prevselectedItem ) end = this.prevselectedItem;
+                            this._shiftHomeAndEndKeyProcess(start,end, start < this.prevselectedItem ? start:end);
+                            this._pageUpStep = start;
+                            this._pageDownStep =end;
+                        } 
+                        else this._moveDown(this._activeItem, step);
                         this._preventDefaultAction(e);
                         break;
                     case 35:
-				    if (e.shiftKey && this.model.allowMultiSelection) this._shiftHomeAndEndKeyProcess(this.prevselectedItem,(this._listSize - 1));
-					else this._homeAndEndKeyProcess(e, _ListItemsContainer, (this._listSize - 1));
-					this._preventDefaultAction(e);
+                        if (e.shiftKey && this.model.allowMultiSelection) this._shiftHomeAndEndKeyProcess(this._activeItem,(this._listSize - 1) , (this._listSize - 1));
+                        else this._homeAndEndKeyProcess(e, _ListItemsContainer, (this._listSize - 1));
+                        this._shiftSelectItem = this._listSize - 1;
+                        this.model.selectedIndex = this._listSize - 1;
+                        this._preventDefaultAction(e);
                     break;
                 case 36:
-				    if (e.shiftKey && this.model.allowMultiSelection)this._shiftHomeAndEndKeyProcess(0,this.prevselectedItem);
-                    this._homeAndEndKeyProcess(e, _ListItemsContainer, 0);
-					this._preventDefaultAction(e);
+                    if (e.shiftKey && this.model.allowMultiSelection)this._shiftHomeAndEndKeyProcess(0,this._activeItem ,0);
+                    else this._homeAndEndKeyProcess(e, _ListItemsContainer, 0);
+                    this.model.selectedIndex = 0;
+                    this._preventDefaultAction(e);
                     break;
                 }
             }
@@ -2295,14 +2449,15 @@
                 return false;
             }
         },
-        _shiftHomeAndEndKeyProcess: function(initial , last) {
+        _shiftHomeAndEndKeyProcess: function(initial , last , index) {
 			this._removeListHover();
 			this._activeItemLoop(initial ,last);
-			this.scrollerObj.setModel({ "scrollTop": this._calcScrollTop(last) });
+			this.scrollerObj.setModel({ "scrollTop": this._calcScrollTop(index) });
             return false;
 		},
         _keyCascade: function (obj, evt) {
             var selectData = this._getItemObject($(obj), evt);
+            this.model.selectedText = selectData.text;
             selectData["isInteraction"] = true;
             this._trigger("select", selectData);
             if (this.model.cascadeTo) {
@@ -2325,21 +2480,22 @@
             }
             else {
                 this.mergeValue = data;
-                this.listitems = this.listitems ? this.listitems : this.model.dataSource;
+                this.listitems = this.listitems ? this.listitems : this.dataSource();
                 this._renderlistContainer();
             }
             this._loadInitialRemoteData = false;
         },
 
         _onScroll: function (e) {
-            this._temp = this.model.dataSource;
+            this._temp = this.dataSource();
             if (this.model.actionBegin)
                 this._trigger("actionBegin", {});
-            if (this._temp != this.model.dataSource)
-                (ej.DataManager && this.model.dataSource instanceof ej.DataManager) ? this._initDataSource(this.model.dataSource) : this._showFullList();
+            if (this._temp != this.dataSource())
+                (ej.DataManager && this.dataSource() instanceof ej.DataManager) ? this._initDataSource(this.dataSource()) : this._showFullList();
             var proxy = this, liEle = this.element.find('li')[0];
             if (this.model.allowVirtualScrolling && this.model.virtualScrollMode == "normal") {
-                this.itemIndex = parseInt(this.scrollerObj.scrollTop() / $(liEle).outerHeight());
+                var liHeight=$(liEle).outerHeight();
+                this.itemIndex = Math.round(this.scrollerObj.scrollTop() / liHeight);
                 this.realUllength = this.itemIndex;
                 var start = this.itemIndex, end;
                 if (this.itemIndex > this.listContainer.outerHeight() / $(liEle).outerHeight()) {
@@ -2348,14 +2504,17 @@
                 }
                 if (this.mergeValue && this.itemIndex <= this.mergeValue.length || start <= 0)
                     start = 0;
-                if (this.model.dataSource.length == undefined && (this._temp == this.model.dataSource)) {
-                    if (ej.DataManager && this.model.dataSource instanceof ej.DataManager)
-                        this._queryPromise(start, proxy, start + Math.round(this.model.height / this.listitemheight), e);
+                if (this.dataSource().length == undefined && (this._temp == this.dataSource())) {
+                    if (ej.DataManager && this.dataSource() instanceof ej.DataManager) {
+                        var startPoint = start == 0 ? start : start - 1;
+                        var endPoint = start == this.element.find('li').length ? start : start + 1;
+                        this._queryPromise(startPoint, proxy, endPoint + Math.ceil(this.model.height / liHeight), e);
+                    }
                 }
-                else if (this._temp != this.model.dataSource) {
+                else if (this._temp != this.dataSource()) {
                     this._queryPromise(start, proxy, this._listitems.length, e);
                 }
-                else if (this.model.dataSource.length > 0)
+                else if (this.dataSource().length > 0)
                     this._loadQueryData(start, end, proxy);
             } else if (this.model.allowVirtualScrolling && this.model.virtualScrollMode == "continuous") {
                 if (this.element.find("li").length - 2 <= (this.scrollerObj.scrollTop() + this.listContainer.height()) / this.element.find('li').outerHeight()) {
@@ -2367,12 +2526,12 @@
 						start = this._oldStartValue;
                     var totalLength = this.model.totalItemsCount ? this.model.totalItemsCount : this.listitems.length
                     if (this.element.find("li").length < totalLength) {
-                        if (this.model.dataSource.length == undefined) {
+                        if (this.dataSource().length == undefined) {
                             if (this.mergeValue && !this._skipInitialRemoteData)
                                 var end = (this.model.totalItemsCount && start + this.model.itemRequestCount + this.mergeValue.length > this.model.totalItemsCount) ? this.model.totalItemsCount - this.mergeValue.length : start + this.model.itemRequestCount;
                             else
                                 var end = (this.model.totalItemsCount && start + this.model.itemRequestCount > this.model.totalItemsCount) ? this.model.totalItemsCount : start + this.model.itemRequestCount;
-                            if (ej.DataManager && this.model.dataSource instanceof ej.DataManager) {
+                            if (ej.DataManager && this.dataSource() instanceof ej.DataManager) {
 								if(start<=end)
                                 	this._queryPromise(start, proxy, end, e);
 								else
@@ -2380,7 +2539,7 @@
 							}
 							this._oldStartValue = start + this.model.itemRequestCount;
                         }
-                        else if (this.model.dataSource.length > 0) {
+                        else if (this.dataSource().length > 0) {
                             if (this._isScrollComplete) return;
                             this._loadQueryData(proxy.realUllength, proxy.realUllength + this.model.itemRequestCount, proxy);
                         }
@@ -2392,7 +2551,7 @@
             this._trigger('itemRequest', { event: e, isInteraction: true });
             this._setMapFields();
             var mQuery = this._savedQueries.clone();
-            var queryPromise = this.model.dataSource.executeQuery(mQuery.range(start, end));
+            var queryPromise = this.dataSource().executeQuery(mQuery.range(start, end));
             this._updateLoadingClass(true);
             queryPromise.done(function (d) {
 			    proxy._trigger("actionBeforeSuccess", d);
@@ -2420,7 +2579,7 @@
         _loadQueryData: function (start, end, proxy) {
             this._isScrollComplete = (end >= this.listitems.length) ? true : false;
             this._updateLoadingClass(true);
-            var tempSrc = this.model.dataSource;
+            var tempSrc = this.dataSource();
             this._loadlist(tempSrc.slice(start, end))._showResult()._updateLoadingClass();
             proxy._applySelection();
             if (proxy.model.virtualScrollMode == "continuous") {
@@ -2456,7 +2615,8 @@
             _proxy = this;
             var typedCharacter = String.fromCharCode(from);
             if (this._incqueryString != typedCharacter) this._incqueryString += typedCharacter;
-            else this._incqueryString = typedCharacter; if ((this._incqueryString.length > 0) && (this._typeInterval == null)) {
+            else this._incqueryString = typedCharacter;
+            if ((this._incqueryString.length > 0) && (this._typeInterval == null)) {
                 this._typeInterval = setTimeout(function () {
                     _proxy._incqueryString = "";
                     _proxy._typeInterval = null
@@ -2495,7 +2655,7 @@
         _wireEvents: function () {
             this._on(this.listContainer, "focus", this._OnFocusIn);
             this._on(this.listContainer, "blur", this._OnFocusOut);
-            $(window).bind("resize", $.proxy(this._OnWindowResize, this));
+            $(window).on("resize", $.proxy(this._OnWindowResize, this));
         },
         _OnFocusIn: function () {
             if (!this._focused) {

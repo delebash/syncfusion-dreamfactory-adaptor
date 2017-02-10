@@ -1,6 +1,6 @@
 /*!
 *  filename: ej.groupbutton.js
-*  version : 14.2.0.26
+*  version : 14.4.0.20
 *  Copyright Syncfusion Inc. 2001 - 2016. All rights reserved.
 *  Use of this code is subject to the terms of our license.
 *  A copy of the current license can be obtained at any time by e-mailing
@@ -147,8 +147,8 @@
                         break;
                     case "orientation":
                         this._setOrientation(val);
-                        this._setDimension("width", val);
-                        this._setDimension("height", val);
+                        this._setDimension("width", this.model.width);
+                        this._setDimension("height", this.model.height);
                         break;
                     case "selectedItemIndex":
                         var temp = JSON.parse(JSON.stringify(this.model.selectedItemIndex));
@@ -179,7 +179,7 @@
             this.element.addClass("e-widget e-box e-widget").attr({ "role": "group", "tabindex": "0", "aria-disabled": false });
             if (this.model.dataSource != null)
                 this._checkDataBinding();
-            this._render();
+             if (!this.element.hasClass("onloading")) this._render();
         },
 
         _render: function () {
@@ -209,6 +209,7 @@
             queryPromise = source.executeQuery(this._getQuery());
             queryPromise.done(function (e) {
                 proxy._createItems(e.result);
+				proxy._render();
             }).fail(function (e) {
                 proxy.element.removeClass("onloading");
             });
@@ -257,8 +258,14 @@
             var imagePosition = (list[map._imagePosition]) ? list[map._imagePosition] : "imageleft";
             var contentType = (list[map._contentType]) ? list[map._contentType] : "textonly";
             if (contentType.indexOf("image") > -1) {
-                if (list[map._prefixIcon]) majorimgtag = ej.buildTag('span.e-icon ' + list[map._prefixIcon]);
-                if (list[map._suffixIcon]) minorimgtag = ej.buildTag('span.e-icon ' + list[map._suffixIcon]);                
+                if (list[map._prefixIcon]) {
+                    majorimgtag = ej.buildTag('span');
+                    majorimgtag.addClass(list[map._prefixIcon]);
+                }
+                if (list[map._suffixIcon]) {
+                    minorimgtag = ej.buildTag('span')
+                    minorimgtag.addClass(list[map._suffixIcon]);
+                }
             }
             switch (contentType) {
                 case ej.ContentType.TextAndImage:
@@ -323,8 +330,8 @@
                 content = document.createElement('div');
                 content.className = 'e-btn-content';
                 if (item.children().length == 0) {
-                    span = document.createElement('span.e-btntxt');
-                    $(span).text(item.text());
+                    span = document.createElement('span');
+                    $(span).text(item.text()).addClass("e-btntxt");
                     item.text("");
                     content.appendChild(span);
                 } else {
@@ -391,6 +398,8 @@
         },
 
         _setDimension: function (prop, val) {
+            var minHeight = 26, defaultHeight = 35;
+            /* here we use 26 constant is our minimum height and 35 constant is default height of the groupButton while rendering groupbutton without height API*/
             var add, value = 0, method = ( prop == "width") ? "outerWidth" : "outerHeight";
             if(val == "auto") {
                 add = this.element[method]() - this.element[prop]();
@@ -399,6 +408,37 @@
                 this.element.css(prop, value + add);                
             } else
                 this.element.css(prop, val);
+
+            if (prop == "height" && !this._vertical) {
+                this.element.css("min-height", "").find("div.e-btn-content").removeClass("e-groupBtn-padding");
+                this.element.find('.e-grp-btn-item').css("height", "").find("div.e-btn-content").css("margin-top", "").find(".e-btntxt").css("line-height", "");
+                if (prop == "height" && parseInt(this.element.height()) < minHeight) {
+                    this.element.addClass("e-groupbutton-hSmall").find("div.e-btn-content").addClass("e-groupBtn-padding");
+                }
+                else if (parseInt(this.element.height()) < defaultHeight)
+                    this.element.find("div.e-btn-content").addClass("e-groupBtn-padding");
+                else
+                    this.element.removeClass("e-groupbutton-hSmall").find("div.e-btn-content").removeClass("e-groupBtn-padding");
+            }
+            else if (prop == "height") {
+                this.element.css("min-height", "").find("div.e-btn-content").removeClass("e-groupBtn-padding");
+                this.element.find('.e-grp-btn-item').css("height", "").find("div.e-btn-content").css("margin-top", "").find(".e-btntxt").css("line-height", "");
+                var tempHeight = this.element.height() / this.items.length; /* tempHeight- the individual height of the groupButton content for min-height */
+                if (tempHeight < minHeight) { 
+                    this.element.css("min-height", (this.items.length * minHeight)).find("div.e-btn-content").addClass("e-groupBtn-padding");
+                    this.element.find('.e-grp-btn-item').css({
+                        'height': Math.ceil(this.element.height() / this.items.length),
+                    });
+                    
+                }
+                else {
+                    var btnContentHeight = (this.element.height() / this.items.length); /* btnContentHeight- the individual height of the groupButton content without min-height */
+                    var tempPadding = (btnContentHeight - this.element.find("div.e-btn-content").outerHeight()) / 2;
+                    this.element.find('.e-grp-btn-item').css({
+                        'height': btnContentHeight,
+                    }).find("div.e-btn-content").css("margin-top", tempPadding + "px").find(".e-btntxt").css("line-height", this.element.find("div.e-btn-content").height() + "px");
+                }
+            }
         },
 
         _setRTL: function (val) {
@@ -414,7 +454,7 @@
         },
 
         _setOrientation: function (val) {
-            (val != ej.Orientation.Vertical) ? this.itemsContainer.removeClass("e-vertical").addClass("e-horizontal") : this.itemsContainer.removeClass("e-horizontal").addClass("e-vertical");
+            (val != ej.Orientation.Vertical) ? this.itemsContainer.removeClass("e-vertical").addClass("e-horizontal") && (this._vertical = false) : this.itemsContainer.removeClass("e-horizontal").addClass("e-vertical") && (this._vertical = true);
         },
 
         _setRoundedCorner: function (val) {
@@ -555,8 +595,10 @@
                 [onOff](this.element, "focus", this._onfocusIn)
                 [onOff](this.element, "blur", this._onfocusOut);
             this[onOff](this.items, "click", this._onBtnClick)
-                [onOff](this.items, "mouseenter", this._onBtnHover)
-                [onOff](this.items, "mouseleave", this._onBtnLeave);
+            if (!ej.isTouchDevice()) {
+                this[onOff](this.items, "mouseenter", this._onBtnHover);
+                this[onOff](this.items, "mouseleave", this._onBtnLeave);
+            }
         },
 
         isSelected: function(element) {
