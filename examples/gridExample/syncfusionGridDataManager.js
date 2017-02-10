@@ -8,25 +8,30 @@ function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
   });
 
 
-  $("#Grid").ejGrid({
-    dataSource: dataManager,
-    allowPaging: true,
-    allowSorting: true,
-    allowFiltering: true,
-    filterSettings: {showPredicate: true, filterType: "menu", enableCaseSensitivity: true},
-    searchSettings: {ignoreCase: false},
-    // filterSettings: { filterType: "menu" },
-
-    columns: [{field: "id", headerText: "ID"},
-      {field: "first_name", headerText: "First Nmae"},
-      {field: "last_name", headerText: "Last Name"}
-    ]
-    // allowFiltering: true,
-    //searchSettings: {ignoreCase:false}
-    // filterSettings: {showPredicate:true ,filterType : "menu",enableCaseSensitivity:false},
-    // columns: [{field:"id"},{field:"last_name"},{field:"first_name"}
-    // ]
-  })
+    $("#Grid").ejGrid({
+        dataSource: dataManager,
+        toolbarSettings: {
+            showToolbar: true,
+            toolbarItems: ["add", "edit", "delete"]
+        },
+        editSettings: {
+            allowEditing: true,
+            allowAdding: true,
+            allowDeleting: true,
+            editMode: "dialog"
+        },
+        allowPaging: true,
+        allowSorting: true,
+        allowFiltering: true,
+        filterSettings: {showPredicate: true, filterType: "menu", enableCaseSensitivity: true},
+        searchSettings: {ignoreCase: false},
+        isResponsive: true,
+        columns: [
+            {field: "id", isPrimaryKey: true, isIdentity: true, width: 10},
+            {field: "first_name", headerText: "First Name", width: 110},
+            {field: "last_name", headerText: "Last Name", width: 110}
+        ]
+    });
 }
 
 
