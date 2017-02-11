@@ -25,6 +25,19 @@ INSTANCE_URL, APP_API_KEY, username, password, serviceObject, field names in cod
 
 # Features: #
 
+**adapterOptions  -- optional defaults to "get" if not specified** 
+
+Specify if you want to use querystring or post data for get request
+
+Example:
+
+      var adapterOptions = {requestType: "json"}; //defaults to "get" if not specified
+
+Then pass into adapter
+    
+    adaptor: new syncfusionDreamFactoryAdapter(adapterOptions)
+
+
 **Parameters: mapped left to right Dremfactory/Syncfusion**
 
     from: "table",
