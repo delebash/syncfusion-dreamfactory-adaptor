@@ -2,6 +2,7 @@ function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
     var token = getToken('token');
     url += serviceObject;
 
+    //requestType = "get" -- request uses query string params via get, "json" -- request uses post to send an object
     var adapterOptions = {requestType: "json"}; //defaults to "get" if not specified
 
     var dataManager = ej.DataManager({
