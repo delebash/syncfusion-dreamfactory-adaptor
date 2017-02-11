@@ -1,6 +1,6 @@
 export class DreamFactoryAdapter {
 
-  syncfusionDreamFactoryAdapter() {
+  syncfusionDreamFactoryAdapter(adapterOptions) {
     let adapter = new ej.ODataAdaptor().extend({
 
       init: function () {
@@ -177,7 +177,7 @@ export class DreamFactoryAdapter {
         }
       }
     });
-    return new adapter
+    return new adapter(adapterOptions)
   }
 
   constructor() {
