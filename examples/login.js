@@ -2,7 +2,7 @@
 //  DreamFactory 2.0 instance specific constants
 //--------------------------------------------------------------------------
 var INSTANCE_URL = 'https://api.test.com';
-var APP_API_KEY = 'api';
+var APP_API_KEY = 'key';
 
 var api = "/api/v2/",
   db = "northwind/",
@@ -29,9 +29,13 @@ var loginHandle = function (response, logintype) {
     setToken('token', response.session_token);
 
     if (logintype == 'ajax') {
-      makeCall(url, serviceObject, requestParams, overrideMethod, APP_API_KEY).done(function (data) {
-        $("#table1 tbody").html($("#tableTemplate").render(data.resource));
-      });
+      makeCall(url, serviceObject, requestParams, overrideMethod, APP_API_KEY)
+        .done(function (data) {
+          $("#table1 tbody").html($("#tableTemplate").render(data.resource));
+        })
+        .fail(function (e) {
+          alert("Handling errors")
+        });
     } else {
       makeCall(url, serviceObject, overrideMethod, APP_API_KEY)
     }
@@ -40,7 +44,7 @@ var loginHandle = function (response, logintype) {
     var msgObj = {};
     msgObj = parseResponse(response);
     if (msgObj) {
-      messageBox(msgObj.code, msgObj.message, msgObj.error);
+      messageBox(msgObj);
     }
   }
 };
@@ -88,17 +92,14 @@ function removeToken(key) {
     }
     else {
       var response = parseResponse(data);
-      messageBox(response.code, response.message, response.error);
+      alert(response.code, response.message, response.error);
     }
   });
 }
 
 
-function messageBox(title, body, error) {
-  $('#modal_title').html(title);
-  $('#modal_body').html(body);
-  $('#errorMsg').html(error);
-  $('#messageBox').modal('show');
+function messageBox(msgObj) {
+  alert("Error Code: " + msgObj.code + "\n\nError Message:\n" + msgObj.message + "\n\nError Details:\n" + msgObj.error);
 }
 
 function parseResponse(response) {

@@ -13,7 +13,7 @@ function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
     .from(serviceObject)
     .select("last_name", "first_name")
     //.where("last_name","=","Bedecs")
-    .sortBy("last_name", "DESC")
+   // .sortBy("last_name", "DESC")
   //.where("last_name", "notin" , "Huang,Yang");
   //.where("last_name", "in" , "Yuan,Huang");
   // .where("last_name", "startswith", "Y");
@@ -24,4 +24,7 @@ function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
       //  console.log(e)
       $("#table1 tbody").html($("#tableTemplate").render(e.result));
     })
+    .fail(function (e) {
+      alert("Handling errors")
+    });
 }
