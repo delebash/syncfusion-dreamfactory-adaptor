@@ -1,17 +1,26 @@
 export class DreamFactoryAdapter {
 
     static syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
+        init: function () {
+            let adapterOptions = this.dataSource;
+
+            if (adapterOptions) {
+                if (adapterOptions.requestType) {
+                    this.options.requestType = adapterOptions.requestType
+                }
+            }
+        },
         options: {
+            requestType: "get",
             accept: "application/json; charset=utf-8",
             from: "table",
-            requestType: "json",
             sortBy: "order",
             select: "fields",
             skip: "skip",
             group: "group",
             take: "limit",
             search: "search",
-            count: "count",
+            count: "include_count",
             where: "filter",
             aggregates: "aggregates"
         },
@@ -44,25 +53,20 @@ export class DreamFactoryAdapter {
             "IS NOT IN": " IS NOT IN ",
             "IS IN": " IS IN "
         },
-        // convertToQueryString: function (req, query, dm) {
-        //   if (dm.dataSource.url && dm.dataSource.url.indexOf("?") !== -1)
-        //     return $.param(req);
-        //   return "?" + $.param(req);
-        // },
+
         convertToQueryString: function (req, query, dm) {
-            var res = [], tableName = req.table || "";
+            let res, tableName = req.table || "";
+
+            if (tableName != "") {
+                tableName = tableName + "/";
+            }
+
             delete req.table;
 
-            if (dm.dataSource.requiresFormat)
-                req["$format"] = "json";
-
-            for (var prop in req)
-                res.push(prop + "=" + req[prop]);
-
-            res = res.join("&");
+            res = $.param(req);
 
             if (dm.dataSource.url && dm.dataSource.url.indexOf("?") !== -1 && !tableName)
-                return res;
+                return $.param(req);
 
             return res.length ? tableName + "?" + res : tableName || "";
         },
@@ -111,7 +115,8 @@ export class DreamFactoryAdapter {
             return count === undefined || count === null ? data : {result: data, count: count};
 
         },
-        insert: function (dm, data, tableName) {
+        insert: function (dm, data, tableName, query) {
+            tableName = tableName || query._fromTable
             let records = [];
             records.push(data);
             let expectedData = {resource: records};
@@ -121,14 +126,16 @@ export class DreamFactoryAdapter {
                 data: JSON.stringify(expectedData)
             }
         },
-        remove: function (dm, keyField, value, tableName) {
+        remove: function (dm, keyField, value, tableName, query) {
+            tableName = tableName || query._fromTable
             return {
                 action: "remove",
                 type: "DELETE",
                 url: dm.dataSource.url.replace(/\/*$/, tableName ? '/' + tableName : '') + '/' + value
             };
         },
-        update: function (dm, keyField, value, tableName) {
+        update: function (dm, keyField, value, tableName, query) {
+            tableName = tableName || query._fromTable
             return {
                 action: "update",
                 type: "PUT",
@@ -144,25 +151,29 @@ export class DreamFactoryAdapter {
 
             let table = "", count = "", data = ej.parseJSON(settings.data);
 
-            if (data.table)
-                table = data.table;
-
-            //Which action CRUD?
-            if (settings.action) {
-                settings.url = settings.url + table;
-            } else {
-                //read request
-                if (data.count === true) {
-                    delete data.count;
-                    count = 'include_count=true';
+            if (data) {
+                if (data.table) {
+                    table = data.table;
+                    delete data.table;
                 }
-                settings.url = settings.url + table + '?method=GET&' + count + '';
             }
 
-            //settings.requestType = this.options.requestType
-            settings.data = JSON.stringify(data)
+            //action if not defined is a get request else it is a CUD request
+            if (!settings.action) {
+                //get request
+                if (this.options.requestType === "get") {
+                    // requesting data using url string parameters
+                    settings.url = settings.url + table;
+                } else {
+                    // requesting data using post with http tunneling via method=GET
+                    if (data.include_count === true) {
+                        delete data.include_count;
+                        count = 'include_count=true';
+                    }
+                    settings.url = settings.url + table + '/?method=GET&' + count + '';
+                }
+            }
         }
-
     });
 
     constructor() {

@@ -1,12 +1,14 @@
 function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
-  let token = getToken('token');
-  url += serviceObject;
-  let dataManager = ej.DataManager({
-    url: url,
-    adaptor: new syncfusionDreamFactoryAdapter(),
-    headers: [{"X-DreamFactory-API-Key": APP_API_KEY, "X-DreamFactory-Session-Token": token}]
-  });
+    var token = getToken('token');
+    url += serviceObject;
 
+    var adapterOptions = {requestType: "json"}; //defaults to "get" if not specified
+
+    var dataManager = ej.DataManager({
+        url: url,
+        adaptor: new syncfusionDreamFactoryAdapter(adapterOptions),
+        headers: [{"X-DreamFactory-API-Key": APP_API_KEY, "X-DreamFactory-Session-Token": token}]
+    });
 
     $("#Grid").ejGrid({
         dataSource: dataManager,

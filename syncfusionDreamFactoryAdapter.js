@@ -1,47 +1,55 @@
 var syncfusiondmSymbols = {};
 syncfusiondmSymbols.operatorSymbols = {
-  "=": "equal",
-  "is not null": "notnull",
-  "is null": "isnull",
-  "is not in": "notin",
-  "is in": "in"
+    "=": "equal",
+    "is not null": "notnull",
+    "is null": "isnull",
+    "is not in": "notin",
+    "is in": "in"
 };
 
 ej.data.fnOperators.like = function (actual, expected, ignoreCase) {
-  if (ignoreCase)
-    return (actual) && "LIKE" && (expected);
+    if (ignoreCase)
+        return (actual) && "LIKE" && (expected);
 
-  return actual > expected;
+    return actual > expected;
 };
 ej.data.fnOperators.notin = function (actual, expected, ignoreCase) {
-  if (ignoreCase)
-    return (actual) && "NOT IN " && (expected);
+    if (ignoreCase)
+        return (actual) && "NOT IN " && (expected);
 
-  return actual > expected;
+    return actual > expected;
 };
 
 ej.data.fnOperators.in = function (actual, expected, ignoreCase) {
-  if (ignoreCase)
-    return (actual) && "IN" && (expected);
+    if (ignoreCase)
+        return (actual) && "IN" && (expected);
 
-  return actual > expected;
+    return actual > expected;
 };
 
 $.extend(ej.data.operatorSymbols, syncfusiondmSymbols.operatorSymbols);
 
 var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
+    init: function () {
+        var adapterOptions = this.dataSource;
 
+        if (adapterOptions) {
+            if (adapterOptions.requestType) {
+                this.options.requestType = adapterOptions.requestType
+            }
+        }
+    },
     options: {
+        requestType: "get",
         accept: "application/json; charset=utf-8",
         from: "table",
-        requestType: "json",
         sortBy: "order",
         select: "fields",
         skip: "skip",
         group: "group",
         take: "limit",
         search: "search",
-        count: "count",
+        count: "include_count",
         where: "filter",
         aggregates: "aggregates"
     },
@@ -74,31 +82,26 @@ var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
         "IS NOT IN": " IS NOT IN ",
         "IS IN": " IS IN "
     },
+
     convertToQueryString: function (req, query, dm) {
-        if (dm.dataSource.url && dm.dataSource.url.indexOf("?") !== -1)
+        var res, tableName = req.table || "";
+
+        if (tableName != "") {
+            tableName = tableName + "/";
+        }
+
+        delete req.table;
+
+        res = $.param(req);
+
+        if (dm.dataSource.url && dm.dataSource.url.indexOf("?") !== -1 && !tableName)
             return $.param(req);
-        return "?" + $.param(req);
+
+        return res.length ? tableName + "?" + res : tableName || "";
     },
-    // convertToQueryString: function (req, query, dm) {
-    //   var res = [], tableName = req.table || "";
-    //   delete req.table;
-    //
-    //   if (dm.dataSource.requiresFormat)
-    //     req["$format"] = "json";
-    //
-    //   for (var prop in req)
-    //     res.push(prop + "=" + req[prop]);
-    //
-    //   res = res.join("&");
-    //
-    //   if (dm.dataSource.url && dm.dataSource.url.indexOf("?") !== -1 && !tableName)
-    //     return res;
-    //
-    //   return res.length ? tableName + "?" + res : tableName || "";
-    // },
     onPredicate: function (pred, query, requiresCast) {
         //   query._fromTable ="contact"
-        let returnValue = "",
+        var returnValue = "",
             operator, guid,
             val = pred.value,
             type = typeof val,
@@ -131,7 +134,7 @@ var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
     },
     processResponse: function (data, ds, query, xhr, request, changes) {
 
-        let count = null, aggregateResult = {};
+        var count = null, aggregateResult = {};
 
         if (query && query._requiresCount) {
             if (data.meta) count = data.meta.count;
@@ -142,9 +145,10 @@ var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
 
     },
     insert: function (dm, data, tableName, query) {
-        let records = [];
+        tableName = tableName || query._fromTable
+        var records = [];
         records.push(data);
-        let expectedData = {resource: records};
+        var expectedData = {resource: records};
         return {
             action: "insert",
             url: dm.dataSource.url.replace(/\/*$/, tableName ? '/' + tableName : ''),
@@ -160,6 +164,7 @@ var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
         };
     },
     update: function (dm, keyField, value, tableName, query) {
+        tableName = tableName || query._fromTable
         return {
             action: "update",
             type: "PUT",
@@ -173,32 +178,33 @@ var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
     },
     beforeSend: function (dm, request, settings) {
 
-        let table = "", count = "", data = ej.parseJSON(settings.data);
+        var table = "", count = "", data = ej.parseJSON(settings.data);
+
         if (data) {
             if (data.table) {
                 table = data.table;
                 delete data.table;
             }
-            if (data.count === true) {
-                delete data.count;
-                count = 'include_count=true';
+        }
+
+        //action if not defined is a get request else it is a CUD request
+        if (!settings.action) {
+            //get request
+            if (this.options.requestType === "get") {
+                // requesting data using url string parameters
+                settings.url = settings.url + table;
+            } else {
+                // requesting data using post with http tunneling via method=GET
+                if (data.include_count === true) {
+                    delete data.include_count;
+                    count = 'include_count=true';
+                }
+                settings.url = settings.url + table + '/?method=GET&' + count + '';
             }
         }
-
-        //Which action CRUD?
-        if (settings.action) {
-            settings.url = settings.url + table;
-        } else {
-            //read request
-
-            settings.url = settings.url + table + '?method=GET&' + count + '';
-        }
-        //settings.requestType = this.options.requestType
-        settings.data = JSON.stringify(data)
     }
 });
 
-
 var isNull = function (val) {
-  return val === undefined || val === null;
+    return val === undefined || val === null;
 };

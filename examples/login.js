@@ -2,7 +2,7 @@
 //  DreamFactory 2.0 instance specific constants
 //--------------------------------------------------------------------------
 var INSTANCE_URL = 'https://api.test.com';
-var APP_API_KEY = 'key';
+var APP_API_KEY = 'api';
 
 var api = "/api/v2/",
     db = "northwind/",
