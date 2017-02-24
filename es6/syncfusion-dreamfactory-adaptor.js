@@ -1,14 +1,14 @@
-export class DreamFactoryAdapter {
+export class DreamFactoryAdaptor {
 
-  syncfusionDreamFactoryAdapter(adapterOptions) {
-    let adapter = new ej.ODataAdaptor().extend({
+  syncfusionDreamFactoryAdaptor(adaptorOptions) {
+    let adaptor = new ej.ODataAdaptor().extend({
 
       init: function () {
-        let adapterOptions = this.dataSource;
+        let adaptorOptions = this.dataSource;
 
-        if (adapterOptions) {
-          if (adapterOptions.requestType) {
-            this.options.requestType = adapterOptions.requestType
+        if (adaptorOptions) {
+          if (adaptorOptions.requestType) {
+            this.options.requestType = adaptorOptions.requestType
           }
         }
       },
@@ -177,7 +177,7 @@ export class DreamFactoryAdapter {
         }
       }
     });
-    return new adapter(adapterOptions)
+    return new adaptor(adaptorOptions)
   }
 
   constructor() {

@@ -29,13 +29,13 @@ ej.data.fnOperators.in = function (actual, expected, ignoreCase) {
 
 $.extend(ej.data.operatorSymbols, syncfusiondmSymbols.operatorSymbols);
 
-var syncfusionDreamFactoryAdapter = new ej.ODataAdaptor().extend({
+var syncfusionDreamFactoryAdaptor = new ej.ODataAdaptor().extend({
     init: function () {
-        var adapterOptions = this.dataSource;
+        var adaptorOptions = this.dataSource;
 
-        if (adapterOptions) {
-            if (adapterOptions.requestType) {
-                this.options.requestType = adapterOptions.requestType
+        if (adaptorOptions) {
+            if (adaptorOptions.requestType) {
+                this.options.requestType = adaptorOptions.requestType
             }
         }
     },

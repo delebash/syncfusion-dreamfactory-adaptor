@@ -2,11 +2,11 @@ function makeCall(url, serviceObject, overrideMethod, APP_API_KEY) {
   var token = getToken('token');
 
   //requestType = "get" -- request uses query string params via get, "json" -- request uses post to send an object
-  var adapterOptions = {requestType: "get"}; //defaults to "get" if not specified or not passed in
+  var adaptorOptions = {requestType: "get"}; //defaults to "get" if not specified or not passed in
 
   var dataManager = ej.DataManager({
     url: url,
-    adaptor: new syncfusionDreamFactoryAdapter(adapterOptions),
+    adaptor: new syncfusionDreamFactoryAdaptor(adaptorOptions),
     headers: [{"X-DreamFactory-API-Key": APP_API_KEY, "X-DreamFactory-Session-Token": token}]
   });
   var query = ej.Query()
